@@ -1,0 +1,263 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "**"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: a-novel-kit/workflows/publish-actions/auto-release@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+  build-database:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    env:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+      POSTGRES_INITDB_ARGS: --auth=scram-sha-256
+    steps:
+      - uses: a-novel-kit/workflows/build-actions/docker@master
+        with:
+          file: builds/database.Dockerfile
+          image_name: ${{ github.repository }}/database
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          run_args: >-
+            -e POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" 
+            -e POSTGRES_USER="${POSTGRES_USER}" 
+            -e POSTGRES_DB="${POSTGRES_DB}"
+            -e POSTGRES_HOST_AUTH_METHOD="${POSTGRES_HOST_AUTH_METHOD}"
+            -e POSTGRES_INITDB_ARGS="${POSTGRES_INITDB_ARGS}"
+
+  build-migrations:
+    runs-on: ubuntu-latest
+    needs: [build-database]
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    services:
+      postgres-narrative-engine:
+        image: ghcr.io/a-novel/service-narrative-engine/database:${{ github.ref_name }}
+        ports:
+          - "5432:5432"
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: postgres
+          POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+          POSTGRES_INITDB_ARGS: --auth=scram-sha-256
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      POSTGRES_DSN: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
+    steps:
+      - uses: a-novel-kit/workflows/build-actions/docker-job@master
+        with:
+          file: builds/migrations.Dockerfile
+          image_name: ${{ github.repository }}/jobs/migrations
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          run_args: -e POSTGRES_DSN="${POSTGRES_DSN}"
+
+  build-job-init:
+    runs-on: ubuntu-latest
+    needs: [build-database]
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    services:
+      postgres-narrative-engine:
+        image: ghcr.io/a-novel/service-narrative-engine/database:${{ github.ref_name }}
+        ports:
+          - "5432:5432"
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: postgres
+          POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+          POSTGRES_INITDB_ARGS: --auth=scram-sha-256
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      POSTGRES_DSN: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/run-migrations
+      - uses: a-novel-kit/workflows/build-actions/docker-job@master
+        with:
+          file: builds/init.Dockerfile
+          image_name: ${{ github.repository }}/jobs/init
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          run_args: >-
+            -e POSTGRES_DSN="${POSTGRES_DSN}"
+            -e DEV_MODE="${DEV_MODE}"
+
+  build-rest-api:
+    needs: [build-database]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    services:
+      postgres-json-keys:
+        image: ghcr.io/a-novel/service-json-keys/database:v2.1.4
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: postgres
+          POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+          POSTGRES_INITDB_ARGS: --auth=scram-sha-256
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      postgres-narrative-engine:
+        image: ghcr.io/a-novel/service-narrative-engine/database:${{ github.ref_name }}
+        ports:
+          - "5432:5432"
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: postgres
+          POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+          POSTGRES_INITDB_ARGS: --auth=scram-sha-256
+
+      service-json-keys:
+        image: ghcr.io/a-novel/service-json-keys/standalone:v2.1.4
+        ports:
+          - "4002:8080"
+        credentials:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          POSTGRES_DSN: postgres://postgres:postgres@postgres-json-keys:5432/postgres?sslmode=disable
+          APP_MASTER_KEY: "fec0681a2f57242211c559ca347721766f8a3acd8ed2e63b36b3768051c702ca"
+    env:
+      POSTGRES_DSN: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
+      OPENAI_MODEL: gpt-5.2
+      OPENAI_BASE_URL: https://api.openai.com/v1
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      SERVICE_JSON_KEYS_PORT: 4002
+      SERVICE_JSON_KEYS_HOST: 0.0.0.0
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/run-migrations
+      - uses: a-novel-kit/workflows/build-actions/docker@master
+        with:
+          file: builds/rest.Dockerfile
+          image_name: ${{ github.repository }}/rest-api
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          run_args: >-
+            -e POSTGRES_DSN="${POSTGRES_DSN}"
+            -e OPENAI_MODEL="${OPENAI_MODEL}"
+            -e OPENAI_BASE_URL="${OPENAI_BASE_URL}"
+            -e OPENAI_API_KEY="${OPENAI_API_KEY}"
+            -e SERVICE_JSON_KEYS_HOST="${SERVICE_JSON_KEYS_HOST}"
+            -p "${SERVICE_JSON_KEYS_PORT}:${SERVICE_JSON_KEYS_PORT}"
+
+  build-standalone:
+    needs: [build-database]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    services:
+      postgres-json-keys:
+        image: ghcr.io/a-novel/service-json-keys/database:v2.1.4
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: postgres
+          POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+          POSTGRES_INITDB_ARGS: --auth=scram-sha-256
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      postgres-narrative-engine:
+        image: ghcr.io/a-novel/service-narrative-engine/database:${{ github.ref_name }}
+        ports:
+          - "5432:5432"
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: postgres
+          POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+          POSTGRES_INITDB_ARGS: --auth=scram-sha-256
+
+      service-json-keys:
+        image: ghcr.io/a-novel/service-json-keys/standalone:v2.1.4
+        ports:
+          - "4002:8080"
+        credentials:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          POSTGRES_DSN: postgres://postgres:postgres@postgres-json-keys:5432/postgres?sslmode=disable
+          APP_MASTER_KEY: "fec0681a2f57242211c559ca347721766f8a3acd8ed2e63b36b3768051c702ca"
+    env:
+      POSTGRES_DSN: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
+      OPENAI_MODEL: gpt-5.2
+      OPENAI_BASE_URL: https://api.openai.com/v1
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      SERVICE_JSON_KEYS_PORT: 4002
+      SERVICE_JSON_KEYS_HOST: 0.0.0.0
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/run-migrations
+      - uses: a-novel-kit/workflows/build-actions/docker@master
+        with:
+          file: builds/standalone.Dockerfile
+          image_name: ${{ github.repository }}/standalone
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          run_args: >-
+            -e POSTGRES_DSN="${POSTGRES_DSN}"
+            -e OPENAI_MODEL="${OPENAI_MODEL}"
+            -e OPENAI_BASE_URL="${OPENAI_BASE_URL}"
+            -e OPENAI_API_KEY="${OPENAI_API_KEY}"
+            -e SERVICE_JSON_KEYS_HOST="${SERVICE_JSON_KEYS_HOST}"
+            -p "${SERVICE_JSON_KEYS_PORT}:${SERVICE_JSON_KEYS_PORT}"
+            -e DEV_MODE="${DEV_MODE}"
+
+  build-js:
+    needs:
+      - release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: a-novel-kit/workflows/publish-actions/npm@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          app_private_key: ${{ secrets.PUBLISH_BOT_PRIVATE_KEY }}
+          app_id: ${{ vars.PUBLISH_BOT_ID }}

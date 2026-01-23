@@ -1,0 +1,29 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "postUpdateOptions": ["gomodTidy", "pnpmDedupe"],
+  "docker-compose": {
+    "managerFilePatterns": ["/(^|/)(?:podman-)?compose[^/]*\\.ya?ml$/"]
+  },
+  "packageRules": [
+    {
+      "matchManagers": ["gomod"],
+      "postUpgradeTasks": {
+        "commands": ["go mod download", "go generate ./...", "go tool golangci-lint run ./... --fix"],
+        "executionMode": "branch"
+      }
+    },
+    {
+      "matchManagers": ["npm"],
+      "postUpgradeTasks": {
+        "commands": ["pnpm format"],
+        "executionMode": "branch"
+      }
+    },
+    {
+      "matchDepTypes": ["peerDependencies"],
+      "rangeStrategy": "bump",
+      "enabled": true
+    }
+  ],
+  "extends": ["config:recommended"]
+}

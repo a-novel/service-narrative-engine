@@ -1,0 +1,917 @@
+# Created with https://editor.swagger.io/
+openapi: 3.1.0
+
+servers:
+  - url: http://127.0.0.1:4021
+
+info:
+  title: Narrative Engine API
+  summary: Narrative creation and management service for story conception and structured content.
+  description: |
+    This service provides tools for creating and managing narrative projects. It is designed primarily for
+    authors to conceive, structure, and edit their stories using configurable modules and schemas.
+    The service is driven by AI-assistance for the creative process.
+
+    ## Modules
+
+    Modules define the structure for narrative content. Each module includes a JSON Schema that describes
+    the expected data format, along with UI configuration for rendering interactive editors. Modules provide
+    a framework for organizing story elements—whether filled in manually by authors or generated with AI assistance.
+
+    ## Projects
+
+    Projects are user-owned containers that group related schemas together. Each project has a workflow that
+    defines which modules are available for content creation.
+
+    ## Schemas
+
+    Schemas are the content instances created within a project. They conform to a module's structure and
+    serve as the building blocks for story conception. Authors can create and edit schemas manually through
+    the UI, or optionally use AI generation as a starting point or creative aid.
+
+    ## Authentication
+
+    This service requires an authenticated token, that can be retrieved from the 
+    [authentication service](https://a-novel.github.io/service-authentication/).
+  version: v0.0.1
+  license:
+    name: AGPL-3.0
+    url: "https://raw.githubusercontent.com/a-novel/service-narrative-engine/refs/heads/master/LICENSE"
+
+paths:
+  /ping:
+    get:
+      operationId: ping
+      summary: Ping the server.
+      description: |
+        A simple endpoint to check if the server is up and running. It always returns the same response.
+
+        Note this **DOES NOT** give information about the server dependencies. To get more information about the server
+        actual health, please use the `/healthcheck` endpoint.
+      tags: [health]
+      security: []
+      responses:
+        "200":
+          $ref: "#/components/responses/pong"
+        "418":
+          $ref: "#/components/responses/teapot"
+        default:
+          $ref: "#/components/responses/internalError"
+
+  /healthcheck:
+    get:
+      operationId: healthcheck
+      summary: Health diagnosis of the server.
+      description: |
+        Performs a complete health diagnosis of the server dependencies, by trying to reach them each.
+      tags: [health]
+      security: []
+      responses:
+        "200":
+          $ref: "#/components/responses/health"
+        "418":
+          $ref: "#/components/responses/teapot"
+        default:
+          $ref: "#/components/responses/internalError"
+
+  /modules:
+    get:
+      operationId: moduleSelect
+      summary: Retrieve a specific module.
+      description: |
+        Retrieve the full definition of a module, including its JSON schema and UI configuration.
+        The module identifier must be in the format `namespace:id@vX.X.X` or `namespace:id@vX.X.X-preversion`.
+      tags: [modules]
+      security:
+        - BearerAuth: ["modules:get"]
+      parameters:
+        - $ref: "#/components/parameters/module"
+      responses:
+        "200":
+          $ref: "#/components/responses/moduleSelect"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+        default:
+          $ref: "#/components/responses/internalError"
+
+  /modules/versions:
+    get:
+      operationId: moduleListVersions
+      summary: List available versions of a module.
+      description: |
+        Retrieve a paginated list of available versions for a specific module.
+        Can filter by namespace, id, version, and whether to include pre-release versions.
+      tags: [modules]
+      security:
+        - BearerAuth: ["modules:versions:list"]
+      parameters:
+        - $ref: "#/components/parameters/moduleID"
+        - $ref: "#/components/parameters/moduleNamespace"
+        - $ref: "#/components/parameters/moduleVersion"
+        - $ref: "#/components/parameters/modulePreversion"
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/offset"
+      responses:
+        "200":
+          $ref: "#/components/responses/moduleListVersions"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+        default:
+          $ref: "#/components/responses/internalError"
+
+  /projects:
+    get:
+      operationId: projectList
+      summary: List user's projects.
+      description: |
+        Retrieve a paginated list of projects owned by the authenticated user.
+      tags: [projects]
+      security:
+        - BearerAuth: ["projects:list"]
+      parameters:
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/offset"
+      responses:
+        "200":
+          $ref: "#/components/responses/projectList"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+        default:
+          $ref: "#/components/responses/internalError"
+    put:
+      operationId: projectInit
+      summary: Create a new project.
+      description: |
+        Initialize a new project for the authenticated user. The project will be associated with
+        the specified workflow modules.
+      tags: [projects]
+      security:
+        - BearerAuth: ["projects:create"]
+      requestBody:
+        $ref: "#/components/requestBodies/projectInit"
+      responses:
+        "201":
+          $ref: "#/components/responses/projectSelect"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "409":
+          $ref: "#/components/responses/conflict"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+        default:
+          $ref: "#/components/responses/internalError"
+    patch:
+      operationId: projectUpdate
+      summary: Update an existing project.
+      description: |
+        Update the workflow or title of an existing project. The user must own the project.
+        Note that module downgrades in the workflow are not allowed.
+      tags: [projects]
+      security:
+        - BearerAuth: ["projects:update"]
+      requestBody:
+        $ref: "#/components/requestBodies/projectUpdate"
+      responses:
+        "200":
+          $ref: "#/components/responses/projectSelect"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+        default:
+          $ref: "#/components/responses/internalError"
+    delete:
+      operationId: projectDelete
+      summary: Delete a project.
+      description: |
+        Delete an existing project. The user must own the project.
+        This will also delete all schemas associated with the project.
+      tags: [projects]
+      security:
+        - BearerAuth: ["projects:delete"]
+      requestBody:
+        $ref: "#/components/requestBodies/projectDelete"
+      responses:
+        "200":
+          $ref: "#/components/responses/projectSelect"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+        default:
+          $ref: "#/components/responses/internalError"
+
+  /schemas:
+    get:
+      operationId: schemaSelect
+      summary: Retrieve a specific schema.
+      description: |
+        Retrieve a schema by its ID or by project and module combination.
+        The user must own the project containing the schema. The projectID is always required
+        for ownership verification. When retrieving by module, both projectID and module are needed.
+      tags: [schemas]
+      security:
+        - BearerAuth: ["schemas:get"]
+      parameters:
+        - $ref: "#/components/parameters/schemaID"
+        - $ref: "#/components/parameters/projectID"
+        - name: module
+          in: query
+          description: The module identifier in `namespace:id@vX.X.X` or `namespace:id@vX.X.X-preversion` format. Required when not providing a schema ID.
+          required: false
+          schema:
+            type: string
+            examples: ["agora:idea@v1.0.0"]
+      responses:
+        "200":
+          $ref: "#/components/responses/schemaSelect"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+        default:
+          $ref: "#/components/responses/internalError"
+    put:
+      operationId: schemaCreate
+      summary: Create a new schema.
+      description: |
+        Create a new schema within a project for manual authoring or to save content from any source.
+        The user must own the project and the module must be part of the project's workflow.
+      tags: [schemas]
+      security:
+        - BearerAuth: ["schemas:create"]
+      requestBody:
+        $ref: "#/components/requestBodies/schemaCreate"
+      responses:
+        "201":
+          $ref: "#/components/responses/schemaSelect"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "409":
+          $ref: "#/components/responses/conflict"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+        default:
+          $ref: "#/components/responses/internalError"
+    patch:
+      operationId: schemaRewrite
+      summary: Update schema data.
+      description: |
+        Update the data content of an existing schema, typically through manual editing in the UI.
+        The user must own the project containing the schema.
+      tags: [schemas]
+      security:
+        - BearerAuth: ["schemas:rewrite"]
+      requestBody:
+        $ref: "#/components/requestBodies/schemaRewrite"
+      responses:
+        "200":
+          $ref: "#/components/responses/schemaSelect"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+        default:
+          $ref: "#/components/responses/internalError"
+
+  /schemas/versions:
+    get:
+      operationId: schemaListVersions
+      summary: List schema versions.
+      description: |
+        Retrieve a paginated list of schema versions for a specific project and module.
+        The user must own the project.
+      tags: [schemas]
+      security:
+        - BearerAuth: ["schemas:versions:list"]
+      parameters:
+        - $ref: "#/components/parameters/projectID"
+        - $ref: "#/components/parameters/moduleIDRequired"
+        - $ref: "#/components/parameters/moduleNamespaceRequired"
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/offset"
+      responses:
+        "200":
+          $ref: "#/components/responses/schemaListVersions"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+        default:
+          $ref: "#/components/responses/internalError"
+
+  /schemas/generate:
+    put:
+      operationId: schemaGenerate
+      summary: Generate a schema using AI assistance.
+      description: |
+        Optionally generate a new schema using AI based on the module's configuration.
+        This endpoint provides AI assistance as an alternative to manual content creation.
+        The user must own the project and the module must be part of the project's workflow.
+      tags: [schemas]
+      security:
+        - BearerAuth: ["schemas:generate"]
+      requestBody:
+        $ref: "#/components/requestBodies/schemaGenerate"
+      responses:
+        "201":
+          $ref: "#/components/responses/schemaSelect"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "409":
+          $ref: "#/components/responses/conflict"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+        default:
+          $ref: "#/components/responses/internalError"
+
+components:
+  responses:
+    pong:
+      description: "101100001100101011001010"
+      content:
+        text/plain:
+          schema:
+            type: string
+            examples: [pong]
+
+    health:
+      description: Summary of the server dependencies.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: ["client:postgres", "api:jsonKeys"]
+            properties:
+              "client:postgres":
+                $ref: "#/components/schemas/healthStatus"
+              "api:jsonKeys":
+                $ref: "#/components/schemas/healthStatus"
+            examples:
+              - { "client:postgres": { "status": "up" }, "api:jsonKeys": { "status": "up" } }
+              - {
+                  "client:postgres": { "status": "up" },
+                  "api:jsonKeys": { "status": "down", "err": "Connection to host refused" },
+                }
+
+    moduleSelect:
+      description: The full module definition.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/module"
+
+    moduleListVersions:
+      description: List of module versions.
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/moduleVersion"
+
+    projectList:
+      description: List of user's projects.
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/project"
+
+    projectSelect:
+      description: The project details.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/project"
+
+    schemaSelect:
+      description: The schema details.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/schema"
+
+    schemaListVersions:
+      description: List of schema versions.
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/schemaVersion"
+
+    unauthorized:
+      description: |
+        The request did not include valid authentication credentials.
+
+    forbidden:
+      description: |
+        The user was authenticated successfully, but its current access rights don't grant permission for
+        this operation, or the user does not own the requested resource.
+
+    unprocessableEntity:
+      description: |
+        The request was understood by the server, but cannot be processed because the data did not pass
+        required validation.
+
+    notFound:
+      description: |
+        The requested data was not found on the server.
+
+    badRequest:
+      description: |
+        The request sent to the server could not be parsed.
+
+    conflict:
+      description: |
+        The record already exists.
+
+    internalError:
+      description: Something unexpected happened.
+
+    teapot:
+      description: I'm a teapot!
+
+  schemas:
+    healthStatus:
+      type: object
+      description: Summary of a server's dependencies status.
+      required: [status]
+      examples:
+        - { "status": "up" }
+        - { "status": "down", "err": "Connection to host refused" }
+      properties:
+        status:
+          type: string
+          description: Exposes whether the server managed to connect to the dependency.
+          enum: [up, down]
+        err:
+          type: string
+          description: The error message returned by the dependency, if any.
+
+    module:
+      type: object
+      description: A module definition that provides structure and UI configuration for narrative content creation and editing.
+      required: [id, namespace, version, description, schema, ui, createdAt]
+      properties:
+        id:
+          $ref: "#/components/schemas/moduleIDField"
+        namespace:
+          $ref: "#/components/schemas/moduleNamespaceField"
+        version:
+          $ref: "#/components/schemas/moduleVersionField"
+        preversion:
+          $ref: "#/components/schemas/modulePreversionField"
+        description:
+          type: string
+          description: Human-readable description of the module's purpose.
+          examples: ["Generate creative story ideas"]
+        schema:
+          type: object
+          description: JSON Schema defining the structure of content created with this module.
+        ui:
+          $ref: "#/components/schemas/moduleUi"
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when the module was created.
+          examples: [2009-11-10T23:00:00Z]
+
+    moduleVersion:
+      type: object
+      description: A version entry for a module.
+      required: [version, createdAt]
+      properties:
+        version:
+          $ref: "#/components/schemas/moduleVersionField"
+        preversion:
+          $ref: "#/components/schemas/modulePreversionField"
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when the version was created.
+          examples: [2009-11-10T23:00:00Z]
+
+    moduleUi:
+      type: object
+      description: UI configuration for rendering module content.
+      required: [component, params, target]
+      properties:
+        component:
+          type: string
+          description: The ID of the UI component to render.
+          examples: ["text-editor", "form-builder"]
+        params:
+          type: object
+          description: Parameters for the UI component.
+          additionalProperties: true
+        target:
+          type: string
+          description: Target field where the UI editable content will be written. Leave empty for pass-through.
+          examples: ["content", ""]
+
+    project:
+      type: object
+      description: A user-owned project container for organizing and developing narrative content.
+      required: [id, owner, lang, title, workflow, createdAt, updatedAt]
+      properties:
+        id:
+          $ref: "#/components/schemas/uuid"
+        owner:
+          $ref: "#/components/schemas/uuid"
+        lang:
+          $ref: "#/components/schemas/lang"
+        title:
+          type: string
+          description: The project title.
+          examples: ["My Novel Project"]
+        workflow:
+          type: array
+          description: List of module identifiers available for content creation in this project.
+          items:
+            type: string
+          examples: [["agora:idea@v1.0.0", "agora:character@v1.0.0"]]
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when the project was created.
+          examples: [2009-11-10T23:00:00Z]
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the project was last updated.
+          examples: [2009-11-10T23:00:00Z]
+
+    schema:
+      type: object
+      description: A content instance conforming to a module's structure. Schemas are typically created and edited manually by authors, with optional AI assistance available.
+      required: [id, projectID, module, source, data, createdAt]
+      properties:
+        id:
+          $ref: "#/components/schemas/uuid"
+        projectID:
+          $ref: "#/components/schemas/uuid"
+        owner:
+          oneOf:
+            - $ref: "#/components/schemas/uuid"
+            - type: "null"
+          description: The owner's user ID. May be null for system-generated schemas.
+        module:
+          type: string
+          description: The module identifier in `namespace:id@vX.X.X` or `namespace:id@vX.X.X-preversion` format.
+          examples: ["agora:idea@v1.0.0"]
+        source:
+          $ref: "#/components/schemas/schemaSource"
+        data:
+          type: object
+          description: The actual content data conforming to the module's schema.
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when the schema was created.
+          examples: [2009-11-10T23:00:00Z]
+
+    schemaVersion:
+      type: object
+      description: A version entry for a schema.
+      required: [id, createdAt]
+      properties:
+        id:
+          $ref: "#/components/schemas/uuid"
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when the version was created.
+          examples: [2009-11-10T23:00:00Z]
+
+    uuid:
+      type: string
+      description: A universally unique identifier.
+      format: uuid
+      examples:
+        - "9dce0fa2-f93b-46a9-aa6b-a71bf0b1ee80"
+
+    moduleIDField:
+      type: string
+      description: The module identifier.
+      examples: ["idea", "character"]
+
+    moduleNamespaceField:
+      type: string
+      description: The module namespace.
+      examples: ["agora", "custom"]
+
+    moduleVersionField:
+      type: string
+      description: The semantic version of the module.
+      examples: ["1.0.0", "2.1.3"]
+
+    modulePreversionField:
+      type: string
+      description: Optional pre-release version suffix (includes leading hyphen).
+      examples: ["-alpha", "-beta-1"]
+
+    schemaSource:
+      type: string
+      description: Indicates how the schema content was created (USER for manual authoring, AI for generated content, FORK for copied from another schema, EXTERNAL for imported content).
+      enum: ["USER", "AI", "FORK", "EXTERNAL"]
+
+    lang:
+      type: string
+      format: ISO-639
+      description: Language code for the content.
+      enum: [en, fr]
+
+    limit:
+      type: integer
+      format: int32
+      minimum: 1
+      maximum: 100
+      description: Maximum number of results to return.
+
+    offset:
+      type: integer
+      format: int32
+      minimum: 0
+      description: Number of results to skip for pagination.
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+
+  parameters:
+    module:
+      name: module
+      in: query
+      description: The module identifier in `namespace:id@vX.X.X` or `namespace:id@vX.X.X-preversion` format.
+      required: true
+      schema:
+        type: string
+        examples: ["agora:idea@v1.0.0"]
+
+    moduleID:
+      name: id
+      in: query
+      description: The module ID to filter by.
+      required: false
+      schema:
+        $ref: "#/components/schemas/moduleIDField"
+
+    moduleNamespace:
+      name: namespace
+      in: query
+      description: The module namespace to filter by.
+      required: false
+      schema:
+        $ref: "#/components/schemas/moduleNamespaceField"
+
+    moduleVersion:
+      name: version
+      in: query
+      description: The specific version to filter by.
+      required: false
+      schema:
+        $ref: "#/components/schemas/moduleVersionField"
+
+    modulePreversion:
+      name: preversion
+      in: query
+      description: Whether to include pre-release versions.
+      required: false
+      schema:
+        type: boolean
+
+    moduleIDRequired:
+      name: moduleID
+      in: query
+      description: The module ID.
+      required: true
+      schema:
+        $ref: "#/components/schemas/moduleIDField"
+
+    moduleNamespaceRequired:
+      name: moduleNamespace
+      in: query
+      description: The module namespace.
+      required: true
+      schema:
+        $ref: "#/components/schemas/moduleNamespaceField"
+
+    schemaID:
+      name: id
+      in: query
+      description: The schema ID.
+      required: false
+      schema:
+        $ref: "#/components/schemas/uuid"
+
+    projectID:
+      name: projectID
+      in: query
+      description: The project ID.
+      required: true
+      schema:
+        $ref: "#/components/schemas/uuid"
+
+    limit:
+      name: limit
+      in: query
+      description: Limit the number of results.
+      required: false
+      schema:
+        $ref: "#/components/schemas/limit"
+
+    offset:
+      name: offset
+      in: query
+      description: Skip results for pagination.
+      required: false
+      schema:
+        $ref: "#/components/schemas/offset"
+
+  requestBodies:
+    projectInit:
+      description: Request to create a new project.
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [lang, title, workflow]
+            properties:
+              lang:
+                $ref: "#/components/schemas/lang"
+              title:
+                type: string
+                description: The project title.
+                examples: ["My Novel Project"]
+              workflow:
+                type: array
+                description: List of module identifiers for the project workflow.
+                items:
+                  type: string
+                examples: [["agora:idea@v1.0.0", "agora:character@v1.0.0"]]
+
+    projectUpdate:
+      description: Request to update an existing project.
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [id, title, workflow]
+            properties:
+              id:
+                $ref: "#/components/schemas/uuid"
+              title:
+                type: string
+                description: The new project title.
+                examples: ["Updated Project Title"]
+              workflow:
+                type: array
+                description: Updated list of module identifiers.
+                items:
+                  type: string
+                examples: [["agora:idea@v1.0.0", "agora:character@v1.0.0"]]
+
+    projectDelete:
+      description: Request to delete a project.
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [id]
+            properties:
+              id:
+                $ref: "#/components/schemas/uuid"
+
+    schemaCreate:
+      description: Request to create a new schema.
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [id, projectID, module, source, data]
+            properties:
+              id:
+                $ref: "#/components/schemas/uuid"
+              projectID:
+                $ref: "#/components/schemas/uuid"
+              module:
+                type: string
+                description: The module identifier in `namespace:id@vX.X.X` or `namespace:id@vX.X.X-preversion` format.
+                examples: ["agora:idea@v1.0.0"]
+              source:
+                $ref: "#/components/schemas/schemaSource"
+              data:
+                type: object
+                description: The content data conforming to the module's schema.
+                additionalProperties: true
+
+    schemaRewrite:
+      description: Request to update schema data.
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [id, data]
+            properties:
+              id:
+                $ref: "#/components/schemas/uuid"
+              data:
+                type: object
+                description: The updated content data.
+                additionalProperties: true
+
+    schemaGenerate:
+      description: Request to generate a schema using AI assistance.
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [projectID, module, lang]
+            properties:
+              projectID:
+                $ref: "#/components/schemas/uuid"
+              module:
+                type: string
+                description: The module identifier in `namespace:id@vX.X.X` or `namespace:id@vX.X.X-preversion` format.
+                examples: ["agora:idea@v1.0.0"]
+              lang:
+                $ref: "#/components/schemas/lang"

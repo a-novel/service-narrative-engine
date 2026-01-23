@@ -1,0 +1,77 @@
+package dao
+
+import (
+	"context"
+	"database/sql"
+	_ "embed"
+	"errors"
+	"fmt"
+
+	"github.com/google/uuid"
+	"github.com/uptrace/bun"
+	"go.opentelemetry.io/otel/attribute"
+
+	"github.com/a-novel-kit/golib/otel"
+	"github.com/a-novel-kit/golib/postgres"
+)
+
+//go:embed pg.schemaSelect.sql
+var schemaGetQuery string
+
+var ErrSchemaSelectNotFound = errors.New("schema not found")
+
+type SchemaSelectRequest struct {
+	// ID is the specific schema version ID. If not provided, the latest schema for the project will be retrieved.
+	ID *uuid.UUID
+	// ProjectID is required when ID is not provided.
+	ProjectID uuid.UUID
+	// ModuleID is required when ID is not provided.
+	ModuleID string
+	// ModuleNamespace is required when ID is not provided.
+	ModuleNamespace string
+}
+
+type SchemaSelect struct{}
+
+func NewSchemaGet() *SchemaSelect {
+	return new(SchemaSelect)
+}
+
+func (repository *SchemaSelect) Exec(ctx context.Context, request *SchemaSelectRequest) (*Schema, error) {
+	ctx, span := otel.Tracer().Start(ctx, "dao.SchemaSelect")
+	defer span.End()
+
+	if request.ID != nil {
+		span.SetAttributes(attribute.String("id", request.ID.String()))
+	} else {
+		span.SetAttributes(
+			attribute.String("project_id", request.ProjectID.String()),
+			attribute.String("module_id", request.ModuleID),
+			attribute.String("module_namespace", request.ModuleNamespace),
+		)
+	}
+
+	tx, err := postgres.GetContext(ctx)
+	if err != nil {
+		return nil, otel.ReportError(span, fmt.Errorf("get transaction: %w", err))
+	}
+
+	entity := new(Schema)
+
+	err = tx.NewRaw(
+		schemaGetQuery,
+		bun.NullZero(request.ID),
+		request.ProjectID,
+		request.ModuleID,
+		request.ModuleNamespace,
+	).Scan(ctx, entity)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			err = errors.Join(err, ErrSchemaSelectNotFound)
+		}
+
+		return nil, otel.ReportError(span, fmt.Errorf("execute query: %w", err))
+	}
+
+	return otel.ReportSuccess(span, entity), nil
+}

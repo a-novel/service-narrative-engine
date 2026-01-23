@@ -1,0 +1,27 @@
+# App.
+export API_PORT=4021
+export API_URL="http://localhost:${API_PORT}"
+
+# Postgres.
+export POSTGRES_USER="postgres"
+export POSTGRES_PASSWORD="postgres"
+export POSTGRES_DB="narrative-engine"
+export POSTGRES_PORT=4023
+export POSTGRES_TEST_PORT=5023
+export POSTGRES_HOST="0.0.0.0"
+
+export POSTGRES_DSN="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable"
+export POSTGRES_DSN_TEST="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_TEST_PORT}/${POSTGRES_DB}?sslmode=disable"
+
+# Dependencies.
+export SERVICE_JSON_KEYS_PORT=4002
+export SERVICE_JSON_KEYS_HOST=localhost
+export AUTH_API_PORT=4011
+export AUTH_API_URL="http://localhost:${AUTH_API_PORT}"
+export MAIL_UI_TEST_PORT=5014
+export MAIL_TEST_HOST="http://localhost:${MAIL_UI_TEST_PORT}"
+
+# Secret.
+export OPENAI_API_KEY="SECRET_OPENAI_API_KEY"
+export OPENAI_BASE_URL="https://api.openai.com/v1"
+export OPENAI_MODEL="gpt-5.2"

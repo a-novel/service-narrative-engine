@@ -1,0 +1,145 @@
+id: idea
+namespace: agora
+
+description: |
+  Raw intake + guided braindump. Captures source pitch, intent, constraints, and pipeline settings that seed
+  Concept/Characters/Beats/Scenes/Script.
+
+schema:
+  type: object
+  required:
+    - targets
+    - intent
+    - exploration
+    - diagnostics
+  properties:
+    targets:
+      type: object
+      additionalProperties: false
+      required:
+        - target_medium
+        - target_language
+        - age_rating
+      properties:
+        target_medium:
+          type: string
+          enum:
+            - FILM
+            - SERIES
+            - NOVEL
+            - GAME
+            - VN
+            - COMIC
+          description: Primary medium choice.
+        target_language:
+          type: string
+          description: Output language target (e.g., 'English', 'French').
+        age_rating:
+          type: string
+          enum:
+            - G
+            - PG
+            - PG-13
+            - R
+            - 16+
+            - 18+
+          description: Tone/violence/sexual-content constraint.
+        format_notes:
+          type: string
+          description: Optional format specifics (episodes, chapters, playtime, etc.).
+    intent:
+      type: object
+      additionalProperties: false
+      required:
+        - audience_promise
+        - intrigue_question
+        - emotional_target
+      properties:
+        audience_promise:
+          type: string
+          description: What the reader/viewer gets (core appeal). Mirrors later concept.audience_promise when present.
+        intrigue_question:
+          type: string
+          description: The big pull question (mystery / romance / moral test).
+        emotional_target:
+          type: string
+          description: Target feel (cathartic, haunting, comforting, adrenaline...).
+        why_now:
+          type: string
+          description: Optional creator intent/personal hook.
+        non_negotiables:
+          type: array
+          items:
+            type: string
+          description: Early 'must keep' vibes (pre-CanonDNA).
+    exploration:
+      type: object
+      additionalProperties: false
+      required:
+        - what_if
+        - key_images
+        - key_conflicts
+      properties:
+        what_if:
+          type: array
+          items:
+            type: string
+          description: What-if variations (fast ideation branches).
+        key_images:
+          type: array
+          items:
+            type: string
+          description: Visual anchors (opening image, motif shots, finale image ideas).
+        key_conflicts:
+          type: object
+          additionalProperties: false
+          required:
+            - inner
+            - outer
+            - stakes
+          properties:
+            inner:
+              type: string
+              description: Protagonist internal tension seed.
+            outer:
+              type: string
+              description: External force/opposition seed.
+            stakes:
+              type: string
+              description: What breaks if they fail.
+        world_seeds:
+          type: array
+          items:
+            type: string
+          description: Lore rules/factions/constraints seeds.
+        tone_palette:
+          type: array
+          items:
+            type: string
+          description: Comma adjectives, or emoji palette.
+    diagnostics:
+      type: object
+      additionalProperties: false
+      required:
+        - completeness_pct
+        - missing
+        - warnings
+      properties:
+        completeness_pct:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Heuristic completion score for this tab.
+        missing:
+          type: array
+          items:
+            type: string
+          description: Required or recommended fields still blank.
+        warnings:
+          type: array
+          items:
+            type: string
+          description: Potential contradictions or risks.
+
+# TODO: setup UI.
+ui:

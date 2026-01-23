@@ -1,0 +1,17 @@
+{{if .context}}Context:
+```json
+{{.context}}
+```
+{{end}}
+{{if .prefilled}}Fill the missing parts from the following structure:
+```json
+{{.prefilled}}
+```
+
+Add elements to arrays when / if necessary. Don't change existing fields unless you need to translate them.
+If extra, unknown fields are present, take them into account to generate your output, but DON'T ADD THEM to your final
+answer.{{else}}
+Generate the structure.
+{{end}}
+
+System prompt is your priority.

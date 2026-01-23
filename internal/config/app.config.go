@@ -1,0 +1,56 @@
+package config
+
+import (
+	"time"
+
+	authpkg "github.com/a-novel/service-authentication/v2/pkg"
+
+	"github.com/a-novel-kit/golib/grpcf"
+	"github.com/a-novel-kit/golib/logging"
+	"github.com/a-novel-kit/golib/otel"
+	"github.com/a-novel-kit/golib/postgres"
+)
+
+type Main struct {
+	Name string `json:"name" yaml:"name"`
+}
+
+type Dependencies struct {
+	ServiceJsonKeysHost        string                    `json:"jsonKeysServiceHost" yaml:"jsonKeysServiceHost"`
+	ServiceJsonKeysPort        int                       `json:"jsonKeysServicePort" yaml:"jsonKeysServicePort"`
+	ServiceJsonKeysCredentials grpcf.CredentialsProvider `json:"-"                   yaml:"-"`
+}
+
+type APITimeouts struct {
+	Read       time.Duration `json:"read"       yaml:"read"`
+	ReadHeader time.Duration `json:"readHeader" yaml:"readHeader"`
+	Write      time.Duration `json:"write"      yaml:"write"`
+	Idle       time.Duration `json:"idle"       yaml:"idle"`
+	Request    time.Duration `json:"request"    yaml:"request"`
+}
+
+type Cors struct {
+	AllowedOrigins   []string `json:"allowedOrigins"   yaml:"allowedOrigins"`
+	AllowedHeaders   []string `json:"allowedHeaders"   yaml:"allowedHeaders"`
+	AllowCredentials bool     `json:"allowCredentials" yaml:"allowCredentials"`
+	MaxAge           int      `json:"maxAge"           yaml:"maxAge"`
+}
+
+type API struct {
+	Port           int         `json:"port"           yaml:"port"`
+	Timeouts       APITimeouts `json:"timeouts"       yaml:"timeouts"`
+	MaxRequestSize int64       `json:"maxRequestSize" yaml:"maxRequestSize"`
+	Cors           Cors        `json:"cors"           yaml:"cors"`
+}
+
+type App struct {
+	App Main `json:"app" yaml:"app"`
+	Api API  `json:"api" yaml:"api"`
+
+	DependenciesConfig Dependencies        `json:"dependencies" yaml:"dependencies"`
+	Permissions        authpkg.Permissions `json:"permissions"  yaml:"permissions"`
+
+	Otel     otel.Config        `json:"otel"     yaml:"otel"`
+	Logger   logging.HttpConfig `json:"logger"   yaml:"logger"`
+	Postgres postgres.Config    `json:"postgres" yaml:"postgres"`
+}

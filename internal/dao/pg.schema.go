@@ -1,0 +1,52 @@
+package dao
+
+import (
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/uptrace/bun"
+)
+
+// SchemaSource represents the source of a schema version.
+type SchemaSource string
+
+const (
+	SchemaSourceUser     SchemaSource = "USER"
+	SchemaSourceAI       SchemaSource = "AI"
+	SchemaSourceFork     SchemaSource = "FORK"
+	SchemaSourceExternal SchemaSource = "EXTERNAL"
+)
+
+func (schemaSource SchemaSource) String() string {
+	return string(schemaSource)
+}
+
+// Schema is a snapshot of the data created from a module. Multiple versions of a schema can coexist for the same
+// project.
+type Schema struct {
+	bun.BaseModel `bun:"table:schemas"`
+
+	// ID of this schema version.
+	ID uuid.UUID `bun:"id,pk,type:uuid"`
+	// ProjectID links multiple versions of the same schema together.
+	ProjectID uuid.UUID `bun:"project_id,type:uuid"`
+	// Owner is the ID of the user who owns this schema version (nullable).
+	Owner *uuid.UUID `bun:"owner,type:uuid"`
+
+	// ModuleID is the ID of the module used to create the schema.
+	ModuleID string `bun:"module_id"`
+	// ModuleNamespace is the namespace of the module used to create the schema.
+	ModuleNamespace string `bun:"module_namespace"`
+	// ModuleVersion is the version of the module used to create the schema.
+	ModuleVersion string `bun:"module_version"`
+	// ModulePreversion is the preversion of the module used to create the schema.
+	ModulePreversion string `bun:"module_preversion"`
+
+	// Source is the source of this schema version.
+	Source SchemaSource `bun:"source,type:schema_source"`
+
+	// Data is the content of the story. It can be left empty to indicate the module has been cleared in the history.
+	Data map[string]any `bun:"data,type:jsonb,nullzero"`
+
+	CreatedAt time.Time `bun:"created_at"`
+}

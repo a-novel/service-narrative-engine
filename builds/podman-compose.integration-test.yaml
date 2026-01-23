@@ -1,0 +1,118 @@
+services:
+  # ====================================================================================================================
+  # EXT. DEPENDENCIES
+  # ====================================================================================================================
+
+  mailserver:
+    image: ghcr.io/axllent/mailpit:v1.28.3
+    ports:
+      - "${MAIL_UI_TEST_PORT}:8025"
+    networks:
+      - narrative-engine-integration-test
+    environment:
+      MP_MAX_MESSAGES: 5000
+      MP_SEND_API_AUTH_ACCEPT_ANY: true
+      MP_SMTP_AUTH_ACCEPT_ANY: true
+      MP_SMTP_AUTH_ALLOW_INSECURE: true
+      MP_SENDMAIL_FROM: noreply@agorastoryverse.com
+      MP_DISABLE_WAL: true
+
+  # ====================================================================================================================
+  # DATABASES
+  # ====================================================================================================================
+
+  postgres-json-keys:
+    image: ghcr.io/a-novel/service-json-keys/database:v2.1.4
+    networks:
+      - narrative-engine-integration-test
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: json-keys
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+      POSTGRES_INITDB_ARGS: --auth=scram-sha-256
+
+  postgres-authentication:
+    image: ghcr.io/a-novel/service-authentication/database:v2.2.4
+    networks:
+      - narrative-engine-integration-test
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: json-keys
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+      POSTGRES_INITDB_ARGS: --auth=scram-sha-256
+
+  postgres-narrative-engine:
+    build:
+      context: ..
+      dockerfile: ./builds/database.Dockerfile
+    networks:
+      - narrative-engine-integration-test
+    environment:
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+      POSTGRES_USER: "${POSTGRES_USER}"
+      POSTGRES_DB: "${POSTGRES_DB}"
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+      POSTGRES_INITDB_ARGS: --auth=scram-sha-256
+
+  # ====================================================================================================================
+  # SERVICES
+  # ====================================================================================================================
+
+  service-json-keys:
+    image: ghcr.io/a-novel/service-json-keys/standalone:v2.1.4
+    depends_on:
+      - postgres-json-keys
+    environment:
+      POSTGRES_DSN: postgres://postgres:postgres@postgres-json-keys:5432/json-keys?sslmode=disable
+      APP_MASTER_KEY: fec0681a2f57242211c559ca347721766f8a3acd8ed2e63b36b3768051c702ca
+    networks:
+      - narrative-engine-integration-test
+
+  service-authentication:
+    image: ghcr.io/a-novel/service-authentication/standalone:v2.2.4
+    ports:
+      - "4011:8080"
+    depends_on:
+      - postgres-authentication
+      - service-json-keys
+      - mailserver
+    environment:
+      POSTGRES_DSN: postgres://postgres:postgres@postgres-authentication:5432/json-keys?sslmode=disable
+      SERVICE_JSON_KEYS_PORT: 8080
+      SERVICE_JSON_KEYS_HOST: service-json-keys
+      SUPER_ADMIN_EMAIL: noreply@agorastoryverse.com
+      SUPER_ADMIN_PASSWORD: admin
+      SMTP_SENDER_DOMAIN: mailserver
+      PLATFORM_AUTH_URL: http://localhost:7010
+      SMTP_ADDR: mailserver:1025
+      SMTP_SENDER_NAME: Agora Storyverse [noreply]
+      SMTP_SENDER_EMAIL: noreply@agorastoryverse.com
+      SMTP_SENDER_PASSWORD: noreply
+      SMTP_FORCE_UNENCRYPTED: true
+    networks:
+      - narrative-engine-integration-test
+
+  service-narrative-engine:
+    build:
+      context: ..
+      dockerfile: ./builds/standalone.Dockerfile
+    ports:
+      - "${API_PORT}:8080"
+    depends_on:
+      - postgres-narrative-engine
+      - service-json-keys
+    environment:
+      POSTGRES_DSN: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-narrative-engine:5432/${POSTGRES_DB}?sslmode=disable"
+      SERVICE_JSON_KEYS_PORT: 8080
+      SERVICE_JSON_KEYS_HOST: service-json-keys
+      OPENAI_API_KEY: "${OPENAI_API_KEY}"
+      OPENAI_BASE_URL: "${OPENAI_BASE_URL}"
+      OPENAI_MODEL: "${OPENAI_MODEL}"
+      DEV_MODE: "true"
+    networks:
+      - narrative-engine-integration-test
+
+networks:
+  narrative-engine-integration-test:

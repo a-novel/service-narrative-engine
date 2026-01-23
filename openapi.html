@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Narrative-engine API Reference</title>
+    <link
+      rel="icon"
+      type="image/x-icon"
+      href="https://raw.githubusercontent.com/a-novel/uikit/refs/heads/master/src/lib/assets/icons/browser/agora%20icon%20(dark).png"
+    />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <body>
+    <div id="app"></div>
+    <!-- Load the Script -->
+    <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.43.5/dist/browser/standalone.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.43.5/dist/style.min.css" rel="stylesheet" />
+    <!-- Initialize the Scalar API Reference -->
+    <script>
+      Scalar.createApiReference("#app", {
+        // The URL of the OpenAPI/Swagger document
+        url: "./openapi.yaml",
+        proxyUrl: "https://proxy.scalar.com",
+        darkMode: true,
+        layout: "modern",
+        theme: "elysiajs",
+      });
+    </script>
+  </body>
+</html>
