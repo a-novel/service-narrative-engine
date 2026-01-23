@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+import "item.proto";
+
+// ItemCreateService creates a new item.
+service ItemCreateService {
+  rpc ItemCreate(ItemCreateRequest) returns (ItemCreateResponse);
+}
+
+message ItemCreateRequest {
+  string name = 1;
+  string description = 2;
+}
+
+message ItemCreateResponse {
+  Item item = 1;
+}

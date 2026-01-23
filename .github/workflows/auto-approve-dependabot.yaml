@@ -1,0 +1,26 @@
+name: auto-approve dependabot
+on: pull_request
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  approve-bot:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    if: ${{ github.event.pull_request.user.login == vars.DEPENDENCY_BOT_LOGIN || github.event.pull_request.user.login == vars.DEPENDABOT_SECURITY_LOGIN }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: a-novel-kit/workflows/generic-actions/approve-bot@master
+        with:
+          pull_request: ${{ github.event.pull_request.html_url }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: a-novel-kit/workflows/generic-actions/auto-merge-bot@master
+        # Renovate already activates auto-merge by itself.
+        if: ${{ github.event.pull_request.user.login == vars.DEPENDABOT_SECURITY_LOGIN }}
+        with:
+          pull_request: ${{ github.event.pull_request.html_url }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,347 @@
+# Created with https://editor.swagger.io/
+openapi: 3.1.0
+
+servers:
+  - url: http://127.0.0.1:{rest_port}
+    variables:
+      rest_port:
+        default: "8080"
+
+info:
+  title: Service Template API
+  summary: Generic CRUD service template.
+  description: |
+    A template service exposing a simple CRUD REST API for a placeholder `item` resource.
+
+    This template is intended to be forked and adapted for specific use cases by replacing
+    the `item` resource with the actual domain model.
+  version: v0.0.0
+  license:
+    name: AGPL-3.0
+    url: "https://raw.githubusercontent.com/a-novel/service-template/refs/heads/master/LICENSE"
+
+paths:
+  /ping:
+    get:
+      operationId: ping
+      summary: Ping the server.
+      description: |
+        A simple endpoint to check if the server is up and running. It always returns the same response.
+
+        Note this **DOES NOT** give information about the server dependencies. To get more information about the
+        server actual health, please use the `/healthcheck` endpoint.
+      tags: [health]
+      security: []
+      responses:
+        "200":
+          $ref: "#/components/responses/pong"
+        "418":
+          $ref: "#/components/responses/teapot"
+        default:
+          $ref: "#/components/responses/internalError"
+
+  /healthcheck:
+    get:
+      operationId: healthcheck
+      summary: Health diagnosis of the server.
+      description: |
+        Performs a complete health diagnosis of the server dependencies, by trying to reach them each.
+      tags: [health]
+      security: []
+      responses:
+        "200":
+          $ref: "#/components/responses/health"
+        "418":
+          $ref: "#/components/responses/teapot"
+        default:
+          $ref: "#/components/responses/internalError"
+
+  /items:
+    post:
+      operationId: itemCreate
+      summary: Create a new item.
+      description: |
+        Creates a new item with the given name and optional description.
+      tags: [item]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/itemCreateRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/item"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        default:
+          $ref: "#/components/responses/internalError"
+
+    get:
+      operationId: itemList
+      summary: List items.
+      description: |
+        Returns a paginated list of items, ordered by creation date descending.
+      tags: [item]
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/offset"
+      responses:
+        "200":
+          $ref: "#/components/responses/itemList"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        default:
+          $ref: "#/components/responses/internalError"
+
+  /item:
+    get:
+      operationId: itemGet
+      summary: Get an item by ID.
+      description: |
+        Returns a single item by its unique identifier.
+      tags: [item]
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/itemID"
+      responses:
+        "200":
+          $ref: "#/components/responses/item"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "404":
+          $ref: "#/components/responses/notFound"
+        default:
+          $ref: "#/components/responses/internalError"
+
+    put:
+      operationId: itemUpdate
+      summary: Update an item.
+      description: |
+        Updates the name and description of an existing item.
+      tags: [item]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/itemUpdateRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/item"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "404":
+          $ref: "#/components/responses/notFound"
+        default:
+          $ref: "#/components/responses/internalError"
+
+    delete:
+      operationId: itemDelete
+      summary: Delete an item.
+      description: |
+        Permanently deletes an item by its unique identifier. Returns the deleted item.
+      tags: [item]
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/itemID"
+      responses:
+        "200":
+          $ref: "#/components/responses/item"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "404":
+          $ref: "#/components/responses/notFound"
+        default:
+          $ref: "#/components/responses/internalError"
+
+components:
+  responses:
+    pong:
+      description: "101100001100101011001010"
+      content:
+        text/plain:
+          schema:
+            type: string
+            examples: [pong]
+
+    health:
+      description: Summary of the server dependencies.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: ["client:postgres"]
+            properties:
+              "client:postgres":
+                $ref: "#/components/schemas/healthStatus"
+            examples:
+              - { "client:postgres": { "status": "up" } }
+              - { "client:postgres": { "status": "down", "err": "Connection to host refused" } }
+
+    item:
+      description: An item resource.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/item"
+
+    itemList:
+      description: A list of items.
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/item"
+
+    notFound:
+      description: |
+        The requested data was not found on the server.
+
+    badRequest:
+      description: |
+        The request sent to the server could not be parsed, or failed validation.
+
+    internalError:
+      description: Something unexpected happened.
+
+    teapot:
+      description: I'm a teapot!
+
+  schemas:
+    healthStatus:
+      type: object
+      description: Summary of a server's dependencies status.
+      required: [status]
+      examples:
+        - { "status": "up" }
+        - { "status": "down", "err": "Connection to host refused" }
+      properties:
+        status:
+          type: string
+          description: Exposes whether the server managed to connect to the dependency.
+          enum: [up, down]
+        err:
+          type: string
+          description: The error message returned by the dependency, if any.
+
+    item:
+      type: object
+      description: A placeholder item resource.
+      required: [id, name, createdAt, updatedAt]
+      examples:
+        - {
+            "id": "00000000-0000-0000-0000-000000000001",
+            "name": "My Item",
+            "description": "A short description.",
+            "createdAt": "2021-01-01T00:00:00Z",
+            "updatedAt": "2021-01-02T00:00:00Z",
+          }
+      properties:
+        id:
+          type: string
+          description: The unique identifier of the item.
+          format: uuid
+          examples:
+            - "00000000-0000-0000-0000-000000000001"
+        name:
+          type: string
+          description: The name of the item.
+          examples: ["My Item"]
+        description:
+          type: string
+          description: An optional description of the item.
+          examples: ["A short description."]
+        createdAt:
+          type: string
+          description: The timestamp at which the item was created.
+          format: date-time
+          examples: ["2021-01-01T00:00:00Z"]
+        updatedAt:
+          type: string
+          description: The timestamp at which the item was last updated.
+          format: date-time
+          examples: ["2021-01-02T00:00:00Z"]
+
+    itemCreateRequest:
+      type: object
+      description: Request body for creating a new item.
+      required: [name]
+      examples:
+        - { "name": "My Item", "description": "A short description." }
+      properties:
+        name:
+          type: string
+          description: The name of the item.
+          examples: ["My Item"]
+        description:
+          type: string
+          description: An optional description of the item.
+          examples: ["A short description."]
+
+    itemUpdateRequest:
+      type: object
+      description: Request body for updating an existing item.
+      required: [id, name]
+      examples:
+        - { "id": "00000000-0000-0000-0000-000000000001", "name": "Updated Item", "description": "New description." }
+      properties:
+        id:
+          type: string
+          description: The unique identifier of the item to update.
+          format: uuid
+          examples:
+            - "00000000-0000-0000-0000-000000000001"
+        name:
+          type: string
+          description: The new name of the item.
+          examples: ["Updated Item"]
+        description:
+          type: string
+          description: The new description of the item.
+          examples: ["New description."]
+
+    itemID:
+      type: string
+      description: The unique identifier of an item.
+      format: uuid
+      examples:
+        - "00000000-0000-0000-0000-000000000001"
+
+  parameters:
+    itemID:
+      name: id
+      in: query
+      description: The unique identifier of the item.
+      required: true
+      schema:
+        $ref: "#/components/schemas/itemID"
+
+    limit:
+      name: limit
+      in: query
+      description: >
+        Maximum number of items to return, between 1 and 100. When omitted, the
+        default page size (20) is used.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+        examples: [10]
+
+    offset:
+      name: offset
+      in: query
+      description: Number of items to skip before returning results.
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+        examples: [0]

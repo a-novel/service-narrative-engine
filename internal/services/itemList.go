@@ -1,0 +1,86 @@
+package services
+
+import (
+	"context"
+	"errors"
+	"fmt"
+
+	"go.opentelemetry.io/otel/attribute"
+
+	"github.com/a-novel-kit/golib/otel"
+
+	"github.com/a-novel/service-template/internal/dao"
+)
+
+type ItemListRepository interface {
+	Exec(ctx context.Context, request *dao.ItemListRequest) ([]*dao.Item, error)
+}
+
+const (
+	// ItemListDefaultSize is applied to ItemListRequest.Limit when the caller
+	// leaves it unset (zero or negative).
+	ItemListDefaultSize = 20
+	// ItemListMaxSize caps the number of items returned per page. Keep the
+	// `max=` constraint on ItemListRequest.Limit in sync with this value.
+	ItemListMaxSize = 100
+)
+
+type ItemListRequest struct {
+	// Limit defaults to ItemListDefaultSize when zero or negative; see Exec.
+	Limit  int `validate:"max=100"`
+	Offset int `validate:"min=0"`
+}
+
+// ItemList retrieves a paginated list of items.
+type ItemList struct {
+	repository ItemListRepository
+}
+
+func NewItemList(repository ItemListRepository) *ItemList {
+	return &ItemList{repository: repository}
+}
+
+func (service *ItemList) Exec(ctx context.Context, request *ItemListRequest) ([]*Item, error) {
+	ctx, span := otel.Tracer().Start(ctx, "service.ItemList")
+	defer span.End()
+
+	// Resolve the effective page size without mutating the caller's request:
+	// a zero or negative Limit means "use the default".
+	limit := request.Limit
+	if limit <= 0 {
+		limit = ItemListDefaultSize
+	}
+
+	span.SetAttributes(
+		attribute.Int("item.limit", limit),
+		attribute.Int("item.offset", request.Offset),
+	)
+
+	err := validate.Struct(request)
+	if err != nil {
+		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
+	}
+
+	entities, err := service.repository.Exec(ctx, &dao.ItemListRequest{
+		Limit:  limit,
+		Offset: request.Offset,
+	})
+	if err != nil {
+		return nil, otel.ReportError(span, fmt.Errorf("list items: %w", err))
+	}
+
+	span.SetAttributes(attribute.Int("items.count", len(entities)))
+
+	items := make([]*Item, len(entities))
+	for i, entity := range entities {
+		items[i] = &Item{
+			ID:          entity.ID,
+			Name:        entity.Name,
+			Description: entity.Description,
+			CreatedAt:   entity.CreatedAt,
+			UpdatedAt:   entity.UpdatedAt,
+		}
+	}
+
+	return otel.ReportSuccess(span, items), nil
+}

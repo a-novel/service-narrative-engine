@@ -1,0 +1,16 @@
+version: v2
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: github.com/a-novel/service-template/internal/handlers/protogen;protogen
+plugins:
+  - remote: buf.build/protocolbuffers/go
+    out: internal/handlers/protogen
+    opt: paths=source_relative
+  - remote: buf.build/grpc/go
+    out: internal/handlers/protogen
+    opt:
+      - paths=source_relative
+inputs:
+  - directory: internal/models/proto

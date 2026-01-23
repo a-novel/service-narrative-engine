@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+// Item is a placeholder resource.
+message Item {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string created_at = 4;
+  string updated_at = 5;
+}
