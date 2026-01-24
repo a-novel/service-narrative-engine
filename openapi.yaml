@@ -33,7 +33,7 @@ info:
 
     This service requires an authenticated token, that can be retrieved from the 
     [authentication service](https://a-novel.github.io/service-authentication/).
-  version: v0.0.1
+  version: v0.1.0
   license:
     name: AGPL-3.0
     url: "https://raw.githubusercontent.com/a-novel/service-narrative-engine/refs/heads/master/LICENSE"
