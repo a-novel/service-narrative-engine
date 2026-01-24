@@ -9,9 +9,9 @@ tool (
 )
 
 require (
-	github.com/a-novel-kit/golib v0.19.11
+	github.com/a-novel-kit/golib v0.19.12
 	github.com/a-novel/service-authentication/v2 v2.1.9
-	github.com/a-novel/service-json-keys/v2 v2.1.3
+	github.com/a-novel/service-json-keys/v2 v2.1.4
 	github.com/go-chi/chi/v5 v5.2.4
 	github.com/go-chi/cors v1.2.2
 	github.com/go-playground/validator/v10 v10.30.1
@@ -55,7 +55,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.4.0 // indirect
 	github.com/MirrexOne/unqueryvet v1.4.0 // indirect
 	github.com/OpenPeeDeeP/depguard/v2 v2.2.1 // indirect
-	github.com/a-novel-kit/jwt v1.1.27 // indirect
+	github.com/a-novel-kit/jwt v1.1.28 // indirect
 	github.com/alecthomas/chroma/v2 v2.21.1 // indirect
 	github.com/alecthomas/go-check-sumtype v0.3.1 // indirect
 	github.com/alexkohler/nakedret/v2 v2.0.6 // indirect
@@ -106,8 +106,8 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/fzipp/gocyclo v0.6.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.12 // indirect
-	github.com/getsentry/sentry-go v0.40.0 // indirect
-	github.com/getsentry/sentry-go/otel v0.40.0 // indirect
+	github.com/getsentry/sentry-go v0.41.0 // indirect
+	github.com/getsentry/sentry-go/otel v0.41.0 // indirect
 	github.com/ghostiam/protogetter v0.3.18 // indirect
 	github.com/go-critic/go-critic v0.14.3 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
