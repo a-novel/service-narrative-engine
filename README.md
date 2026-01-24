@@ -24,7 +24,7 @@ Run the service as a containerized application (the below examples use docker-co
 ```yaml
 services:
   postgres-narrative-engine:
-    image: ghcr.io/a-novel/service-narrative-engine/database:v0.0.1
+    image: ghcr.io/a-novel/service-narrative-engine/database:v0.1.0
     networks:
       - api
     environment:
@@ -37,7 +37,7 @@ services:
       - narrative-engine-postgres-data:/var/lib/postgresql/
 
   service-narrative-engine:
-    image: ghcr.io/a-novel/service-narrative-engine/standalone:v0.0.1
+    image: ghcr.io/a-novel/service-narrative-engine/standalone:v0.1.0
     ports:
       - "4021:8080"
     depends_on:
@@ -67,7 +67,7 @@ production deployments. Instead, consider using the separate, optimized images f
 ```yaml
 services:
   postgres-narrative-engine:
-    image: ghcr.io/a-novel/service-narrative-engine/database:v0.0.1
+    image: ghcr.io/a-novel/service-narrative-engine/database:v0.1.0
     networks:
       - api
     environment:
@@ -80,7 +80,7 @@ services:
       - narrative-engine-postgres-data:/var/lib/postgresql/
 
   migrations-narrative-engine:
-    image: ghcr.io/a-novel/service-narrative-engine/migrations:v0.0.1
+    image: ghcr.io/a-novel/service-narrative-engine/migrations:v0.1.0
     depends_on:
       postgres-narrative-engine:
         condition: service_healthy
@@ -91,7 +91,7 @@ services:
 
   # Optional job, used to inject base data (system modules) into a freshly initialized database.
   init-narrative-engine:
-    image: ghcr.io/a-novel/service-narrative-engine/init:v0.0.1
+    image: ghcr.io/a-novel/service-narrative-engine/init:v0.1.0
     depends_on:
       postgres-narrative-engine:
         condition: service_healthy
@@ -103,7 +103,7 @@ services:
       - api
 
   service-narrative-engine:
-    image: ghcr.io/a-novel/service-narrative-engine/rest:v0.0.1
+    image: ghcr.io/a-novel/service-narrative-engine/rest:v0.1.0
     ports:
       - "4021:8080"
     depends_on:

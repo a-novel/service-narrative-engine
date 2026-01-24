@@ -28,7 +28,7 @@
     "lint:typecheck:test:rest-js": "pnpm tsc --p ./pkg/test/rest-js/tsconfig.json --noEmit",
     "prepublish:doc": "pnpm prepublish:doc:readme && pnpm prepublish:doc:openapi",
     "prepublish:doc:openapi": "bash scripts/prepublish-version.sh 'version: ' openapi.yaml",
-    "prepublish:doc:readme": "bash scripts/prepublish-version.sh 'a-novel/service-authentication/[^/]+' README.md",
+    "prepublish:doc:readme": "bash scripts/prepublish-version.sh 'a-novel/service-narrative-engine/[^/]+' README.md",
     "publish:major": "bash scripts/publish.sh major",
     "publish:minor": "bash scripts/publish.sh minor",
     "publish:patch": "bash scripts/publish.sh patch",
