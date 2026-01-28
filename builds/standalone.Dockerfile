@@ -41,7 +41,7 @@ COPY ./package.json ./package.json
 RUN touch /version
 RUN echo $(node -p "require('./package.json').version") >> /version
 
-FROM docker.io/library/alpine:3.23.2
+FROM docker.io/library/alpine:3.23.3
 
 WORKDIR /
 
