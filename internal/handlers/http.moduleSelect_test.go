@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/a-novel/service-narrative-engine/internal/config"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 	"github.com/a-novel/service-narrative-engine/internal/handlers"
 	handlersmocks "github.com/a-novel/service-narrative-engine/internal/handlers/mocks"
@@ -204,7 +205,7 @@ func TestModuleSelect(t *testing.T) {
 					Return(testCase.serviceMock.resp, testCase.serviceMock.err)
 			}
 
-			handler := handlers.NewModuleSelect(service)
+			handler := handlers.NewModuleSelect(service, config.LoggerDev)
 			w := httptest.NewRecorder()
 
 			handler.ServeHTTP(w, testCase.request)

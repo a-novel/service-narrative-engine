@@ -21,6 +21,7 @@ import (
 	"github.com/a-novel-kit/golib/postgres"
 
 	"github.com/a-novel/service-narrative-engine/internal/config"
+	"github.com/a-novel/service-narrative-engine/internal/config/env"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 	"github.com/a-novel/service-narrative-engine/internal/handlers"
 	"github.com/a-novel/service-narrative-engine/internal/services"
@@ -34,6 +35,10 @@ func main() {
 
 	lo.Must0(otel.Init(cfg.Otel))
 	defer cfg.Otel.Flush()
+
+	if env.GcloudProjectId == "" {
+		log.SetFlags(log.Flags() &^ (log.Ldate | log.Ltime))
+	}
 
 	// =================================================================================================================
 	// DEPENDENCIES
@@ -80,7 +85,9 @@ func main() {
 	serviceModuleSelect := services.NewModuleSelect(repositoryModuleSelect)
 	serviceModuleListVersions := services.NewModuleListVersions(repositoryModuleListVersions)
 
-	serviceProjectInit := services.NewProjectInit(repositoryProjectInsert, repositorySchemaInsert, repositoryModuleSelect)
+	serviceProjectInit := services.NewProjectInit(
+		repositoryProjectInsert, repositorySchemaInsert, repositoryModuleSelect,
+	)
 	serviceProjectDelete := services.NewProjectDelete(repositoryProjectDelete, repositoryProjectSelect)
 	serviceProjectList := services.NewProjectList(repositoryProjectList)
 	serviceProjectUpdate := services.NewProjectUpdate(
@@ -117,7 +124,7 @@ func main() {
 	// MIDDLEWARES
 	// =================================================================================================================
 
-	withAuth := authpkg.NewAuthHandler(serviceVerifyAccessToken, cfg.Permissions)
+	withAuth := authpkg.NewAuthHandler(serviceVerifyAccessToken, cfg.Permissions, cfg.Logger)
 
 	// =================================================================================================================
 	// HANDLERS
@@ -126,19 +133,19 @@ func main() {
 	handlerPing := handlers.NewPing()
 	handlerHealth := handlers.NewHealth(jsonKeysClient)
 
-	handlerModuleSelect := handlers.NewModuleSelect(serviceModuleSelect)
-	handlerModuleListVersions := handlers.NewModuleListVersions(serviceModuleListVersions)
+	handlerModuleSelect := handlers.NewModuleSelect(serviceModuleSelect, cfg.Logger)
+	handlerModuleListVersions := handlers.NewModuleListVersions(serviceModuleListVersions, cfg.Logger)
 
-	handlerProjectInit := handlers.NewProjectInit(serviceProjectInit)
-	handlerProjectDelete := handlers.NewProjectDelete(serviceProjectDelete)
-	handlerProjectList := handlers.NewProjectList(serviceProjectList)
-	handlerProjectUpdate := handlers.NewProjectUpdate(serviceProjectUpdate)
+	handlerProjectInit := handlers.NewProjectInit(serviceProjectInit, cfg.Logger)
+	handlerProjectDelete := handlers.NewProjectDelete(serviceProjectDelete, cfg.Logger)
+	handlerProjectList := handlers.NewProjectList(serviceProjectList, cfg.Logger)
+	handlerProjectUpdate := handlers.NewProjectUpdate(serviceProjectUpdate, cfg.Logger)
 
-	handlerSchemaCreate := handlers.NewSchemaCreate(serviceSchemaCreate)
-	handlerSchemaGenerate := handlers.NewSchemaGenerate(serviceSchemaGenerate)
-	handlerSchemaSelect := handlers.NewSchemaSelect(serviceSchemaSelect)
-	handlerSchemaRewrite := handlers.NewSchemaRewrite(serviceSchemaRewrite)
-	handlerSchemaListVersions := handlers.NewSchemaListVersions(serviceSchemaListVersions)
+	handlerSchemaCreate := handlers.NewSchemaCreate(serviceSchemaCreate, cfg.Logger)
+	handlerSchemaGenerate := handlers.NewSchemaGenerate(serviceSchemaGenerate, cfg.Logger)
+	handlerSchemaSelect := handlers.NewSchemaSelect(serviceSchemaSelect, cfg.Logger)
+	handlerSchemaRewrite := handlers.NewSchemaRewrite(serviceSchemaRewrite, cfg.Logger)
+	handlerSchemaListVersions := handlers.NewSchemaListVersions(serviceSchemaListVersions, cfg.Logger)
 
 	// =================================================================================================================
 	// ROUTER
@@ -165,7 +172,7 @@ func main() {
 		},
 		MaxAge: cfg.Api.Cors.MaxAge,
 	}))
-	router.Use(cfg.Logger.Logger())
+	router.Use(cfg.HttpLogger.Logger())
 
 	router.Get("/ping", handlerPing.ServeHTTP)
 	router.Get("/healthcheck", handlerHealth.ServeHTTP)

@@ -50,7 +50,8 @@ type App struct {
 	DependenciesConfig Dependencies        `json:"dependencies" yaml:"dependencies"`
 	Permissions        authpkg.Permissions `json:"permissions"  yaml:"permissions"`
 
-	Otel     otel.Config        `json:"otel"     yaml:"otel"`
-	Logger   logging.HttpConfig `json:"logger"   yaml:"logger"`
-	Postgres postgres.Config    `json:"postgres" yaml:"postgres"`
+	Otel       otel.Config        `json:"otel"       yaml:"otel"`
+	Logger     logging.Log        `json:"logger"     yaml:"logger"`
+	HttpLogger logging.HttpConfig `json:"httplogger" yaml:"httplogger"`
+	Postgres   postgres.Config    `json:"postgres"   yaml:"postgres"`
 }

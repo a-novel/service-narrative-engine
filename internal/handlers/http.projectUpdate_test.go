@@ -17,6 +17,7 @@ import (
 
 	authpkg "github.com/a-novel/service-authentication/v2/pkg"
 
+	"github.com/a-novel/service-narrative-engine/internal/config"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 	"github.com/a-novel/service-narrative-engine/internal/handlers"
 	handlersmocks "github.com/a-novel/service-narrative-engine/internal/handlers/mocks"
@@ -269,7 +270,7 @@ func TestProjectUpdate(t *testing.T) {
 					Return(testCase.serviceMock.resp, testCase.serviceMock.err)
 			}
 
-			handler := handlers.NewProjectUpdate(service)
+			handler := handlers.NewProjectUpdate(service, config.LoggerDev)
 			w := httptest.NewRecorder()
 
 			rCtx := testCase.request.Context()

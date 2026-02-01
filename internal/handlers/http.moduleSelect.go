@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/a-novel-kit/golib/httpf"
+	"github.com/a-novel-kit/golib/logging"
 	"github.com/a-novel-kit/golib/otel"
 
 	"github.com/a-novel/service-narrative-engine/internal/dao"
@@ -21,10 +22,11 @@ type ModuleSelectRequest struct {
 
 type ModuleSelect struct {
 	service ModuleSelectService
+	logger  logging.Log
 }
 
-func NewModuleSelect(service ModuleSelectService) *ModuleSelect {
-	return &ModuleSelect{service: service}
+func NewModuleSelect(service ModuleSelectService, logger logging.Log) *ModuleSelect {
+	return &ModuleSelect{service: service, logger: logger}
 }
 
 func (handler *ModuleSelect) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -35,7 +37,7 @@ func (handler *ModuleSelect) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	err := muxDecoder.Decode(&request, r.URL.Query())
 	if err != nil {
-		httpf.HandleError(ctx, w, span, httpf.ErrMap{nil: http.StatusBadRequest}, err)
+		httpf.HandleError(ctx, handler.logger, w, span, httpf.ErrMap{nil: http.StatusBadRequest}, err)
 
 		return
 	}
@@ -44,7 +46,7 @@ func (handler *ModuleSelect) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Module: request.Module,
 	})
 	if err != nil {
-		httpf.HandleError(ctx, w, span, httpf.ErrMap{
+		httpf.HandleError(ctx, handler.logger, w, span, httpf.ErrMap{
 			services.ErrInvalidRequest:  http.StatusUnprocessableEntity,
 			dao.ErrModuleSelectNotFound: http.StatusNotFound,
 		}, err)

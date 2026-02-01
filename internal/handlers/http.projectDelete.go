@@ -11,6 +11,7 @@ import (
 	authpkg "github.com/a-novel/service-authentication/v2/pkg"
 
 	"github.com/a-novel-kit/golib/httpf"
+	"github.com/a-novel-kit/golib/logging"
 	"github.com/a-novel-kit/golib/otel"
 
 	"github.com/a-novel/service-narrative-engine/internal/dao"
@@ -27,10 +28,11 @@ type ProjectDeleteRequest struct {
 
 type ProjectDelete struct {
 	service ProjectDeleteService
+	logger  logging.Log
 }
 
-func NewProjectDelete(service ProjectDeleteService) *ProjectDelete {
-	return &ProjectDelete{service: service}
+func NewProjectDelete(service ProjectDeleteService, logger logging.Log) *ProjectDelete {
+	return &ProjectDelete{service: service, logger: logger}
 }
 
 func (handler *ProjectDelete) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -43,14 +45,14 @@ func (handler *ProjectDelete) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 	err := decoder.Decode(&request)
 	if err != nil {
-		httpf.HandleError(ctx, w, span, httpf.ErrMap{nil: http.StatusBadRequest}, err)
+		httpf.HandleError(ctx, handler.logger, w, span, httpf.ErrMap{nil: http.StatusBadRequest}, err)
 
 		return
 	}
 
 	claims, err := authpkg.MustGetClaimsContext(ctx)
 	if err != nil {
-		httpf.HandleError(ctx, w, span, httpf.ErrMap{nil: http.StatusForbidden}, err)
+		httpf.HandleError(ctx, handler.logger, w, span, httpf.ErrMap{nil: http.StatusForbidden}, err)
 
 		return
 	}
@@ -60,7 +62,7 @@ func (handler *ProjectDelete) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		UserID: lo.FromPtr(claims.UserID),
 	})
 	if err != nil {
-		httpf.HandleError(ctx, w, span, httpf.ErrMap{
+		httpf.HandleError(ctx, handler.logger, w, span, httpf.ErrMap{
 			services.ErrInvalidRequest:        http.StatusUnprocessableEntity,
 			services.ErrUserDoesNotOwnProject: http.StatusForbidden,
 			dao.ErrProjectSelectNotFound:      http.StatusNotFound,

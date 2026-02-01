@@ -9,6 +9,7 @@ import (
 	authpkg "github.com/a-novel/service-authentication/v2/pkg"
 
 	"github.com/a-novel-kit/golib/httpf"
+	"github.com/a-novel-kit/golib/logging"
 	"github.com/a-novel-kit/golib/otel"
 
 	"github.com/a-novel/service-narrative-engine/internal/services"
@@ -25,10 +26,11 @@ type ProjectListRequest struct {
 
 type ProjectList struct {
 	service ProjectListService
+	logger  logging.Log
 }
 
-func NewProjectList(service ProjectListService) *ProjectList {
-	return &ProjectList{service: service}
+func NewProjectList(service ProjectListService, logger logging.Log) *ProjectList {
+	return &ProjectList{service: service, logger: logger}
 }
 
 func (handler *ProjectList) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -39,14 +41,14 @@ func (handler *ProjectList) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	err := muxDecoder.Decode(&request, r.URL.Query())
 	if err != nil {
-		httpf.HandleError(ctx, w, span, httpf.ErrMap{nil: http.StatusBadRequest}, err)
+		httpf.HandleError(ctx, handler.logger, w, span, httpf.ErrMap{nil: http.StatusBadRequest}, err)
 
 		return
 	}
 
 	claims, err := authpkg.MustGetClaimsContext(ctx)
 	if err != nil {
-		httpf.HandleError(ctx, w, span, httpf.ErrMap{nil: http.StatusForbidden}, err)
+		httpf.HandleError(ctx, handler.logger, w, span, httpf.ErrMap{nil: http.StatusForbidden}, err)
 
 		return
 	}
@@ -57,7 +59,7 @@ func (handler *ProjectList) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Offset: request.Offset,
 	})
 	if err != nil {
-		httpf.HandleError(ctx, w, span, httpf.ErrMap{
+		httpf.HandleError(ctx, handler.logger, w, span, httpf.ErrMap{
 			services.ErrInvalidRequest: http.StatusUnprocessableEntity,
 		}, err)
 

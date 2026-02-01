@@ -12,6 +12,7 @@ import (
 	authpkg "github.com/a-novel/service-authentication/v2/pkg"
 
 	"github.com/a-novel-kit/golib/httpf"
+	"github.com/a-novel-kit/golib/logging"
 	"github.com/a-novel-kit/golib/otel"
 
 	"github.com/a-novel/service-narrative-engine/internal/dao"
@@ -29,10 +30,11 @@ type SchemaRewriteRequest struct {
 
 type SchemaRewrite struct {
 	service SchemaRewriteService
+	logger  logging.Log
 }
 
-func NewSchemaRewrite(service SchemaRewriteService) *SchemaRewrite {
-	return &SchemaRewrite{service: service}
+func NewSchemaRewrite(service SchemaRewriteService, logger logging.Log) *SchemaRewrite {
+	return &SchemaRewrite{service: service, logger: logger}
 }
 
 func (handler *SchemaRewrite) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -45,14 +47,14 @@ func (handler *SchemaRewrite) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 	err := decoder.Decode(&request)
 	if err != nil {
-		httpf.HandleError(ctx, w, span, httpf.ErrMap{nil: http.StatusBadRequest}, err)
+		httpf.HandleError(ctx, handler.logger, w, span, httpf.ErrMap{nil: http.StatusBadRequest}, err)
 
 		return
 	}
 
 	claims, err := authpkg.MustGetClaimsContext(ctx)
 	if err != nil {
-		httpf.HandleError(ctx, w, span, httpf.ErrMap{nil: http.StatusForbidden}, err)
+		httpf.HandleError(ctx, handler.logger, w, span, httpf.ErrMap{nil: http.StatusForbidden}, err)
 
 		return
 	}
@@ -64,7 +66,7 @@ func (handler *SchemaRewrite) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		Now:    time.Now(),
 	})
 	if err != nil {
-		httpf.HandleError(ctx, w, span, httpf.ErrMap{
+		httpf.HandleError(ctx, handler.logger, w, span, httpf.ErrMap{
 			services.ErrInvalidRequest:        http.StatusUnprocessableEntity,
 			services.ErrUserDoesNotOwnProject: http.StatusForbidden,
 			dao.ErrSchemaSelectNotFound:       http.StatusNotFound,
