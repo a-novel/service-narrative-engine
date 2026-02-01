@@ -42,8 +42,8 @@ func TestProjectInit(t *testing.T) {
 		err  error
 	}
 
-	type moduleSelectMock struct {
-		resp *dao.Module
+	type moduleExistsMock struct {
+		resp bool
 		err  error
 	}
 
@@ -52,8 +52,8 @@ func TestProjectInit(t *testing.T) {
 
 		request *services.ProjectInitRequest
 
-		moduleSelectMocks  []*moduleSelectMock
-		expectModuleSelect int
+		moduleExistsMocks  []*moduleExistsMock
+		expectModuleExists int
 		projectInsertMock  *projectInsertMock
 		schemaInsertMocks  []*schemaInsertMock
 		expectSchemaInsert int
@@ -71,16 +71,10 @@ func TestProjectInit(t *testing.T) {
 				Workflow: []string{"test-namespace:test-module@v1.0.0"},
 			},
 
-			moduleSelectMocks: []*moduleSelectMock{
-				{
-					resp: &dao.Module{
-						ID:        "test-module",
-						Namespace: "test-namespace",
-						Version:   "1.0.0",
-					},
-				},
+			moduleExistsMocks: []*moduleExistsMock{
+				{resp: true},
 			},
-			expectModuleSelect: 1,
+			expectModuleExists: 1,
 
 			projectInsertMock: &projectInsertMock{
 				resp: &dao.Project{
@@ -135,23 +129,11 @@ func TestProjectInit(t *testing.T) {
 				},
 			},
 
-			moduleSelectMocks: []*moduleSelectMock{
-				{
-					resp: &dao.Module{
-						ID:        "idea",
-						Namespace: "agora",
-						Version:   "1.0.0",
-					},
-				},
-				{
-					resp: &dao.Module{
-						ID:        "concept",
-						Namespace: "agora",
-						Version:   "2.1.3",
-					},
-				},
+			moduleExistsMocks: []*moduleExistsMock{
+				{resp: true},
+				{resp: true},
 			},
-			expectModuleSelect: 2,
+			expectModuleExists: 2,
 
 			projectInsertMock: &projectInsertMock{
 				resp: &dao.Project{
@@ -288,12 +270,10 @@ func TestProjectInit(t *testing.T) {
 				Workflow: []string{"test-namespace:test-module@v1.0.0"},
 			},
 
-			moduleSelectMocks: []*moduleSelectMock{
-				{
-					err: dao.ErrModuleSelectNotFound,
-				},
+			moduleExistsMocks: []*moduleExistsMock{
+				{resp: false},
 			},
-			expectModuleSelect: 1,
+			expectModuleExists: 1,
 
 			expectErr: dao.ErrModuleSelectNotFound,
 		},
@@ -307,16 +287,10 @@ func TestProjectInit(t *testing.T) {
 				Workflow: []string{"test-namespace:test-module@v1.0.0"},
 			},
 
-			moduleSelectMocks: []*moduleSelectMock{
-				{
-					resp: &dao.Module{
-						ID:        "test-module",
-						Namespace: "test-namespace",
-						Version:   "1.0.0",
-					},
-				},
+			moduleExistsMocks: []*moduleExistsMock{
+				{resp: true},
 			},
-			expectModuleSelect: 1,
+			expectModuleExists: 1,
 
 			projectInsertMock: &projectInsertMock{
 				err: errFoo,
@@ -334,16 +308,10 @@ func TestProjectInit(t *testing.T) {
 				Workflow: []string{"test-namespace:test-module@v1.0.0"},
 			},
 
-			moduleSelectMocks: []*moduleSelectMock{
-				{
-					resp: &dao.Module{
-						ID:        "test-module",
-						Namespace: "test-namespace",
-						Version:   "1.0.0",
-					},
-				},
+			moduleExistsMocks: []*moduleExistsMock{
+				{resp: true},
 			},
-			expectModuleSelect: 1,
+			expectModuleExists: 1,
 
 			projectInsertMock: &projectInsertMock{
 				resp: &dao.Project{
@@ -380,23 +348,11 @@ func TestProjectInit(t *testing.T) {
 				},
 			},
 
-			moduleSelectMocks: []*moduleSelectMock{
-				{
-					resp: &dao.Module{
-						ID:        "idea",
-						Namespace: "agora",
-						Version:   "1.0.0",
-					},
-				},
-				{
-					resp: &dao.Module{
-						ID:        "concept",
-						Namespace: "agora",
-						Version:   "2.1.3",
-					},
-				},
+			moduleExistsMocks: []*moduleExistsMock{
+				{resp: true},
+				{resp: true},
 			},
-			expectModuleSelect: 2,
+			expectModuleExists: 2,
 
 			projectInsertMock: &projectInsertMock{
 				resp: &dao.Project{
@@ -444,14 +400,14 @@ func TestProjectInit(t *testing.T) {
 
 				projectInsertRepository := servicesmocks.NewMockProjectInsertRepository(t)
 				schemaInsertRepository := servicesmocks.NewMockProjectInsertRepositorySchemaInsert(t)
-				moduleSelectRepository := servicesmocks.NewMockProjectInsertRepositoryModuleSelect(t)
+				moduleExistsRepository := servicesmocks.NewMockProjectInsertRepositoryModuleExists(t)
 
-				for i := range testCase.expectModuleSelect {
+				for i := range testCase.expectModuleExists {
 					func(idx int) {
-						mockData := testCase.moduleSelectMocks[idx]
+						mockData := testCase.moduleExistsMocks[idx]
 						decodedModule := lib.DecodeModule(testCase.request.Workflow[idx])
 
-						moduleSelectRepository.EXPECT().
+						moduleExistsRepository.EXPECT().
 							Exec(mock.Anything, mock.MatchedBy(func(req *dao.ModuleSelectRequest) bool {
 								return req.ID == decodedModule.Module &&
 									req.Namespace == decodedModule.Namespace &&
@@ -498,7 +454,7 @@ func TestProjectInit(t *testing.T) {
 					}(i)
 				}
 
-				service := services.NewProjectInit(projectInsertRepository, schemaInsertRepository, moduleSelectRepository)
+				service := services.NewProjectInit(projectInsertRepository, schemaInsertRepository, moduleExistsRepository)
 
 				resp, err := service.Exec(ctx, testCase.request)
 				require.ErrorIs(t, err, testCase.expectErr)
@@ -506,7 +462,7 @@ func TestProjectInit(t *testing.T) {
 
 				projectInsertRepository.AssertExpectations(t)
 				schemaInsertRepository.AssertExpectations(t)
-				moduleSelectRepository.AssertExpectations(t)
+				moduleExistsRepository.AssertExpectations(t)
 			})
 		})
 	}

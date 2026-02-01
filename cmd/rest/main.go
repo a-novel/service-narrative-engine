@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/a-novel/service-narrative-engine/internal/config/env"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -35,6 +36,10 @@ func main() {
 	lo.Must0(otel.Init(cfg.Otel))
 	defer cfg.Otel.Flush()
 
+	if env.GcloudProjectId == "" {
+		log.SetFlags(log.Flags() &^ (log.Ldate | log.Ltime))
+	}
+
 	// =================================================================================================================
 	// DEPENDENCIES
 	// =================================================================================================================
@@ -56,6 +61,7 @@ func main() {
 
 	repositoryModuleInsert := dao.NewModuleInsert()
 	repositoryModuleSelect := dao.NewModuleSelect()
+	repositoryModuleExists := dao.NewModuleExists()
 	repositoryModuleDelete := dao.NewModuleDelete()
 	repositoryModuleListVersions := dao.NewModuleListVersions()
 	repositoryModuleGenerate := dao.NewModuleGenerate()
@@ -80,14 +86,14 @@ func main() {
 	serviceModuleSelect := services.NewModuleSelect(repositoryModuleSelect)
 	serviceModuleListVersions := services.NewModuleListVersions(repositoryModuleListVersions)
 
-	serviceProjectInit := services.NewProjectInit(repositoryProjectInsert, repositorySchemaInsert, repositoryModuleSelect)
+	serviceProjectInit := services.NewProjectInit(repositoryProjectInsert, repositorySchemaInsert, repositoryModuleExists)
 	serviceProjectDelete := services.NewProjectDelete(repositoryProjectDelete, repositoryProjectSelect)
 	serviceProjectList := services.NewProjectList(repositoryProjectList)
 	serviceProjectUpdate := services.NewProjectUpdate(
 		repositoryProjectUpdate,
 		repositoryProjectSelect,
 		repositorySchemaInsert,
-		repositoryModuleSelect,
+		repositoryModuleExists,
 	)
 
 	serviceSchemaCreate := services.NewSchemaCreate(

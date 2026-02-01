@@ -1,0 +1,254 @@
+id: concept
+namespace: agora
+
+description: |
+  13-slot Concept foundation (Concept Engine) plus optional story-level Canon DNA (Narrative Engine).
+
+schema:
+  type: object
+  additionalProperties: false
+  required:
+    - concept
+    - diagnostics
+  properties:
+    agora_canon_dna:
+      type:
+        - object
+        - "null"
+      description: Optional story-level 'do not break' constraints. Present when running
+        MythOS Narrative Engine (Structure).
+      additionalProperties: false
+      properties:
+        core_axis:
+          type:
+            - string
+            - object
+          description: Either compact string (e.g., 'Isolation ↔ Connection') or expanded
+            object (advanced mode).
+        axis_archetype:
+          type: string
+          description: Short tag like 'Belonging Story', 'Power Story'.
+        secondary_axes:
+          type: array
+          items:
+            type: string
+        relationship_spine:
+          type: string
+          description: Primary relational backbone (mentor/rebel, hunter/prey lovers,
+            etc.).
+        inciting_template:
+          type: string
+          description: Canon inciting pattern (Summons, Betrayal, Loss & Void, etc.).
+        resolution_shape:
+          type: string
+          enum:
+            - Redemptive
+            - Tragic
+            - Bittersweet
+            - Cyclical
+            - Open-Ended
+            - Pyrrhic
+          description: Macro ending shape.
+        protagonist_fate:
+          type: string
+          description: Triumph/Sacrifice/Fall/Survive-Changed/etc.
+        antagonist_fate:
+          type: string
+          description: Defeated/Converted/Escapes/Wins/etc.
+        motifs:
+          type: object
+          additionalProperties: false
+          properties:
+            primary:
+              type: string
+            secondary:
+              type: array
+              items:
+                type: string
+            evolution_pattern:
+              type: string
+              description: Introduced → Stressed → Broken → Reborn (or custom).
+        setting_anchor:
+          type: object
+          additionalProperties: false
+          properties:
+            world_type:
+              type: string
+            tech_magic_level:
+              type: string
+            social_axis:
+              type: string
+        must_keep:
+          type: array
+          description: Story invariants, weighted 1–5.
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - item
+              - weight
+            properties:
+              item:
+                type: string
+              weight:
+                type: integer
+                minimum: 1
+                maximum: 5
+        changeable:
+          type: array
+          items:
+            type: string
+        notes:
+          type: object
+          additionalProperties: false
+          properties:
+            canon_tagline:
+              type: string
+            variant_constraints:
+              type: string
+    concept:
+      type: object
+      additionalProperties: false
+      required:
+        - premise
+        - genre
+        - tone
+        - intrigue
+        - characters
+        - theme
+        - conflict
+        - resolution
+        - moral
+        - tropes
+        - lore
+        - setting
+        - time
+      properties:
+        premise:
+          type: string
+          description: Core hook in 1–2 lines.
+        genre:
+          type: string
+          description: Primary + secondary genre.
+        tone:
+          type: string
+          description: Comma adjectives (moody, sharp, cosy...).
+        intrigue:
+          type: string
+          description: The pull question (identity/mystery/survival/romance/moral test...).
+        characters:
+          type: array
+          description: Quick cast snapshot (3–8), compatible with CharacterBlueprint
+            ids.
+          minItems: 1
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - id
+              - role
+              - logline
+            properties:
+              id:
+                type: string
+                description: Stable id like 'HERO-001'.
+              role:
+                type: string
+                description: Protagonist/Antagonist/Mentor/Love Interest/etc.
+              logline:
+                type: string
+                description: 1–2 lines, role-functional.
+        theme:
+          type: string
+          description: One phrase or one short sentence (not a paragraph).
+        conflict:
+          type: object
+          additionalProperties: false
+          required:
+            - inner
+            - outer
+            - stakes
+          properties:
+            inner:
+              type: string
+              description: Protagonist internal battle.
+            outer:
+              type: string
+              description: Primary external struggle.
+            stakes:
+              type: string
+              description: What is at risk (personal/relational/systemic).
+        resolution:
+          type: string
+          description: What actually happens; must match resolution_shape if Canon DNA
+            exists.
+        moral:
+          type: string
+          description: "Optional: what the story suggests (not sermon). Can be empty
+            string."
+        tropes:
+          type: array
+          items:
+            type: string
+          description: 5–10 trope tags.
+        lore:
+          type: array
+          items:
+            type: string
+          description: "3–7 bullets: rules + factions + constraints (not trivia)."
+        setting:
+          type: string
+          description: Concrete setting line.
+        time:
+          type: string
+          description: Era / chronology note.
+    concept_meta:
+      type:
+        - object
+        - "null"
+      description: Optional control layer suggested in advanced structure addendum.
+      additionalProperties: false
+      properties:
+        story_type:
+          type: string
+          enum:
+            - Character-first
+            - Plot-first
+            - World-first
+            - Relationship-first
+        target_feel:
+          type: string
+          description: Cathartic/Haunting/Comforting/etc.
+        pacing_profile:
+          type: string
+          description: Slow-burn, rollercoaster spikes, etc.
+        audience_promise:
+          type: string
+          description: Re-stated promise for product/UX surfaces.
+    diagnostics:
+      type: object
+      additionalProperties: false
+      required:
+        - coherence_checks
+        - warnings
+      properties:
+        coherence_checks:
+          type: object
+          description: Quick sanity checks (theme↔inner, intrigue↔outer, resolution↔stakes...).
+          additionalProperties: false
+          properties:
+            theme_matches_inner_conflict:
+              type: boolean
+            intrigue_matches_outer_conflict:
+              type: boolean
+            resolution_matches_stakes:
+              type: boolean
+            tropes_match_genre_tone:
+              type: boolean
+        warnings:
+          type: array
+          items:
+            type: string
+
+# TODO: setup UI.
+ui:

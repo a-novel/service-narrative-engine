@@ -7,6 +7,7 @@ description: |
 
 schema:
   type: object
+  additionalProperties: false
   required:
     - targets
     - intent
@@ -57,13 +58,14 @@ schema:
       properties:
         audience_promise:
           type: string
-          description: What the reader/viewer gets (core appeal). Mirrors later concept.audience_promise when present.
+          description: What the reader/viewer gets (core appeal). Mirrors later concept.audience_promise
+            when present.
         intrigue_question:
           type: string
           description: The big pull question (mystery / romance / moral test).
         emotional_target:
           type: string
-          description: Target feel (cathartic, haunting, comforting, adrenaline...).
+          description: Target feel (cathartic, haunting, comforting, adrenaline…).
         why_now:
           type: string
           description: Optional creator intent/personal hook.
