@@ -10,6 +10,7 @@ import (
 	authpkg "github.com/a-novel/service-authentication/v2/pkg"
 
 	"github.com/a-novel-kit/golib/httpf"
+	"github.com/a-novel-kit/golib/logging"
 	"github.com/a-novel-kit/golib/otel"
 
 	"github.com/a-novel/service-narrative-engine/internal/dao"
@@ -28,10 +29,11 @@ type ProjectInitRequest struct {
 
 type ProjectInit struct {
 	service ProjectInitService
+	logger  logging.Log
 }
 
-func NewProjectInit(service ProjectInitService) *ProjectInit {
-	return &ProjectInit{service: service}
+func NewProjectInit(service ProjectInitService, logger logging.Log) *ProjectInit {
+	return &ProjectInit{service: service, logger: logger}
 }
 
 func (handler *ProjectInit) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -44,14 +46,14 @@ func (handler *ProjectInit) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	err := decoder.Decode(&request)
 	if err != nil {
-		httpf.HandleError(ctx, w, span, httpf.ErrMap{nil: http.StatusBadRequest}, err)
+		httpf.HandleError(ctx, handler.logger, w, span, httpf.ErrMap{nil: http.StatusBadRequest}, err)
 
 		return
 	}
 
 	claims, err := authpkg.MustGetClaimsContext(ctx)
 	if err != nil {
-		httpf.HandleError(ctx, w, span, httpf.ErrMap{nil: http.StatusForbidden}, err)
+		httpf.HandleError(ctx, handler.logger, w, span, httpf.ErrMap{nil: http.StatusForbidden}, err)
 
 		return
 	}
@@ -63,7 +65,7 @@ func (handler *ProjectInit) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Workflow: request.Workflow,
 	})
 	if err != nil {
-		httpf.HandleError(ctx, w, span, httpf.ErrMap{
+		httpf.HandleError(ctx, handler.logger, w, span, httpf.ErrMap{
 			services.ErrInvalidRequest:        http.StatusUnprocessableEntity,
 			dao.ErrModuleSelectNotFound:       http.StatusNotFound,
 			dao.ErrProjectInsertAlreadyExists: http.StatusConflict,

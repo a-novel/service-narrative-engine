@@ -17,6 +17,7 @@ import (
 
 	authpkg "github.com/a-novel/service-authentication/v2/pkg"
 
+	"github.com/a-novel/service-narrative-engine/internal/config"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 	"github.com/a-novel/service-narrative-engine/internal/handlers"
 	handlersmocks "github.com/a-novel/service-narrative-engine/internal/handlers/mocks"
@@ -248,7 +249,7 @@ func TestSchemaRewrite(t *testing.T) {
 					Return(testCase.serviceMock.resp, testCase.serviceMock.err)
 			}
 
-			handler := handlers.NewSchemaRewrite(service)
+			handler := handlers.NewSchemaRewrite(service, config.LoggerDev)
 			w := httptest.NewRecorder()
 
 			rCtx := testCase.request.Context()
