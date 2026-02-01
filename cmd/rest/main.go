@@ -61,6 +61,7 @@ func main() {
 
 	repositoryModuleInsert := dao.NewModuleInsert()
 	repositoryModuleSelect := dao.NewModuleSelect()
+	repositoryModuleExists := dao.NewModuleExists()
 	repositoryModuleDelete := dao.NewModuleDelete()
 	repositoryModuleListVersions := dao.NewModuleListVersions()
 	repositoryModuleGenerate := dao.NewModuleGenerate()
@@ -86,7 +87,7 @@ func main() {
 	serviceModuleListVersions := services.NewModuleListVersions(repositoryModuleListVersions)
 
 	serviceProjectInit := services.NewProjectInit(
-		repositoryProjectInsert, repositorySchemaInsert, repositoryModuleSelect,
+		repositoryProjectInsert, repositorySchemaInsert, repositoryModuleExists,
 	)
 	serviceProjectDelete := services.NewProjectDelete(repositoryProjectDelete, repositoryProjectSelect)
 	serviceProjectList := services.NewProjectList(repositoryProjectList)
@@ -94,7 +95,7 @@ func main() {
 		repositoryProjectUpdate,
 		repositoryProjectSelect,
 		repositorySchemaInsert,
-		repositoryModuleSelect,
+		repositoryModuleExists,
 	)
 
 	serviceSchemaCreate := services.NewSchemaCreate(

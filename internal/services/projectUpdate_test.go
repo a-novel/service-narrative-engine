@@ -45,8 +45,8 @@ func TestProjectUpdate(t *testing.T) {
 		err  error
 	}
 
-	type moduleSelectMock struct {
-		resp *dao.Module
+	type moduleExistsMock struct {
+		resp bool
 		err  error
 	}
 
@@ -56,8 +56,8 @@ func TestProjectUpdate(t *testing.T) {
 		request *services.ProjectUpdateRequest
 
 		projectSelectMock  *projectSelectMock
-		moduleSelectMocks  []moduleSelectMock
-		expectModuleSelect int
+		moduleExistsMocks  []moduleExistsMock
+		expectModuleExists int
 		projectUpdateMock  *projectUpdateMock
 		schemaInsertMocks  []schemaInsertMock
 
@@ -86,10 +86,10 @@ func TestProjectUpdate(t *testing.T) {
 				},
 			},
 
-			moduleSelectMocks: []moduleSelectMock{
-				{resp: &dao.Module{ID: "idea", Namespace: "agora", Version: "1.0.0"}},
+			moduleExistsMocks: []moduleExistsMock{
+				{resp: true},
 			},
-			expectModuleSelect: 1,
+			expectModuleExists: 1,
 
 			projectUpdateMock: &projectUpdateMock{
 				resp: &dao.Project{
@@ -135,11 +135,11 @@ func TestProjectUpdate(t *testing.T) {
 				},
 			},
 
-			moduleSelectMocks: []moduleSelectMock{
-				{resp: &dao.Module{ID: "idea", Namespace: "agora", Version: "1.0.0"}},
-				{resp: &dao.Module{ID: "concept", Namespace: "agora", Version: "1.0.0"}},
+			moduleExistsMocks: []moduleExistsMock{
+				{resp: true},
+				{resp: true},
 			},
-			expectModuleSelect: 2,
+			expectModuleExists: 2,
 
 			projectUpdateMock: &projectUpdateMock{
 				resp: &dao.Project{
@@ -201,10 +201,10 @@ func TestProjectUpdate(t *testing.T) {
 				},
 			},
 
-			moduleSelectMocks: []moduleSelectMock{
-				{resp: &dao.Module{ID: "idea", Namespace: "agora", Version: "1.0.0"}},
+			moduleExistsMocks: []moduleExistsMock{
+				{resp: true},
 			},
-			expectModuleSelect: 1,
+			expectModuleExists: 1,
 
 			projectUpdateMock: &projectUpdateMock{
 				resp: &dao.Project{
@@ -266,11 +266,11 @@ func TestProjectUpdate(t *testing.T) {
 				},
 			},
 
-			moduleSelectMocks: []moduleSelectMock{
-				{resp: &dao.Module{ID: "idea", Namespace: "agora", Version: "1.0.0"}},
-				{resp: &dao.Module{ID: "characters", Namespace: "agora", Version: "1.0.0"}},
+			moduleExistsMocks: []moduleExistsMock{
+				{resp: true},
+				{resp: true},
 			},
-			expectModuleSelect: 2,
+			expectModuleExists: 2,
 
 			projectUpdateMock: &projectUpdateMock{
 				resp: &dao.Project{
@@ -437,10 +437,10 @@ func TestProjectUpdate(t *testing.T) {
 				},
 			},
 
-			moduleSelectMocks: []moduleSelectMock{
-				{err: dao.ErrModuleSelectNotFound},
+			moduleExistsMocks: []moduleExistsMock{
+				{resp: false},
 			},
-			expectModuleSelect: 1,
+			expectModuleExists: 1,
 
 			expectErr: dao.ErrModuleSelectNotFound,
 		},
@@ -466,10 +466,10 @@ func TestProjectUpdate(t *testing.T) {
 				},
 			},
 
-			moduleSelectMocks: []moduleSelectMock{
-				{resp: &dao.Module{ID: "idea", Namespace: "agora", Version: "2.0.0"}},
+			moduleExistsMocks: []moduleExistsMock{
+				{resp: true},
 			},
-			expectModuleSelect: 1,
+			expectModuleExists: 1,
 
 			expectErr: services.ErrForbiddenModuleUpgrade,
 		},
@@ -495,10 +495,10 @@ func TestProjectUpdate(t *testing.T) {
 				},
 			},
 
-			moduleSelectMocks: []moduleSelectMock{
-				{resp: &dao.Module{ID: "idea", Namespace: "agora", Version: "1.0.0"}},
+			moduleExistsMocks: []moduleExistsMock{
+				{resp: true},
 			},
-			expectModuleSelect: 1,
+			expectModuleExists: 1,
 
 			projectUpdateMock: &projectUpdateMock{
 				err: errFoo,
@@ -528,11 +528,11 @@ func TestProjectUpdate(t *testing.T) {
 				},
 			},
 
-			moduleSelectMocks: []moduleSelectMock{
-				{resp: &dao.Module{ID: "idea", Namespace: "agora", Version: "1.0.0"}},
-				{resp: &dao.Module{ID: "concept", Namespace: "agora", Version: "1.0.0"}},
+			moduleExistsMocks: []moduleExistsMock{
+				{resp: true},
+				{resp: true},
 			},
-			expectModuleSelect: 2,
+			expectModuleExists: 2,
 
 			projectUpdateMock: &projectUpdateMock{
 				resp: &dao.Project{
@@ -566,7 +566,7 @@ func TestProjectUpdate(t *testing.T) {
 				projectUpdateRepositorySelect := servicesmocks.NewMockProjectUpdateRepositorySelect(t)
 				projectUpdateRepository := servicesmocks.NewMockProjectUpdateRepository(t)
 				projectUpdateRepositorySchemaInsert := servicesmocks.NewMockProjectUpdateRepositorySchemaInsert(t)
-				moduleSelectRepository := servicesmocks.NewMockProjectUpdateRepositoryModuleSelect(t)
+				moduleExistsRepository := servicesmocks.NewMockProjectUpdateRepositoryModuleExists(t)
 
 				if testCase.projectSelectMock != nil {
 					projectUpdateRepositorySelect.EXPECT().
@@ -576,10 +576,10 @@ func TestProjectUpdate(t *testing.T) {
 						Return(testCase.projectSelectMock.resp, testCase.projectSelectMock.err)
 				}
 
-				for i := range testCase.expectModuleSelect {
-					moduleSelectRepository.EXPECT().
+				for i := range testCase.expectModuleExists {
+					moduleExistsRepository.EXPECT().
 						Exec(mock.Anything, mock.Anything).
-						Return(testCase.moduleSelectMocks[i].resp, testCase.moduleSelectMocks[i].err).
+						Return(testCase.moduleExistsMocks[i].resp, testCase.moduleExistsMocks[i].err).
 						Once()
 				}
 
@@ -604,7 +604,7 @@ func TestProjectUpdate(t *testing.T) {
 					projectUpdateRepository,
 					projectUpdateRepositorySelect,
 					projectUpdateRepositorySchemaInsert,
-					moduleSelectRepository,
+					moduleExistsRepository,
 				)
 
 				resp, err := service.Exec(ctx, testCase.request)
@@ -614,7 +614,7 @@ func TestProjectUpdate(t *testing.T) {
 				projectUpdateRepositorySelect.AssertExpectations(t)
 				projectUpdateRepository.AssertExpectations(t)
 				projectUpdateRepositorySchemaInsert.AssertExpectations(t)
-				moduleSelectRepository.AssertExpectations(t)
+				moduleExistsRepository.AssertExpectations(t)
 			})
 		})
 	}

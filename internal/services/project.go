@@ -51,7 +51,7 @@ func VerifyProjectOwnership(project *dao.Project, userID uuid.UUID) error {
 }
 
 // VerifyModule assess that the given module is part of the project's workflow.
-// The module parameter should be a full versioned module string (e.g., "namespace:module@v1.0.0").
+// The module parameter should be a full-versioned module string (e.g., "namespace:module@v1.0.0").
 func VerifyModule(project *dao.Project, module string) error {
 	for _, m := range project.Workflow {
 		if m == module {
