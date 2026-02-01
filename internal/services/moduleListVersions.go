@@ -19,7 +19,7 @@ type ModuleListVersionsRequest struct {
 	ID        string `validate:"required,max=128,moduleName"`
 	Namespace string `validate:"required,max=128,moduleName"`
 	Limit     int    `validate:"required,min=1,max=128"`
-	Offset    int    `validate:"omitempty,min=0,max=8192"`
+	Offset    int    `validate:"omitempty,min=0"`
 	Version   string `validate:"omitempty,moduleVersion,max=32"`
 	// Preversion indicates whether to include preversions in the results.
 	// By default, only stable versions (empty preversion) are returned.

@@ -6,8 +6,6 @@ import (
 
 	"github.com/goccy/go-yaml"
 	"github.com/google/jsonschema-go/jsonschema"
-
-	"github.com/a-novel/service-narrative-engine/internal/models"
 )
 
 type SystemModule struct {
@@ -15,7 +13,6 @@ type SystemModule struct {
 	Namespace   string            `yaml:"namespace"`
 	Description string            `yaml:"description"`
 	Schema      jsonschema.Schema `yaml:"schema"`
-	UI          models.ModuleUi   `yaml:"ui"`
 }
 
 // UnmarshalYAML implements the yaml.Unmarshaler interface.
@@ -43,7 +40,6 @@ func (module *SystemModule) UnmarshalYAML(data []byte) error {
 		Namespace   string            `json:"namespace"`
 		Description string            `json:"description"`
 		Schema      jsonschema.Schema `json:"schema"`
-		UI          models.ModuleUi   `json:"ui"`
 	}
 
 	err = json.Unmarshal(initMarshalled, &final)
@@ -55,7 +51,6 @@ func (module *SystemModule) UnmarshalYAML(data []byte) error {
 	module.Namespace = final.Namespace
 	module.Description = final.Description
 	module.Schema = final.Schema
-	module.UI = final.UI
 
 	return nil
 }

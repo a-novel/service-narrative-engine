@@ -12,7 +12,6 @@ import (
 
 	"github.com/a-novel/service-narrative-engine/internal/config"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
-	"github.com/a-novel/service-narrative-engine/internal/models"
 )
 
 func TestModuleListVersions(t *testing.T) {
@@ -24,14 +23,6 @@ func TestModuleListVersions(t *testing.T) {
 			},
 		},
 		Required: []string{"field1"},
-	}
-
-	testUi := models.ModuleUi{
-		Component: "input",
-		Params: models.ModuleUiParams{
-			"placeholder": "Enter value",
-		},
-		Target: "field1",
 	}
 
 	testCases := []struct {
@@ -55,7 +46,6 @@ func TestModuleListVersions(t *testing.T) {
 					Preversion:  "",
 					Description: "Version 1",
 					Schema:      testSchema,
-					UI:          testUi,
 					CreatedAt:   time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
 				},
 				{
@@ -65,7 +55,6 @@ func TestModuleListVersions(t *testing.T) {
 					Preversion:  "",
 					Description: "Version 2",
 					Schema:      testSchema,
-					UI:          testUi,
 					CreatedAt:   time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC),
 				},
 				{
@@ -75,7 +64,6 @@ func TestModuleListVersions(t *testing.T) {
 					Preversion:  "",
 					Description: "Version 3",
 					Schema:      testSchema,
-					UI:          testUi,
 					CreatedAt:   time.Date(2021, 1, 3, 0, 0, 0, 0, time.UTC),
 				},
 			},
@@ -102,7 +90,6 @@ func TestModuleListVersions(t *testing.T) {
 					Preversion:  "",
 					Description: "Stable 1.0.0",
 					Schema:      testSchema,
-					UI:          testUi,
 					CreatedAt:   time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
 				},
 				{
@@ -112,7 +99,6 @@ func TestModuleListVersions(t *testing.T) {
 					Preversion:  "-beta-1",
 					Description: "Beta 1",
 					Schema:      testSchema,
-					UI:          testUi,
 					CreatedAt:   time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC),
 				},
 				{
@@ -122,7 +108,6 @@ func TestModuleListVersions(t *testing.T) {
 					Preversion:  "-beta-2",
 					Description: "Beta 2",
 					Schema:      testSchema,
-					UI:          testUi,
 					CreatedAt:   time.Date(2021, 1, 3, 0, 0, 0, 0, time.UTC),
 				},
 				{
@@ -132,7 +117,6 @@ func TestModuleListVersions(t *testing.T) {
 					Preversion:  "",
 					Description: "Stable 0.9.0",
 					Schema:      testSchema,
-					UI:          testUi,
 					CreatedAt:   time.Date(2021, 1, 4, 0, 0, 0, 0, time.UTC),
 				},
 			},
@@ -159,7 +143,6 @@ func TestModuleListVersions(t *testing.T) {
 					Preversion:  "",
 					Description: "Stable 1.0.0",
 					Schema:      testSchema,
-					UI:          testUi,
 					CreatedAt:   time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
 				},
 				{
@@ -169,7 +152,6 @@ func TestModuleListVersions(t *testing.T) {
 					Preversion:  "-beta-1",
 					Description: "Beta 1",
 					Schema:      testSchema,
-					UI:          testUi,
 					CreatedAt:   time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC),
 				},
 				{
@@ -179,7 +161,6 @@ func TestModuleListVersions(t *testing.T) {
 					Preversion:  "-beta-2",
 					Description: "Beta 2",
 					Schema:      testSchema,
-					UI:          testUi,
 					CreatedAt:   time.Date(2021, 1, 3, 0, 0, 0, 0, time.UTC),
 				},
 				{
@@ -189,7 +170,6 @@ func TestModuleListVersions(t *testing.T) {
 					Preversion:  "",
 					Description: "Stable 0.9.0",
 					Schema:      testSchema,
-					UI:          testUi,
 					CreatedAt:   time.Date(2021, 1, 4, 0, 0, 0, 0, time.UTC),
 				},
 			},
@@ -219,7 +199,6 @@ func TestModuleListVersions(t *testing.T) {
 					Preversion:  "",
 					Description: "Version 1",
 					Schema:      testSchema,
-					UI:          testUi,
 					CreatedAt:   time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
 				},
 				{
@@ -229,7 +208,6 @@ func TestModuleListVersions(t *testing.T) {
 					Preversion:  "",
 					Description: "Version 2",
 					Schema:      testSchema,
-					UI:          testUi,
 					CreatedAt:   time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC),
 				},
 				{
@@ -239,7 +217,6 @@ func TestModuleListVersions(t *testing.T) {
 					Preversion:  "",
 					Description: "Version 3",
 					Schema:      testSchema,
-					UI:          testUi,
 					CreatedAt:   time.Date(2021, 1, 3, 0, 0, 0, 0, time.UTC),
 				},
 			},
@@ -266,7 +243,6 @@ func TestModuleListVersions(t *testing.T) {
 					Preversion:  "",
 					Description: "Version 1",
 					Schema:      testSchema,
-					UI:          testUi,
 					CreatedAt:   time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
 				},
 				{
@@ -276,7 +252,6 @@ func TestModuleListVersions(t *testing.T) {
 					Preversion:  "",
 					Description: "Version 2",
 					Schema:      testSchema,
-					UI:          testUi,
 					CreatedAt:   time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC),
 				},
 				{
@@ -286,7 +261,6 @@ func TestModuleListVersions(t *testing.T) {
 					Preversion:  "",
 					Description: "Version 3",
 					Schema:      testSchema,
-					UI:          testUi,
 					CreatedAt:   time.Date(2021, 1, 3, 0, 0, 0, 0, time.UTC),
 				},
 			},
@@ -313,7 +287,6 @@ func TestModuleListVersions(t *testing.T) {
 					Preversion:  "",
 					Description: "Version 1",
 					Schema:      testSchema,
-					UI:          testUi,
 					CreatedAt:   time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
 				},
 				{
@@ -323,7 +296,6 @@ func TestModuleListVersions(t *testing.T) {
 					Preversion:  "",
 					Description: "Version 2",
 					Schema:      testSchema,
-					UI:          testUi,
 					CreatedAt:   time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC),
 				},
 				{
@@ -333,7 +305,6 @@ func TestModuleListVersions(t *testing.T) {
 					Preversion:  "",
 					Description: "Version 3",
 					Schema:      testSchema,
-					UI:          testUi,
 					CreatedAt:   time.Date(2021, 1, 3, 0, 0, 0, 0, time.UTC),
 				},
 				{
@@ -343,7 +314,6 @@ func TestModuleListVersions(t *testing.T) {
 					Preversion:  "",
 					Description: "Version 4",
 					Schema:      testSchema,
-					UI:          testUi,
 					CreatedAt:   time.Date(2021, 1, 4, 0, 0, 0, 0, time.UTC),
 				},
 			},
@@ -371,7 +341,6 @@ func TestModuleListVersions(t *testing.T) {
 					Preversion:  "",
 					Description: "NS1 Version 1",
 					Schema:      testSchema,
-					UI:          testUi,
 					CreatedAt:   time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
 				},
 				{
@@ -381,7 +350,6 @@ func TestModuleListVersions(t *testing.T) {
 					Preversion:  "",
 					Description: "NS2 Version 1",
 					Schema:      testSchema,
-					UI:          testUi,
 					CreatedAt:   time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC),
 				},
 				{
@@ -391,7 +359,6 @@ func TestModuleListVersions(t *testing.T) {
 					Preversion:  "",
 					Description: "NS1 Version 2",
 					Schema:      testSchema,
-					UI:          testUi,
 					CreatedAt:   time.Date(2021, 1, 3, 0, 0, 0, 0, time.UTC),
 				},
 			},
@@ -417,7 +384,6 @@ func TestModuleListVersions(t *testing.T) {
 					Preversion:  "",
 					Description: "Version 1",
 					Schema:      testSchema,
-					UI:          testUi,
 					CreatedAt:   time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
 				},
 				{
@@ -427,7 +393,6 @@ func TestModuleListVersions(t *testing.T) {
 					Preversion:  "",
 					Description: "Version 2",
 					Schema:      testSchema,
-					UI:          testUi,
 					CreatedAt:   time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC),
 				},
 				{
@@ -437,7 +402,6 @@ func TestModuleListVersions(t *testing.T) {
 					Preversion:  "",
 					Description: "Version 3",
 					Schema:      testSchema,
-					UI:          testUi,
 					CreatedAt:   time.Date(2021, 1, 3, 0, 0, 0, 0, time.UTC),
 				},
 			},
@@ -463,7 +427,6 @@ func TestModuleListVersions(t *testing.T) {
 					Preversion:  "",
 					Description: "Stable 1.0.0",
 					Schema:      testSchema,
-					UI:          testUi,
 					CreatedAt:   time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
 				},
 				{
@@ -473,7 +436,6 @@ func TestModuleListVersions(t *testing.T) {
 					Preversion:  "-beta-1",
 					Description: "Beta 1",
 					Schema:      testSchema,
-					UI:          testUi,
 					CreatedAt:   time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC),
 				},
 				{
@@ -483,7 +445,6 @@ func TestModuleListVersions(t *testing.T) {
 					Preversion:  "-beta-2",
 					Description: "Beta 2",
 					Schema:      testSchema,
-					UI:          testUi,
 					CreatedAt:   time.Date(2021, 1, 3, 0, 0, 0, 0, time.UTC),
 				},
 				{
@@ -493,7 +454,6 @@ func TestModuleListVersions(t *testing.T) {
 					Preversion:  "",
 					Description: "Stable 2.0.0",
 					Schema:      testSchema,
-					UI:          testUi,
 					CreatedAt:   time.Date(2021, 1, 4, 0, 0, 0, 0, time.UTC),
 				},
 				{
@@ -503,7 +463,6 @@ func TestModuleListVersions(t *testing.T) {
 					Preversion:  "-alpha-1",
 					Description: "Alpha 1",
 					Schema:      testSchema,
-					UI:          testUi,
 					CreatedAt:   time.Date(2021, 1, 5, 0, 0, 0, 0, time.UTC),
 				},
 			},

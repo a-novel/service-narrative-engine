@@ -11,7 +11,7 @@ test-unit-short:
 test-pkg-js:
 	bash -c "set -m; bash '$(CURDIR)/scripts/test.pkg.js.sh'"
 
-test: test-unit # test-pkg-js
+test: test-unit test-pkg-js
 
 test-short: test-unit-short
 

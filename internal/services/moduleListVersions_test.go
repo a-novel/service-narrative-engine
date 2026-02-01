@@ -316,19 +316,6 @@ func TestModuleListVersions(t *testing.T) {
 			expectErr: services.ErrInvalidRequest,
 		},
 		{
-			name: "Error/InvalidRequest/OffsetTooLarge",
-
-			request: &services.ModuleListVersionsRequest{
-				ID:        "test-module",
-				Namespace: "test-namespace",
-				Limit:     10,
-				Offset:    8193,
-				Version:   "1.0.0",
-			},
-
-			expectErr: services.ErrInvalidRequest,
-		},
-		{
 			name: "Error/RepositoryError",
 
 			request: &services.ModuleListVersionsRequest{

@@ -134,6 +134,50 @@ func TestSchemaGenerate(t *testing.T) {
 			expectStatus: http.StatusCreated,
 		},
 		{
+			name: "Success/WithInstruction",
+
+			request: httptest.NewRequest(
+				http.MethodPost,
+				"/",
+				strings.NewReader(`{"projectID":"00000000-0000-0000-0000-000000000002","module":"namespace:module@v1.0.0","lang":"en","instruction":"The title must contain Dragon."}`),
+			),
+			claims: &authpkg.Claims{
+				UserID: lo.ToPtr(uuid.MustParse("00000000-0000-0000-0000-000000000003")),
+			},
+
+			serviceMock: &serviceMock{
+				req: &services.SchemaGenerateRequest{
+					ProjectID:   uuid.MustParse("00000000-0000-0000-0000-000000000002"),
+					UserID:      uuid.MustParse("00000000-0000-0000-0000-000000000003"),
+					Module:      "namespace:module@v1.0.0",
+					Lang:        "en",
+					Instruction: "The title must contain Dragon.",
+				},
+				resp: &services.Schema{
+					ID:              uuid.MustParse("00000000-0000-0000-0000-000000000001"),
+					ProjectID:       uuid.MustParse("00000000-0000-0000-0000-000000000002"),
+					Owner:           lo.ToPtr(uuid.MustParse("00000000-0000-0000-0000-000000000003")),
+					ModuleID:        "module",
+					ModuleNamespace: "namespace",
+					ModuleVersion:   "1.0.0",
+					Source:          "AI",
+					Data:            map[string]any{"title": "The Dragon King"},
+					CreatedAt:       time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+				},
+			},
+
+			expectResponse: map[string]any{
+				"id":        "00000000-0000-0000-0000-000000000001",
+				"projectID": "00000000-0000-0000-0000-000000000002",
+				"owner":     "00000000-0000-0000-0000-000000000003",
+				"module":    "namespace:module@v1.0.0",
+				"source":    "AI",
+				"data":      map[string]any{"title": "The Dragon King"},
+				"createdAt": "2026-01-01T00:00:00Z",
+			},
+			expectStatus: http.StatusCreated,
+		},
+		{
 			name: "Error/NoClaims",
 
 			request: httptest.NewRequest(

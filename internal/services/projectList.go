@@ -19,7 +19,7 @@ type ProjectListRepository interface {
 type ProjectListRequest struct {
 	UserID uuid.UUID `validate:"required"`
 	Limit  int       `validate:"required,min=1,max=128"`
-	Offset int       `validate:"omitempty,min=0,max=8192"`
+	Offset int       `validate:"omitempty,min=0"`
 }
 
 type ProjectList struct {

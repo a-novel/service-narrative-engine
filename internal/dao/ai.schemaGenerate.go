@@ -17,28 +17,29 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/lib"
 )
 
-//go:embed ai.moduleGenerate.prompt
-var moduleGeneratePrompt string
+//go:embed ai.schemaGenerate.prompt
+var schemaGeneratePrompt string
 
-var moduleGeneratePromptTemplate = template.Must(template.New("").Parse(moduleGeneratePrompt))
+var schemaGeneratePromptTemplate = template.Must(template.New("").Parse(schemaGeneratePrompt))
 
-type ModuleGenerateRequest struct {
+type SchemaGenerateRequest struct {
 	Module *Module
 
 	Lang string
 
-	Context   any
-	Prefilled map[string]any
+	Context     any
+	Prefilled   map[string]any
+	Instruction string
 }
 
-type ModuleGenerate struct{}
+type SchemaGenerate struct{}
 
-func NewModuleGenerate() *ModuleGenerate {
-	return new(ModuleGenerate)
+func NewSchemaGenerate() *SchemaGenerate {
+	return new(SchemaGenerate)
 }
 
-func (repository *ModuleGenerate) Exec(ctx context.Context, request *ModuleGenerateRequest) (map[string]any, error) {
-	ctx, span := otel.Tracer().Start(ctx, "dao.ModuleGenerate")
+func (repository *SchemaGenerate) Exec(ctx context.Context, request *SchemaGenerateRequest) (map[string]any, error) {
+	ctx, span := otel.Tracer().Start(ctx, "dao.SchemaGenerate")
 	defer span.End()
 
 	span.SetAttributes(
@@ -60,9 +61,10 @@ func (repository *ModuleGenerate) Exec(ctx context.Context, request *ModuleGener
 
 	userPrompt := new(strings.Builder)
 
-	err = moduleGeneratePromptTemplate.Execute(userPrompt, map[string]any{
-		"context":   string(strContext),
-		"prefilled": lo.Ternary[any](len(request.Prefilled) == 0, nil, string(strPrefilled)),
+	err = schemaGeneratePromptTemplate.Execute(userPrompt, map[string]any{
+		"context":     string(strContext),
+		"prefilled":   lo.Ternary[any](len(request.Prefilled) == 0, nil, string(strPrefilled)),
+		"instruction": request.Instruction,
 	})
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("execute prompt template: %w", err))

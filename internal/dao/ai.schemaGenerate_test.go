@@ -39,7 +39,7 @@ func detectLanguage(ctx context.Context, text string) (string, error) {
 
 // List alternatives values, more relevant giving what you did
 
-func TestModuleGenerate(t *testing.T) {
+func TestSchemaGenerate(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping AI-based tests in short mode")
 
@@ -80,7 +80,7 @@ func TestModuleGenerate(t *testing.T) {
 	testCases := []struct {
 		name string
 
-		request *dao.ModuleGenerateRequest
+		request *dao.SchemaGenerateRequest
 
 		// validateResult is a custom validation function since AI output is non-deterministic.
 		validateResult func(t *testing.T, result map[string]any)
@@ -88,7 +88,7 @@ func TestModuleGenerate(t *testing.T) {
 		{
 			name: "Success/BasicGeneration",
 
-			request: &dao.ModuleGenerateRequest{
+			request: &dao.SchemaGenerateRequest{
 				Module: &testModule,
 				Lang:   "en",
 				Context: map[string]any{
@@ -129,7 +129,7 @@ func TestModuleGenerate(t *testing.T) {
 		{
 			name: "Success/WithPrefilled",
 
-			request: &dao.ModuleGenerateRequest{
+			request: &dao.SchemaGenerateRequest{
 				Module: &testModule,
 				Lang:   "en",
 				Context: map[string]any{
@@ -160,9 +160,51 @@ func TestModuleGenerate(t *testing.T) {
 				require.Greater(t, len(premise), 10, "premise should be a meaningful description")
 			},
 		},
+		{
+			name: "Success/WithInstruction",
+
+			request: &dao.SchemaGenerateRequest{
+				Module: &testModule,
+				Lang:   "en",
+				Context: map[string]any{
+					"theme": "medieval fantasy",
+				},
+				Instruction: "The genre MUST be exactly 'fantasy'. The title MUST contain the word 'Dragon'.",
+			},
+
+			validateResult: func(t *testing.T, result map[string]any) {
+				t.Helper()
+
+				require.NotNil(t, result)
+
+				// Verify all required fields exist
+				require.Contains(t, result, "title")
+				require.Contains(t, result, "premise")
+				require.Contains(t, result, "genre")
+
+				// Verify field types
+				title, ok := result["title"].(string)
+				require.True(t, ok, "title should be a string")
+				require.NotEmpty(t, title, "title should not be empty")
+
+				// Verify instruction was followed: title must contain "Dragon"
+				require.Contains(t, strings.ToLower(title), "dragon",
+					"title should contain 'Dragon' as instructed, got: %s", title)
+
+				// Verify instruction was followed: genre must be "fantasy"
+				genre, ok := result["genre"].(string)
+				require.True(t, ok, "genre should be a string")
+				require.Equal(t, "fantasy", strings.ToLower(genre),
+					"genre should be 'fantasy' as instructed, got: %s", genre)
+
+				premise, ok := result["premise"].(string)
+				require.True(t, ok, "premise should be a string")
+				require.NotEmpty(t, premise, "premise should not be empty")
+			},
+		},
 	}
 
-	repository := dao.NewModuleGenerate()
+	repository := dao.NewSchemaGenerate()
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -176,7 +218,7 @@ func TestModuleGenerate(t *testing.T) {
 	}
 }
 
-func TestModuleGenerate_Language(t *testing.T) {
+func TestSchemaGenerate_Language(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping AI-based tests in short mode")
 
@@ -306,7 +348,7 @@ func TestModuleGenerate_Language(t *testing.T) {
 			"filename should remain in ASCII format without translation: %s", filename)
 	}
 
-	repository := dao.NewModuleGenerate()
+	repository := dao.NewSchemaGenerate()
 
 	// Automatically test all known languages
 	for _, lang := range config.KnownLangs {
@@ -321,7 +363,7 @@ func TestModuleGenerate_Language(t *testing.T) {
 				testContext = contextByLang[config.LangEN]
 			}
 
-			result, err := repository.Exec(ctx, &dao.ModuleGenerateRequest{
+			result, err := repository.Exec(ctx, &dao.SchemaGenerateRequest{
 				Module:    &testModule,
 				Lang:      lang,
 				Context:   testContext,

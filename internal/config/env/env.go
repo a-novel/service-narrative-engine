@@ -24,7 +24,7 @@ const (
 	ServiceJsonKeysPortDefault = 8080
 
 	ApiPortDefault              = 8080
-	ApiTimeoutReadDefault       = 15 * time.Second
+	ApiTimeoutReadDefault       = 60 * time.Second
 	ApiTimeoutReadHeaderDefault = 3 * time.Second
 	ApiTimeoutWriteDefault      = 30 * time.Second
 	ApiTimeoutIdleDefault       = 60 * time.Second

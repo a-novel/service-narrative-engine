@@ -16,7 +16,7 @@ import (
 )
 
 type SchemaGenerateRepository interface {
-	Exec(ctx context.Context, request *dao.ModuleGenerateRequest) (map[string]any, error)
+	Exec(ctx context.Context, request *dao.SchemaGenerateRequest) (map[string]any, error)
 }
 
 type SchemaGenerateRepositorySchemaList interface {
@@ -36,10 +36,11 @@ type SchemaGenerateRepositoryModuleSelect interface {
 }
 
 type SchemaGenerateRequest struct {
-	ProjectID uuid.UUID `validate:"required"`
-	UserID    uuid.UUID `validate:"required"`
-	Module    string    `validate:"required,module,max=512"`
-	Lang      string    `validate:"required,langs"`
+	ProjectID   uuid.UUID `validate:"required"`
+	UserID      uuid.UUID `validate:"required"`
+	Module      string    `validate:"required,module,max=512"`
+	Lang        string    `validate:"required,langs"`
+	Instruction string    `validate:"omitempty,max=8192"`
 }
 
 type SchemaGenerate struct {
@@ -112,12 +113,6 @@ func (service *SchemaGenerate) Exec(ctx context.Context, request *SchemaGenerate
 		return nil, otel.ReportError(span, err)
 	}
 
-	ok := lib.JSONSchemaLLM(&moduleContent.Schema)
-	// Should not happen.
-	if !ok {
-		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidData, ErrInvalidRequest))
-	}
-
 	moduleSchema, err := moduleContent.Schema.Resolve(&jsonschema.ResolveOptions{
 		ValidateDefaults: true,
 	})
@@ -154,11 +149,12 @@ func (service *SchemaGenerate) Exec(ctx context.Context, request *SchemaGenerate
 	// Generate.
 	// =================================================================================================================
 
-	data, err := service.schemaGenerateRepository.Exec(ctx, &dao.ModuleGenerateRequest{
-		Module:    moduleContent,
-		Lang:      request.Lang,
-		Context:   contextSchemas,
-		Prefilled: prefilled,
+	data, err := service.schemaGenerateRepository.Exec(ctx, &dao.SchemaGenerateRequest{
+		Module:      moduleContent,
+		Lang:        request.Lang,
+		Context:     contextSchemas,
+		Prefilled:   prefilled,
+		Instruction: request.Instruction,
 	})
 	if err != nil {
 		return nil, otel.ReportError(span, err)
@@ -173,7 +169,7 @@ func (service *SchemaGenerate) Exec(ctx context.Context, request *SchemaGenerate
 		ModuleVersion:    moduleContent.Version,
 		ModulePreversion: moduleContent.Preversion,
 		Source:           dao.SchemaSourceAI,
-		Data:             data,
+		Data:             lib.DeepMerge(prefilled, data),
 		Now:              time.Now(),
 	})
 	if err != nil {

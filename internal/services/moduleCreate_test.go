@@ -15,7 +15,6 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/config"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 	"github.com/a-novel/service-narrative-engine/internal/lib"
-	"github.com/a-novel/service-narrative-engine/internal/models"
 	"github.com/a-novel/service-narrative-engine/internal/services"
 	servicesmocks "github.com/a-novel/service-narrative-engine/internal/services/mocks"
 )
@@ -35,12 +34,6 @@ func TestModuleCreate(t *testing.T) {
 			},
 		},
 		Required: []string{"title"},
-	}
-
-	testModuleUI := models.ModuleUi{
-		Component: "test-component",
-		Params:    map[string]any{"key": "value"},
-		Target:    "title",
 	}
 
 	validDescription := "This is a valid description that is at least 32 characters long."
@@ -73,7 +66,6 @@ func TestModuleCreate(t *testing.T) {
 				Module:      "test-namespace:test-module@v1.0.0",
 				Description: validDescription,
 				Schema:      testModuleSchema,
-				UI:          testModuleUI,
 			},
 
 			moduleInsertMock: &moduleInsertMock{
@@ -83,7 +75,6 @@ func TestModuleCreate(t *testing.T) {
 					Version:     "1.0.0",
 					Description: validDescription,
 					Schema:      testModuleSchema,
-					UI:          testModuleUI,
 					CreatedAt:   baseTime,
 				},
 			},
@@ -94,7 +85,6 @@ func TestModuleCreate(t *testing.T) {
 				Version:     "1.0.0",
 				Description: validDescription,
 				Schema:      testModuleSchema,
-				UI:          testModuleUI,
 				CreatedAt:   baseTime,
 			},
 		},
@@ -105,7 +95,6 @@ func TestModuleCreate(t *testing.T) {
 				Module:      "test-namespace:test-module@v1.0.0-beta-1",
 				Description: validDescription,
 				Schema:      testModuleSchema,
-				UI:          testModuleUI,
 			},
 
 			moduleInsertMock: &moduleInsertMock{
@@ -116,7 +105,6 @@ func TestModuleCreate(t *testing.T) {
 					Preversion:  "-beta-1",
 					Description: validDescription,
 					Schema:      testModuleSchema,
-					UI:          testModuleUI,
 					CreatedAt:   baseTime,
 				},
 			},
@@ -128,7 +116,6 @@ func TestModuleCreate(t *testing.T) {
 				Preversion:  "-beta-1",
 				Description: validDescription,
 				Schema:      testModuleSchema,
-				UI:          testModuleUI,
 				CreatedAt:   baseTime,
 			},
 		},
@@ -139,7 +126,6 @@ func TestModuleCreate(t *testing.T) {
 				Module:      "test-namespace:test-module@v1.0.0",
 				Description: validDescription,
 				Schema:      testModuleSchema,
-				UI:          testModuleUI,
 				Overwrite:   true,
 			},
 
@@ -150,7 +136,6 @@ func TestModuleCreate(t *testing.T) {
 					Version:     "1.0.0",
 					Description: "old description that was previously here",
 					Schema:      testModuleSchema,
-					UI:          testModuleUI,
 					CreatedAt:   baseTime,
 				},
 			},
@@ -162,7 +147,6 @@ func TestModuleCreate(t *testing.T) {
 					Version:     "1.0.0",
 					Description: validDescription,
 					Schema:      testModuleSchema,
-					UI:          testModuleUI,
 					CreatedAt:   baseTime,
 				},
 			},
@@ -173,7 +157,6 @@ func TestModuleCreate(t *testing.T) {
 				Version:     "1.0.0",
 				Description: validDescription,
 				Schema:      testModuleSchema,
-				UI:          testModuleUI,
 				CreatedAt:   baseTime,
 			},
 		},
@@ -184,7 +167,6 @@ func TestModuleCreate(t *testing.T) {
 				Module:      "test-namespace:test-module@v1.0.0",
 				Description: validDescription,
 				Schema:      testModuleSchema,
-				UI:          testModuleUI,
 				Overwrite:   true,
 			},
 
@@ -199,7 +181,6 @@ func TestModuleCreate(t *testing.T) {
 					Version:     "1.0.0",
 					Description: validDescription,
 					Schema:      testModuleSchema,
-					UI:          testModuleUI,
 					CreatedAt:   baseTime,
 				},
 			},
@@ -210,7 +191,6 @@ func TestModuleCreate(t *testing.T) {
 				Version:     "1.0.0",
 				Description: validDescription,
 				Schema:      testModuleSchema,
-				UI:          testModuleUI,
 				CreatedAt:   baseTime,
 			},
 		},
@@ -221,7 +201,6 @@ func TestModuleCreate(t *testing.T) {
 				Module:      "",
 				Description: validDescription,
 				Schema:      testModuleSchema,
-				UI:          testModuleUI,
 			},
 
 			expectErr: services.ErrInvalidRequest,
@@ -233,7 +212,6 @@ func TestModuleCreate(t *testing.T) {
 				Module:      "invalid-module-format",
 				Description: validDescription,
 				Schema:      testModuleSchema,
-				UI:          testModuleUI,
 			},
 
 			expectErr: services.ErrInvalidRequest,
@@ -245,7 +223,6 @@ func TestModuleCreate(t *testing.T) {
 				Module:      "namespace:module@invalid",
 				Description: validDescription,
 				Schema:      testModuleSchema,
-				UI:          testModuleUI,
 			},
 
 			expectErr: services.ErrInvalidRequest,
@@ -257,7 +234,6 @@ func TestModuleCreate(t *testing.T) {
 				Module:      "test-namespace:test-module@v1.0.0",
 				Description: "",
 				Schema:      testModuleSchema,
-				UI:          testModuleUI,
 			},
 
 			expectErr: services.ErrInvalidRequest,
@@ -269,7 +245,6 @@ func TestModuleCreate(t *testing.T) {
 				Module:      "test-namespace:test-module@v1.0.0",
 				Description: "Too short",
 				Schema:      testModuleSchema,
-				UI:          testModuleUI,
 			},
 
 			expectErr: services.ErrInvalidRequest,
@@ -281,7 +256,6 @@ func TestModuleCreate(t *testing.T) {
 				Module:      "test-namespace:test-module@v1.0.0",
 				Description: string(make([]byte, 513)),
 				Schema:      testModuleSchema,
-				UI:          testModuleUI,
 			},
 
 			expectErr: services.ErrInvalidRequest,
@@ -295,7 +269,6 @@ func TestModuleCreate(t *testing.T) {
 				Schema: jsonschema.Schema{
 					Ref: "invalid-ref",
 				},
-				UI: testModuleUI,
 			},
 
 			expectErr: services.ErrInvalidRequest,
@@ -307,7 +280,6 @@ func TestModuleCreate(t *testing.T) {
 				Module:      "test-namespace:test-module@v1.0.0",
 				Description: validDescription,
 				Schema:      testModuleSchema,
-				UI:          testModuleUI,
 			},
 
 			moduleInsertMock: &moduleInsertMock{
@@ -323,7 +295,6 @@ func TestModuleCreate(t *testing.T) {
 				Module:      "test-namespace:test-module@v1.0.0",
 				Description: validDescription,
 				Schema:      testModuleSchema,
-				UI:          testModuleUI,
 			},
 
 			moduleInsertMock: &moduleInsertMock{
@@ -339,7 +310,6 @@ func TestModuleCreate(t *testing.T) {
 				Module:      "test-namespace:test-module@v1.0.0",
 				Description: validDescription,
 				Schema:      testModuleSchema,
-				UI:          testModuleUI,
 				Overwrite:   true,
 			},
 

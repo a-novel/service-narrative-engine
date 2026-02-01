@@ -14,7 +14,6 @@ import (
 
 	"github.com/a-novel/service-narrative-engine/internal/config"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
-	"github.com/a-novel/service-narrative-engine/internal/models"
 	"github.com/a-novel/service-narrative-engine/internal/models/modules"
 	"github.com/a-novel/service-narrative-engine/internal/services"
 	servicesmocks "github.com/a-novel/service-narrative-engine/internal/services/mocks"
@@ -51,18 +50,6 @@ func TestModuleLoadSystem(t *testing.T) {
 			},
 		},
 		Required: []string{"title", "description"},
-	}
-
-	testModuleUI := models.ModuleUi{
-		Component: "test-component",
-		Params:    map[string]any{"key": "value"},
-		Target:    "title",
-	}
-
-	testModuleUIUpdated := models.ModuleUi{
-		Component: "updated-component",
-		Params:    map[string]any{"newKey": "newValue"},
-		Target:    "description",
 	}
 
 	validDescription := "This is a valid description that is at least 32 characters long."
@@ -103,7 +90,6 @@ func TestModuleLoadSystem(t *testing.T) {
 					Namespace:   "test-namespace",
 					Description: validDescription,
 					Schema:      testModuleSchema,
-					UI:          testModuleUI,
 				},
 				Version: "1.0.0",
 				DevMode: false,
@@ -116,7 +102,6 @@ func TestModuleLoadSystem(t *testing.T) {
 					Version:     "1.0.0",
 					Description: validDescription,
 					Schema:      testModuleSchema,
-					UI:          testModuleUI,
 					CreatedAt:   baseTime,
 				},
 			},
@@ -127,7 +112,6 @@ func TestModuleLoadSystem(t *testing.T) {
 				Version:     "1.0.0",
 				Description: validDescription,
 				Schema:      testModuleSchema,
-				UI:          testModuleUI,
 				CreatedAt:   baseTime,
 			},
 		},
@@ -140,7 +124,6 @@ func TestModuleLoadSystem(t *testing.T) {
 					Namespace:   "test-namespace",
 					Description: validDescription,
 					Schema:      testModuleSchema,
-					UI:          testModuleUI,
 				},
 				Version: "1.0.0",
 				DevMode: true,
@@ -158,7 +141,6 @@ func TestModuleLoadSystem(t *testing.T) {
 					Preversion:  "uuid-preversion",
 					Description: validDescription,
 					Schema:      testModuleSchema,
-					UI:          testModuleUI,
 					CreatedAt:   baseTime,
 				},
 			},
@@ -170,7 +152,6 @@ func TestModuleLoadSystem(t *testing.T) {
 				Preversion:  "uuid-preversion",
 				Description: validDescription,
 				Schema:      testModuleSchema,
-				UI:          testModuleUI,
 				CreatedAt:   baseTime,
 			},
 		},
@@ -183,7 +164,6 @@ func TestModuleLoadSystem(t *testing.T) {
 					Namespace:   "test-namespace",
 					Description: validDescription,
 					Schema:      testModuleSchemaUpdated,
-					UI:          testModuleUI,
 				},
 				Version: "1.0.0",
 				DevMode: true,
@@ -207,7 +187,6 @@ func TestModuleLoadSystem(t *testing.T) {
 					Preversion:  "old-preversion",
 					Description: validDescription,
 					Schema:      testModuleSchema, // Different from testModuleSchemaUpdated.
-					UI:          testModuleUI,
 					CreatedAt:   baseTime,
 				},
 			},
@@ -220,7 +199,6 @@ func TestModuleLoadSystem(t *testing.T) {
 					Preversion:  "new-uuid-preversion",
 					Description: validDescription,
 					Schema:      testModuleSchemaUpdated,
-					UI:          testModuleUI,
 					CreatedAt:   baseTime,
 				},
 			},
@@ -232,69 +210,6 @@ func TestModuleLoadSystem(t *testing.T) {
 				Preversion:  "new-uuid-preversion",
 				Description: validDescription,
 				Schema:      testModuleSchemaUpdated,
-				UI:          testModuleUI,
-				CreatedAt:   baseTime,
-			},
-		},
-		{
-			name: "Success/DevMode/ExistingVersionWithDifferentUI",
-
-			request: &services.ModuleLoadSystemRequest{
-				Module: modules.SystemModule{
-					ID:          "test-module",
-					Namespace:   "test-namespace",
-					Description: validDescription,
-					Schema:      testModuleSchema,
-					UI:          testModuleUIUpdated,
-				},
-				Version: "1.0.0",
-				DevMode: true,
-			},
-
-			moduleListVersionsMock: &moduleListVersionsMock{
-				resp: []*dao.ModuleVersion{
-					{
-						Version:    "1.0.0",
-						Preversion: "old-preversion",
-						CreatedAt:  baseTime,
-					},
-				},
-			},
-
-			moduleSelectMock: &moduleSelectMock{
-				resp: &dao.Module{
-					ID:          "test-module",
-					Namespace:   "test-namespace",
-					Version:     "1.0.0",
-					Preversion:  "old-preversion",
-					Description: validDescription,
-					Schema:      testModuleSchema,
-					UI:          testModuleUI, // Different from testModuleUIUpdated.
-					CreatedAt:   baseTime,
-				},
-			},
-
-			moduleInsertMock: &moduleInsertMock{
-				resp: &dao.Module{
-					ID:          "test-module",
-					Namespace:   "test-namespace",
-					Version:     "1.0.0",
-					Preversion:  "new-uuid-preversion",
-					Description: validDescription,
-					Schema:      testModuleSchema,
-					UI:          testModuleUIUpdated,
-					CreatedAt:   baseTime,
-				},
-			},
-
-			expect: &services.Module{
-				ID:          "test-module",
-				Namespace:   "test-namespace",
-				Version:     "1.0.0",
-				Preversion:  "new-uuid-preversion",
-				Description: validDescription,
-				Schema:      testModuleSchema,
-				UI:          testModuleUIUpdated,
 				CreatedAt:   baseTime,
 			},
 		},
@@ -307,7 +222,6 @@ func TestModuleLoadSystem(t *testing.T) {
 					Namespace:   "test-namespace",
 					Description: validDescription,
 					Schema:      testModuleSchema,
-					UI:          testModuleUI,
 				},
 				Version: "1.0.0",
 				DevMode: true,
@@ -331,7 +245,6 @@ func TestModuleLoadSystem(t *testing.T) {
 					Preversion:  "existing-preversion",
 					Description: validDescription,
 					Schema:      testModuleSchema, // Must be resolved to match service comparison.
-					UI:          testModuleUI,
 					CreatedAt:   baseTime,
 				},
 			},
@@ -345,7 +258,6 @@ func TestModuleLoadSystem(t *testing.T) {
 				Preversion:  "existing-preversion",
 				Description: validDescription,
 				Schema:      testModuleSchema,
-				UI:          testModuleUI,
 				CreatedAt:   baseTime,
 			},
 		},
@@ -358,7 +270,6 @@ func TestModuleLoadSystem(t *testing.T) {
 					Namespace:   "test-namespace",
 					Description: validDescription,
 					Schema:      testModuleSchema,
-					UI:          testModuleUI,
 				},
 				Version: "",
 				DevMode: false,
@@ -375,7 +286,6 @@ func TestModuleLoadSystem(t *testing.T) {
 					Namespace:   "test-namespace",
 					Description: validDescription,
 					Schema:      testModuleSchema,
-					UI:          testModuleUI,
 				},
 				Version: "invalid-version",
 				DevMode: false,
@@ -392,7 +302,6 @@ func TestModuleLoadSystem(t *testing.T) {
 					Namespace:   "test-namespace",
 					Description: validDescription,
 					Schema:      testModuleSchema,
-					UI:          testModuleUI,
 				},
 				Version: "1.0.0",
 				DevMode: true,
@@ -413,7 +322,6 @@ func TestModuleLoadSystem(t *testing.T) {
 					Namespace:   "test-namespace",
 					Description: validDescription,
 					Schema:      testModuleSchema,
-					UI:          testModuleUI,
 				},
 				Version: "1.0.0",
 				DevMode: true,
@@ -444,7 +352,6 @@ func TestModuleLoadSystem(t *testing.T) {
 					Namespace:   "test-namespace",
 					Description: validDescription,
 					Schema:      testModuleSchema,
-					UI:          testModuleUI,
 				},
 				Version: "1.0.0",
 				DevMode: false,
@@ -465,7 +372,6 @@ func TestModuleLoadSystem(t *testing.T) {
 					Namespace:   "test-namespace",
 					Description: validDescription,
 					Schema:      testModuleSchema,
-					UI:          testModuleUI,
 				},
 				Version: "1.0.0",
 				DevMode: false,

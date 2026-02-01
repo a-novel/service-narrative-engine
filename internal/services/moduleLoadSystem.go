@@ -102,8 +102,7 @@ func (service *ModuleLoadSystem) Exec(
 				return nil, otel.ReportError(span, fmt.Errorf("failed to retrieve latest module: %w", err))
 			}
 
-			if reflect.DeepEqual(latest.Schema, request.Module.Schema) &&
-				reflect.DeepEqual(latest.UI, request.Module.UI) {
+			if reflect.DeepEqual(latest.Schema, request.Module.Schema) {
 				return otel.ReportSuccess(span, loadModule(latest)), nil
 			}
 		}
@@ -118,7 +117,6 @@ func (service *ModuleLoadSystem) Exec(
 		Preversion:  lo.Ternary(request.DevMode, "-"+uuid.NewString(), ""),
 		Description: request.Module.Description,
 		Schema:      request.Module.Schema,
-		UI:          request.Module.UI,
 		Now:         time.Now(),
 	})
 	if err != nil {

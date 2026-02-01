@@ -17,7 +17,6 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 	"github.com/a-novel/service-narrative-engine/internal/handlers"
 	handlersmocks "github.com/a-novel/service-narrative-engine/internal/handlers/mocks"
-	"github.com/a-novel/service-narrative-engine/internal/models"
 	"github.com/a-novel/service-narrative-engine/internal/services"
 )
 
@@ -64,10 +63,6 @@ func TestModuleSelect(t *testing.T) {
 					Schema: jsonschema.Schema{
 						Type: "object",
 					},
-					UI: models.ModuleUi{
-						Component: "test-component",
-						Target:    "test-target",
-					},
 					CreatedAt: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
 				},
 			},
@@ -79,11 +74,6 @@ func TestModuleSelect(t *testing.T) {
 				"description": "A test module",
 				"schema": map[string]any{
 					"type": "object",
-				},
-				"ui": map[string]any{
-					"component": "test-component",
-					"params":    nil,
-					"target":    "test-target",
 				},
 				"createdAt": "2026-01-01T00:00:00Z",
 			},
@@ -111,10 +101,6 @@ func TestModuleSelect(t *testing.T) {
 					Schema: jsonschema.Schema{
 						Type: "object",
 					},
-					UI: models.ModuleUi{
-						Component: "test-component",
-						Target:    "test-target",
-					},
 					CreatedAt: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
 				},
 			},
@@ -127,11 +113,6 @@ func TestModuleSelect(t *testing.T) {
 				"description": "A test module",
 				"schema": map[string]any{
 					"type": "object",
-				},
-				"ui": map[string]any{
-					"component": "test-component",
-					"params":    nil,
-					"target":    "test-target",
 				},
 				"createdAt": "2026-01-01T00:00:00Z",
 			},

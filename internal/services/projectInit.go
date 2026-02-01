@@ -23,8 +23,8 @@ type ProjectInsertRepositorySchemaInsert interface {
 	Exec(ctx context.Context, request *dao.SchemaInsertRequest) (*dao.Schema, error)
 }
 
-type ProjectInsertRepositoryModuleSelect interface {
-	Exec(ctx context.Context, request *dao.ModuleSelectRequest) (*dao.Module, error)
+type ProjectInsertRepositoryModuleExists interface {
+	Exec(ctx context.Context, request *dao.ModuleSelectRequest) (bool, error)
 }
 
 type ProjectInitRequest struct {
@@ -37,18 +37,18 @@ type ProjectInitRequest struct {
 type ProjectInit struct {
 	projectInsertRepository             ProjectInsertRepository
 	projectInsertRepositorySchemaInsert ProjectInsertRepositorySchemaInsert
-	moduleSelectRepository              ProjectInsertRepositoryModuleSelect
+	moduleExistsRepository              ProjectInsertRepositoryModuleExists
 }
 
 func NewProjectInit(
 	projectInsertRepository ProjectInsertRepository,
 	projectInsertRepositorySchemaInsert ProjectInsertRepositorySchemaInsert,
-	moduleSelectRepository ProjectInsertRepositoryModuleSelect,
+	moduleExistsRepository ProjectInsertRepositoryModuleExists,
 ) *ProjectInit {
 	return &ProjectInit{
 		projectInsertRepository:             projectInsertRepository,
 		projectInsertRepositorySchemaInsert: projectInsertRepositorySchemaInsert,
-		moduleSelectRepository:              moduleSelectRepository,
+		moduleExistsRepository:              moduleExistsRepository,
 	}
 }
 
@@ -65,7 +65,7 @@ func (service *ProjectInit) Exec(ctx context.Context, request *ProjectInitReques
 	for _, module := range request.Workflow {
 		decodedModule := lib.DecodeModule(module)
 
-		_, err = service.moduleSelectRepository.Exec(ctx, &dao.ModuleSelectRequest{
+		exists, err := service.moduleExistsRepository.Exec(ctx, &dao.ModuleSelectRequest{
 			ID:         decodedModule.Module,
 			Namespace:  decodedModule.Namespace,
 			Version:    decodedModule.Version,
@@ -73,6 +73,10 @@ func (service *ProjectInit) Exec(ctx context.Context, request *ProjectInitReques
 		})
 		if err != nil {
 			return nil, otel.ReportError(span, err)
+		}
+
+		if !exists {
+			return nil, otel.ReportError(span, dao.ErrModuleSelectNotFound)
 		}
 	}
 

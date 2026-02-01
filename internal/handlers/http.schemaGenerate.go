@@ -23,9 +23,10 @@ type SchemaGenerateService interface {
 }
 
 type SchemaGenerateRequest struct {
-	ProjectID uuid.UUID `json:"projectID"`
-	Module    string    `json:"module"`
-	Lang      string    `json:"lang"`
+	ProjectID   uuid.UUID `json:"projectID"`
+	Module      string    `json:"module"`
+	Lang        string    `json:"lang"`
+	Instruction string    `json:"instruction,omitempty"`
 }
 
 type SchemaGenerate struct {
@@ -60,10 +61,11 @@ func (handler *SchemaGenerate) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	}
 
 	res, err := handler.service.Exec(ctx, &services.SchemaGenerateRequest{
-		ProjectID: request.ProjectID,
-		UserID:    lo.FromPtr(claims.UserID),
-		Module:    request.Module,
-		Lang:      request.Lang,
+		ProjectID:   request.ProjectID,
+		UserID:      lo.FromPtr(claims.UserID),
+		Module:      request.Module,
+		Lang:        request.Lang,
+		Instruction: request.Instruction,
 	})
 	if err != nil {
 		httpf.HandleError(ctx, handler.logger, w, span, httpf.ErrMap{
