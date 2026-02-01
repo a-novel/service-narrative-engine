@@ -30,8 +30,8 @@ type ProjectUpdateRepositorySchemaInsert interface {
 	Exec(ctx context.Context, request *dao.SchemaInsertRequest) (*dao.Schema, error)
 }
 
-type ProjectUpdateRepositoryModuleSelect interface {
-	Exec(ctx context.Context, request *dao.ModuleSelectRequest) (*dao.Module, error)
+type ProjectUpdateRepositoryModuleExists interface {
+	Exec(ctx context.Context, request *dao.ModuleSelectRequest) (bool, error)
 }
 
 type ProjectUpdateRequest struct {
@@ -45,20 +45,20 @@ type ProjectUpdate struct {
 	projectUpdateRepositorySelect       ProjectUpdateRepositorySelect
 	projectUpdateRepository             ProjectUpdateRepository
 	projectUpdateRepositorySchemaInsert ProjectUpdateRepositorySchemaInsert
-	moduleSelectRepository              ProjectUpdateRepositoryModuleSelect
+	moduleExistsRepository              ProjectUpdateRepositoryModuleExists
 }
 
 func NewProjectUpdate(
 	projectUpdateRepository ProjectUpdateRepository,
 	projectUpdateRepositorySelect ProjectUpdateRepositorySelect,
 	projectUpdateRepositorySchemaInsert ProjectUpdateRepositorySchemaInsert,
-	moduleSelectRepository ProjectUpdateRepositoryModuleSelect,
+	moduleExistsRepository ProjectUpdateRepositoryModuleExists,
 ) *ProjectUpdate {
 	return &ProjectUpdate{
 		projectUpdateRepositorySelect:       projectUpdateRepositorySelect,
 		projectUpdateRepository:             projectUpdateRepository,
 		projectUpdateRepositorySchemaInsert: projectUpdateRepositorySchemaInsert,
-		moduleSelectRepository:              moduleSelectRepository,
+		moduleExistsRepository:              moduleExistsRepository,
 	}
 }
 
@@ -87,7 +87,7 @@ func (service *ProjectUpdate) Exec(ctx context.Context, request *ProjectUpdateRe
 	for _, module := range request.Workflow {
 		decodedModule := lib.DecodeModule(module)
 
-		_, err = service.moduleSelectRepository.Exec(ctx, &dao.ModuleSelectRequest{
+		exists, err := service.moduleExistsRepository.Exec(ctx, &dao.ModuleSelectRequest{
 			ID:         decodedModule.Module,
 			Namespace:  decodedModule.Namespace,
 			Version:    decodedModule.Version,
@@ -95,6 +95,10 @@ func (service *ProjectUpdate) Exec(ctx context.Context, request *ProjectUpdateRe
 		})
 		if err != nil {
 			return nil, otel.ReportError(span, err)
+		}
+
+		if !exists {
+			return nil, otel.ReportError(span, dao.ErrModuleSelectNotFound)
 		}
 	}
 
