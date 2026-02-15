@@ -8,6 +8,8 @@ roles:
       - "auth:anon"
     permissions:
       - "modules:get"
+      - "modules:ids:list"
+      - "modules:namespaces:list"
       - "modules:versions:list"
       - "projects:create"
       - "projects:delete"

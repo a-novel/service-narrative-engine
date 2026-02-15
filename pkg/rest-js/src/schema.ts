@@ -72,6 +72,7 @@ export const SchemaGenerateRequestSchema = z.object({
   projectID: UUIDSchema,
   module: ModuleStringSchema,
   lang: LangSchema,
+  instruction: z.string().max(8192).optional(),
 });
 
 export type SchemaGenerateRequest = z.infer<typeof SchemaGenerateRequestSchema>;
@@ -127,7 +128,7 @@ export async function schemaListVersions(
   params.set("projectID", form.projectID);
   params.set("moduleID", form.moduleID);
   params.set("moduleNamespace", form.moduleNamespace);
-  params.set("limit", `${form.limit || 100}`);
+  params.set("limit", `${form.limit}`);
   params.set("offset", `${form.offset || 0}`);
 
   return await api.fetch(`/schemas/versions?${params.toString()}`, z.array(SchemaVersionEntrySchema), {
@@ -142,8 +143,10 @@ export async function schemaGenerate(
   form: SchemaGenerateRequest
 ): Promise<Schema> {
   return await api.fetch("/schemas/generate", SchemaSchema, {
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
+    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}`, Connection: "close" },
     method: "PUT",
     body: JSON.stringify(form),
+    // Let a 10min timeout because AI
+    signal: AbortSignal.timeout(10 * 60 * 1000),
   });
 }

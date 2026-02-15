@@ -317,20 +317,6 @@ func TestSchemaListVersions(t *testing.T) {
 			expectErr: services.ErrInvalidRequest,
 		},
 		{
-			name: "Error/InvalidRequest/OffsetTooLarge",
-
-			request: &services.SchemaListVersionsRequest{
-				ProjectID:       projectID,
-				UserID:          userID,
-				ModuleID:        "test-module",
-				ModuleNamespace: "test-namespace",
-				Limit:           10,
-				Offset:          8193,
-			},
-
-			expectErr: services.ErrInvalidRequest,
-		},
-		{
 			name: "Error/ProjectNotFound",
 
 			request: &services.SchemaListVersionsRequest{

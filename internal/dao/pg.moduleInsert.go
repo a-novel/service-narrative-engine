@@ -13,8 +13,6 @@ import (
 
 	"github.com/a-novel-kit/golib/otel"
 	"github.com/a-novel-kit/golib/postgres"
-
-	"github.com/a-novel/service-narrative-engine/internal/models"
 )
 
 //go:embed pg.moduleInsert.sql
@@ -29,7 +27,6 @@ type ModuleInsertRequest struct {
 	Preversion  string
 	Description string
 	Schema      jsonschema.Schema
-	UI          models.ModuleUi
 	Now         time.Time
 }
 
@@ -65,7 +62,6 @@ func (repository *ModuleInsert) Exec(ctx context.Context, request *ModuleInsertR
 		request.Preversion,
 		request.Description,
 		request.Schema,
-		request.UI,
 		request.Now,
 	).Scan(ctx, entity)
 	if err != nil {

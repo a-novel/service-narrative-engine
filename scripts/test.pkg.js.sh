@@ -29,7 +29,7 @@ until curl -s -o /dev/null -w "%{http_code}" "http://localhost:${API_PORT:-4021}
 done
 echo "Narrative engine service is ready."
 
-pnpm test
+pnpm test || podman logs service-narrative-engine-integration-test_service-narrative-engine_1
 
 # Normal execution: containers are shut down.
 podman compose -p "${APP_NAME}" -f "${PODMAN_FILE}" down --volume

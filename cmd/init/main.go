@@ -100,6 +100,7 @@ func processNamespace(
 			return fmt.Errorf("unmarshal file %s: %w", path, err)
 		}
 
+		module.Namespace = namespace
 		systemModules = append(systemModules, module)
 
 		return nil

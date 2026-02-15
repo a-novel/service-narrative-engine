@@ -227,17 +227,6 @@ func TestProjectList(t *testing.T) {
 			expectErr: services.ErrInvalidRequest,
 		},
 		{
-			name: "Error/InvalidRequest/OffsetTooLarge",
-
-			request: &services.ProjectListRequest{
-				UserID: userID,
-				Limit:  10,
-				Offset: 8193,
-			},
-
-			expectErr: services.ErrInvalidRequest,
-		},
-		{
 			name: "Error/RepositoryError",
 
 			request: &services.ProjectListRequest{

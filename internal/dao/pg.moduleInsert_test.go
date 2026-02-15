@@ -12,7 +12,6 @@ import (
 
 	"github.com/a-novel/service-narrative-engine/internal/config"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
-	"github.com/a-novel/service-narrative-engine/internal/models"
 )
 
 func TestModuleInsert(t *testing.T) {
@@ -24,14 +23,6 @@ func TestModuleInsert(t *testing.T) {
 			},
 		},
 		Required: []string{"field1"},
-	}
-
-	testUi := models.ModuleUi{
-		Component: "input",
-		Params: models.ModuleUiParams{
-			"placeholder": "Enter value",
-		},
-		Target: "field1",
 	}
 
 	testCases := []struct {
@@ -54,7 +45,6 @@ func TestModuleInsert(t *testing.T) {
 				Preversion:  "",
 				Description: "A test module",
 				Schema:      testSchema,
-				UI:          testUi,
 				Now:         time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
 			},
 
@@ -65,7 +55,6 @@ func TestModuleInsert(t *testing.T) {
 				Preversion:  "",
 				Description: "A test module",
 				Schema:      testSchema,
-				UI:          testUi,
 				CreatedAt:   time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
 			},
 		},
@@ -79,7 +68,6 @@ func TestModuleInsert(t *testing.T) {
 				Preversion:  "-beta-1",
 				Description: "A beta test module",
 				Schema:      testSchema,
-				UI:          testUi,
 				Now:         time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
 			},
 
@@ -90,7 +78,6 @@ func TestModuleInsert(t *testing.T) {
 				Preversion:  "-beta-1",
 				Description: "A beta test module",
 				Schema:      testSchema,
-				UI:          testUi,
 				CreatedAt:   time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
 			},
 		},
@@ -105,7 +92,6 @@ func TestModuleInsert(t *testing.T) {
 					Preversion:  "",
 					Description: "Version 1",
 					Schema:      testSchema,
-					UI:          testUi,
 					CreatedAt:   time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
 				},
 			},
@@ -117,7 +103,6 @@ func TestModuleInsert(t *testing.T) {
 				Preversion:  "",
 				Description: "Version 2",
 				Schema:      testSchema,
-				UI:          testUi,
 				Now:         time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC),
 			},
 
@@ -128,7 +113,6 @@ func TestModuleInsert(t *testing.T) {
 				Preversion:  "",
 				Description: "Version 2",
 				Schema:      testSchema,
-				UI:          testUi,
 				CreatedAt:   time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC),
 			},
 		},
@@ -143,7 +127,6 @@ func TestModuleInsert(t *testing.T) {
 					Preversion:  "",
 					Description: "Stable version",
 					Schema:      testSchema,
-					UI:          testUi,
 					CreatedAt:   time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
 				},
 			},
@@ -155,7 +138,6 @@ func TestModuleInsert(t *testing.T) {
 				Preversion:  "-beta-1",
 				Description: "Beta version",
 				Schema:      testSchema,
-				UI:          testUi,
 				Now:         time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC),
 			},
 
@@ -166,7 +148,6 @@ func TestModuleInsert(t *testing.T) {
 				Preversion:  "-beta-1",
 				Description: "Beta version",
 				Schema:      testSchema,
-				UI:          testUi,
 				CreatedAt:   time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC),
 			},
 		},
@@ -181,7 +162,6 @@ func TestModuleInsert(t *testing.T) {
 					Preversion:  "",
 					Description: "Existing module",
 					Schema:      testSchema,
-					UI:          testUi,
 					CreatedAt:   time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
 				},
 			},
@@ -193,7 +173,6 @@ func TestModuleInsert(t *testing.T) {
 				Preversion:  "",
 				Description: "Duplicate module",
 				Schema:      testSchema,
-				UI:          testUi,
 				Now:         time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC),
 			},
 
@@ -210,7 +189,6 @@ func TestModuleInsert(t *testing.T) {
 					Preversion:  "-beta-1",
 					Description: "Existing beta module",
 					Schema:      testSchema,
-					UI:          testUi,
 					CreatedAt:   time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
 				},
 			},
@@ -222,7 +200,6 @@ func TestModuleInsert(t *testing.T) {
 				Preversion:  "-beta-1",
 				Description: "Duplicate beta module",
 				Schema:      testSchema,
-				UI:          testUi,
 				Now:         time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC),
 			},
 

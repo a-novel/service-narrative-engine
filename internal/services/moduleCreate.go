@@ -13,7 +13,6 @@ import (
 
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 	"github.com/a-novel/service-narrative-engine/internal/lib"
-	"github.com/a-novel/service-narrative-engine/internal/models"
 )
 
 type ModuleCreateRepository interface {
@@ -28,7 +27,6 @@ type ModuleCreateRequest struct {
 	Module      string            `validate:"required,module,max=512"`
 	Description string            `validate:"required,min=32,max=512"`
 	Schema      jsonschema.Schema `validate:"required"`
-	UI          models.ModuleUi   `validate:"required"`
 	Overwrite   bool
 }
 
@@ -89,7 +87,6 @@ func (service *ModuleCreate) Exec(ctx context.Context, request *ModuleCreateRequ
 			Preversion:  decodedModule.Preversion,
 			Description: request.Description,
 			Schema:      *resolved.Schema(),
-			UI:          request.UI,
 			Now:         time.Now().UTC(),
 		})
 

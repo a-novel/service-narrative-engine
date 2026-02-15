@@ -299,6 +299,73 @@ func TestSchemaGenerate(t *testing.T) {
 			},
 		},
 		{
+			name: "Success/WithInstruction",
+
+			request: &services.SchemaGenerateRequest{
+				ProjectID:   projectID,
+				UserID:      ownerID,
+				Module:      "test-namespace:test-module@v1.0.0",
+				Lang:        config.LangEN,
+				Instruction: "The title must contain the word Dragon.",
+			},
+
+			projectSelectMock: &projectSelectMock{
+				resp: &dao.Project{
+					ID:        projectID,
+					Owner:     ownerID,
+					Lang:      config.LangEN,
+					Title:     "Test Project",
+					Workflow:  []string{"test-namespace:test-module@v1.0.0"},
+					CreatedAt: baseTime,
+					UpdatedAt: baseTime,
+				},
+			},
+
+			moduleSelectMock: &moduleSelectMock{
+				resp: &dao.Module{
+					ID:        "test-module",
+					Namespace: "test-namespace",
+					Version:   "1.0.0",
+					Schema:    testModuleSchema,
+					CreatedAt: baseTime,
+				},
+			},
+
+			schemaListMock: &schemaListMock{
+				resp: []*dao.Schema{},
+			},
+
+			schemaGenerateMock: &schemaGenerateMock{
+				resp: map[string]any{"title": "The Dragon King"},
+			},
+
+			schemaInsertMock: &schemaInsertMock{
+				resp: &dao.Schema{
+					ID:              schemaID,
+					ProjectID:       projectID,
+					Owner:           &ownerID,
+					ModuleID:        "test-module",
+					ModuleNamespace: "test-namespace",
+					ModuleVersion:   "1.0.0",
+					Source:          dao.SchemaSourceAI,
+					Data:            map[string]any{"title": "The Dragon King"},
+					CreatedAt:       baseTime,
+				},
+			},
+
+			expect: &services.Schema{
+				ID:              schemaID,
+				ProjectID:       projectID,
+				Owner:           &ownerID,
+				ModuleID:        "test-module",
+				ModuleNamespace: "test-namespace",
+				ModuleVersion:   "1.0.0",
+				Source:          "AI",
+				Data:            map[string]any{"title": "The Dragon King"},
+				CreatedAt:       baseTime,
+			},
+		},
+		{
 			name: "Error/InvalidRequest/MissingProjectID",
 
 			request: &services.SchemaGenerateRequest{
@@ -632,12 +699,13 @@ func TestSchemaGenerate(t *testing.T) {
 				if testCase.schemaGenerateMock != nil {
 					decodedModule := lib.DecodeModule(testCase.request.Module)
 					schemaGenerateRepository.EXPECT().
-						Exec(mock.Anything, mock.MatchedBy(func(req *dao.ModuleGenerateRequest) bool {
+						Exec(mock.Anything, mock.MatchedBy(func(req *dao.SchemaGenerateRequest) bool {
 							return req.Module.ID == testCase.moduleSelectMock.resp.ID &&
 								req.Module.Namespace == testCase.moduleSelectMock.resp.Namespace &&
 								req.Module.Version == testCase.moduleSelectMock.resp.Version &&
 								req.Module.Preversion == testCase.moduleSelectMock.resp.Preversion &&
 								req.Lang == testCase.request.Lang &&
+								req.Instruction == testCase.request.Instruction &&
 								// Verify that the context excludes the module being generated.
 								!lo.ContainsBy(req.Context.([]*dao.Schema), func(s *dao.Schema) bool {
 									return s.ModuleNamespace == decodedModule.Namespace && s.ModuleID == decodedModule.Module

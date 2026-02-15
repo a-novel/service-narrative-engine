@@ -14,7 +14,7 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-func TestModuleSelect(t *testing.T) {
+func TestModuleExists(t *testing.T) {
 	testSchema := jsonschema.Schema{
 		Type: "object",
 		Properties: map[string]*jsonschema.Schema{
@@ -32,8 +32,7 @@ func TestModuleSelect(t *testing.T) {
 
 		request *dao.ModuleSelectRequest
 
-		expect    *dao.Module
-		expectErr error
+		expect bool
 	}{
 		{
 			name: "Success",
@@ -57,15 +56,7 @@ func TestModuleSelect(t *testing.T) {
 				Preversion: "",
 			},
 
-			expect: &dao.Module{
-				ID:          "test-module",
-				Namespace:   "test-namespace",
-				Version:     "1.0.0",
-				Preversion:  "",
-				Description: "A test module",
-				Schema:      testSchema,
-				CreatedAt:   time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
-			},
+			expect: true,
 		},
 		{
 			name: "Success/MultipleVersions",
@@ -98,18 +89,10 @@ func TestModuleSelect(t *testing.T) {
 				Preversion: "",
 			},
 
-			expect: &dao.Module{
-				ID:          "test-module",
-				Namespace:   "test-namespace",
-				Version:     "2.0.0",
-				Preversion:  "",
-				Description: "Version 2",
-				Schema:      testSchema,
-				CreatedAt:   time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC),
-			},
+			expect: true,
 		},
 		{
-			name: "Error/NotFound",
+			name: "NotFound",
 
 			request: &dao.ModuleSelectRequest{
 				ID:         "test-module",
@@ -118,7 +101,7 @@ func TestModuleSelect(t *testing.T) {
 				Preversion: "",
 			},
 
-			expectErr: dao.ErrModuleSelectNotFound,
+			expect: false,
 		},
 		{
 			name: "Success/EmptyVersionReturnsLatestStable",
@@ -160,15 +143,7 @@ func TestModuleSelect(t *testing.T) {
 				Preversion: "",
 			},
 
-			expect: &dao.Module{
-				ID:          "test-module",
-				Namespace:   "test-namespace",
-				Version:     "3.0.0",
-				Preversion:  "",
-				Description: "Version 3",
-				Schema:      testSchema,
-				CreatedAt:   time.Date(2021, 1, 3, 0, 0, 0, 0, time.UTC),
-			},
+			expect: true,
 		},
 		{
 			name: "Success/EmptyVersionIgnoresPreversions",
@@ -210,15 +185,7 @@ func TestModuleSelect(t *testing.T) {
 				Preversion: "",
 			},
 
-			expect: &dao.Module{
-				ID:          "test-module",
-				Namespace:   "test-namespace",
-				Version:     "1.0.0",
-				Preversion:  "",
-				Description: "Stable version",
-				Schema:      testSchema,
-				CreatedAt:   time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
-			},
+			expect: true,
 		},
 		{
 			name: "Success/SelectWithPreversion",
@@ -251,18 +218,10 @@ func TestModuleSelect(t *testing.T) {
 				Preversion: "-beta-1",
 			},
 
-			expect: &dao.Module{
-				ID:          "test-module",
-				Namespace:   "test-namespace",
-				Version:     "1.0.0",
-				Preversion:  "-beta-1",
-				Description: "Beta version",
-				Schema:      testSchema,
-				CreatedAt:   time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC),
-			},
+			expect: true,
 		},
 		{
-			name: "Error/WrongVersion",
+			name: "WrongVersion",
 
 			fixtures: []*dao.Module{
 				{
@@ -283,10 +242,10 @@ func TestModuleSelect(t *testing.T) {
 				Preversion: "",
 			},
 
-			expectErr: dao.ErrModuleSelectNotFound,
+			expect: false,
 		},
 		{
-			name: "Error/WrongPreversion",
+			name: "WrongPreversion",
 
 			fixtures: []*dao.Module{
 				{
@@ -307,11 +266,35 @@ func TestModuleSelect(t *testing.T) {
 				Preversion: "-beta-1",
 			},
 
-			expectErr: dao.ErrModuleSelectNotFound,
+			expect: false,
+		},
+		{
+			name: "EmptyVersionNoStableVersion",
+
+			fixtures: []*dao.Module{
+				{
+					ID:          "test-module",
+					Namespace:   "test-namespace",
+					Version:     "1.0.0",
+					Preversion:  "-beta-1",
+					Description: "Beta version",
+					Schema:      testSchema,
+					CreatedAt:   time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+				},
+			},
+
+			request: &dao.ModuleSelectRequest{
+				ID:         "test-module",
+				Namespace:  "test-namespace",
+				Version:    "",
+				Preversion: "",
+			},
+
+			expect: false,
 		},
 	}
 
-	repository := dao.NewModuleSelect()
+	repository := dao.NewModuleExists()
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -326,9 +309,9 @@ func TestModuleSelect(t *testing.T) {
 					require.NoError(t, err)
 				}
 
-				module, err := repository.Exec(ctx, testCase.request)
-				require.ErrorIs(t, err, testCase.expectErr)
-				require.Equal(t, testCase.expect, module)
+				exists, err := repository.Exec(ctx, testCase.request)
+				require.NoError(t, err)
+				require.Equal(t, testCase.expect, exists)
 			})
 		})
 	}

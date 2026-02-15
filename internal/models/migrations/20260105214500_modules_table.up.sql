@@ -12,8 +12,6 @@ CREATE TABLE modules (
   -- Schema defines the shape of the module output. It must be compatible with openAI Api structured outputs:
   -- https://platform.openai.com/docs/guides/structured-outputs
   schema json NOT NULL,
-  -- UI definition to interact with the module.
-  ui json NOT NULL,
   created_at timestamp(0) with time zone NOT NULL,
   -- Multiple versions of a module can be stored in any given namespace.
   PRIMARY KEY (id, namespace, version, preversion)

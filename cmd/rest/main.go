@@ -61,9 +61,11 @@ func main() {
 
 	repositoryModuleInsert := dao.NewModuleInsert()
 	repositoryModuleSelect := dao.NewModuleSelect()
+	repositoryModuleExists := dao.NewModuleExists()
 	repositoryModuleDelete := dao.NewModuleDelete()
 	repositoryModuleListVersions := dao.NewModuleListVersions()
-	repositoryModuleGenerate := dao.NewModuleGenerate()
+	repositoryModuleListNamespaces := dao.NewModuleListNamespaces()
+	repositoryModuleListIDs := dao.NewModuleListIDs()
 
 	repositoryProjectInsert := dao.NewProjectInsert()
 	repositoryProjectSelect := dao.NewProjectSelect()
@@ -76,6 +78,7 @@ func main() {
 	repositorySchemaUpdate := dao.NewSchemaUpdate()
 	repositorySchemaList := dao.NewSchemaList()
 	repositorySchemaListVersions := dao.NewSchemaListVersions()
+	repositorySchemaGenerate := dao.NewSchemaGenerate()
 
 	// =================================================================================================================
 	// SERVICES
@@ -84,9 +87,11 @@ func main() {
 	serviceModuleCreate := services.NewModuleCreate(repositoryModuleInsert, repositoryModuleDelete)
 	serviceModuleSelect := services.NewModuleSelect(repositoryModuleSelect)
 	serviceModuleListVersions := services.NewModuleListVersions(repositoryModuleListVersions)
+	serviceModuleListNamespaces := services.NewModuleListNamespaces(repositoryModuleListNamespaces)
+	serviceModuleListIDs := services.NewModuleListIDs(repositoryModuleListIDs)
 
 	serviceProjectInit := services.NewProjectInit(
-		repositoryProjectInsert, repositorySchemaInsert, repositoryModuleSelect,
+		repositoryProjectInsert, repositorySchemaInsert, repositoryModuleExists,
 	)
 	serviceProjectDelete := services.NewProjectDelete(repositoryProjectDelete, repositoryProjectSelect)
 	serviceProjectList := services.NewProjectList(repositoryProjectList)
@@ -94,7 +99,7 @@ func main() {
 		repositoryProjectUpdate,
 		repositoryProjectSelect,
 		repositorySchemaInsert,
-		repositoryModuleSelect,
+		repositoryModuleExists,
 	)
 
 	serviceSchemaCreate := services.NewSchemaCreate(
@@ -103,7 +108,7 @@ func main() {
 		repositoryModuleSelect,
 	)
 	serviceSchemaGenerate := services.NewSchemaGenerate(
-		repositoryModuleGenerate,
+		repositorySchemaGenerate,
 		repositorySchemaList,
 		repositorySchemaInsert,
 		repositoryProjectSelect,
@@ -135,6 +140,8 @@ func main() {
 
 	handlerModuleSelect := handlers.NewModuleSelect(serviceModuleSelect, cfg.Logger)
 	handlerModuleListVersions := handlers.NewModuleListVersions(serviceModuleListVersions, cfg.Logger)
+	handlerModuleListNamespaces := handlers.NewModuleListNamespaces(serviceModuleListNamespaces, cfg.Logger)
+	handlerModuleListIDs := handlers.NewModuleListIDs(serviceModuleListIDs, cfg.Logger)
 
 	handlerProjectInit := handlers.NewProjectInit(serviceProjectInit, cfg.Logger)
 	handlerProjectDelete := handlers.NewProjectDelete(serviceProjectDelete, cfg.Logger)
@@ -179,6 +186,8 @@ func main() {
 
 	router.Route("/modules", func(r chi.Router) {
 		withAuth(r, "modules:get").Get("/", handlerModuleSelect.ServeHTTP)
+		withAuth(r, "modules:ids:list").Get("/ids", handlerModuleListIDs.ServeHTTP)
+		withAuth(r, "modules:namespaces:list").Get("/namespaces", handlerModuleListNamespaces.ServeHTTP)
 		withAuth(r, "modules:versions:list").Get("/versions", handlerModuleListVersions.ServeHTTP)
 	})
 

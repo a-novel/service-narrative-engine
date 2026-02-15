@@ -6,7 +6,6 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 
-	"github.com/a-novel/service-narrative-engine/internal/models"
 	"github.com/a-novel/service-narrative-engine/internal/models/modules"
 )
 
@@ -148,38 +147,6 @@ schema:
 			},
 		},
 		{
-			name: "WithUIComponent",
-			input: `
-id: ui-test
-namespace: test
-description: Test UI component
-schema:
-  type: object
-  properties:
-    content:
-      type: string
-ui:
-  component: text-editor
-  target: content
-  params:
-    maxLength: 1000
-    placeholder: Enter text here
-`,
-			expect: modules.SystemModule{
-				ID:          "ui-test",
-				Namespace:   "test",
-				Description: "Test UI component",
-				UI: models.ModuleUi{
-					Component: "text-editor",
-					Target:    "content",
-					Params: map[string]any{
-						"maxLength":   float64(1000),
-						"placeholder": "Enter text here",
-					},
-				},
-			},
-		},
-		{
 			name: "EmptyUI",
 			input: `
 id: empty-ui
@@ -196,7 +163,6 @@ ui:
 				ID:          "empty-ui",
 				Namespace:   "test",
 				Description: "Test empty UI",
-				UI:          models.ModuleUi{},
 			},
 		},
 		{
@@ -234,7 +200,6 @@ schema:
 			require.Equal(t, tc.expect.ID, module.ID)
 			require.Equal(t, tc.expect.Namespace, module.Namespace)
 			require.Equal(t, tc.expect.Description, module.Description)
-			require.Equal(t, tc.expect.UI, module.UI)
 		})
 	}
 }

@@ -6,7 +6,6 @@ import (
 	"github.com/google/jsonschema-go/jsonschema"
 
 	"github.com/a-novel/service-narrative-engine/internal/dao"
-	"github.com/a-novel/service-narrative-engine/internal/models"
 )
 
 type Module struct {
@@ -16,7 +15,6 @@ type Module struct {
 	Preversion  string
 	Description string
 	Schema      jsonschema.Schema
-	UI          models.ModuleUi
 	CreatedAt   time.Time
 }
 
@@ -28,7 +26,6 @@ func loadModule(module *dao.Module) *Module {
 		Preversion:  module.Preversion,
 		Description: module.Description,
 		Schema:      module.Schema,
-		UI:          module.UI,
 		CreatedAt:   module.CreatedAt,
 	}
 }

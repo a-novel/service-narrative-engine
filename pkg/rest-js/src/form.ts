@@ -34,7 +34,7 @@ export type ModuleString = z.infer<typeof ModuleStringSchema>;
 export const UUIDSchema = z.uuid();
 export type UUID = z.infer<typeof UUIDSchema>;
 
-export const LimitSchema = z.int().min(1).max(100).optional();
+export const LimitSchema = z.int().min(1).max(100);
 export type Limit = z.infer<typeof LimitSchema>;
 
 export const OffsetSchema = z.int().min(0).optional();

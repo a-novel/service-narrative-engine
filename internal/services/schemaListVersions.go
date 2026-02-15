@@ -26,7 +26,7 @@ type SchemaListVersionsRequest struct {
 	ModuleID        string    `validate:"required,max=128,moduleName"`
 	ModuleNamespace string    `validate:"required,max=128,moduleName"`
 	Limit           int       `validate:"required,min=1,max=128"`
-	Offset          int       `validate:"omitempty,min=0,max=8192"`
+	Offset          int       `validate:"omitempty,min=0"`
 }
 
 type SchemaListVersions struct {

@@ -1,0 +1,198 @@
+id: idea
+
+description: |
+  Raw intake + guided braindump. Captures source pitch, intent, constraints, and pipeline settings that seed
+  Concept/Characters/Beats/Scenes/Script.
+
+# Generated with https://json.ophir.dev/
+# JSON to YAML: https://www.bairesdev.com/tools/json2yaml/
+schema:
+  type: object
+  additionalProperties: false
+  properties:
+    hook:
+      type: object
+      additionalProperties: false
+      properties:
+        logline:
+          minLength: 1
+          maxLength: 256
+          type: string
+          description: A short, 1-2 sentences description of the story.
+        title:
+          minLength: 1
+          maxLength: 128
+          type: string
+        type:
+          enum:
+            - original
+            - fork
+          type: string
+        genre:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            enum:
+              - sci-fi
+              - fantasy
+              - cyberpunk
+              - noir
+              - mystery
+              - thriller
+              - romance
+              - horror
+              - adventure
+              - dystopian
+              - historical
+              - western
+              - comedy
+              - drama
+              - action
+              - psychological
+              - supernatural
+              - space opera
+              - urban fantasy
+              - crime
+              - biopunk
+              - steampunk
+              - slice of life
+              - satire
+          maxItems: 10
+        intrigue:
+          minLength: 1
+          maxLength: 1024
+          type: string
+          description: The question that pulls us forward
+        tone:
+          type: array
+          items:
+            type: string
+            enum:
+              - dark
+              - gritty
+              - optimistic
+              - whimsical
+              - serious
+              - humorous
+              - cynical
+              - hopeful
+              - melancholic
+              - tense
+              - epic
+              - intimate
+              - surreal
+              - grounded
+              - fast-paced
+              - slow-burn
+              - atmospheric
+              - violent
+              - heartwarming
+              - eerie
+              - satirical
+              - bittersweet
+              - philosophical
+      required:
+        - logline
+        - title
+        - type
+        - genre
+        - intrigue
+        - tone
+    heart:
+      type: object
+      additionalProperties: false
+      properties:
+        theme:
+          minLength: 1
+          maxLength: 1024
+          type: string
+        conflict:
+          type: object
+          additionalProperties: false
+          properties:
+            inner:
+              minLength: 1
+              maxLength: 1024
+              type: string
+            outer:
+              minLength: 1
+              maxLength: 1024
+              type: string
+            stakes:
+              minLength: 1
+              maxLength: 1024
+              type: string
+          required:
+            - inner
+            - stakes
+            - outer
+        resolution:
+          minLength: 1
+          maxLength: 65536
+          type: string
+          description: What happens (neutral, structural)...
+        moral:
+          minLength: 1
+          maxLength: 4096
+          type: string
+      required:
+        - theme
+        - conflict
+        - resolution
+        - moral
+    world:
+      type: object
+      additionalProperties: false
+      properties:
+        premise:
+          minLength: 1
+          maxLength: 8192
+          type: string
+          description: Extended logline
+        lore:
+          minLength: 1
+          maxLength: 65536
+          type: string
+        setting:
+          minLength: 1
+          maxLength: 4096
+          type: string
+          description: The environment the story takes place in
+        time:
+          minLength: 1
+          maxLength: 8192
+          type: string
+          description: Era / Chronology / Timeline
+        world:
+          minLength: 1
+          maxLength: 4096
+          type: string
+          description: A short summary of the type of world the story is about
+        advancement:
+          minLength: 1
+          maxLength: 4096
+          type: string
+          description: |
+            The level of presence of tech / magic in the world, and the level of advancement civilisation has made
+            mastering it (eg. High-Tech Alchemy, Medieval Magic, etc.)
+      required:
+        - premise
+        - lore
+        - setting
+        - time
+        - world
+        - advancement
+    players:
+      type: array
+      description: Key characters roles of the story.
+      items:
+        minLength: 1
+        maxLength: 128
+        type: string
+      maxItems: 10
+  required:
+    - hook
+    - heart
+    - world
+    - players

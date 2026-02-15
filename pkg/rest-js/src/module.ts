@@ -13,14 +13,6 @@ import { HTTP_HEADERS } from "@a-novel-kit/nodelib-browser/http";
 
 import { z } from "zod";
 
-export const ModuleUiSchema = z.object({
-  component: z.string(),
-  params: z.union([z.record(z.string(), z.unknown()), z.null()]),
-  target: z.string(),
-});
-
-export type ModuleUi = z.infer<typeof ModuleUiSchema>;
-
 export const ModuleSchema = z.object({
   id: ModuleIDSchema,
   namespace: ModuleNamespaceSchema,
@@ -28,7 +20,6 @@ export const ModuleSchema = z.object({
   preversion: ModulePreversionSchema,
   description: z.string(),
   schema: z.record(z.string(), z.unknown()),
-  ui: ModuleUiSchema,
   createdAt: z.iso.datetime().transform((value) => new Date(value)),
 });
 
@@ -48,9 +39,24 @@ export const ModuleSelectRequestSchema = z.object({
 
 export type ModuleSelectRequest = z.infer<typeof ModuleSelectRequestSchema>;
 
+export const ModuleListNamespacesRequestSchema = z.object({
+  limit: LimitSchema,
+  offset: OffsetSchema,
+});
+
+export type ModuleListNamespacesRequest = z.infer<typeof ModuleListNamespacesRequestSchema>;
+
+export const ModuleListIDsRequestSchema = z.object({
+  namespace: ModuleNamespaceSchema,
+  limit: LimitSchema,
+  offset: OffsetSchema,
+});
+
+export type ModuleListIDsRequest = z.infer<typeof ModuleListIDsRequestSchema>;
+
 export const ModuleListVersionsRequestSchema = z.object({
-  id: ModuleIDSchema.optional(),
-  namespace: ModuleNamespaceSchema.optional(),
+  id: ModuleIDSchema,
+  namespace: ModuleNamespaceSchema,
   version: ModuleVersionSchema.optional(),
   preversion: z.boolean().optional(),
   limit: LimitSchema,
@@ -73,17 +79,48 @@ export async function moduleSelect(
   });
 }
 
+export async function moduleListNamespaces(
+  api: NarrativeEngineApi,
+  accessToken: string,
+  form: ModuleListNamespacesRequest
+): Promise<string[]> {
+  const params = new URLSearchParams();
+  params.set("limit", `${form.limit}`);
+  params.set("offset", `${form.offset || 0}`);
+
+  return await api.fetch(`/modules/namespaces?${params.toString()}`, z.array(z.string()), {
+    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
+    method: "GET",
+  });
+}
+
+export async function moduleListIDs(
+  api: NarrativeEngineApi,
+  accessToken: string,
+  form: ModuleListIDsRequest
+): Promise<string[]> {
+  const params = new URLSearchParams();
+  params.set("namespace", form.namespace);
+  params.set("limit", `${form.limit}`);
+  params.set("offset", `${form.offset || 0}`);
+
+  return await api.fetch(`/modules/ids?${params.toString()}`, z.array(z.string()), {
+    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
+    method: "GET",
+  });
+}
+
 export async function moduleListVersions(
   api: NarrativeEngineApi,
   accessToken: string,
   form: ModuleListVersionsRequest
 ): Promise<ModuleVersionEntry[]> {
   const params = new URLSearchParams();
-  params.set("limit", `${form.limit || 100}`);
+  params.set("id", form.id);
+  params.set("namespace", form.namespace);
+  params.set("limit", `${form.limit}`);
   params.set("offset", `${form.offset || 0}`);
 
-  if (form.id) params.set("id", form.id);
-  if (form.namespace) params.set("namespace", form.namespace);
   if (form.version) params.set("version", form.version);
   if (form.preversion !== undefined) params.set("preversion", `${form.preversion}`);
 

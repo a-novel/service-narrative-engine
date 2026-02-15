@@ -15,7 +15,6 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/config"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 	"github.com/a-novel/service-narrative-engine/internal/lib"
-	"github.com/a-novel/service-narrative-engine/internal/models"
 	"github.com/a-novel/service-narrative-engine/internal/services"
 	servicesmocks "github.com/a-novel/service-narrative-engine/internal/services/mocks"
 )
@@ -35,12 +34,6 @@ func TestModuleSelect(t *testing.T) {
 			},
 		},
 		Required: []string{"title"},
-	}
-
-	testModuleUI := models.ModuleUi{
-		Component: "test-component",
-		Params:    map[string]any{"key": "value"},
-		Target:    "title",
 	}
 
 	validDescription := "This is a valid description that is at least 32 characters long."
@@ -74,7 +67,6 @@ func TestModuleSelect(t *testing.T) {
 					Version:     "1.0.0",
 					Description: validDescription,
 					Schema:      testModuleSchema,
-					UI:          testModuleUI,
 					CreatedAt:   baseTime,
 				},
 			},
@@ -85,7 +77,6 @@ func TestModuleSelect(t *testing.T) {
 				Version:     "1.0.0",
 				Description: validDescription,
 				Schema:      testModuleSchema,
-				UI:          testModuleUI,
 				CreatedAt:   baseTime,
 			},
 		},
@@ -104,7 +95,6 @@ func TestModuleSelect(t *testing.T) {
 					Preversion:  "-beta-1",
 					Description: validDescription,
 					Schema:      testModuleSchema,
-					UI:          testModuleUI,
 					CreatedAt:   baseTime,
 				},
 			},
@@ -116,7 +106,6 @@ func TestModuleSelect(t *testing.T) {
 				Preversion:  "-beta-1",
 				Description: validDescription,
 				Schema:      testModuleSchema,
-				UI:          testModuleUI,
 				CreatedAt:   baseTime,
 			},
 		},

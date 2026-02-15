@@ -1,0 +1,82 @@
+id: concept
+
+description: |
+  13-slot Concept foundation (Concept Engine) plus optional story-level Canon DNA (Narrative Engine).
+
+# Generated with https://json.ophir.dev/
+# JSON to YAML: https://www.bairesdev.com/tools/json2yaml/
+schema:
+  type: object
+  additionalProperties: false
+  properties:
+    canon:
+      type: object
+      additionalProperties: false
+      properties:
+        thematic:
+          type: object
+          additionalProperties: false
+          properties:
+            negative:
+              minLength: 1
+              maxLength: 4096
+              type: string
+              description: The negative, pessimistic pole of the thematic
+            central:
+              minLength: 1
+              maxLength: 4096
+              type: string
+              description: The central conflict of the thematic
+            positive:
+              minLength: 1
+              maxLength: 4096
+              type: string
+              description: The positive, optimistic pole of the thematic
+          required:
+            - negative
+            - positive
+            - central
+        relationship:
+          type: object
+          additionalProperties: false
+          description: The relationship between the protagonist and antagonist of the
+            story
+          properties:
+            archetype:
+              minLength: 1
+              maxLength: 256
+              type: string
+              description: The archetypal pattern between the protagonist and antagonist
+            promise:
+              type: string
+              description: The climax / resolution of the conflct between the protagonist
+                and antagonist.
+          required:
+            - archetype
+            - promise
+      required:
+        - thematic
+        - relationship
+    codex:
+      type: array
+      description: An encyclopedical list of detailed lore elements.
+      minItems: 0
+      items:
+        type: object
+        additionalProperties: false
+        properties:
+          title:
+            minLength: 1
+            maxLength: 256
+            type: string
+          content:
+            minLength: 1
+            maxLength: 65536
+            type: string
+        required:
+          - title
+          - content
+      maxItems: 256
+  required:
+    - canon
+    - codex

@@ -102,6 +102,59 @@ paths:
         default:
           $ref: "#/components/responses/internalError"
 
+  /modules/namespaces:
+    get:
+      operationId: moduleListNamespaces
+      summary: List available module namespaces.
+      description: |
+        Retrieve a paginated list of distinct module namespaces, sorted alphabetically.
+      tags: [modules]
+      security:
+        - BearerAuth: ["modules:namespaces:list"]
+      parameters:
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/offset"
+      responses:
+        "200":
+          $ref: "#/components/responses/moduleListNamespaces"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+        default:
+          $ref: "#/components/responses/internalError"
+
+  /modules/ids:
+    get:
+      operationId: moduleListIDs
+      summary: List available modules within a namespace.
+      description: |
+        Retrieve a paginated list of distinct module IDs within a given namespace, sorted alphabetically.
+      tags: [modules]
+      security:
+        - BearerAuth: ["modules:ids:list"]
+      parameters:
+        - $ref: "#/components/parameters/moduleNamespace"
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/offset"
+      responses:
+        "200":
+          $ref: "#/components/responses/moduleListIDs"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+        default:
+          $ref: "#/components/responses/internalError"
+
   /modules/versions:
     get:
       operationId: moduleListVersions
@@ -429,6 +482,28 @@ components:
           schema:
             $ref: "#/components/schemas/module"
 
+    moduleListNamespaces:
+      description: List of distinct module namespaces.
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              type: string
+            examples:
+              - ["agora", "custom"]
+
+    moduleListIDs:
+      description: List of distinct module IDs within a namespace.
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              type: string
+            examples:
+              - ["idea", "concept"]
+
     moduleListVersions:
       description: List of module versions.
       content:
@@ -521,8 +596,8 @@ components:
 
     module:
       type: object
-      description: A module definition that provides structure and UI configuration for narrative content creation and editing.
-      required: [id, namespace, version, description, schema, ui, createdAt]
+      description: A module definition that provides structure for narrative content creation and editing.
+      required: [id, namespace, version, description, schema, createdAt]
       properties:
         id:
           $ref: "#/components/schemas/moduleIDField"
@@ -539,8 +614,6 @@ components:
         schema:
           type: object
           description: JSON Schema defining the structure of content created with this module.
-        ui:
-          $ref: "#/components/schemas/moduleUi"
         createdAt:
           type: string
           format: date-time
@@ -561,24 +634,6 @@ components:
           format: date-time
           description: Timestamp when the version was created.
           examples: [2009-11-10T23:00:00Z]
-
-    moduleUi:
-      type: object
-      description: UI configuration for rendering module content.
-      required: [component, params, target]
-      properties:
-        component:
-          type: string
-          description: The ID of the UI component to render.
-          examples: ["text-editor", "form-builder"]
-        params:
-          type: object
-          description: Parameters for the UI component.
-          additionalProperties: true
-        target:
-          type: string
-          description: Target field where the UI editable content will be written. Leave empty for pass-through.
-          examples: ["content", ""]
 
     project:
       type: object
@@ -725,7 +780,7 @@ components:
       name: id
       in: query
       description: The module ID to filter by.
-      required: false
+      required: true
       schema:
         $ref: "#/components/schemas/moduleIDField"
 
@@ -733,7 +788,7 @@ components:
       name: namespace
       in: query
       description: The module namespace to filter by.
-      required: false
+      required: true
       schema:
         $ref: "#/components/schemas/moduleNamespaceField"
 
@@ -789,7 +844,7 @@ components:
       name: limit
       in: query
       description: Limit the number of results.
-      required: false
+      required: true
       schema:
         $ref: "#/components/schemas/limit"
 
@@ -915,3 +970,8 @@ components:
                 examples: ["agora:idea@v1.0.0"]
               lang:
                 $ref: "#/components/schemas/lang"
+              instruction:
+                type: string
+                description: Optional additional instructions to guide the AI generation.
+                maxLength: 8192
+                examples: ["The title must contain the word Dragon."]
