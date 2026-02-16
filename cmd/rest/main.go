@@ -162,7 +162,6 @@ func main() {
 
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.RealIP)
-	router.Use(middleware.Timeout(cfg.Api.Timeouts.Request))
 	router.Use(middleware.RequestSize(cfg.Api.MaxRequestSize))
 	router.Use(cfg.Otel.HttpHandler())
 	router.Use(cors.Handler(cors.Options{
@@ -181,29 +180,39 @@ func main() {
 	}))
 	router.Use(cfg.HttpLogger.Logger())
 
-	router.Get("/ping", handlerPing.ServeHTTP)
-	router.Get("/healthcheck", handlerHealth.ServeHTTP)
+	baseRouter := router.Group(func(r chi.Router) {
+		r.Use(middleware.Timeout(cfg.Api.Timeouts.Request))
+	})
+	// Allow greater write timeouts for requests using ai.
+	aiRouter := router.Group(func(r chi.Router) {
+		r.Use(middleware.Timeout(cfg.Api.Timeouts.RequestAI))
+	})
 
-	router.Route("/modules", func(r chi.Router) {
+	baseRouter.Get("/ping", handlerPing.ServeHTTP)
+	baseRouter.Get("/healthcheck", handlerHealth.ServeHTTP)
+
+	baseRouter.Route("/modules", func(r chi.Router) {
 		withAuth(r, "modules:get").Get("/", handlerModuleSelect.ServeHTTP)
 		withAuth(r, "modules:ids:list").Get("/ids", handlerModuleListIDs.ServeHTTP)
 		withAuth(r, "modules:namespaces:list").Get("/namespaces", handlerModuleListNamespaces.ServeHTTP)
 		withAuth(r, "modules:versions:list").Get("/versions", handlerModuleListVersions.ServeHTTP)
 	})
 
-	router.Route("/projects", func(r chi.Router) {
+	baseRouter.Route("/projects", func(r chi.Router) {
 		withAuth(r, "projects:list").Get("/", handlerProjectList.ServeHTTP)
 		withAuth(r, "projects:create").Put("/", handlerProjectInit.ServeHTTP)
 		withAuth(r, "projects:update").Patch("/", handlerProjectUpdate.ServeHTTP)
 		withAuth(r, "projects:delete").Delete("/", handlerProjectDelete.ServeHTTP)
 	})
 
-	router.Route("/schemas", func(r chi.Router) {
+	baseRouter.Route("/schemas", func(r chi.Router) {
 		withAuth(r, "schemas:get").Get("/", handlerSchemaSelect.ServeHTTP)
 		withAuth(r, "schemas:versions:list").Get("/versions", handlerSchemaListVersions.ServeHTTP)
 		withAuth(r, "schemas:create").Put("/", handlerSchemaCreate.ServeHTTP)
-		withAuth(r, "schemas:generate").Put("/generate", handlerSchemaGenerate.ServeHTTP)
 		withAuth(r, "schemas:rewrite").Patch("/", handlerSchemaRewrite.ServeHTTP)
+	})
+	aiRouter.Route("/schemas/generate", func(r chi.Router) {
+		withAuth(r, "schemas:generate").Put("/", handlerSchemaGenerate.ServeHTTP)
 	})
 
 	// =================================================================================================================

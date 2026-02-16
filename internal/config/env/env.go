@@ -24,12 +24,13 @@ const (
 	ServiceJsonKeysPortDefault = 8080
 
 	ApiPortDefault              = 8080
-	ApiTimeoutReadDefault       = 60 * time.Second
+	ApiTimeoutReadDefault       = 15 * time.Second
 	ApiTimeoutReadHeaderDefault = 3 * time.Second
-	ApiTimeoutWriteDefault      = 30 * time.Second
-	ApiTimeoutIdleDefault       = 60 * time.Second
+	ApiTimeoutWriteDefault      = 15 * time.Minute
+	ApiTimeoutIdleDefault       = 0
 	ApiTimeoutRequestDefault    = 60 * time.Second
-	ApiMaxRequestSizeDefault    = 2 << 20 // 2 MiB
+	ApiTimeoutRequestAIDefault  = 15 * time.Minute
+	ApiMaxRequestSizeDefault    = 5 << 20 // 5 MiB
 	CorsAllowCredentialsDefault = false
 	CorsMaxAgeDefault           = 3600
 )
@@ -58,6 +59,7 @@ var (
 	apiTimeoutWrite      = getEnv("API_TIMEOUT_WRITE")
 	apiTimeoutIdle       = getEnv("API_TIMEOUT_IDLE")
 	apiTimeoutRequest    = getEnv("API_TIMEOUT_REQUEST")
+	apiTimeoutRequestAI  = getEnv("API_TIMEOUT_REQUEST_AI")
 	corsAllowedOrigins   = getEnv("API_CORS_ALLOWED_ORIGINS")
 	corsAllowedHeaders   = getEnv("API_CORS_ALLOWED_HEADERS")
 	corsAllowCredentials = getEnv("API_CORS_ALLOW_CREDENTIALS")
@@ -107,6 +109,7 @@ var (
 	ApiTimeoutWrite      = config.LoadEnv(apiTimeoutWrite, ApiTimeoutWriteDefault, config.DurationParser)
 	ApiTimeoutIdle       = config.LoadEnv(apiTimeoutIdle, ApiTimeoutIdleDefault, config.DurationParser)
 	ApiTimeoutRequest    = config.LoadEnv(apiTimeoutRequest, ApiTimeoutRequestDefault, config.DurationParser)
+	ApiTimeoutRequestAI  = config.LoadEnv(apiTimeoutRequestAI, ApiTimeoutRequestAIDefault, config.DurationParser)
 	CorsAllowedOrigins   = config.LoadEnv(
 		corsAllowedOrigins, CorsAllowedOriginsDefault, config.SliceParser(config.StringParser),
 	)

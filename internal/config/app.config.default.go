@@ -43,6 +43,7 @@ var AppPresetDefault = App{
 			Write:      env.ApiTimeoutWrite,
 			Idle:       env.ApiTimeoutIdle,
 			Request:    env.ApiTimeoutRequest,
+			RequestAI:  env.ApiTimeoutRequestAI,
 		},
 		Cors: Cors{
 			AllowedOrigins:   env.CorsAllowedOrigins,

@@ -313,67 +313,67 @@ describe(
   "schemaGenerate",
   () => {
     // Generates all default modules in order for each namespace, verifying the full workflow.
-    describe(
-      "modules generation",
-      async () => {
-        for (const [namespace, moduleIDs] of Object.entries(DEFAULT_WORKFLOWS)) {
-          describe(
-            `for namespace ${namespace}`,
-            async () => {
-              let nsProject: Awaited<ReturnType<typeof projectInit>>;
+    describe("modules generation", async () => {
+      for (const [namespace, moduleIDs] of Object.entries(DEFAULT_WORKFLOWS)) {
+        describe(`for namespace ${namespace}`, async () => {
+          let nsProject: Awaited<ReturnType<typeof projectInit>>;
 
-              beforeAll(async () => {
-                nsProject = await projectInit(api, user.token.accessToken, {
+          beforeAll(async () => {
+            nsProject = await projectInit(api, user.token.accessToken, {
+              lang: "en",
+              title: `Schema Workflow Test ${Date.now()}`,
+              workflow: Object.values(resolvedModules[namespace]),
+            });
+          });
+
+          afterAll(async () => {
+            await projectDelete(api, user.token.accessToken, { id: nsProject.id });
+          });
+
+          for (const id of moduleIDs) {
+            it(
+              `generates module ${id}`,
+              async () => {
+                const modString = resolvedModules[namespace][id];
+
+                const schema = await schemaGenerate(api, user.token.accessToken, {
+                  projectID: nsProject.id,
+                  module: modString,
                   lang: "en",
-                  title: `Schema Workflow Test ${Date.now()}`,
-                  workflow: Object.values(resolvedModules[namespace]),
                 });
-              });
 
-              afterAll(async () => {
-                await projectDelete(api, user.token.accessToken, { id: nsProject.id });
-              });
+                expect(schema.id).toBeTruthy();
+                expect(schema.projectID).toBe(nsProject.id);
+                expect(schema.module).toContain(`${namespace}:${id}@v`);
+                expect(schema.source).toBe("AI");
+                expect(schema.data).toBeTruthy();
+                expect(schema.createdAt).toBeInstanceOf(Date);
+              },
+              2 * 60 * 1000
+            );
+          }
+        });
+      }
+    });
 
-              for (const id of moduleIDs) {
-                it(`generates module ${id}`, async () => {
-                  const modString = resolvedModules[namespace][id];
+    it(
+      "generates a schema with instruction",
+      async () => {
+        const schema = await schemaGenerate(api, user.token.accessToken, {
+          projectID: project.id,
+          module: moduleString,
+          lang: "en",
+          instruction: "Make it about music.",
+        });
 
-                  const schema = await schemaGenerate(api, user.token.accessToken, {
-                    projectID: nsProject.id,
-                    module: modString,
-                    lang: "en",
-                  });
-
-                  expect(schema.id).toBeTruthy();
-                  expect(schema.projectID).toBe(nsProject.id);
-                  expect(schema.module).toContain(`${namespace}:${id}@v`);
-                  expect(schema.source).toBe("AI");
-                  expect(schema.data).toBeTruthy();
-                  expect(schema.createdAt).toBeInstanceOf(Date);
-                }, 60000);
-              }
-            },
-            60000 * moduleIDs.length
-          );
-        }
+        expect(schema.id).toBeTruthy();
+        expect(schema.projectID).toBe(project.id);
+        expect(schema.source).toBe("AI");
+        expect(schema.data).toBeTruthy();
+        expect(schema.createdAt).toBeInstanceOf(Date);
       },
-      60000 * Object.keys(DEFAULT_WORKFLOWS).length
+      2 * 60 * 1000
     );
-
-    it("generates a schema with instruction", async () => {
-      const schema = await schemaGenerate(api, user.token.accessToken, {
-        projectID: project.id,
-        module: moduleString,
-        lang: "en",
-        instruction: "Make it about music.",
-      });
-
-      expect(schema.id).toBeTruthy();
-      expect(schema.projectID).toBe(project.id);
-      expect(schema.source).toBe("AI");
-      expect(schema.data).toBeTruthy();
-      expect(schema.createdAt).toBeInstanceOf(Date);
-    }, 60000);
 
     it("returns 404 for non-existent project", async () => {
       await expectStatus(
