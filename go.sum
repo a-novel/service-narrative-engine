@@ -57,8 +57,8 @@ github.com/MirrexOne/unqueryvet v1.5.3 h1:LpT3rsH+IY3cQddWF9bg4C7jsbASdGnrOSofY8
 github.com/MirrexOne/unqueryvet v1.5.3/go.mod h1:fs9Zq6eh1LRIhsDIsxf9PONVUjYdFHdtkHIgZdJnyPU=
 github.com/OpenPeeDeeP/depguard/v2 v2.2.1 h1:vckeWVESWp6Qog7UZSARNqfu/cZqvki8zsuj3piCMx4=
 github.com/OpenPeeDeeP/depguard/v2 v2.2.1/go.mod h1:q4DKzC4UcVaAvcfd41CZh0PWpGgzrVxUYBlgKNGquUo=
-github.com/a-novel-kit/golib v0.20.6 h1:Kv0gVTqFaVI3fNStT8RnqOnAd1bCv/Sx+vLjZe0kx3c=
-github.com/a-novel-kit/golib v0.20.6/go.mod h1:BqDoJSWO4bfnkKTBfftXwttrsY+Lxx17lzJdGqtrYs4=
+github.com/a-novel-kit/golib v0.20.7 h1:4VtLR6+nZBghF7kvflxFrTNVlGzNEI77xKuARgeTrEM=
+github.com/a-novel-kit/golib v0.20.7/go.mod h1:rWtOzAUMAmzPDjFBtAkhLyU315XyVcZNlwMk3vzRklg=
 github.com/a-novel-kit/jwt v1.1.31 h1:xTY9CozYIRb12J111ktytOi7jfxbzGnXW5k63tH7ync=
 github.com/a-novel-kit/jwt v1.1.31/go.mod h1:1d2yjQO4qCUdQqSgUIBxjEWE/vsu6Sstwz+Npg+q5u8=
 github.com/a-novel/service-authentication/v2 v2.3.0 h1:G2KWcazTmf5WJMPobMzYyeT8e/basIBdDPn7e+TMPuI=
