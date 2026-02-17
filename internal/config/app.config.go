@@ -27,6 +27,7 @@ type APITimeouts struct {
 	Write      time.Duration `json:"write"      yaml:"write"`
 	Idle       time.Duration `json:"idle"       yaml:"idle"`
 	Request    time.Duration `json:"request"    yaml:"request"`
+	RequestAI  time.Duration `json:"requestAi"  yaml:"requestAi"`
 }
 
 type Cors struct {

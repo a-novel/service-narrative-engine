@@ -143,10 +143,10 @@ export async function schemaGenerate(
   form: SchemaGenerateRequest
 ): Promise<Schema> {
   return await api.fetch("/schemas/generate", SchemaSchema, {
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}`, Connection: "close" },
+    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
     method: "PUT",
     body: JSON.stringify(form),
-    // Let a 10min timeout because AI
+    // Allow a 10min timeout because of AI.
     signal: AbortSignal.timeout(10 * 60 * 1000),
   });
 }
