@@ -3,8 +3,9 @@ package dao
 import (
 	"time"
 
-	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/uptrace/bun"
+
+	"github.com/a-novel/service-narrative-engine/internal/lib"
 )
 
 // Module represents a single unit of a story Engine workflow. It contains data used to shape the final story.
@@ -23,9 +24,8 @@ type Module struct {
 	// Description of the module.
 	Description string `bun:"description"`
 
-	// Schema defines the shape of the module output. It must be compatible with openAI Api structured outputs:
-	// https://platform.openai.com/docs/guides/structured-outputs
-	Schema jsonschema.Schema `bun:"schema,type:json"`
+	// Schema defines the shape of the module output.
+	Schema *lib.RawSchema `bun:"schema,type:json"`
 
 	CreatedAt time.Time `bun:"created_at"`
 }

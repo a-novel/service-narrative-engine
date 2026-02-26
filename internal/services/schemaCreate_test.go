@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
@@ -33,17 +32,6 @@ func TestSchemaCreate(t *testing.T) {
 	schemaID := uuid.MustParse("00000000-0000-0000-0000-000000000200")
 
 	baseTime := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
-
-	// Simple JSON schema that requires a "title" string field.
-	testModuleSchema := jsonschema.Schema{
-		Type: "object",
-		Properties: map[string]*jsonschema.Schema{
-			"title": {
-				Type: "string",
-			},
-		},
-		Required: []string{"title"},
-	}
 
 	type schemaInsertMock struct {
 		resp *dao.Schema
@@ -81,7 +69,7 @@ func TestSchemaCreate(t *testing.T) {
 				UserID:    ownerID,
 				Module:    "test-namespace:test-module@v1.0.0",
 				Source:    "USER",
-				Data:      map[string]any{"title": "Test Title"},
+				Data:      map[string]any{"field1": "Test Title"},
 			},
 
 			projectSelectMock: &projectSelectMock{
@@ -115,7 +103,7 @@ func TestSchemaCreate(t *testing.T) {
 					ModuleNamespace: "test-namespace",
 					ModuleVersion:   "1.0.0",
 					Source:          dao.SchemaSourceUser,
-					Data:            map[string]any{"title": "Test Title"},
+					Data:            map[string]any{"field1": "Test Title"},
 					CreatedAt:       baseTime,
 				},
 			},
@@ -128,7 +116,7 @@ func TestSchemaCreate(t *testing.T) {
 				ModuleNamespace: "test-namespace",
 				ModuleVersion:   "1.0.0",
 				Source:          "USER",
-				Data:            map[string]any{"title": "Test Title"},
+				Data:            map[string]any{"field1": "Test Title"},
 				CreatedAt:       baseTime,
 			},
 		},
@@ -141,7 +129,7 @@ func TestSchemaCreate(t *testing.T) {
 				UserID:    ownerID,
 				Module:    "test-namespace:test-module@v1.0.0-beta-1",
 				Source:    "AI",
-				Data:      map[string]any{"title": "Beta Test"},
+				Data:      map[string]any{"field1": "Beta Test"},
 			},
 
 			projectSelectMock: &projectSelectMock{
@@ -177,7 +165,7 @@ func TestSchemaCreate(t *testing.T) {
 					ModuleVersion:    "1.0.0",
 					ModulePreversion: "-beta-1",
 					Source:           dao.SchemaSourceAI,
-					Data:             map[string]any{"title": "Beta Test"},
+					Data:             map[string]any{"field1": "Beta Test"},
 					CreatedAt:        baseTime,
 				},
 			},
@@ -191,7 +179,7 @@ func TestSchemaCreate(t *testing.T) {
 				ModuleVersion:    "1.0.0",
 				ModulePreversion: "-beta-1",
 				Source:           "AI",
-				Data:             map[string]any{"title": "Beta Test"},
+				Data:             map[string]any{"field1": "Beta Test"},
 				CreatedAt:        baseTime,
 			},
 		},
@@ -204,7 +192,7 @@ func TestSchemaCreate(t *testing.T) {
 				UserID:    ownerID,
 				Module:    "",
 				Source:    "USER",
-				Data:      map[string]any{"title": "Test Title"},
+				Data:      map[string]any{"field1": "Test Title"},
 			},
 
 			expectErr: services.ErrInvalidRequest,
@@ -218,7 +206,7 @@ func TestSchemaCreate(t *testing.T) {
 				UserID:    ownerID,
 				Module:    "invalid-module-format",
 				Source:    "USER",
-				Data:      map[string]any{"title": "Test Title"},
+				Data:      map[string]any{"field1": "Test Title"},
 			},
 
 			expectErr: services.ErrInvalidRequest,
@@ -232,7 +220,7 @@ func TestSchemaCreate(t *testing.T) {
 				UserID:    ownerID,
 				Module:    "namespace:module@invalid",
 				Source:    "USER",
-				Data:      map[string]any{"title": "Test Title"},
+				Data:      map[string]any{"field1": "Test Title"},
 			},
 
 			expectErr: services.ErrInvalidRequest,
@@ -246,7 +234,7 @@ func TestSchemaCreate(t *testing.T) {
 				UserID:    ownerID,
 				Module:    "test-namespace:test-module@v1.0.0",
 				Source:    "",
-				Data:      map[string]any{"title": "Test Title"},
+				Data:      map[string]any{"field1": "Test Title"},
 			},
 
 			expectErr: services.ErrInvalidRequest,
@@ -260,7 +248,7 @@ func TestSchemaCreate(t *testing.T) {
 				UserID:    ownerID,
 				Module:    "test-namespace:test-module@v1.0.0",
 				Source:    "INVALID",
-				Data:      map[string]any{"title": "Test Title"},
+				Data:      map[string]any{"field1": "Test Title"},
 			},
 
 			expectErr: services.ErrInvalidRequest,
@@ -274,7 +262,7 @@ func TestSchemaCreate(t *testing.T) {
 				UserID:    ownerID,
 				Module:    "test-namespace:test-module@v1.0.0",
 				Source:    "USER",
-				Data:      map[string]any{"title": "Test Title"},
+				Data:      map[string]any{"field1": "Test Title"},
 			},
 
 			projectSelectMock: &projectSelectMock{
@@ -292,7 +280,7 @@ func TestSchemaCreate(t *testing.T) {
 				UserID:    otherUserID,
 				Module:    "test-namespace:test-module@v1.0.0",
 				Source:    "USER",
-				Data:      map[string]any{"title": "Test Title"},
+				Data:      map[string]any{"field1": "Test Title"},
 			},
 
 			projectSelectMock: &projectSelectMock{
@@ -318,7 +306,7 @@ func TestSchemaCreate(t *testing.T) {
 				UserID:    ownerID,
 				Module:    "test-namespace:test-module@v1.0.0",
 				Source:    "USER",
-				Data:      map[string]any{"title": "Test Title"},
+				Data:      map[string]any{"field1": "Test Title"},
 			},
 
 			projectSelectMock: &projectSelectMock{
@@ -344,7 +332,7 @@ func TestSchemaCreate(t *testing.T) {
 				UserID:    ownerID,
 				Module:    "test-namespace:test-module@v1.0.0",
 				Source:    "USER",
-				Data:      map[string]any{"title": "Test Title"},
+				Data:      map[string]any{"field1": "Test Title"},
 			},
 
 			projectSelectMock: &projectSelectMock{
@@ -374,7 +362,7 @@ func TestSchemaCreate(t *testing.T) {
 				UserID:    ownerID,
 				Module:    "test-namespace:test-module@v1.0.0",
 				Source:    "USER",
-				Data:      map[string]any{"title": "Test Title"},
+				Data:      map[string]any{"field1": "Test Title"},
 			},
 
 			projectSelectMock: &projectSelectMock{
@@ -404,6 +392,42 @@ func TestSchemaCreate(t *testing.T) {
 			},
 
 			expectErr: errFoo,
+		},
+		{
+			name: "Error/InvalidData",
+
+			request: &services.SchemaCreateRequest{
+				ID:        schemaID,
+				ProjectID: projectID,
+				UserID:    ownerID,
+				Module:    "test-namespace:test-module@v1.0.0",
+				Source:    "USER",
+				Data:      map[string]any{"field1": 123}, // field1 must be a string
+			},
+
+			projectSelectMock: &projectSelectMock{
+				resp: &dao.Project{
+					ID:        projectID,
+					Owner:     ownerID,
+					Lang:      config.LangEN,
+					Title:     "Test Project",
+					Workflow:  []string{"test-namespace:test-module@v1.0.0"},
+					CreatedAt: baseTime,
+					UpdatedAt: baseTime,
+				},
+			},
+
+			moduleSelectMock: &moduleSelectMock{
+				resp: &dao.Module{
+					ID:        "test-module",
+					Namespace: "test-namespace",
+					Version:   "1.0.0",
+					Schema:    testModuleSchema,
+					CreatedAt: baseTime,
+				},
+			},
+
+			expectErr: services.ErrInvalidRequest,
 		},
 		{
 			name: "Error/NilData",

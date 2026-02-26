@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
@@ -34,17 +33,6 @@ func TestSchemaGenerate(t *testing.T) {
 	otherSchemaID := uuid.MustParse("00000000-0000-0000-0000-000000000201")
 
 	baseTime := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
-
-	// Simple JSON schema that requires a "title" string field.
-	testModuleSchema := jsonschema.Schema{
-		Type: "object",
-		Properties: map[string]*jsonschema.Schema{
-			"title": {
-				Type: "string",
-			},
-		},
-		Required: []string{"title"},
-	}
 
 	type schemaGenerateMock struct {
 		resp map[string]any

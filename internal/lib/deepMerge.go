@@ -2,16 +2,16 @@ package lib
 
 func DeepMerge(src, dst map[string]any) map[string]any {
 	if src == nil {
-		src = make(map[string]any)
+		return dst
 	}
 
 	out := src
 
 	for k, v := range dst {
-		srcV, ok := out[k]
+		srcV := out[k]
 
 		// Key not in dest, add it.
-		if !ok {
+		if srcV == nil {
 			out[k] = v
 
 			continue
@@ -20,7 +20,7 @@ func DeepMerge(src, dst map[string]any) map[string]any {
 		srcVMap, srcVMapOk := srcV.(map[string]any)
 		vMap, vMapOk := v.(map[string]any)
 
-		// Only maps can be deep merged. Otherwise, replace the value entirely.
+		// Only maps can be deep-merged. Otherwise, replace the value entirely.
 		if !srcVMapOk || !vMapOk {
 			out[k] = v
 

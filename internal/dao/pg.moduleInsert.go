@@ -7,12 +7,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/uptrace/bun/driver/pgdriver"
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/a-novel-kit/golib/otel"
 	"github.com/a-novel-kit/golib/postgres"
+
+	"github.com/a-novel/service-narrative-engine/internal/lib"
 )
 
 //go:embed pg.moduleInsert.sql
@@ -26,7 +27,7 @@ type ModuleInsertRequest struct {
 	Version     string
 	Preversion  string
 	Description string
-	Schema      jsonschema.Schema
+	Schema      *lib.RawSchema
 	Now         time.Time
 }
 

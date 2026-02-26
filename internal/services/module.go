@@ -3,9 +3,8 @@ package services
 import (
 	"time"
 
-	"github.com/google/jsonschema-go/jsonschema"
-
 	"github.com/a-novel/service-narrative-engine/internal/dao"
+	"github.com/a-novel/service-narrative-engine/internal/lib"
 )
 
 type Module struct {
@@ -14,7 +13,7 @@ type Module struct {
 	Version     string
 	Preversion  string
 	Description string
-	Schema      jsonschema.Schema
+	Schema      *lib.RawSchema
 	CreatedAt   time.Time
 }
 

@@ -8,11 +8,9 @@ description: |
 # JSON to YAML: https://www.bairesdev.com/tools/json2yaml/
 schema:
   type: object
-  additionalProperties: false
   properties:
     hook:
       type: object
-      additionalProperties: false
       properties:
         logline:
           minLength: 1
@@ -101,7 +99,6 @@ schema:
         - tone
     heart:
       type: object
-      additionalProperties: false
       properties:
         theme:
           minLength: 1
@@ -109,7 +106,6 @@ schema:
           type: string
         conflict:
           type: object
-          additionalProperties: false
           properties:
             inner:
               minLength: 1
@@ -143,7 +139,6 @@ schema:
         - moral
     world:
       type: object
-      additionalProperties: false
       properties:
         premise:
           minLength: 1

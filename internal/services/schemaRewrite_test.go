@@ -46,6 +46,11 @@ func TestSchemaRewrite(t *testing.T) {
 		err  error
 	}
 
+	type moduleSelectMock struct {
+		resp *dao.Module
+		err  error
+	}
+
 	testCases := []struct {
 		name string
 
@@ -54,6 +59,7 @@ func TestSchemaRewrite(t *testing.T) {
 		schemaRewriteMock *schemaRewriteMock
 		projectSelectMock *projectSelectMock
 		schemaSelectMock  *schemaSelectMock
+		moduleSelectMock  *moduleSelectMock
 
 		expect    *services.Schema
 		expectErr error
@@ -64,7 +70,7 @@ func TestSchemaRewrite(t *testing.T) {
 			request: &services.SchemaRewriteRequest{
 				ID:     schemaID,
 				UserID: ownerID,
-				Data:   map[string]any{"title": "Updated Title"},
+				Data:   map[string]any{"field1": "Updated Title"},
 				Now:    updateTime,
 			},
 
@@ -77,7 +83,7 @@ func TestSchemaRewrite(t *testing.T) {
 					ModuleNamespace: "test-namespace",
 					ModuleVersion:   "1.0.0",
 					Source:          dao.SchemaSourceUser,
-					Data:            map[string]any{"title": "Original Title"},
+					Data:            map[string]any{"field1": "Original Title"},
 					CreatedAt:       baseTime,
 				},
 			},
@@ -94,6 +100,16 @@ func TestSchemaRewrite(t *testing.T) {
 				},
 			},
 
+			moduleSelectMock: &moduleSelectMock{
+				resp: &dao.Module{
+					ID:        "test-module",
+					Namespace: "test-namespace",
+					Version:   "1.0.0",
+					Schema:    testModuleSchema,
+					CreatedAt: baseTime,
+				},
+			},
+
 			schemaRewriteMock: &schemaRewriteMock{
 				resp: &dao.Schema{
 					ID:              schemaID,
@@ -103,7 +119,7 @@ func TestSchemaRewrite(t *testing.T) {
 					ModuleNamespace: "test-namespace",
 					ModuleVersion:   "1.0.0",
 					Source:          dao.SchemaSourceUser,
-					Data:            map[string]any{"title": "Updated Title"},
+					Data:            map[string]any{"field1": "Updated Title"},
 					CreatedAt:       baseTime,
 				},
 			},
@@ -116,7 +132,7 @@ func TestSchemaRewrite(t *testing.T) {
 				ModuleNamespace: "test-namespace",
 				ModuleVersion:   "1.0.0",
 				Source:          "USER",
-				Data:            map[string]any{"title": "Updated Title"},
+				Data:            map[string]any{"field1": "Updated Title"},
 				CreatedAt:       baseTime,
 			},
 		},
@@ -126,7 +142,7 @@ func TestSchemaRewrite(t *testing.T) {
 			request: &services.SchemaRewriteRequest{
 				ID:     schemaID,
 				UserID: ownerID,
-				Data:   map[string]any{"title": "Beta Updated"},
+				Data:   map[string]any{"field1": "Beta Updated"},
 				Now:    updateTime,
 			},
 
@@ -140,7 +156,7 @@ func TestSchemaRewrite(t *testing.T) {
 					ModuleVersion:    "1.0.0",
 					ModulePreversion: "-beta-1",
 					Source:           dao.SchemaSourceAI,
-					Data:             map[string]any{"title": "Beta Original"},
+					Data:             map[string]any{"field1": "Beta Original"},
 					CreatedAt:        baseTime,
 				},
 			},
@@ -157,6 +173,17 @@ func TestSchemaRewrite(t *testing.T) {
 				},
 			},
 
+			moduleSelectMock: &moduleSelectMock{
+				resp: &dao.Module{
+					ID:         "test-module",
+					Namespace:  "test-namespace",
+					Version:    "1.0.0",
+					Preversion: "-beta-1",
+					Schema:     testModuleSchema,
+					CreatedAt:  baseTime,
+				},
+			},
+
 			schemaRewriteMock: &schemaRewriteMock{
 				resp: &dao.Schema{
 					ID:               schemaID,
@@ -167,7 +194,7 @@ func TestSchemaRewrite(t *testing.T) {
 					ModuleVersion:    "1.0.0",
 					ModulePreversion: "-beta-1",
 					Source:           dao.SchemaSourceAI,
-					Data:             map[string]any{"title": "Beta Updated"},
+					Data:             map[string]any{"field1": "Beta Updated"},
 					CreatedAt:        baseTime,
 				},
 			},
@@ -181,7 +208,7 @@ func TestSchemaRewrite(t *testing.T) {
 				ModuleVersion:    "1.0.0",
 				ModulePreversion: "-beta-1",
 				Source:           "AI",
-				Data:             map[string]any{"title": "Beta Updated"},
+				Data:             map[string]any{"field1": "Beta Updated"},
 				CreatedAt:        baseTime,
 			},
 		},
@@ -191,7 +218,7 @@ func TestSchemaRewrite(t *testing.T) {
 			request: &services.SchemaRewriteRequest{
 				ID:     schemaID,
 				UserID: ownerID,
-				Data:   map[string]any{"title": "Updated Title"},
+				Data:   map[string]any{"field1": "Updated Title"},
 				Now:    updateTime,
 			},
 
@@ -207,7 +234,7 @@ func TestSchemaRewrite(t *testing.T) {
 			request: &services.SchemaRewriteRequest{
 				ID:     schemaID,
 				UserID: ownerID,
-				Data:   map[string]any{"title": "Updated Title"},
+				Data:   map[string]any{"field1": "Updated Title"},
 				Now:    updateTime,
 			},
 
@@ -233,7 +260,7 @@ func TestSchemaRewrite(t *testing.T) {
 			request: &services.SchemaRewriteRequest{
 				ID:     schemaID,
 				UserID: ownerID,
-				Data:   map[string]any{"title": "Updated Title"},
+				Data:   map[string]any{"field1": "Updated Title"},
 				Now:    updateTime,
 			},
 
@@ -246,7 +273,7 @@ func TestSchemaRewrite(t *testing.T) {
 					ModuleNamespace: "test-namespace",
 					ModuleVersion:   "1.0.0",
 					Source:          dao.SchemaSourceUser,
-					Data:            map[string]any{"title": "Original Title"},
+					Data:            map[string]any{"field1": "Original Title"},
 					CreatedAt:       baseTime,
 				},
 			},
@@ -263,7 +290,7 @@ func TestSchemaRewrite(t *testing.T) {
 			request: &services.SchemaRewriteRequest{
 				ID:     schemaID,
 				UserID: otherUserID,
-				Data:   map[string]any{"title": "Updated Title"},
+				Data:   map[string]any{"field1": "Updated Title"},
 				Now:    updateTime,
 			},
 
@@ -276,7 +303,7 @@ func TestSchemaRewrite(t *testing.T) {
 					ModuleNamespace: "test-namespace",
 					ModuleVersion:   "1.0.0",
 					Source:          dao.SchemaSourceUser,
-					Data:            map[string]any{"title": "Original Title"},
+					Data:            map[string]any{"field1": "Original Title"},
 					CreatedAt:       baseTime,
 				},
 			},
@@ -296,12 +323,12 @@ func TestSchemaRewrite(t *testing.T) {
 			expectErr: services.ErrUserDoesNotOwnProject,
 		},
 		{
-			name: "Error/SchemaRewrite",
+			name: "Error/ModuleSelect",
 
 			request: &services.SchemaRewriteRequest{
 				ID:     schemaID,
 				UserID: ownerID,
-				Data:   map[string]any{"title": "Updated Title"},
+				Data:   map[string]any{"field1": "Updated Title"},
 				Now:    updateTime,
 			},
 
@@ -314,7 +341,7 @@ func TestSchemaRewrite(t *testing.T) {
 					ModuleNamespace: "test-namespace",
 					ModuleVersion:   "1.0.0",
 					Source:          dao.SchemaSourceUser,
-					Data:            map[string]any{"title": "Original Title"},
+					Data:            map[string]any{"field1": "Original Title"},
 					CreatedAt:       baseTime,
 				},
 			},
@@ -328,6 +355,106 @@ func TestSchemaRewrite(t *testing.T) {
 					Workflow:  []string{"test-module"},
 					CreatedAt: baseTime,
 					UpdatedAt: baseTime,
+				},
+			},
+
+			moduleSelectMock: &moduleSelectMock{
+				err: errFoo,
+			},
+
+			expectErr: errFoo,
+		},
+		{
+			name: "Error/InvalidData",
+
+			request: &services.SchemaRewriteRequest{
+				ID:     schemaID,
+				UserID: ownerID,
+				Data:   map[string]any{"field1": 123}, // field1 must be a string
+				Now:    updateTime,
+			},
+
+			schemaSelectMock: &schemaSelectMock{
+				resp: &dao.Schema{
+					ID:              schemaID,
+					ProjectID:       projectID,
+					Owner:           &ownerID,
+					ModuleID:        "test-module",
+					ModuleNamespace: "test-namespace",
+					ModuleVersion:   "1.0.0",
+					Source:          dao.SchemaSourceUser,
+					Data:            map[string]any{"field1": "Original Title"},
+					CreatedAt:       baseTime,
+				},
+			},
+
+			projectSelectMock: &projectSelectMock{
+				resp: &dao.Project{
+					ID:        projectID,
+					Owner:     ownerID,
+					Lang:      config.LangEN,
+					Title:     "Test Project",
+					Workflow:  []string{"test-module"},
+					CreatedAt: baseTime,
+					UpdatedAt: baseTime,
+				},
+			},
+
+			moduleSelectMock: &moduleSelectMock{
+				resp: &dao.Module{
+					ID:        "test-module",
+					Namespace: "test-namespace",
+					Version:   "1.0.0",
+					Schema:    testModuleSchema,
+					CreatedAt: baseTime,
+				},
+			},
+
+			expectErr: services.ErrInvalidRequest,
+		},
+		{
+			name: "Error/SchemaRewrite",
+
+			request: &services.SchemaRewriteRequest{
+				ID:     schemaID,
+				UserID: ownerID,
+				Data:   map[string]any{"field1": "Updated Title"},
+				Now:    updateTime,
+			},
+
+			schemaSelectMock: &schemaSelectMock{
+				resp: &dao.Schema{
+					ID:              schemaID,
+					ProjectID:       projectID,
+					Owner:           &ownerID,
+					ModuleID:        "test-module",
+					ModuleNamespace: "test-namespace",
+					ModuleVersion:   "1.0.0",
+					Source:          dao.SchemaSourceUser,
+					Data:            map[string]any{"field1": "Original Title"},
+					CreatedAt:       baseTime,
+				},
+			},
+
+			projectSelectMock: &projectSelectMock{
+				resp: &dao.Project{
+					ID:        projectID,
+					Owner:     ownerID,
+					Lang:      config.LangEN,
+					Title:     "Test Project",
+					Workflow:  []string{"test-module"},
+					CreatedAt: baseTime,
+					UpdatedAt: baseTime,
+				},
+			},
+
+			moduleSelectMock: &moduleSelectMock{
+				resp: &dao.Module{
+					ID:        "test-module",
+					Namespace: "test-namespace",
+					Version:   "1.0.0",
+					Schema:    testModuleSchema,
+					CreatedAt: baseTime,
 				},
 			},
 
@@ -367,7 +494,7 @@ func TestSchemaRewrite(t *testing.T) {
 					ModuleNamespace: "test-namespace",
 					ModuleVersion:   "1.0.0",
 					Source:          dao.SchemaSourceUser,
-					Data:            map[string]any{"title": "Original Title"},
+					Data:            map[string]any{"field1": "Original Title"},
 					CreatedAt:       baseTime,
 				},
 			},
@@ -381,6 +508,16 @@ func TestSchemaRewrite(t *testing.T) {
 					Workflow:  []string{"test-module"},
 					CreatedAt: baseTime,
 					UpdatedAt: baseTime,
+				},
+			},
+
+			moduleSelectMock: &moduleSelectMock{
+				resp: &dao.Module{
+					ID:        "test-module",
+					Namespace: "test-namespace",
+					Version:   "1.0.0",
+					Schema:    testModuleSchema,
+					CreatedAt: baseTime,
 				},
 			},
 
@@ -422,6 +559,7 @@ func TestSchemaRewrite(t *testing.T) {
 				schemaRewriteRepository := servicesmocks.NewMockSchemaRewriteRepository(t)
 				projectSelectRepository := servicesmocks.NewMockSchemaRewriteRepositoryProjectSelect(t)
 				schemaSelectRepository := servicesmocks.NewMockSchemaRewriteRepositorySchemaSelect(t)
+				moduleSelectRepository := servicesmocks.NewMockSchemaRewriteRepositoryModuleSelect(t)
 
 				if testCase.schemaSelectMock != nil {
 					schemaSelectRepository.EXPECT().
@@ -440,6 +578,18 @@ func TestSchemaRewrite(t *testing.T) {
 						Return(testCase.projectSelectMock.resp, testCase.projectSelectMock.err)
 				}
 
+				if testCase.moduleSelectMock != nil {
+					schemaSelectResp := testCase.schemaSelectMock.resp
+					moduleSelectRepository.EXPECT().
+						Exec(mock.Anything, &dao.ModuleSelectRequest{
+							ID:         schemaSelectResp.ModuleID,
+							Namespace:  schemaSelectResp.ModuleNamespace,
+							Version:    schemaSelectResp.ModuleVersion,
+							Preversion: schemaSelectResp.ModulePreversion,
+						}).
+						Return(testCase.moduleSelectMock.resp, testCase.moduleSelectMock.err)
+				}
+
 				if testCase.schemaRewriteMock != nil {
 					schemaRewriteRepository.EXPECT().
 						Exec(mock.Anything, &dao.SchemaUpdateRequest{
@@ -454,6 +604,7 @@ func TestSchemaRewrite(t *testing.T) {
 					schemaRewriteRepository,
 					projectSelectRepository,
 					schemaSelectRepository,
+					moduleSelectRepository,
 				)
 
 				resp, err := service.Exec(ctx, testCase.request)
@@ -463,6 +614,7 @@ func TestSchemaRewrite(t *testing.T) {
 				schemaRewriteRepository.AssertExpectations(t)
 				projectSelectRepository.AssertExpectations(t)
 				schemaSelectRepository.AssertExpectations(t)
+				moduleSelectRepository.AssertExpectations(t)
 			})
 		})
 	}

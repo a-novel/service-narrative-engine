@@ -5,7 +5,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 
@@ -112,15 +111,6 @@ func (service *SchemaGenerate) Exec(ctx context.Context, request *SchemaGenerate
 	if err != nil {
 		return nil, otel.ReportError(span, err)
 	}
-
-	moduleSchema, err := moduleContent.Schema.Resolve(&jsonschema.ResolveOptions{
-		ValidateDefaults: true,
-	})
-	if err != nil {
-		return nil, otel.ReportError(span, err)
-	}
-
-	moduleContent.Schema = *moduleSchema.Schema()
 
 	// =================================================================================================================
 	// Prepare context.

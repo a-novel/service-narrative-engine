@@ -5,7 +5,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/uptrace/bun"
 
 	"github.com/a-novel-kit/golib/otel"
@@ -24,9 +23,9 @@ type ModuleCreateRepositoryDelete interface {
 }
 
 type ModuleCreateRequest struct {
-	Module      string            `validate:"required,module,max=512"`
-	Description string            `validate:"required,min=32,max=512"`
-	Schema      jsonschema.Schema `validate:"required"`
+	Module      string         `validate:"required,module,max=512"`
+	Description string         `validate:"required,min=32,max=512"`
+	Schema      *lib.RawSchema `validate:"required"`
 	Overwrite   bool
 }
 
@@ -57,11 +56,9 @@ func (service *ModuleCreate) Exec(ctx context.Context, request *ModuleCreateRequ
 	decodedModule := lib.DecodeModule(request.Module)
 
 	// Check if the jsonSchema is valid.
-	resolved, err := request.Schema.Resolve(&jsonschema.ResolveOptions{
-		ValidateDefaults: true,
-	})
+	err = request.Schema.Validate(lib.SchemaValidateFlagGenerate)
 	if err != nil {
-		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
+		return nil, otel.ReportError(span, err)
 	}
 
 	var module *dao.Module
@@ -86,7 +83,7 @@ func (service *ModuleCreate) Exec(ctx context.Context, request *ModuleCreateRequ
 			Version:     decodedModule.Version,
 			Preversion:  decodedModule.Preversion,
 			Description: request.Description,
-			Schema:      *resolved.Schema(),
+			Schema:      request.Schema,
 			Now:         time.Now().UTC(),
 		})
 
