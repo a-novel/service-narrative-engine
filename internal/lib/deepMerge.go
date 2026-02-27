@@ -10,7 +10,7 @@ func DeepMerge(src, dst map[string]any) map[string]any {
 	for k, v := range dst {
 		srcV := out[k]
 
-		// Key not in dest, add it.
+		// Key not in src/output, take value from dst.
 		if srcV == nil {
 			out[k] = v
 

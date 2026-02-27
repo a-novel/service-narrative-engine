@@ -58,7 +58,7 @@ func (service *ModuleCreate) Exec(ctx context.Context, request *ModuleCreateRequ
 	// Check if the jsonSchema is valid.
 	err = request.Schema.Validate(lib.SchemaValidateFlagGenerate)
 	if err != nil {
-		return nil, otel.ReportError(span, err)
+		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
 	var module *dao.Module
