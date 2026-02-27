@@ -79,6 +79,7 @@ func TestKnownModules(t *testing.T) {
 				var m modules.SystemModule
 				require.NoError(t, yaml.Unmarshal(tc.rawYAML, &m))
 				m.Namespace = tc.namespace // namespace is the map key, not in the YAML file
+
 				return m
 			}
 
@@ -98,18 +99,21 @@ func TestKnownModules(t *testing.T) {
 
 			t.Run("BuildSchema/NoFlags", func(t *testing.T) {
 				t.Parallel()
+
 				_, err := lib.BuildSchema(fresh().Schema)
 				require.NoError(t, err)
 			})
 
 			t.Run("BuildSchema/AI", func(t *testing.T) {
 				t.Parallel()
+
 				_, err := lib.BuildSchema(fresh().Schema, lib.SchemaBuildFlagAI)
 				require.NoError(t, err)
 			})
 
 			t.Run("BuildSchema/Partial", func(t *testing.T) {
 				t.Parallel()
+
 				_, err := lib.BuildSchema(fresh().Schema, lib.SchemaBuildFlagPartial)
 				require.NoError(t, err)
 			})

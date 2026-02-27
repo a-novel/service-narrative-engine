@@ -96,6 +96,7 @@ func TestSchemaTypeUnmarshalJSON(t *testing.T) {
 			t.Parallel()
 
 			var result lib.SchemaType
+
 			err := json.Unmarshal([]byte(tc.input), &result)
 
 			if tc.expectErr != nil {
@@ -184,6 +185,7 @@ func TestSchemaTypeUnmarshalYAML(t *testing.T) {
 			t.Parallel()
 
 			var result lib.SchemaType
+
 			err := result.UnmarshalYAML(tc.input)
 
 			if tc.expectErr != nil {
@@ -242,23 +244,23 @@ func TestSchemaAdditionalPropertiesUnmarshalJSON(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
-		name         string
-		input        string
+		name            string
+		input           string
 		expectReMarshal string // re-marshal the result to verify what was stored
 	}{
 		{
-			name:         "BoolTrue",
-			input:        "true",
+			name:            "BoolTrue",
+			input:           "true",
 			expectReMarshal: "true",
 		},
 		{
-			name:         "BoolFalse",
-			input:        "false",
+			name:            "BoolFalse",
+			input:           "false",
 			expectReMarshal: "false",
 		},
 		{
-			name:         "Schema",
-			input:        `{"type":"string"}`,
+			name:            "Schema",
+			input:           `{"type":"string"}`,
 			expectReMarshal: `{"type":"string"}`,
 		},
 	}
@@ -268,6 +270,7 @@ func TestSchemaAdditionalPropertiesUnmarshalJSON(t *testing.T) {
 			t.Parallel()
 
 			var result lib.SchemaAdditionalProperties
+
 			err := json.Unmarshal([]byte(tc.input), &result)
 			require.NoError(t, err)
 
