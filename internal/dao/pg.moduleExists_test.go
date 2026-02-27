@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/stretchr/testify/require"
 
 	"github.com/a-novel-kit/golib/postgres"
@@ -15,16 +14,6 @@ import (
 )
 
 func TestModuleExists(t *testing.T) {
-	testSchema := jsonschema.Schema{
-		Type: "object",
-		Properties: map[string]*jsonschema.Schema{
-			"field1": {
-				Type: "string",
-			},
-		},
-		Required: []string{"field1"},
-	}
-
 	testCases := []struct {
 		name string
 

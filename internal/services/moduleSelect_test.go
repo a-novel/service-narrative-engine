@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -25,16 +24,6 @@ func TestModuleSelect(t *testing.T) {
 	errFoo := errors.New("foo")
 
 	baseTime := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
-
-	testModuleSchema := jsonschema.Schema{
-		Type: "object",
-		Properties: map[string]*jsonschema.Schema{
-			"title": {
-				Type: "string",
-			},
-		},
-		Required: []string{"title"},
-	}
 
 	validDescription := "This is a valid description that is at least 32 characters long."
 

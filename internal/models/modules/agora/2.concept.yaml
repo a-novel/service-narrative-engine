@@ -7,15 +7,12 @@ description: |
 # JSON to YAML: https://www.bairesdev.com/tools/json2yaml/
 schema:
   type: object
-  additionalProperties: false
   properties:
     canon:
       type: object
-      additionalProperties: false
       properties:
         thematic:
           type: object
-          additionalProperties: false
           properties:
             negative:
               minLength: 1
@@ -38,7 +35,6 @@ schema:
             - central
         relationship:
           type: object
-          additionalProperties: false
           description: The relationship between the protagonist and antagonist of the
             story
           properties:
@@ -63,7 +59,6 @@ schema:
       minItems: 0
       items:
         type: object
-        additionalProperties: false
         properties:
           title:
             minLength: 1

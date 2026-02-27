@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -17,6 +16,7 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 	"github.com/a-novel/service-narrative-engine/internal/handlers"
 	handlersmocks "github.com/a-novel/service-narrative-engine/internal/handlers/mocks"
+	"github.com/a-novel/service-narrative-engine/internal/lib"
 	"github.com/a-novel/service-narrative-engine/internal/services"
 )
 
@@ -60,8 +60,8 @@ func TestModuleSelect(t *testing.T) {
 					Version:     "1.0.0",
 					Preversion:  "",
 					Description: "A test module",
-					Schema: jsonschema.Schema{
-						Type: "object",
+					Schema: &lib.RawSchema{
+						Type: lib.NewSchemaType("object"),
 					},
 					CreatedAt: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
 				},
@@ -98,8 +98,8 @@ func TestModuleSelect(t *testing.T) {
 					Version:     "1.0.0",
 					Preversion:  "beta",
 					Description: "A test module",
-					Schema: jsonschema.Schema{
-						Type: "object",
+					Schema: &lib.RawSchema{
+						Type: lib.NewSchemaType("object"),
 					},
 					CreatedAt: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
 				},

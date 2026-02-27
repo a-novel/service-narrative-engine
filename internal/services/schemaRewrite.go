@@ -10,6 +10,7 @@ import (
 	"github.com/a-novel-kit/golib/otel"
 
 	"github.com/a-novel/service-narrative-engine/internal/dao"
+	"github.com/a-novel/service-narrative-engine/internal/lib"
 )
 
 type SchemaRewriteRepository interface {
@@ -24,6 +25,10 @@ type SchemaRewriteRepositorySchemaSelect interface {
 	Exec(ctx context.Context, request *dao.SchemaSelectRequest) (*dao.Schema, error)
 }
 
+type SchemaRewriteRepositoryModuleSelect interface {
+	Exec(ctx context.Context, request *dao.ModuleSelectRequest) (*dao.Module, error)
+}
+
 type SchemaRewriteRequest struct {
 	ID     uuid.UUID      `validate:"required"`
 	UserID uuid.UUID      `validate:"required"`
@@ -35,17 +40,20 @@ type SchemaRewrite struct {
 	schemaRewriteRepository SchemaRewriteRepository
 	projectSelectRepository SchemaRewriteRepositoryProjectSelect
 	schemaSelectRepository  SchemaRewriteRepositorySchemaSelect
+	moduleSelectRepository  SchemaRewriteRepositoryModuleSelect
 }
 
 func NewSchemaRewrite(
 	schemaRewriteRepository SchemaRewriteRepository,
 	projectSelectRepository SchemaRewriteRepositoryProjectSelect,
 	schemaSelectRepository SchemaRewriteRepositorySchemaSelect,
+	moduleSelectRepository SchemaRewriteRepositoryModuleSelect,
 ) *SchemaRewrite {
 	return &SchemaRewrite{
 		schemaRewriteRepository: schemaRewriteRepository,
 		projectSelectRepository: projectSelectRepository,
 		schemaSelectRepository:  schemaSelectRepository,
+		moduleSelectRepository:  moduleSelectRepository,
 	}
 }
 
@@ -86,6 +94,30 @@ func (service *SchemaRewrite) Exec(ctx context.Context, request *SchemaRewriteRe
 	err = VerifyProjectOwnership(project, request.UserID)
 	if err != nil {
 		return nil, otel.ReportError(span, err)
+	}
+
+	// =================================================================================================================
+	// Schema validation
+	// =================================================================================================================
+
+	moduleContent, err := service.moduleSelectRepository.Exec(ctx, &dao.ModuleSelectRequest{
+		ID:         currentSchema.ModuleID,
+		Namespace:  currentSchema.ModuleNamespace,
+		Version:    currentSchema.ModuleVersion,
+		Preversion: currentSchema.ModulePreversion,
+	})
+	if err != nil {
+		return nil, otel.ReportError(span, err)
+	}
+
+	jsonSchema, err := lib.BuildSchema(moduleContent.Schema, lib.SchemaBuildFlagPartial)
+	if err != nil {
+		return nil, otel.ReportError(span, err)
+	}
+
+	err = jsonSchema.Validate(request.Data)
+	if err != nil {
+		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
 	// =================================================================================================================

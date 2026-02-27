@@ -119,6 +119,7 @@ func main() {
 		repositorySchemaUpdate,
 		repositoryProjectSelect,
 		repositorySchemaSelect,
+		repositoryModuleSelect,
 	)
 	serviceSchemaListVersions := services.NewSchemaListVersions(repositorySchemaListVersions, repositoryProjectSelect)
 

@@ -3,19 +3,18 @@ package handlers
 import (
 	"time"
 
-	"github.com/google/jsonschema-go/jsonschema"
-
+	"github.com/a-novel/service-narrative-engine/internal/lib"
 	"github.com/a-novel/service-narrative-engine/internal/services"
 )
 
 type Module struct {
-	ID          string            `json:"id"`
-	Namespace   string            `json:"namespace"`
-	Version     string            `json:"version"`
-	Preversion  string            `json:"preversion,omitempty"`
-	Description string            `json:"description"`
-	Schema      jsonschema.Schema `json:"schema"`
-	CreatedAt   time.Time         `json:"createdAt"`
+	ID          string         `json:"id"`
+	Namespace   string         `json:"namespace"`
+	Version     string         `json:"version"`
+	Preversion  string         `json:"preversion,omitempty"`
+	Description string         `json:"description"`
+	Schema      *lib.RawSchema `json:"schema"`
+	CreatedAt   time.Time      `json:"createdAt"`
 }
 
 func loadModule(s *services.Module) Module {

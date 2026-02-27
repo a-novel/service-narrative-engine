@@ -98,6 +98,16 @@ func (service *SchemaCreate) Exec(ctx context.Context, request *SchemaCreateRequ
 		return nil, otel.ReportError(span, err)
 	}
 
+	jsonSchema, err := lib.BuildSchema(moduleContent.Schema, lib.SchemaBuildFlagPartial)
+	if err != nil {
+		return nil, otel.ReportError(span, err)
+	}
+
+	err = jsonSchema.Validate(request.Data)
+	if err != nil {
+		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
+	}
+
 	// =================================================================================================================
 	// Create data.
 	// =================================================================================================================

@@ -70,6 +70,11 @@ func (repository *SchemaGenerate) Exec(ctx context.Context, request *SchemaGener
 		return nil, otel.ReportError(span, fmt.Errorf("execute prompt template: %w", err))
 	}
 
+	jsonSchema, err := lib.BuildSchema(request.Module.Schema, lib.SchemaBuildFlagAI)
+	if err != nil {
+		return nil, otel.ReportError(span, fmt.Errorf("build schema: %w", err))
+	}
+
 	res, err := lib.NewCompletion(ctx, request.Lang, openai.ChatCompletionNewParams{
 		Messages: []openai.ChatCompletionMessageParamUnion{
 			openai.UserMessage(userPrompt.String()),
@@ -78,7 +83,7 @@ func (repository *SchemaGenerate) Exec(ctx context.Context, request *SchemaGener
 			OfJSONSchema: &openai.ResponseFormatJSONSchemaParam{
 				JSONSchema: openai.ResponseFormatJSONSchemaJSONSchemaParam{
 					Name:        request.Module.ID,
-					Schema:      request.Module.Schema,
+					Schema:      jsonSchema.Schema(),
 					Description: openai.String(request.Module.Description),
 					Strict:      openai.Bool(true),
 				},

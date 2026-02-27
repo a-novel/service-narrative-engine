@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -14,6 +13,7 @@ import (
 
 	"github.com/a-novel/service-narrative-engine/internal/config"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
+	"github.com/a-novel/service-narrative-engine/internal/lib"
 	"github.com/a-novel/service-narrative-engine/internal/models/modules"
 	"github.com/a-novel/service-narrative-engine/internal/services"
 	servicesmocks "github.com/a-novel/service-narrative-engine/internal/services/mocks"
@@ -26,27 +26,14 @@ func TestModuleLoadSystem(t *testing.T) {
 
 	baseTime := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
 
-	testModuleSchema := jsonschema.Schema{
-		Type: "object",
-		Properties: map[string]*jsonschema.Schema{
+	testModuleSchemaUpdated := &lib.RawSchema{
+		Type: lib.NewSchemaType("object"),
+		Properties: map[string]lib.RawSchema{
 			"title": {
-				Type: "string",
-			},
-			"count": {
-				Type: "integer",
-			},
-		},
-		Required: []string{"title"},
-	}
-
-	testModuleSchemaUpdated := jsonschema.Schema{
-		Type: "object",
-		Properties: map[string]*jsonschema.Schema{
-			"title": {
-				Type: "string",
+				Type: lib.NewSchemaType("string"),
 			},
 			"description": {
-				Type: "string",
+				Type: lib.NewSchemaType("string"),
 			},
 		},
 		Required: []string{"title", "description"},

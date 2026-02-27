@@ -7,13 +7,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/openai/openai-go/v3"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
 	"github.com/a-novel/service-narrative-engine/internal/config"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
+	"github.com/a-novel/service-narrative-engine/internal/lib"
 )
 
 // detectLanguage uses AI to detect the language of the given text.
@@ -46,23 +46,23 @@ func TestSchemaGenerate(t *testing.T) {
 		return
 	}
 
-	testSchema := jsonschema.Schema{
-		Type: "object",
-		// Marshals to "additonalProperties": false, which is required by openai.
-		AdditionalProperties: &jsonschema.Schema{Not: &jsonschema.Schema{}},
-		Properties: map[string]*jsonschema.Schema{
+	generateTestSchema := lib.RawSchema{
+		Type: lib.NewSchemaType("object"),
+		// Marshals to "additionalProperties": false, which OpenAI requires.
+		AdditionalProperties: lib.AdditionalPropertiesBool(false),
+		Properties: map[string]lib.RawSchema{
 			"title": {
-				Type:        "string",
+				Type:        lib.NewSchemaType("string"),
 				Description: "A creative title for the story",
 				MaxLength:   lo.ToPtr(128),
 			},
 			"premise": {
-				Type:        "string",
+				Type:        lib.NewSchemaType("string"),
 				Description: "A short premise for the story",
 				MaxLength:   lo.ToPtr(1024),
 			},
 			"genre": {
-				Type:        "string",
+				Type:        lib.NewSchemaType("string"),
 				Description: "The story genre",
 			},
 		},
@@ -74,7 +74,7 @@ func TestSchemaGenerate(t *testing.T) {
 		Namespace:   "test",
 		Version:     "1.0.0",
 		Description: "A test module that generates a story idea.",
-		Schema:      testSchema,
+		Schema:      &generateTestSchema,
 	}
 
 	testCases := []struct {
@@ -226,35 +226,35 @@ func TestSchemaGenerate_Language(t *testing.T) {
 	}
 
 	// Test schema with enums, filenames, and translatable text fields
-	languageTestSchema := jsonschema.Schema{
-		Type: "object",
-		// Marshals to "additonalProperties": false, which is required by openai.
-		AdditionalProperties: &jsonschema.Schema{Not: &jsonschema.Schema{}},
-		Properties: map[string]*jsonschema.Schema{
+	languageTestSchema := lib.RawSchema{
+		Type: lib.NewSchemaType("object"),
+		// Marshals to "additionalProperties": false, which OpenAI requires.
+		AdditionalProperties: lib.AdditionalPropertiesBool(false),
+		Properties: map[string]lib.RawSchema{
 			"title": {
-				Type:        "string",
+				Type:        lib.NewSchemaType("string"),
 				Description: "A creative title for the story",
 			},
 			"description": {
-				Type:        "string",
+				Type:        lib.NewSchemaType("string"),
 				Description: "A detailed description of the story concept",
 			},
 			"medium": {
-				Type:        "string",
+				Type:        lib.NewSchemaType("string"),
 				Enum:        []any{"FILM", "SERIES", "NOVEL", "GAME", "VISUAL NOVEL", "COMIC"},
 				Description: "The medium for this story (must be one of the enum values)",
 			},
 			"ageRating": {
-				Type:        "string",
+				Type:        lib.NewSchemaType("string"),
 				Enum:        []any{"G", "PG", "PG-13", "R", "NC-17"},
 				Description: "The age rating for this story (must be one of the enum values)",
 			},
 			"filename": {
-				Type:        "string",
+				Type:        lib.NewSchemaType("string"),
 				Description: "A suggested filename for this project (e.g., 'my_story_project.txt')",
 			},
 			"mood": {
-				Type:        "string",
+				Type:        lib.NewSchemaType("string"),
 				Description: "The mood or atmosphere of the story",
 				Enum: []any{
 					"dark",
@@ -278,7 +278,7 @@ func TestSchemaGenerate_Language(t *testing.T) {
 		Namespace:   "test",
 		Version:     "1.0.0",
 		Description: "A test module that generates a story idea.",
-		Schema:      languageTestSchema,
+		Schema:      &languageTestSchema,
 	}
 
 	// Language-specific context for testing
