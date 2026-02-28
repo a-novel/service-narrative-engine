@@ -14,6 +14,21 @@ onlyBuiltDependencies:
   - msw
   - protobufjs
 
+overrides:
+  "@sveltejs/kit@>=2.49.0 <=2.52.1": ">=2.52.2"
+  cookie@<0.7.0: ">=0.7.0"
+  js-yaml@>=4.0.0 <4.1.1: ">=4.1.1"
+  lodash-es@>=4.0.0 <=4.17.22: ">=4.17.23"
+  minimatch@>=10.0.0 <10.2.3: ">=10.2.3"
+  minimatch@>=5.0.0 <5.1.7: ">=5.1.7"
+  minimatch@>=5.0.0 <5.1.8: ">=5.1.8"
+  minimatch@>=9.0.0 <9.0.7: ">=9.0.7"
+  rollup@>=4.0.0 <4.59.0: ">=4.59.0"
+  storybook@>=10.0.0-beta.0 <10.2.10: ">=10.2.10"
+  svelte@<=5.51.4: ">=5.51.5"
+  svelte@<=5.53.4: ">=5.53.5"
+  svelte@>=5.39.3 <5.51.5: ">=5.51.5"
+
 prefer-workspace-packages: true
 
 recursive-install: true
