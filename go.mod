@@ -9,7 +9,7 @@ tool (
 )
 
 require (
-	github.com/a-novel-kit/golib v0.20.11
+	github.com/a-novel-kit/golib v0.20.12
 	github.com/a-novel/service-authentication/v2 v2.3.1
 	github.com/a-novel/service-json-keys/v2 v2.1.5
 	github.com/charmbracelet/lipgloss v1.1.0
