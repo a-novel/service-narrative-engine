@@ -22,7 +22,7 @@ require (
 	github.com/gorilla/schema v1.4.1
 	github.com/muesli/termenv v0.16.0
 	github.com/openai/openai-go/v3 v3.24.0
-	github.com/samber/lo v1.52.0
+	github.com/samber/lo v1.53.0
 	github.com/stretchr/testify v1.11.1
 	github.com/uptrace/bun v1.2.18
 	github.com/uptrace/bun/dialect/pgdialect v1.2.18
