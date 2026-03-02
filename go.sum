@@ -59,6 +59,8 @@ github.com/OpenPeeDeeP/depguard/v2 v2.2.1 h1:vckeWVESWp6Qog7UZSARNqfu/cZqvki8zsu
 github.com/OpenPeeDeeP/depguard/v2 v2.2.1/go.mod h1:q4DKzC4UcVaAvcfd41CZh0PWpGgzrVxUYBlgKNGquUo=
 github.com/a-novel-kit/golib v0.20.11 h1:RwLL6SECFR19L3o89opcLL+jvVKqeJRcS3vU/irxfxg=
 github.com/a-novel-kit/golib v0.20.11/go.mod h1:9E6+STkhToFbAZf/7IKdeDGThupopILXKW6oG3X6WfM=
+github.com/a-novel-kit/golib v0.20.12 h1:UCV2S/nnWQ4ErLvRdCJZ55bpAGAYys8Vbxy9+5U2d/U=
+github.com/a-novel-kit/golib v0.20.12/go.mod h1:qxbvcFPCiC8vnPfnF0xCwUL6e23WETPz9ac7lceeV2w=
 github.com/a-novel-kit/jwt v1.1.34 h1:afri9yAH8kHyXIAn+3cALapq/QXyilBAC+Q05e6v8vg=
 github.com/a-novel-kit/jwt v1.1.34/go.mod h1:Zh5pukWz9219yF497U2SmjkL5qO+ps/aNPEt+1MZAQA=
 github.com/a-novel/service-authentication/v2 v2.3.1 h1:PW6jrWRE7tHVzXtskLq6OlFYhvJb9uVefJGQVYZn0uU=
