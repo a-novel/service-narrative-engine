@@ -9,6 +9,7 @@ overrides:
   cookie@<0.7.0: '>=0.7.0'
   js-yaml@>=4.0.0 <4.1.1: '>=4.1.1'
   lodash-es@>=4.0.0 <=4.17.22: '>=4.17.23'
+  mailparser@<3.9.3: '>=3.9.3'
   minimatch@>=10.0.0 <10.2.3: '>=10.2.3'
   minimatch@>=5.0.0 <5.1.7: '>=5.1.7'
   minimatch@>=5.0.0 <5.1.8: '>=5.1.8'
@@ -25,7 +26,7 @@ importers:
     devDependencies:
       '@a-novel-kit/nodelib-config':
         specifier: ^1.3.6
-        version: 1.3.19(549897ac5b4612929465b8192d9f1b01)
+        version: 1.3.19(8c52dc4d422cca2f5f225148677d7238)
       '@eslint/js':
         specifier: ^10.0.0
         version: 10.0.1(eslint@10.0.2(jiti@2.6.1))
@@ -119,7 +120,7 @@ importers:
         version: 2.2.4(@a-novel-kit/nodelib-browser@1.3.19(zod@4.3.6))(zod@4.3.6)
       '@a-novel/service-authentication-rest-test':
         specifier: ^2.2.4
-        version: 2.2.4(@a-novel-kit/nodelib-browser@1.3.19(zod@4.3.6))(@a-novel-kit/nodelib-test@1.3.6(@a-novel-kit/nodelib-browser@1.3.19(zod@4.3.6))(@msw/playwright@0.4.5(msw@2.12.7(@types/node@24.10.9)(typescript@5.9.3)))(@tanstack/react-query@5.90.19(react@19.2.4))(@testing-library/react@16.3.2(@testing-library/dom@10.4.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(msw@2.12.7(@types/node@24.10.9)(typescript@5.9.3))(playwright@1.57.0)(v8-to-istanbul@9.3.0)(vitest@4.0.18(@opentelemetry/api@1.9.0)(@types/node@24.10.9)(jiti@2.6.1)(jsdom@27.4.0(@noble/hashes@1.8.0))(msw@2.12.7(@types/node@24.10.9)(typescript@5.9.3)))(zod@4.3.6))(@a-novel/service-authentication-rest@2.2.4(@a-novel-kit/nodelib-browser@1.3.19(zod@4.3.6))(zod@4.3.6))(jsdom@27.4.0(@noble/hashes@1.8.0))(mailparser@3.9.1)(vite@7.3.1(@types/node@24.10.9)(jiti@2.6.1))(vitest@4.0.18(@opentelemetry/api@1.9.0)(@types/node@24.10.9)(jiti@2.6.1)(jsdom@27.4.0(@noble/hashes@1.8.0))(msw@2.12.7(@types/node@24.10.9)(typescript@5.9.3)))(zod@4.3.6)
+        version: 2.2.4(@a-novel-kit/nodelib-browser@1.3.19(zod@4.3.6))(@a-novel-kit/nodelib-test@1.3.6(@a-novel-kit/nodelib-browser@1.3.19(zod@4.3.6))(@msw/playwright@0.4.5(msw@2.12.7(@types/node@24.10.9)(typescript@5.9.3)))(@tanstack/react-query@5.90.19(react@19.2.4))(@testing-library/react@16.3.2(@testing-library/dom@10.4.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(msw@2.12.7(@types/node@24.10.9)(typescript@5.9.3))(playwright@1.57.0)(v8-to-istanbul@9.3.0)(vitest@4.0.18(@opentelemetry/api@1.9.0)(@types/node@24.10.9)(jiti@2.6.1)(jsdom@27.4.0(@noble/hashes@1.8.0))(msw@2.12.7(@types/node@24.10.9)(typescript@5.9.3)))(zod@4.3.6))(@a-novel/service-authentication-rest@2.2.4(@a-novel-kit/nodelib-browser@1.3.19(zod@4.3.6))(zod@4.3.6))(jsdom@27.4.0(@noble/hashes@1.8.0))(mailparser@3.9.3)(vite@7.3.1(@types/node@24.10.9)(jiti@2.6.1))(vitest@4.0.18(@opentelemetry/api@1.9.0)(@types/node@24.10.9)(jiti@2.6.1)(jsdom@27.4.0(@noble/hashes@1.8.0))(msw@2.12.7(@types/node@24.10.9)(typescript@5.9.3)))(zod@4.3.6)
       '@a-novel/service-narrative-engine-rest':
         specifier: workspace:*
         version: link:../../rest-js
@@ -139,8 +140,8 @@ importers:
         specifier: ^27.1.0
         version: 27.4.0(@noble/hashes@1.8.0)
       mailparser:
-        specifier: ^3.9.0
-        version: 3.9.1
+        specifier: '>=3.9.3'
+        version: 3.9.3
       prettier:
         specifier: ^3.6.2
         version: 3.8.1
@@ -191,6 +192,21 @@ packages:
       svelte: ^5.53.6
       typescript: ^5.9.3
       typescript-eslint: ^8.56.1
+    peerDependenciesMeta:
+      '@sveltejs/kit':
+        optional: true
+      eslint-plugin-storybook:
+        optional: true
+      eslint-plugin-svelte:
+        optional: true
+      prettier-plugin-css-order:
+        optional: true
+      prettier-plugin-sql:
+        optional: true
+      prettier-plugin-svelte:
+        optional: true
+      svelte:
+        optional: true
 
   '@a-novel-kit/nodelib-test@1.3.6':
     resolution: {integrity: sha512-p8wAvhV1thA//JXGXsM+BX6uOQLe9IwyUmUM3Q82d4wNaFWGgAFIs4gBo7Jaq8M+usxpGPpGEubhdnBidMl8jw==, tarball: https://npm.pkg.github.com/download/@a-novel-kit/nodelib-test/1.3.6/5cf435b4a9f11b1a8654dabc2e11c8d242eab72e}
@@ -214,7 +230,7 @@ packages:
       '@a-novel-kit/nodelib-test': ^1.3.1
       '@a-novel/service-authentication-rest': 2.2.4
       jsdom: ^27.1.0
-      mailparser: ^3.9.0
+      mailparser: '>=3.9.3'
       vite: ^7.2.2
       vitest: ^4.0.8
       zod: ^4.1.12
@@ -1016,7 +1032,7 @@ packages:
       prettier: 2.x - 3.x
       prettier-plugin-ember-template-tag: '>= 2.0.0'
       prettier-plugin-svelte: 3.x
-      svelte: '>=5.51.5'
+      svelte: '>=5.53.5'
     peerDependenciesMeta:
       '@vue/compiler-sfc':
         optional: true
@@ -1764,8 +1780,8 @@ packages:
     resolution: {integrity: sha512-4fCk79wshMdzMp2rH06qWrJE4iolqLhCUH+OiuIgU++RB0+94NlDL81atO7GX55uUKueo0txHNtvEyI6D7WdMw==}
     engines: {node: '>=0.10.0'}
 
-  iconv-lite@0.7.0:
-    resolution: {integrity: sha512-cf6L2Ds3h57VVmkZe+Pn+5APsT7FpqJtEhhieDCvrE2MK5Qk9MyffgQyuxQTm6BChfeZNtcOLHp9IcWRVcIcBQ==}
+  iconv-lite@0.7.2:
+    resolution: {integrity: sha512-im9DjEDQ55s9fL4EYzOAv0yMqmMBSZp6G0VvFyTMPKWxiSBHUj9NW/qqLmXUwXrrM7AvqSlTCfvqRb0cM8yYqw==}
     engines: {node: '>=0.10.0'}
 
   ignore@5.3.2:
@@ -1990,8 +2006,8 @@ packages:
   magicast@0.5.1:
     resolution: {integrity: sha512-xrHS24IxaLrvuo613F719wvOIv9xPHFWQHuvGUBmPnCA/3MQxKI3b+r7n1jAoDHmsbC5bRhTZYR77invLAxVnw==}
 
-  mailparser@3.9.1:
-    resolution: {integrity: sha512-6vHZcco3fWsDMkf4Vz9iAfxvwrKNGbHx0dV1RKVphQ/zaNY34Buc7D37LSa09jeSeybWzYcTPjhiZFxzVRJedA==}
+  mailparser@3.9.3:
+    resolution: {integrity: sha512-AnB0a3zROum6fLaa52L+/K2SoRJVyFDk78Ea6q1D0ofcZLxWEWDtsS1+OrVqKbV7r5dulKL/AwYQccFGAPpuYQ==}
 
   make-dir@4.0.0:
     resolution: {integrity: sha512-hXdUTZYIVOt1Ex//jAQi+wTZZpUpwBj/0QsOzqegb3rGMMeJiSEu5xLHnYfBrRV4RH2+OCSOO95Is/7x1WJ4bw==}
@@ -2115,8 +2131,8 @@ packages:
     resolution: {integrity: sha512-jVe6Z61gPcPjCElPZ6j8llB3wnqGcuQzefim1ERsqIakxnEy5JlzV7XKdO1KmacRG5TKwPc4vJTgSRQ0LfkbFw==}
     engines: {node: '>=8'}
 
-  nodemailer@7.0.11:
-    resolution: {integrity: sha512-gnXhNRE0FNhD7wPSCGhdNh46Hs6nm+uTyg+Kq0cZukNQiYdnCsoQjodNP9BQVG9XrcK/v6/MgpAPBUFyzh9pvw==}
+  nodemailer@7.0.13:
+    resolution: {integrity: sha512-PNDFSJdP+KFgdsG3ZzMXCgquO7I6McjY2vlqILjtJd0hy8wEvtugS9xKRF2NWlPNGxvLCXlTNIae4serI7dinw==}
     engines: {node: '>=6.0.0'}
 
   oas-kit-common@1.0.8:
@@ -2967,27 +2983,27 @@ snapshots:
     dependencies:
       zod: 4.3.6
 
-  '@a-novel-kit/nodelib-config@1.3.19(549897ac5b4612929465b8192d9f1b01)':
+  '@a-novel-kit/nodelib-config@1.3.19(8c52dc4d422cca2f5f225148677d7238)':
     dependencies:
       '@eslint/compat': 2.0.1(eslint@10.0.2(jiti@2.6.1))
       '@eslint/js': 10.0.1(eslint@10.0.2(jiti@2.6.1))
-      '@sveltejs/kit': 2.53.4(@opentelemetry/api@1.9.0)(@sveltejs/vite-plugin-svelte@6.2.4(svelte@5.47.1)(vite@7.3.1(@types/node@25.3.3)(jiti@2.6.1)))(svelte@5.47.1)(typescript@5.9.3)(vite@7.3.1(@types/node@25.3.3)(jiti@2.6.1))
       '@trivago/prettier-plugin-sort-imports': 6.0.2(prettier-plugin-svelte@3.4.1(prettier@3.8.1)(svelte@5.47.1))(prettier@3.8.1)(svelte@5.47.1)
       '@types/node': 25.3.3
       eslint: 10.0.2(jiti@2.6.1)
       eslint-config-prettier: 10.1.8(eslint@10.0.2(jiti@2.6.1))
       eslint-plugin-prettier: 5.5.5(eslint-config-prettier@10.1.8(eslint@10.0.2(jiti@2.6.1)))(eslint@10.0.2(jiti@2.6.1))(prettier@3.8.1)
-      eslint-plugin-storybook: 10.2.15(eslint@10.0.2(jiti@2.6.1))(storybook@10.1.11(@testing-library/dom@10.4.1)(prettier@3.8.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(typescript@5.9.3)
-      eslint-plugin-svelte: 3.15.0(eslint@10.0.2(jiti@2.6.1))(svelte@5.47.1)
       prettier: 3.8.1
-      prettier-plugin-css-order: 2.2.0(postcss@8.5.6)(prettier@3.8.1)
       prettier-plugin-packagejson: 3.0.1(prettier@3.8.1)
-      prettier-plugin-sql: 0.19.2(prettier@3.8.1)
-      prettier-plugin-svelte: 3.4.1(prettier@3.8.1)(svelte@5.47.1)
       storybook: 10.1.11(@testing-library/dom@10.4.1)(prettier@3.8.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      svelte: 5.47.1
       typescript: 5.9.3
       typescript-eslint: 8.56.1(eslint@10.0.2(jiti@2.6.1))(typescript@5.9.3)
+    optionalDependencies:
+      '@sveltejs/kit': 2.53.4(@opentelemetry/api@1.9.0)(@sveltejs/vite-plugin-svelte@6.2.4(svelte@5.47.1)(vite@7.3.1(@types/node@25.3.3)(jiti@2.6.1)))(svelte@5.47.1)(typescript@5.9.3)(vite@7.3.1(@types/node@25.3.3)(jiti@2.6.1))
+      eslint-plugin-storybook: 10.2.15(eslint@10.0.2(jiti@2.6.1))(storybook@10.1.11(@testing-library/dom@10.4.1)(prettier@3.8.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(typescript@5.9.3)
+      eslint-plugin-svelte: 3.15.0(eslint@10.0.2(jiti@2.6.1))(svelte@5.47.1)
+      prettier-plugin-css-order: 2.2.0(postcss@8.5.6)(prettier@3.8.1)
+      prettier-plugin-sql: 0.19.2(prettier@3.8.1)
+      svelte: 5.47.1
 
   '@a-novel-kit/nodelib-test@1.3.6(@a-novel-kit/nodelib-browser@1.3.19(zod@4.3.6))(@msw/playwright@0.4.5(msw@2.12.7(@types/node@24.10.9)(typescript@5.9.3)))(@tanstack/react-query@5.90.19(react@19.2.4))(@testing-library/react@16.3.2(@testing-library/dom@10.4.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(msw@2.12.7(@types/node@24.10.9)(typescript@5.9.3))(playwright@1.57.0)(v8-to-istanbul@9.3.0)(vitest@4.0.18(@opentelemetry/api@1.9.0)(@types/node@24.10.9)(jiti@2.6.1)(jsdom@27.4.0(@noble/hashes@1.8.0))(msw@2.12.7(@types/node@24.10.9)(typescript@5.9.3)))(zod@4.3.6)':
     dependencies:
@@ -3004,13 +3020,13 @@ snapshots:
       vitest: 4.0.18(@opentelemetry/api@1.9.0)(@types/node@24.10.9)(jiti@2.6.1)(jsdom@27.4.0(@noble/hashes@1.8.0))(msw@2.12.7(@types/node@24.10.9)(typescript@5.9.3))
       zod: 4.3.6
 
-  ? '@a-novel/service-authentication-rest-test@2.2.4(@a-novel-kit/nodelib-browser@1.3.19(zod@4.3.6))(@a-novel-kit/nodelib-test@1.3.6(@a-novel-kit/nodelib-browser@1.3.19(zod@4.3.6))(@msw/playwright@0.4.5(msw@2.12.7(@types/node@24.10.9)(typescript@5.9.3)))(@tanstack/react-query@5.90.19(react@19.2.4))(@testing-library/react@16.3.2(@testing-library/dom@10.4.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(msw@2.12.7(@types/node@24.10.9)(typescript@5.9.3))(playwright@1.57.0)(v8-to-istanbul@9.3.0)(vitest@4.0.18(@opentelemetry/api@1.9.0)(@types/node@24.10.9)(jiti@2.6.1)(jsdom@27.4.0(@noble/hashes@1.8.0))(msw@2.12.7(@types/node@24.10.9)(typescript@5.9.3)))(zod@4.3.6))(@a-novel/service-authentication-rest@2.2.4(@a-novel-kit/nodelib-browser@1.3.19(zod@4.3.6))(zod@4.3.6))(jsdom@27.4.0(@noble/hashes@1.8.0))(mailparser@3.9.1)(vite@7.3.1(@types/node@24.10.9)(jiti@2.6.1))(vitest@4.0.18(@opentelemetry/api@1.9.0)(@types/node@24.10.9)(jiti@2.6.1)(jsdom@27.4.0(@noble/hashes@1.8.0))(msw@2.12.7(@types/node@24.10.9)(typescript@5.9.3)))(zod@4.3.6)'
+  ? '@a-novel/service-authentication-rest-test@2.2.4(@a-novel-kit/nodelib-browser@1.3.19(zod@4.3.6))(@a-novel-kit/nodelib-test@1.3.6(@a-novel-kit/nodelib-browser@1.3.19(zod@4.3.6))(@msw/playwright@0.4.5(msw@2.12.7(@types/node@24.10.9)(typescript@5.9.3)))(@tanstack/react-query@5.90.19(react@19.2.4))(@testing-library/react@16.3.2(@testing-library/dom@10.4.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(msw@2.12.7(@types/node@24.10.9)(typescript@5.9.3))(playwright@1.57.0)(v8-to-istanbul@9.3.0)(vitest@4.0.18(@opentelemetry/api@1.9.0)(@types/node@24.10.9)(jiti@2.6.1)(jsdom@27.4.0(@noble/hashes@1.8.0))(msw@2.12.7(@types/node@24.10.9)(typescript@5.9.3)))(zod@4.3.6))(@a-novel/service-authentication-rest@2.2.4(@a-novel-kit/nodelib-browser@1.3.19(zod@4.3.6))(zod@4.3.6))(jsdom@27.4.0(@noble/hashes@1.8.0))(mailparser@3.9.3)(vite@7.3.1(@types/node@24.10.9)(jiti@2.6.1))(vitest@4.0.18(@opentelemetry/api@1.9.0)(@types/node@24.10.9)(jiti@2.6.1)(jsdom@27.4.0(@noble/hashes@1.8.0))(msw@2.12.7(@types/node@24.10.9)(typescript@5.9.3)))(zod@4.3.6)'
   : dependencies:
       '@a-novel-kit/nodelib-browser': 1.3.19(zod@4.3.6)
       '@a-novel-kit/nodelib-test': 1.3.6(@a-novel-kit/nodelib-browser@1.3.19(zod@4.3.6))(@msw/playwright@0.4.5(msw@2.12.7(@types/node@24.10.9)(typescript@5.9.3)))(@tanstack/react-query@5.90.19(react@19.2.4))(@testing-library/react@16.3.2(@testing-library/dom@10.4.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(msw@2.12.7(@types/node@24.10.9)(typescript@5.9.3))(playwright@1.57.0)(v8-to-istanbul@9.3.0)(vitest@4.0.18(@opentelemetry/api@1.9.0)(@types/node@24.10.9)(jiti@2.6.1)(jsdom@27.4.0(@noble/hashes@1.8.0))(msw@2.12.7(@types/node@24.10.9)(typescript@5.9.3)))(zod@4.3.6)
       '@a-novel/service-authentication-rest': 2.2.4(@a-novel-kit/nodelib-browser@1.3.19(zod@4.3.6))(zod@4.3.6)
       jsdom: 27.4.0(@noble/hashes@1.8.0)
-      mailparser: 3.9.1
+      mailparser: 3.9.3
       vite: 7.3.1(@types/node@24.10.9)(jiti@2.6.1)
       vitest: 4.0.18(@opentelemetry/api@1.9.0)(@types/node@24.10.9)(jiti@2.6.1)(jsdom@27.4.0(@noble/hashes@1.8.0))(msw@2.12.7(@types/node@24.10.9)(typescript@5.9.3))
       zod: 4.3.6
@@ -3330,6 +3346,7 @@ snapshots:
     dependencies:
       '@jridgewell/gen-mapping': 0.3.13
       '@jridgewell/trace-mapping': 0.3.31
+    optional: true
 
   '@jridgewell/resolve-uri@3.1.2': {}
 
@@ -3444,7 +3461,8 @@ snapshots:
 
   '@pkgr/core@0.2.9': {}
 
-  '@polka/url@1.0.0-next.29': {}
+  '@polka/url@1.0.0-next.29':
+    optional: true
 
   '@protobufjs/aspromise@1.1.2': {}
 
@@ -3662,6 +3680,7 @@ snapshots:
   '@sveltejs/acorn-typescript@1.0.9(acorn@8.16.0)':
     dependencies:
       acorn: 8.16.0
+    optional: true
 
   '@sveltejs/kit@2.53.4(@opentelemetry/api@1.9.0)(@sveltejs/vite-plugin-svelte@6.2.4(svelte@5.47.1)(vite@7.3.1(@types/node@25.3.3)(jiti@2.6.1)))(svelte@5.47.1)(typescript@5.9.3)(vite@7.3.1(@types/node@25.3.3)(jiti@2.6.1))':
     dependencies:
@@ -3683,6 +3702,7 @@ snapshots:
     optionalDependencies:
       '@opentelemetry/api': 1.9.0
       typescript: 5.9.3
+    optional: true
 
   '@sveltejs/vite-plugin-svelte-inspector@5.0.2(@sveltejs/vite-plugin-svelte@6.2.4(svelte@5.47.1)(vite@7.3.1(@types/node@25.3.3)(jiti@2.6.1)))(svelte@5.47.1)(vite@7.3.1(@types/node@25.3.3)(jiti@2.6.1))':
     dependencies:
@@ -3690,6 +3710,7 @@ snapshots:
       obug: 2.1.1
       svelte: 5.47.1
       vite: 7.3.1(@types/node@25.3.3)(jiti@2.6.1)
+    optional: true
 
   '@sveltejs/vite-plugin-svelte@6.2.4(svelte@5.47.1)(vite@7.3.1(@types/node@25.3.3)(jiti@2.6.1))':
     dependencies:
@@ -3700,6 +3721,7 @@ snapshots:
       svelte: 5.47.1
       vite: 7.3.1(@types/node@25.3.3)(jiti@2.6.1)
       vitefu: 1.1.2(vite@7.3.1(@types/node@25.3.3)(jiti@2.6.1))
+    optional: true
 
   '@tanstack/query-core@5.90.19': {}
 
@@ -3763,7 +3785,8 @@ snapshots:
       '@types/deep-eql': 4.0.2
       assertion-error: 2.0.1
 
-  '@types/cookie@0.6.0': {}
+  '@types/cookie@0.6.0':
+    optional: true
 
   '@types/deep-eql@4.0.2': {}
 
@@ -4039,7 +4062,8 @@ snapshots:
       estree-walker: 3.0.3
       js-tokens: 9.0.1
 
-  axobject-query@4.1.0: {}
+  axobject-query@4.1.0:
+    optional: true
 
   balanced-match@1.0.2: {}
 
@@ -4142,6 +4166,7 @@ snapshots:
   css-declaration-sorter@7.3.1(postcss@8.5.6):
     dependencies:
       postcss: 8.5.6
+    optional: true
 
   css-to-react-native@3.2.0:
     dependencies:
@@ -4215,7 +4240,8 @@ snapshots:
 
   detect-newline@4.0.1: {}
 
-  devalue@5.6.3: {}
+  devalue@5.6.3:
+    optional: true
 
   discontinuous-range@1.0.0: {}
 
@@ -4387,7 +4413,8 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  esm-env@1.2.2: {}
+  esm-env@1.2.2:
+    optional: true
 
   espree@10.4.0:
     dependencies:
@@ -4410,6 +4437,7 @@ snapshots:
   esrap@2.2.3:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.5
+    optional: true
 
   esrecurse@4.3.0:
     dependencies:
@@ -4556,7 +4584,7 @@ snapshots:
     dependencies:
       safer-buffer: 2.1.2
 
-  iconv-lite@0.7.0:
+  iconv-lite@0.7.2:
     dependencies:
       safer-buffer: 2.1.2
 
@@ -4593,6 +4621,7 @@ snapshots:
   is-reference@3.0.3:
     dependencies:
       '@types/estree': 1.0.8
+    optional: true
 
   is-wsl@3.1.1:
     dependencies:
@@ -4712,7 +4741,8 @@ snapshots:
     dependencies:
       json-buffer: 3.0.1
 
-  kleur@4.1.5: {}
+  kleur@4.1.5:
+    optional: true
 
   known-css-properties@0.37.0: {}
 
@@ -4742,7 +4772,8 @@ snapshots:
     dependencies:
       uc.micro: 2.1.0
 
-  locate-character@3.0.0: {}
+  locate-character@3.0.0:
+    optional: true
 
   locate-path@6.0.0:
     dependencies:
@@ -4774,16 +4805,16 @@ snapshots:
       '@babel/types': 7.28.6
       source-map-js: 1.2.1
 
-  mailparser@3.9.1:
+  mailparser@3.9.3:
     dependencies:
       '@zone-eu/mailsplit': 5.4.8
       encoding-japanese: 2.2.0
       he: 1.2.0
       html-to-text: 9.0.5
-      iconv-lite: 0.7.0
+      iconv-lite: 0.7.2
       libmime: 5.3.7
       linkify-it: 5.0.0
-      nodemailer: 7.0.11
+      nodemailer: 7.0.13
       punycode.js: 2.3.1
       tlds: 1.261.0
 
@@ -4831,7 +4862,8 @@ snapshots:
 
   moo@0.5.2: {}
 
-  mrmime@2.0.1: {}
+  mrmime@2.0.1:
+    optional: true
 
   ms@2.1.3: {}
 
@@ -4918,7 +4950,7 @@ snapshots:
       '@types/pegjs': 0.10.6
       big-integer: 1.6.52
 
-  nodemailer@7.0.11: {}
+  nodemailer@7.0.13: {}
 
   oas-kit-common@1.0.8:
     dependencies:
@@ -5046,6 +5078,7 @@ snapshots:
   postcss-less@6.0.0(postcss@8.5.6):
     dependencies:
       postcss: 8.5.6
+    optional: true
 
   postcss-load-config@3.1.4(postcss@8.5.6):
     dependencies:
@@ -5095,6 +5128,7 @@ snapshots:
       prettier: 3.8.1
     transitivePeerDependencies:
       - postcss
+    optional: true
 
   prettier-plugin-packagejson@2.5.22(prettier@3.8.1):
     dependencies:
@@ -5120,6 +5154,7 @@ snapshots:
     dependencies:
       prettier: 3.8.1
       svelte: 5.47.1
+    optional: true
 
   prettier@3.8.1: {}
 
@@ -5299,7 +5334,8 @@ snapshots:
 
   set-cookie-parser@2.7.2: {}
 
-  set-cookie-parser@3.0.1: {}
+  set-cookie-parser@3.0.1:
+    optional: true
 
   shallowequal@1.1.0: {}
 
@@ -5356,6 +5392,7 @@ snapshots:
       '@polka/url': 1.0.0-next.29
       mrmime: 2.0.1
       totalist: 3.0.1
+    optional: true
 
   slugify@1.4.7: {}
 
@@ -5482,6 +5519,7 @@ snapshots:
       locate-character: 3.0.0
       magic-string: 0.30.21
       zimmerframe: 1.1.4
+    optional: true
 
   swagger2openapi@7.0.8:
     dependencies:
@@ -5532,7 +5570,8 @@ snapshots:
     dependencies:
       tldts-core: 7.0.23
 
-  totalist@3.0.1: {}
+  totalist@3.0.1:
+    optional: true
 
   tough-cookie@6.0.0:
     dependencies:
@@ -5639,6 +5678,7 @@ snapshots:
   vitefu@1.1.2(vite@7.3.1(@types/node@25.3.3)(jiti@2.6.1)):
     optionalDependencies:
       vite: 7.3.1(@types/node@25.3.3)(jiti@2.6.1)
+    optional: true
 
   vitest@4.0.18(@opentelemetry/api@1.9.0)(@types/node@24.10.9)(jiti@2.6.1)(jsdom@27.4.0(@noble/hashes@1.8.0))(msw@2.12.7(@types/node@24.10.9)(typescript@5.9.3)):
     dependencies:
@@ -5819,6 +5859,7 @@ snapshots:
 
   yoctocolors-cjs@2.1.3: {}
 
-  zimmerframe@1.1.4: {}
+  zimmerframe@1.1.4:
+    optional: true
 
   zod@4.3.6: {}
