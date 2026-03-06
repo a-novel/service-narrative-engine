@@ -11,7 +11,7 @@ tool (
 require (
 	github.com/a-novel-kit/golib v0.20.13
 	github.com/a-novel/service-authentication/v2 v2.3.1
-	github.com/a-novel/service-json-keys/v2 v2.1.5
+	github.com/a-novel/service-json-keys/v2 v2.2.0
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/go-chi/chi/v5 v5.2.5
 	github.com/go-chi/cors v1.2.2
@@ -57,7 +57,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.4.0 // indirect
 	github.com/MirrexOne/unqueryvet v1.5.3 // indirect
 	github.com/OpenPeeDeeP/depguard/v2 v2.2.1 // indirect
-	github.com/a-novel-kit/jwt v1.1.34 // indirect
+	github.com/a-novel-kit/jwt v1.1.39 // indirect
 	github.com/alecthomas/chroma/v2 v2.23.1 // indirect
 	github.com/alecthomas/go-check-sumtype v0.3.1 // indirect
 	github.com/alexkohler/nakedret/v2 v2.0.6 // indirect
