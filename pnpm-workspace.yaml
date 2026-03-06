@@ -14,6 +14,12 @@ onlyBuiltDependencies:
   - msw
   - protobufjs
 
+prefer-workspace-packages: true
+
+recursive-install: true
+
+strictPeerDependencies: false
+
 overrides:
   "@sveltejs/kit@>=2.49.0 <=2.52.1": ">=2.52.2"
   cookie@<0.7.0: ">=0.7.0"
@@ -30,9 +36,3 @@ overrides:
   svelte@<=5.51.4: ">=5.51.5"
   svelte@<=5.53.4: ">=5.53.5"
   svelte@>=5.39.3 <5.51.5: ">=5.51.5"
-
-prefer-workspace-packages: true
-
-recursive-install: true
-
-strictPeerDependencies: false

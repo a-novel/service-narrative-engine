@@ -37,7 +37,7 @@ type Cors struct {
 	MaxAge           int      `json:"maxAge"           yaml:"maxAge"`
 }
 
-type API struct {
+type Rest struct {
 	Port           int         `json:"port"           yaml:"port"`
 	Timeouts       APITimeouts `json:"timeouts"       yaml:"timeouts"`
 	MaxRequestSize int64       `json:"maxRequestSize" yaml:"maxRequestSize"`
@@ -45,8 +45,8 @@ type API struct {
 }
 
 type App struct {
-	App Main `json:"app" yaml:"app"`
-	Api API  `json:"api" yaml:"api"`
+	App  Main `json:"app"  yaml:"app"`
+	Rest Rest `json:"rest" yaml:"rest"`
 
 	DependenciesConfig Dependencies        `json:"dependencies" yaml:"dependencies"`
 	Permissions        authpkg.Permissions `json:"permissions"  yaml:"permissions"`

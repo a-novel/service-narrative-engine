@@ -26,10 +26,10 @@ const resolvedModules: Record<
 > = {};
 
 beforeAll(async () => {
-  const authApi = new AuthenticationApi(process.env.AUTH_API_URL!);
-  const api = new NarrativeEngineApi(process.env.API_URL!);
+  const authApi = new AuthenticationApi(process.env.SERVICE_AUTHENTICATION_URL!);
+  const api = new NarrativeEngineApi(process.env.REST_URL!);
 
-  const preRegister = await preRegisterUser(authApi, process.env.MAIL_TEST_HOST!);
+  const preRegister = await preRegisterUser(authApi, process.env.MAIL_HOST!);
   user = await registerUser(authApi, preRegister);
 
   // Resolve versions for all default modules.
@@ -61,7 +61,7 @@ beforeAll(async () => {
 
 describe("moduleSelect", () => {
   it("returns all default modules", async () => {
-    const api = new NarrativeEngineApi(process.env.API_URL!);
+    const api = new NarrativeEngineApi(process.env.REST_URL!);
 
     for (const [namespace, moduleIDs] of Object.entries(DEFAULT_WORKFLOWS)) {
       for (const id of moduleIDs) {
@@ -83,7 +83,7 @@ describe("moduleSelect", () => {
   });
 
   it("returns 404 for non-existent module", async () => {
-    const api = new NarrativeEngineApi(process.env.API_URL!);
+    const api = new NarrativeEngineApi(process.env.REST_URL!);
 
     await expectStatus(
       moduleSelect(api, user.token.accessToken, {
@@ -94,7 +94,7 @@ describe("moduleSelect", () => {
   });
 
   it("returns 422 for invalid module string format", async () => {
-    const api = new NarrativeEngineApi(process.env.API_URL!);
+    const api = new NarrativeEngineApi(process.env.REST_URL!);
 
     await expectStatus(
       moduleSelect(api, user.token.accessToken, {
@@ -105,7 +105,7 @@ describe("moduleSelect", () => {
   });
 
   it("returns 401 without access token", async () => {
-    const api = new NarrativeEngineApi(process.env.API_URL!);
+    const api = new NarrativeEngineApi(process.env.REST_URL!);
 
     const firstNamespace = Object.keys(DEFAULT_WORKFLOWS)[0];
     const firstModuleID = DEFAULT_WORKFLOWS[firstNamespace][0];
@@ -121,7 +121,7 @@ describe("moduleSelect", () => {
 
 describe("moduleListNamespaces", () => {
   it("returns all default namespaces", async () => {
-    const api = new NarrativeEngineApi(process.env.API_URL!);
+    const api = new NarrativeEngineApi(process.env.REST_URL!);
 
     const namespaces = await moduleListNamespaces(api, user.token.accessToken, {
       limit: 100,
@@ -136,7 +136,7 @@ describe("moduleListNamespaces", () => {
   });
 
   it("respects limit parameter", async () => {
-    const api = new NarrativeEngineApi(process.env.API_URL!);
+    const api = new NarrativeEngineApi(process.env.REST_URL!);
 
     const namespaces = await moduleListNamespaces(api, user.token.accessToken, {
       limit: 1,
@@ -147,7 +147,7 @@ describe("moduleListNamespaces", () => {
   });
 
   it("returns 401 without access token", async () => {
-    const api = new NarrativeEngineApi(process.env.API_URL!);
+    const api = new NarrativeEngineApi(process.env.REST_URL!);
 
     await expectStatus(
       moduleListNamespaces(api, "", {
@@ -161,7 +161,7 @@ describe("moduleListNamespaces", () => {
 
 describe("moduleListIDs", () => {
   it("returns all default module IDs for each namespace", async () => {
-    const api = new NarrativeEngineApi(process.env.API_URL!);
+    const api = new NarrativeEngineApi(process.env.REST_URL!);
 
     for (const [namespace, moduleIDs] of Object.entries(DEFAULT_WORKFLOWS)) {
       const ids = await moduleListIDs(api, user.token.accessToken, {
@@ -179,7 +179,7 @@ describe("moduleListIDs", () => {
   });
 
   it("respects limit parameter", async () => {
-    const api = new NarrativeEngineApi(process.env.API_URL!);
+    const api = new NarrativeEngineApi(process.env.REST_URL!);
 
     const firstNamespace = Object.keys(DEFAULT_WORKFLOWS)[0];
 
@@ -193,7 +193,7 @@ describe("moduleListIDs", () => {
   });
 
   it("returns empty array for non-existent namespace", async () => {
-    const api = new NarrativeEngineApi(process.env.API_URL!);
+    const api = new NarrativeEngineApi(process.env.REST_URL!);
 
     const ids = await moduleListIDs(api, user.token.accessToken, {
       namespace: "non-existent",
@@ -206,7 +206,7 @@ describe("moduleListIDs", () => {
   });
 
   it("returns 401 without access token", async () => {
-    const api = new NarrativeEngineApi(process.env.API_URL!);
+    const api = new NarrativeEngineApi(process.env.REST_URL!);
 
     const firstNamespace = Object.keys(DEFAULT_WORKFLOWS)[0];
 
@@ -223,7 +223,7 @@ describe("moduleListIDs", () => {
 
 describe("moduleListVersions", () => {
   it("returns versions for all default modules", async () => {
-    const api = new NarrativeEngineApi(process.env.API_URL!);
+    const api = new NarrativeEngineApi(process.env.REST_URL!);
 
     for (const [namespace, moduleIDs] of Object.entries(DEFAULT_WORKFLOWS)) {
       for (const id of moduleIDs) {
@@ -246,7 +246,7 @@ describe("moduleListVersions", () => {
   });
 
   it("returns empty array for non-existent module", async () => {
-    const api = new NarrativeEngineApi(process.env.API_URL!);
+    const api = new NarrativeEngineApi(process.env.REST_URL!);
 
     const versions = await moduleListVersions(api, user.token.accessToken, {
       namespace: "non-existent",
@@ -261,7 +261,7 @@ describe("moduleListVersions", () => {
   });
 
   it("respects limit parameter", async () => {
-    const api = new NarrativeEngineApi(process.env.API_URL!);
+    const api = new NarrativeEngineApi(process.env.REST_URL!);
 
     const firstNamespace = Object.keys(DEFAULT_WORKFLOWS)[0];
     const firstModuleID = DEFAULT_WORKFLOWS[firstNamespace][0];
@@ -278,7 +278,7 @@ describe("moduleListVersions", () => {
   });
 
   it("returns 401 without access token", async () => {
-    const api = new NarrativeEngineApi(process.env.API_URL!);
+    const api = new NarrativeEngineApi(process.env.REST_URL!);
 
     const firstNamespace = Object.keys(DEFAULT_WORKFLOWS)[0];
     const firstModuleID = DEFAULT_WORKFLOWS[firstNamespace][0];

@@ -48,7 +48,7 @@ func TestSchemaSelect(t *testing.T) {
 		{
 			name: "Success/ByID",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodGet,
 				"/?id=00000000-0000-0000-0000-000000000001&projectID=00000000-0000-0000-0000-000000000002",
 				nil,
@@ -90,7 +90,7 @@ func TestSchemaSelect(t *testing.T) {
 		{
 			name: "Success/ByProjectAndModule",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodGet,
 				"/?projectID=00000000-0000-0000-0000-000000000002&module=namespace:module@v1.0.0",
 				nil,
@@ -132,7 +132,7 @@ func TestSchemaSelect(t *testing.T) {
 		{
 			name: "Success/WithPreversion",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodGet,
 				"/?projectID=00000000-0000-0000-0000-000000000002&module=namespace:module@v1.0.0-beta",
 				nil,
@@ -175,7 +175,7 @@ func TestSchemaSelect(t *testing.T) {
 		{
 			name: "Error/NoClaims",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodGet,
 				"/?id=00000000-0000-0000-0000-000000000001&projectID=00000000-0000-0000-0000-000000000002",
 				nil,
@@ -186,7 +186,7 @@ func TestSchemaSelect(t *testing.T) {
 		{
 			name: "Error/SchemaNotFound",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodGet,
 				"/?id=00000000-0000-0000-0000-000000000001&projectID=00000000-0000-0000-0000-000000000002",
 				nil,
@@ -209,7 +209,7 @@ func TestSchemaSelect(t *testing.T) {
 		{
 			name: "Error/ProjectNotFound",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodGet,
 				"/?id=00000000-0000-0000-0000-000000000001&projectID=00000000-0000-0000-0000-000000000002",
 				nil,
@@ -232,7 +232,7 @@ func TestSchemaSelect(t *testing.T) {
 		{
 			name: "Error/InvalidRequest",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodGet,
 				"/?id=00000000-0000-0000-0000-000000000001&projectID=00000000-0000-0000-0000-000000000002",
 				nil,
@@ -255,7 +255,7 @@ func TestSchemaSelect(t *testing.T) {
 		{
 			name: "Error/UserDoesNotOwnProject",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodGet,
 				"/?id=00000000-0000-0000-0000-000000000001&projectID=00000000-0000-0000-0000-000000000002",
 				nil,
@@ -278,7 +278,7 @@ func TestSchemaSelect(t *testing.T) {
 		{
 			name: "Error/InternalError",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodGet,
 				"/?id=00000000-0000-0000-0000-000000000001&projectID=00000000-0000-0000-0000-000000000002",
 				nil,

@@ -70,10 +70,10 @@ Once the service is running (`make run`), you can interact with it using `curl` 
 
 ```bash
 # Simple ping (is the server up?)
-curl http://localhost:4021/ping
+curl http://localhost:${SERVICE_NARRATIVE_ENGINE_REST_PORT}/ping
 
 # Detailed health check (checks database, dependencies)
-curl http://localhost:4021/healthcheck
+curl http://localhost:${SERVICE_NARRATIVE_ENGINE_REST_PORT}/healthcheck
 ```
 
 #### Authentication
@@ -92,11 +92,11 @@ Projects are the main containers for user narrative content.
 
 ```bash
 # List your projects (supports pagination with limit/offset)
-curl -X GET "http://localhost:4021/projects?limit=10&offset=0" \
+curl -X GET "http://localhost:${SERVICE_NARRATIVE_ENGINE_REST_PORT}/projects?limit=10&offset=0" \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 
 # Create a new project
-curl -X PUT http://localhost:4021/projects \
+curl -X PUT http://localhost:${SERVICE_NARRATIVE_ENGINE_REST_PORT}/projects \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -d '{
@@ -106,7 +106,7 @@ curl -X PUT http://localhost:4021/projects \
   }'
 
 # Update a project (title and/or workflow)
-curl -X PATCH http://localhost:4021/projects \
+curl -X PATCH http://localhost:${SERVICE_NARRATIVE_ENGINE_REST_PORT}/projects \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -d '{
@@ -116,7 +116,7 @@ curl -X PATCH http://localhost:4021/projects \
   }'
 
 # Delete a project
-curl -X DELETE http://localhost:4021/projects \
+curl -X DELETE http://localhost:${SERVICE_NARRATIVE_ENGINE_REST_PORT}/projects \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -d '{"id": "<project-uuid>"}'
@@ -128,11 +128,11 @@ Modules are predefined narrative templates with JSON schemas.
 
 ```bash
 # Get a module by ID (format: namespace:id@vX.X.X[-preversion])
-curl -X GET "http://localhost:4021/modules?module=system:character@v1.0.0" \
+curl -X GET "http://localhost:${SERVICE_NARRATIVE_ENGINE_REST_PORT}/modules?module=system:character@v1.0.0" \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 
 # List available versions of a module
-curl -X GET "http://localhost:4021/modules/versions?namespace=system&id=character" \
+curl -X GET "http://localhost:${SERVICE_NARRATIVE_ENGINE_REST_PORT}/modules/versions?namespace=system&id=character" \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
@@ -142,15 +142,15 @@ Schemas store the actual narrative data for each module in a project.
 
 ```bash
 # Get a schema (by module string or by schema id)
-curl -X GET "http://localhost:4021/schemas?projectID=<project-uuid>&module=system:character@v1.0.0" \
+curl -X GET "http://localhost:${SERVICE_NARRATIVE_ENGINE_REST_PORT}/schemas?projectID=<project-uuid>&module=system:character@v1.0.0" \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 
 # List schema versions (returns history of edits for a module in a project)
-curl -X GET "http://localhost:4021/schemas/versions?projectID=<project-uuid>&moduleNamespace=system&moduleID=character" \
+curl -X GET "http://localhost:${SERVICE_NARRATIVE_ENGINE_REST_PORT}/schemas/versions?projectID=<project-uuid>&moduleNamespace=system&moduleID=character" \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 
 # Create a schema manually
-curl -X PUT http://localhost:4021/schemas \
+curl -X PUT http://localhost:${SERVICE_NARRATIVE_ENGINE_REST_PORT}/schemas \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -d '{
@@ -162,7 +162,7 @@ curl -X PUT http://localhost:4021/schemas \
   }'
 
 # Generate a schema using AI
-curl -X PUT http://localhost:4021/schemas/generate \
+curl -X PUT http://localhost:${SERVICE_NARRATIVE_ENGINE_REST_PORT}/schemas/generate \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -d '{
@@ -172,7 +172,7 @@ curl -X PUT http://localhost:4021/schemas/generate \
   }'
 
 # Rewrite/update a schema (creates a new version)
-curl -X PATCH http://localhost:4021/schemas \
+curl -X PATCH http://localhost:${SERVICE_NARRATIVE_ENGINE_REST_PORT}/schemas \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -d '{

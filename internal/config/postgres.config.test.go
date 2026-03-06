@@ -8,4 +8,4 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/config/env"
 )
 
-var PostgresPresetTest = postgrespresets.NewDefault(pgdriver.WithDSN(env.PostgresDsnTest))
+var PostgresPresetTest = postgrespresets.NewDefault(pgdriver.WithDSN(env.PostgresDsn))

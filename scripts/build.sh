@@ -16,5 +16,5 @@ podman build --format docker \
   -f ./builds/rest.Dockerfile \
   -t ghcr.io/a-novel/service-narrative-engine/rest:local .
 podman build --format docker \
-  -f ./builds/standalone.Dockerfile \
-  -t ghcr.io/a-novel/service-narrative-engine/standalone:local .
+  -f ./builds/standalone.rest.Dockerfile \
+  -t ghcr.io/a-novel/service-narrative-engine/standalone-rest:local .

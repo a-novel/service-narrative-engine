@@ -42,7 +42,7 @@ func TestModuleListVersions(t *testing.T) {
 		{
 			name: "Success",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodGet,
 				"/?id=my-module&namespace=my-namespace&limit=10&offset=0",
 				nil,
@@ -85,7 +85,7 @@ func TestModuleListVersions(t *testing.T) {
 		{
 			name: "Success/WithVersion",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodGet,
 				"/?id=my-module&namespace=my-namespace&version=1.0",
 				nil,
@@ -126,7 +126,7 @@ func TestModuleListVersions(t *testing.T) {
 		{
 			name: "Success/WithPreversion",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodGet,
 				"/?id=my-module&namespace=my-namespace&preversion=true",
 				nil,
@@ -159,7 +159,7 @@ func TestModuleListVersions(t *testing.T) {
 		{
 			name: "Success/EmptyResult",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodGet,
 				"/?id=my-module&namespace=my-namespace",
 				nil,
@@ -179,7 +179,7 @@ func TestModuleListVersions(t *testing.T) {
 		{
 			name: "Error/InvalidRequest",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodGet,
 				"/?id=my-module&namespace=my-namespace",
 				nil,
@@ -198,7 +198,7 @@ func TestModuleListVersions(t *testing.T) {
 		{
 			name: "Error/InternalError",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodGet,
 				"/?id=my-module&namespace=my-namespace",
 				nil,

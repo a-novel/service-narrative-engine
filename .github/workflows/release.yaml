@@ -113,7 +113,7 @@ jobs:
             -e POSTGRES_DSN="${POSTGRES_DSN}"
             -e DEV_MODE="${DEV_MODE}"
 
-  build-rest-api:
+  build-rest:
     needs: [build-database]
     runs-on: ubuntu-latest
     permissions:
@@ -148,9 +148,9 @@ jobs:
           POSTGRES_INITDB_ARGS: --auth=scram-sha-256
 
       service-json-keys:
-        image: ghcr.io/a-novel/service-json-keys/standalone:v2.1.5
+        image: ghcr.io/a-novel/service-json-keys/standalone-grpc:v2.2.0
         ports:
-          - "4002:8080"
+          - "4000:8080"
         credentials:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
@@ -162,7 +162,7 @@ jobs:
       OPENAI_MODEL: gpt-5.2
       OPENAI_BASE_URL: https://api.openai.com/v1
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      SERVICE_JSON_KEYS_PORT: 4002
+      SERVICE_JSON_KEYS_PORT: 4000
       SERVICE_JSON_KEYS_HOST: 0.0.0.0
     steps:
       - uses: actions/checkout@v6
@@ -180,7 +180,7 @@ jobs:
             -e SERVICE_JSON_KEYS_HOST="${SERVICE_JSON_KEYS_HOST}"
             -p "${SERVICE_JSON_KEYS_PORT}:${SERVICE_JSON_KEYS_PORT}"
 
-  build-standalone:
+  build-standalone-rest:
     needs: [build-database]
     runs-on: ubuntu-latest
     permissions:
@@ -215,9 +215,9 @@ jobs:
           POSTGRES_INITDB_ARGS: --auth=scram-sha-256
 
       service-json-keys:
-        image: ghcr.io/a-novel/service-json-keys/standalone:v2.1.5
+        image: ghcr.io/a-novel/service-json-keys/standalone-grpc:v2.2.0
         ports:
-          - "4002:8080"
+          - "4000:8080"
         credentials:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
@@ -229,15 +229,15 @@ jobs:
       OPENAI_MODEL: gpt-5.2
       OPENAI_BASE_URL: https://api.openai.com/v1
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      SERVICE_JSON_KEYS_PORT: 4002
+      SERVICE_JSON_KEYS_PORT: 4000
       SERVICE_JSON_KEYS_HOST: 0.0.0.0
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/run-migrations
       - uses: a-novel-kit/workflows/build-actions/docker@master
         with:
-          file: builds/standalone.Dockerfile
-          image_name: ${{ github.repository }}/standalone
+          file: builds/standalone.rest.Dockerfile
+          image_name: ${{ github.repository }}/standalone-rest
           github_token: ${{ secrets.GITHUB_TOKEN }}
           run_args: >-
             -e POSTGRES_DSN="${POSTGRES_DSN}"

@@ -48,7 +48,7 @@ func TestSchemaListVersions(t *testing.T) {
 		{
 			name: "Success",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodGet,
 				"/?projectID=00000000-0000-0000-0000-000000000001&moduleID=my-module&moduleNamespace=my-namespace&limit=10&offset=0",
 				nil,
@@ -93,7 +93,7 @@ func TestSchemaListVersions(t *testing.T) {
 		{
 			name: "Success/WithOffset",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodGet,
 				"/?projectID=00000000-0000-0000-0000-000000000001&moduleID=my-module&moduleNamespace=my-namespace&limit=5&offset=10",
 				nil,
@@ -130,7 +130,7 @@ func TestSchemaListVersions(t *testing.T) {
 		{
 			name: "Success/EmptyResult",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodGet,
 				"/?projectID=00000000-0000-0000-0000-000000000001&moduleID=my-module&moduleNamespace=my-namespace&limit=10",
 				nil,
@@ -156,7 +156,7 @@ func TestSchemaListVersions(t *testing.T) {
 		{
 			name: "Error/NoClaims",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodGet,
 				"/?projectID=00000000-0000-0000-0000-000000000001&moduleID=my-module&moduleNamespace=my-namespace&limit=10",
 				nil,
@@ -167,7 +167,7 @@ func TestSchemaListVersions(t *testing.T) {
 		{
 			name: "Error/ProjectNotFound",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodGet,
 				"/?projectID=00000000-0000-0000-0000-000000000001&moduleID=my-module&moduleNamespace=my-namespace&limit=10",
 				nil,
@@ -192,7 +192,7 @@ func TestSchemaListVersions(t *testing.T) {
 		{
 			name: "Error/InvalidRequest",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodGet,
 				"/?projectID=00000000-0000-0000-0000-000000000001&moduleID=my-module&moduleNamespace=my-namespace&limit=10",
 				nil,
@@ -217,7 +217,7 @@ func TestSchemaListVersions(t *testing.T) {
 		{
 			name: "Error/UserDoesNotOwnProject",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodGet,
 				"/?projectID=00000000-0000-0000-0000-000000000001&moduleID=my-module&moduleNamespace=my-namespace&limit=10",
 				nil,
@@ -242,7 +242,7 @@ func TestSchemaListVersions(t *testing.T) {
 		{
 			name: "Error/InternalError",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodGet,
 				"/?projectID=00000000-0000-0000-0000-000000000001&moduleID=my-module&moduleNamespace=my-namespace&limit=10",
 				nil,

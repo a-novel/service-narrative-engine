@@ -41,7 +41,7 @@ func TestHealth(t *testing.T) {
 		{
 			name: "Success",
 
-			request: httptest.NewRequest(http.MethodPost, "/", nil),
+			request: httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/", nil),
 
 			healthApiJsonKeysMock: &healthApiJsonKeysMock{
 				res: new(jkpkg.StatusResponse),
@@ -49,10 +49,10 @@ func TestHealth(t *testing.T) {
 
 			expectResponse: map[string]any{
 				"client:postgres": map[string]any{
-					"status": handlers.HealthStatusUp,
+					"status": handlers.RestHealthStatusUp,
 				},
 				"api:jsonKeys": map[string]any{
-					"status": handlers.HealthStatusUp,
+					"status": handlers.RestHealthStatusUp,
 				},
 			},
 			expectStatus: http.StatusOK,
@@ -60,7 +60,7 @@ func TestHealth(t *testing.T) {
 		{
 			name: "Error",
 
-			request: httptest.NewRequest(http.MethodPost, "/", nil),
+			request: httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/", nil),
 
 			healthApiJsonKeysMock: &healthApiJsonKeysMock{
 				err: errors.New("error json keys"),
@@ -68,10 +68,10 @@ func TestHealth(t *testing.T) {
 
 			expectResponse: map[string]any{
 				"client:postgres": map[string]any{
-					"status": handlers.HealthStatusUp,
+					"status": handlers.RestHealthStatusUp,
 				},
 				"api:jsonKeys": map[string]any{
-					"status": handlers.HealthStatusDown,
+					"status": handlers.RestHealthStatusDown,
 					"err":    "error json keys",
 				},
 			},
@@ -83,7 +83,7 @@ func TestHealth(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			healthApiJsonKeys := handlersmocks.NewMockHealthApiJsonkeys(t)
+			healthApiJsonKeys := handlersmocks.NewMockRestHealthApiJsonKeys(t)
 
 			if testCase.healthApiJsonKeysMock != nil {
 				healthApiJsonKeys.EXPECT().
