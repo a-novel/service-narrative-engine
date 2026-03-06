@@ -16,37 +16,37 @@ import (
 )
 
 const (
-	HealthStatusUp   = "up"
-	HealthStatusDown = "down"
+	RestHealthStatusUp   = "up"
+	RestHealthStatusDown = "down"
 )
 
-type HealthStatus struct {
+type RestHealthStatus struct {
 	Status string `json:"status"`
 	Err    string `json:"err,omitempty"`
 }
 
-func NewHealthStatus(err error) *HealthStatus {
+func NewRestHealthStatus(err error) *RestHealthStatus {
 	errMsg := ""
 	if err != nil {
 		errMsg = err.Error()
 	}
 
-	return &HealthStatus{
-		Status: lo.Ternary(err == nil, HealthStatusUp, HealthStatusDown),
+	return &RestHealthStatus{
+		Status: lo.Ternary(err == nil, RestHealthStatusUp, RestHealthStatusDown),
 		Err:    errMsg,
 	}
 }
 
-type HealthApiJsonkeys interface {
+type RestHealthApiJsonKeys interface {
 	Status(ctx context.Context, req *jkpkg.StatusRequest, opts ...grpc.CallOption) (*jkpkg.StatusResponse, error)
 }
 
 type Health struct {
-	apiJsonKeys HealthApiJsonkeys
+	apiJsonKeys RestHealthApiJsonKeys
 }
 
 func NewHealth(
-	apiJsonKeys HealthApiJsonkeys,
+	apiJsonKeys RestHealthApiJsonKeys,
 ) *Health {
 	return &Health{
 		apiJsonKeys: apiJsonKeys,
@@ -54,17 +54,17 @@ func NewHealth(
 }
 
 func (handler *Health) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ctx, span := otel.Tracer().Start(r.Context(), "api.Health")
+	ctx, span := otel.Tracer().Start(r.Context(), "rest.Health")
 	defer span.End()
 
 	httpf.SendJSON(ctx, w, span, map[string]any{
-		"client:postgres": NewHealthStatus(handler.reportPostgres(ctx)),
-		"api:jsonKeys":    NewHealthStatus(handler.reportJsonKeys(ctx)),
+		"client:postgres": NewRestHealthStatus(handler.reportPostgres(ctx)),
+		"api:jsonKeys":    NewRestHealthStatus(handler.reportJsonKeys(ctx)),
 	})
 }
 
 func (handler *Health) reportPostgres(ctx context.Context) error {
-	ctx, span := otel.Tracer().Start(ctx, "api.Health(reportPostgres)")
+	ctx, span := otel.Tracer().Start(ctx, "rest.Health(reportPostgres)")
 	defer span.End()
 
 	pg, err := postgres.GetContext(ctx)
@@ -89,7 +89,7 @@ func (handler *Health) reportPostgres(ctx context.Context) error {
 }
 
 func (handler *Health) reportJsonKeys(ctx context.Context) error {
-	ctx, span := otel.Tracer().Start(ctx, "api.Health(reportJsonKeys)")
+	ctx, span := otel.Tracer().Start(ctx, "rest.Health(reportJsonKeys)")
 	defer span.End()
 
 	_, err := handler.apiJsonKeys.Status(ctx, new(jkpkg.StatusRequest))

@@ -44,7 +44,7 @@ func TestModuleSelect(t *testing.T) {
 		{
 			name: "Success",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodGet,
 				"/?module=my-namespace:my-module@1.0.0",
 				nil,
@@ -82,7 +82,7 @@ func TestModuleSelect(t *testing.T) {
 		{
 			name: "Success/WithPreversion",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodGet,
 				"/?module=my-namespace:my-module@1.0.0-beta",
 				nil,
@@ -121,7 +121,7 @@ func TestModuleSelect(t *testing.T) {
 		{
 			name: "Error/NotFound",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodGet,
 				"/?module=my-namespace:my-module@1.0.0",
 				nil,
@@ -139,7 +139,7 @@ func TestModuleSelect(t *testing.T) {
 		{
 			name: "Error/InvalidRequest",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodGet,
 				"/?module=my-namespace:my-module@1.0.0",
 				nil,
@@ -157,7 +157,7 @@ func TestModuleSelect(t *testing.T) {
 		{
 			name: "Error/InternalError",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodGet,
 				"/?module=my-namespace:my-module@1.0.0",
 				nil,

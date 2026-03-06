@@ -49,7 +49,7 @@ func TestProjectUpdate(t *testing.T) {
 		{
 			name: "Success",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodPost,
 				"/",
 				strings.NewReader(`{"id":"00000000-0000-0000-0000-000000000001","title":"Updated Project","workflow":["module1@namespace:1.0.0","module2@namespace:2.0.0"]}`),
@@ -90,7 +90,7 @@ func TestProjectUpdate(t *testing.T) {
 		{
 			name: "Error/NoClaims",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodPost,
 				"/",
 				strings.NewReader(`{"id":"00000000-0000-0000-0000-000000000001","title":"Updated Project","workflow":["module1@namespace:1.0.0"]}`),
@@ -101,7 +101,7 @@ func TestProjectUpdate(t *testing.T) {
 		{
 			name: "Error/InvalidJSON",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodPost,
 				"/",
 				strings.NewReader(`{invalid`),
@@ -115,7 +115,7 @@ func TestProjectUpdate(t *testing.T) {
 		{
 			name: "Error/NotFound",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodPost,
 				"/",
 				strings.NewReader(`{"id":"00000000-0000-0000-0000-000000000001","title":"Updated Project","workflow":["module1@namespace:1.0.0"]}`),
@@ -139,7 +139,7 @@ func TestProjectUpdate(t *testing.T) {
 		{
 			name: "Error/InvalidRequest",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodPost,
 				"/",
 				strings.NewReader(`{"id":"00000000-0000-0000-0000-000000000001","title":"Updated Project","workflow":["module1@namespace:1.0.0"]}`),
@@ -163,7 +163,7 @@ func TestProjectUpdate(t *testing.T) {
 		{
 			name: "Error/UserDoesNotOwnProject",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodPost,
 				"/",
 				strings.NewReader(`{"id":"00000000-0000-0000-0000-000000000001","title":"Updated Project","workflow":["module1@namespace:1.0.0"]}`),
@@ -187,7 +187,7 @@ func TestProjectUpdate(t *testing.T) {
 		{
 			name: "Error/ForbiddenModuleUpgrade",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodPost,
 				"/",
 				strings.NewReader(`{"id":"00000000-0000-0000-0000-000000000001","title":"Updated Project","workflow":["module1@namespace:2.0.0"]}`),
@@ -211,7 +211,7 @@ func TestProjectUpdate(t *testing.T) {
 		{
 			name: "Error/ModuleNotFound",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodPost,
 				"/",
 				strings.NewReader(`{"id":"00000000-0000-0000-0000-000000000001","title":"Updated Project","workflow":["module1@namespace:1.0.0"]}`),
@@ -235,7 +235,7 @@ func TestProjectUpdate(t *testing.T) {
 		{
 			name: "Error/InternalError",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodPost,
 				"/",
 				strings.NewReader(`{"id":"00000000-0000-0000-0000-000000000001","title":"Updated Project","workflow":["module1@namespace:1.0.0"]}`),

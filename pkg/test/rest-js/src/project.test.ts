@@ -21,10 +21,10 @@ const TEST_MODULE_NAMESPACE = "agora";
 const TEST_MODULE_ID = "idea";
 
 beforeAll(async () => {
-  const authApi = new AuthenticationApi(process.env.AUTH_API_URL!);
-  const api = new NarrativeEngineApi(process.env.API_URL!);
+  const authApi = new AuthenticationApi(process.env.SERVICE_AUTHENTICATION_URL!);
+  const api = new NarrativeEngineApi(process.env.REST_URL!);
 
-  const preRegister = await preRegisterUser(authApi, process.env.MAIL_TEST_HOST!);
+  const preRegister = await preRegisterUser(authApi, process.env.MAIL_HOST!);
   user = await registerUser(authApi, preRegister);
 
   const versions = await moduleListVersions(api, user.token.accessToken, {
@@ -44,7 +44,7 @@ beforeAll(async () => {
 
 describe("projectInit", () => {
   it("creates a new project", async () => {
-    const api = new NarrativeEngineApi(process.env.API_URL!);
+    const api = new NarrativeEngineApi(process.env.REST_URL!);
 
     const project = await projectInit(api, user.token.accessToken, {
       lang: "en",
@@ -66,7 +66,7 @@ describe("projectInit", () => {
   });
 
   it("creates a project with French language", async () => {
-    const api = new NarrativeEngineApi(process.env.API_URL!);
+    const api = new NarrativeEngineApi(process.env.REST_URL!);
 
     const project = await projectInit(api, user.token.accessToken, {
       lang: "fr",
@@ -81,7 +81,7 @@ describe("projectInit", () => {
   });
 
   it("returns 404 for non-existent module in workflow", async () => {
-    const api = new NarrativeEngineApi(process.env.API_URL!);
+    const api = new NarrativeEngineApi(process.env.REST_URL!);
 
     await expectStatus(
       projectInit(api, user.token.accessToken, {
@@ -94,7 +94,7 @@ describe("projectInit", () => {
   });
 
   it("returns 401 without access token", async () => {
-    const api = new NarrativeEngineApi(process.env.API_URL!);
+    const api = new NarrativeEngineApi(process.env.REST_URL!);
 
     await expectStatus(
       projectInit(api, "", {
@@ -109,7 +109,7 @@ describe("projectInit", () => {
 
 describe("projectList", () => {
   it("returns a list of projects", async () => {
-    const api = new NarrativeEngineApi(process.env.API_URL!);
+    const api = new NarrativeEngineApi(process.env.REST_URL!);
 
     // Create a project first
     const project = await projectInit(api, user.token.accessToken, {
@@ -132,7 +132,7 @@ describe("projectList", () => {
   });
 
   it("respects limit parameter", async () => {
-    const api = new NarrativeEngineApi(process.env.API_URL!);
+    const api = new NarrativeEngineApi(process.env.REST_URL!);
 
     const projects = await projectList(api, user.token.accessToken, {
       limit: 1,
@@ -143,7 +143,7 @@ describe("projectList", () => {
   });
 
   it("returns 401 without access token", async () => {
-    const api = new NarrativeEngineApi(process.env.API_URL!);
+    const api = new NarrativeEngineApi(process.env.REST_URL!);
 
     await expectStatus(
       projectList(api, "", {
@@ -157,7 +157,7 @@ describe("projectList", () => {
 
 describe("projectUpdate", () => {
   it("updates project title", async () => {
-    const api = new NarrativeEngineApi(process.env.API_URL!);
+    const api = new NarrativeEngineApi(process.env.REST_URL!);
 
     const project = await projectInit(api, user.token.accessToken, {
       lang: "en",
@@ -180,7 +180,7 @@ describe("projectUpdate", () => {
   });
 
   it("updates project workflow", async () => {
-    const api = new NarrativeEngineApi(process.env.API_URL!);
+    const api = new NarrativeEngineApi(process.env.REST_URL!);
 
     const project = await projectInit(api, user.token.accessToken, {
       lang: "en",
@@ -203,7 +203,7 @@ describe("projectUpdate", () => {
   });
 
   it("returns 404 for non-existent project", async () => {
-    const api = new NarrativeEngineApi(process.env.API_URL!);
+    const api = new NarrativeEngineApi(process.env.REST_URL!);
 
     await expectStatus(
       projectUpdate(api, user.token.accessToken, {
@@ -216,7 +216,7 @@ describe("projectUpdate", () => {
   });
 
   it("returns 401 without access token", async () => {
-    const api = new NarrativeEngineApi(process.env.API_URL!);
+    const api = new NarrativeEngineApi(process.env.REST_URL!);
 
     await expectStatus(
       projectUpdate(api, "", {
@@ -231,7 +231,7 @@ describe("projectUpdate", () => {
 
 describe("projectDelete", () => {
   it("deletes a project", async () => {
-    const api = new NarrativeEngineApi(process.env.API_URL!);
+    const api = new NarrativeEngineApi(process.env.REST_URL!);
 
     const project = await projectInit(api, user.token.accessToken, {
       lang: "en",
@@ -255,7 +255,7 @@ describe("projectDelete", () => {
   });
 
   it("returns 404 for non-existent project", async () => {
-    const api = new NarrativeEngineApi(process.env.API_URL!);
+    const api = new NarrativeEngineApi(process.env.REST_URL!);
 
     await expectStatus(
       projectDelete(api, user.token.accessToken, {
@@ -266,7 +266,7 @@ describe("projectDelete", () => {
   });
 
   it("returns 401 without access token", async () => {
-    const api = new NarrativeEngineApi(process.env.API_URL!);
+    const api = new NarrativeEngineApi(process.env.REST_URL!);
 
     await expectStatus(
       projectDelete(api, "", {

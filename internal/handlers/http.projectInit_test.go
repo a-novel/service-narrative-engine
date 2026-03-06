@@ -49,7 +49,7 @@ func TestProjectInit(t *testing.T) {
 		{
 			name: "Success",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodPost,
 				"/",
 				strings.NewReader(`{"lang":"en","title":"Test Project","workflow":["step1","step2"]}`),
@@ -90,7 +90,7 @@ func TestProjectInit(t *testing.T) {
 		{
 			name: "Error/NoClaims",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodPost,
 				"/",
 				strings.NewReader(`{"lang":"en","title":"Test Project","workflow":["step1","step2"]}`),
@@ -101,7 +101,7 @@ func TestProjectInit(t *testing.T) {
 		{
 			name: "Error/InvalidJSON",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodPost,
 				"/",
 				strings.NewReader(`{invalid`),
@@ -115,7 +115,7 @@ func TestProjectInit(t *testing.T) {
 		{
 			name: "Error/InvalidRequest",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodPost,
 				"/",
 				strings.NewReader(`{"lang":"en","title":"Test Project","workflow":["step1","step2"]}`),
@@ -139,7 +139,7 @@ func TestProjectInit(t *testing.T) {
 		{
 			name: "Error/ModuleNotFound",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodPost,
 				"/",
 				strings.NewReader(`{"lang":"en","title":"Test Project","workflow":["step1","step2"]}`),
@@ -163,7 +163,7 @@ func TestProjectInit(t *testing.T) {
 		{
 			name: "Error/ProjectAlreadyExists",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodPost,
 				"/",
 				strings.NewReader(`{"lang":"en","title":"Test Project","workflow":["step1","step2"]}`),
@@ -187,7 +187,7 @@ func TestProjectInit(t *testing.T) {
 		{
 			name: "Error/InternalError",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodPost,
 				"/",
 				strings.NewReader(`{"lang":"en","title":"Test Project","workflow":["step1","step2"]}`),

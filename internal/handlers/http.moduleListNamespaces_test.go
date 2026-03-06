@@ -41,7 +41,7 @@ func TestModuleListNamespaces(t *testing.T) {
 		{
 			name: "Success",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodGet,
 				"/?limit=10&offset=0",
 				nil,
@@ -61,7 +61,7 @@ func TestModuleListNamespaces(t *testing.T) {
 		{
 			name: "Success/WithOffset",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodGet,
 				"/?limit=10&offset=5",
 				nil,
@@ -81,7 +81,7 @@ func TestModuleListNamespaces(t *testing.T) {
 		{
 			name: "Success/EmptyResult",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodGet,
 				"/?limit=10",
 				nil,
@@ -100,7 +100,7 @@ func TestModuleListNamespaces(t *testing.T) {
 		{
 			name: "Error/InvalidRequest",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodGet,
 				"/?limit=10",
 				nil,
@@ -118,7 +118,7 @@ func TestModuleListNamespaces(t *testing.T) {
 		{
 			name: "Error/InternalError",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodGet,
 				"/?limit=10",
 				nil,

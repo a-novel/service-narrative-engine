@@ -48,7 +48,7 @@ func TestSchemaRewrite(t *testing.T) {
 		{
 			name: "Success",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodPut,
 				"/",
 				strings.NewReader(`{"id":"00000000-0000-0000-0000-000000000001","data":{"key":"value"}}`),
@@ -85,7 +85,7 @@ func TestSchemaRewrite(t *testing.T) {
 		{
 			name: "Success/WithPreversion",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodPut,
 				"/",
 				strings.NewReader(`{"id":"00000000-0000-0000-0000-000000000001","data":{"foo":"bar"}}`),
@@ -123,7 +123,7 @@ func TestSchemaRewrite(t *testing.T) {
 		{
 			name: "Error/NoClaims",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodPut,
 				"/",
 				strings.NewReader(`{"id":"00000000-0000-0000-0000-000000000001","data":{"key":"value"}}`),
@@ -134,7 +134,7 @@ func TestSchemaRewrite(t *testing.T) {
 		{
 			name: "Error/InvalidJSON",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodPut,
 				"/",
 				strings.NewReader(`{invalid`),
@@ -148,7 +148,7 @@ func TestSchemaRewrite(t *testing.T) {
 		{
 			name: "Error/SchemaNotFound",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodPut,
 				"/",
 				strings.NewReader(`{"id":"00000000-0000-0000-0000-000000000001","data":{"key":"value"}}`),
@@ -166,7 +166,7 @@ func TestSchemaRewrite(t *testing.T) {
 		{
 			name: "Error/ProjectNotFound",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodPut,
 				"/",
 				strings.NewReader(`{"id":"00000000-0000-0000-0000-000000000001","data":{"key":"value"}}`),
@@ -184,7 +184,7 @@ func TestSchemaRewrite(t *testing.T) {
 		{
 			name: "Error/InvalidRequest",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodPut,
 				"/",
 				strings.NewReader(`{"id":"00000000-0000-0000-0000-000000000001","data":{"key":"value"}}`),
@@ -202,7 +202,7 @@ func TestSchemaRewrite(t *testing.T) {
 		{
 			name: "Error/UserDoesNotOwnProject",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodPut,
 				"/",
 				strings.NewReader(`{"id":"00000000-0000-0000-0000-000000000001","data":{"key":"value"}}`),
@@ -220,7 +220,7 @@ func TestSchemaRewrite(t *testing.T) {
 		{
 			name: "Error/InternalError",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodPut,
 				"/",
 				strings.NewReader(`{"id":"00000000-0000-0000-0000-000000000001","data":{"key":"value"}}`),

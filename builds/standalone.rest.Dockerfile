@@ -30,7 +30,7 @@ RUN go mod download
 # ======================================================================================================================
 # Build executables.
 # ======================================================================================================================
-RUN go build -o /api cmd/rest/main.go
+RUN go build -o /rest cmd/rest/main.go
 RUN go build -o /init cmd/init/main.go
 RUN go build -o /migrations cmd/migrations/main.go
 
@@ -45,7 +45,7 @@ FROM docker.io/library/alpine:3.23.3
 
 WORKDIR /
 
-COPY --from=builder /api /api
+COPY --from=builder /rest /rest
 COPY --from=builder /init /init
 COPY --from=builder /migrations /migrations
 COPY --from=version /version /version
@@ -62,10 +62,10 @@ HEALTHCHECK --interval=1s --timeout=5s --retries=10 --start-period=1s \
 # Finish setup.
 # ======================================================================================================================
 # Make sure the executable uses the default port.
-ENV PORT=8080
+ENV REST_PORT=8080
 
 # Rest api port.
 EXPOSE 8080
 
 # Run patches before starting the server.
-CMD ["sh", "-c", "/migrations && VERSION=$(cat /version) /init && /api"]
+CMD ["sh", "-c", "/migrations && VERSION=$(cat /version) /init && /rest"]

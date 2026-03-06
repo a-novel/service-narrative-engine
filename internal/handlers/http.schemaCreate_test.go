@@ -49,7 +49,7 @@ func TestSchemaCreate(t *testing.T) {
 		{
 			name: "Success",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodPost,
 				"/",
 				strings.NewReader(`{"id":"00000000-0000-0000-0000-000000000001","projectID":"00000000-0000-0000-0000-000000000002","module":"namespace:module@v1.0.0","source":"USER","data":{"key":"value"}}`),
@@ -94,7 +94,7 @@ func TestSchemaCreate(t *testing.T) {
 		{
 			name: "Success/WithPreversion",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodPost,
 				"/",
 				strings.NewReader(`{"id":"00000000-0000-0000-0000-000000000001","projectID":"00000000-0000-0000-0000-000000000002","module":"namespace:module@v1.0.0-beta","source":"AI","data":{"foo":"bar"}}`),
@@ -140,7 +140,7 @@ func TestSchemaCreate(t *testing.T) {
 		{
 			name: "Error/NoClaims",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodPost,
 				"/",
 				strings.NewReader(`{"id":"00000000-0000-0000-0000-000000000001","projectID":"00000000-0000-0000-0000-000000000002","module":"namespace:module@v1.0.0","source":"USER","data":{}}`),
@@ -151,7 +151,7 @@ func TestSchemaCreate(t *testing.T) {
 		{
 			name: "Error/InvalidJSON",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodPost,
 				"/",
 				strings.NewReader(`{invalid`),
@@ -165,7 +165,7 @@ func TestSchemaCreate(t *testing.T) {
 		{
 			name: "Error/ProjectNotFound",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodPost,
 				"/",
 				strings.NewReader(`{"id":"00000000-0000-0000-0000-000000000001","projectID":"00000000-0000-0000-0000-000000000002","module":"namespace:module@v1.0.0","source":"USER","data":{}}`),
@@ -191,7 +191,7 @@ func TestSchemaCreate(t *testing.T) {
 		{
 			name: "Error/ModuleNotFound",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodPost,
 				"/",
 				strings.NewReader(`{"id":"00000000-0000-0000-0000-000000000001","projectID":"00000000-0000-0000-0000-000000000002","module":"namespace:module@v1.0.0","source":"USER","data":{}}`),
@@ -217,7 +217,7 @@ func TestSchemaCreate(t *testing.T) {
 		{
 			name: "Error/InvalidRequest",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodPost,
 				"/",
 				strings.NewReader(`{"id":"00000000-0000-0000-0000-000000000001","projectID":"00000000-0000-0000-0000-000000000002","module":"namespace:module@v1.0.0","source":"USER","data":{}}`),
@@ -243,7 +243,7 @@ func TestSchemaCreate(t *testing.T) {
 		{
 			name: "Error/UserDoesNotOwnProject",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodPost,
 				"/",
 				strings.NewReader(`{"id":"00000000-0000-0000-0000-000000000001","projectID":"00000000-0000-0000-0000-000000000002","module":"namespace:module@v1.0.0","source":"USER","data":{}}`),
@@ -269,7 +269,7 @@ func TestSchemaCreate(t *testing.T) {
 		{
 			name: "Error/ModuleNotInProject",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodPost,
 				"/",
 				strings.NewReader(`{"id":"00000000-0000-0000-0000-000000000001","projectID":"00000000-0000-0000-0000-000000000002","module":"namespace:module@v1.0.0","source":"USER","data":{}}`),
@@ -295,7 +295,7 @@ func TestSchemaCreate(t *testing.T) {
 		{
 			name: "Error/InternalError",
 
-			request: httptest.NewRequest(
+			request: httptest.NewRequestWithContext(t.Context(),
 				http.MethodPost,
 				"/",
 				strings.NewReader(`{"id":"00000000-0000-0000-0000-000000000001","projectID":"00000000-0000-0000-0000-000000000002","module":"namespace:module@v1.0.0","source":"USER","data":{}}`),

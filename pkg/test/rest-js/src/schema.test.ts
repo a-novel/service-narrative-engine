@@ -37,10 +37,10 @@ const resolvedModules: Record<string, Record<string, string>> = {};
 const allModuleStrings: string[] = [];
 
 beforeAll(async () => {
-  const authApi = new AuthenticationApi(process.env.AUTH_API_URL!);
-  api = new NarrativeEngineApi(process.env.API_URL!);
+  const authApi = new AuthenticationApi(process.env.SERVICE_AUTHENTICATION_URL!);
+  api = new NarrativeEngineApi(process.env.REST_URL!);
 
-  const preRegister = await preRegisterUser(authApi, process.env.MAIL_TEST_HOST!);
+  const preRegister = await preRegisterUser(authApi, process.env.MAIL_HOST!);
   user = await registerUser(authApi, preRegister);
 
   // Resolve module strings for all default modules.
@@ -193,7 +193,7 @@ describe("schemaSelect", () => {
   });
 
   it("returns 401 without access token", async () => {
-    const api = new NarrativeEngineApi(process.env.API_URL!);
+    const api = new NarrativeEngineApi(process.env.REST_URL!);
 
     await expectStatus(
       schemaSelect(api, "", {
