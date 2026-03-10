@@ -12,7 +12,7 @@ require (
 	github.com/a-novel-kit/golib v0.20.14
 	github.com/a-novel/service-authentication/v2 v2.4.0
 	github.com/a-novel/service-json-keys/v2 v2.2.0
-	github.com/charmbracelet/lipgloss v1.1.0
+	github.com/charmbracelet/lipgloss/v2 v2.0.1
 	github.com/go-chi/chi/v5 v5.2.5
 	github.com/go-chi/cors v1.2.2
 	github.com/go-playground/validator/v10 v10.30.1
