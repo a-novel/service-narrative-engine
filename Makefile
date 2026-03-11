@@ -19,7 +19,7 @@ test-short: test-unit-short
 # Lint.
 # ================================================================================
 lint-go:
-	go tool golangci-lint run
+	go tool -modfile=golangci-lint.mod golangci-lint run ./...
 
 lint-node:
 	pnpm lint
@@ -31,7 +31,7 @@ lint: lint-go lint-node
 # ================================================================================
 format-go:
 	go mod tidy
-	go tool golangci-lint run --fix
+	go tool -modfile=golangci-lint.mod golangci-lint run ./... --fix
 
 format-node:
 	pnpm format

@@ -18,7 +18,7 @@ go run cmd/migrations/main.go
 
 # shellcheck disable=SC2046
 PACKAGES="$(go list ./... | grep -v /mocks | grep -v /test)"
-go tool gotestsum --format pkgname -- -count=1 -cover $@ $PACKAGES
+go tool -modfile=gotestsum.mod gotestsum --format pkgname -- -count=1 -cover $@ $PACKAGES
 
 # Normal execution: containers are shut down.
 podman compose -p "${APP_NAME}" -f "${PODMAN_FILE}" down --volume
