@@ -33,7 +33,7 @@ services:
       POSTGRES_INITDB_ARGS: --auth=scram-sha-256
 
   postgres-authentication:
-    image: ghcr.io/a-novel/service-authentication/database:v2.4.0
+    image: ghcr.io/a-novel/service-authentication/database:v2.4.1
     networks:
       - narrative-engine-integration-rest-test
     environment:
@@ -71,7 +71,7 @@ services:
       - narrative-engine-integration-rest-test
 
   service-authentication:
-    image: ghcr.io/a-novel/service-authentication/standalone-rest:v2.4.0
+    image: ghcr.io/a-novel/service-authentication/standalone-rest:v2.4.1
     ports:
       - "${SERVICE_AUTHENTICATION_PORT}:8080"
     depends_on:
