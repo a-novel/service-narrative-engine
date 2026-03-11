@@ -17,8 +17,8 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/samber/lo"
 
-	authpkg "github.com/a-novel/service-authentication/v2/pkg"
-	jkpkg "github.com/a-novel/service-json-keys/v2/pkg"
+	"github.com/a-novel/service-authentication/v2/pkg/go"
+	"github.com/a-novel/service-json-keys/v2/pkg/go"
 
 	"github.com/a-novel-kit/golib/otel"
 	"github.com/a-novel-kit/golib/postgres"
@@ -51,12 +51,12 @@ func main() {
 
 	jsonKeysCredentials := lo.Must(cfg.DependenciesConfig.ServiceJsonKeysCredentials.Options(ctx))
 
-	jsonKeysClient := lo.Must(jkpkg.NewClient(
+	jsonKeysClient := lo.Must(servicejsonkeys.NewClient(
 		fmt.Sprintf("%s:%d", cfg.DependenciesConfig.ServiceJsonKeysHost, cfg.DependenciesConfig.ServiceJsonKeysPort),
 		jsonKeysCredentials...,
 	))
 
-	serviceVerifyAccessToken := jkpkg.NewClaimsVerifier[authpkg.Claims](jsonKeysClient)
+	serviceVerifyAccessToken := servicejsonkeys.NewClaimsVerifier[serviceauthentication.Claims](jsonKeysClient)
 
 	// =================================================================================================================
 	// DAO
@@ -133,7 +133,7 @@ func main() {
 	// MIDDLEWARES
 	// =================================================================================================================
 
-	withAuth := authpkg.NewAuthHandler(serviceVerifyAccessToken, cfg.Permissions, cfg.Logger)
+	withAuth := serviceauthentication.NewAuthHandler(serviceVerifyAccessToken, cfg.Permissions, cfg.Logger)
 
 	// =================================================================================================================
 	// HANDLERS

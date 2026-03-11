@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	authpkg "github.com/a-novel/service-authentication/v2/pkg"
+	"github.com/a-novel/service-authentication/v2/pkg/go"
 
 	"github.com/a-novel/service-narrative-engine/internal/config"
 	"github.com/a-novel/service-narrative-engine/internal/handlers"
@@ -37,7 +37,7 @@ func TestProjectList(t *testing.T) {
 		name string
 
 		request *http.Request
-		claims  *authpkg.Claims
+		claims  *serviceauthentication.Claims
 
 		serviceMock *serviceMock
 
@@ -52,7 +52,7 @@ func TestProjectList(t *testing.T) {
 				"/?limit=10&offset=0",
 				nil,
 			),
-			claims: &authpkg.Claims{
+			claims: &serviceauthentication.Claims{
 				UserID: lo.ToPtr(uuid.MustParse("00000000-0000-0000-0000-000000000001")),
 			},
 
@@ -114,7 +114,7 @@ func TestProjectList(t *testing.T) {
 				"/?limit=10&offset=0",
 				nil,
 			),
-			claims: &authpkg.Claims{
+			claims: &serviceauthentication.Claims{
 				UserID: lo.ToPtr(uuid.MustParse("00000000-0000-0000-0000-000000000001")),
 			},
 
@@ -138,7 +138,7 @@ func TestProjectList(t *testing.T) {
 				"/?limit=5&offset=10",
 				nil,
 			),
-			claims: &authpkg.Claims{
+			claims: &serviceauthentication.Claims{
 				UserID: lo.ToPtr(uuid.MustParse("00000000-0000-0000-0000-000000000001")),
 			},
 
@@ -193,7 +193,7 @@ func TestProjectList(t *testing.T) {
 				"/?limit=10&offset=0",
 				nil,
 			),
-			claims: &authpkg.Claims{
+			claims: &serviceauthentication.Claims{
 				UserID: lo.ToPtr(uuid.MustParse("00000000-0000-0000-0000-000000000001")),
 			},
 
@@ -216,7 +216,7 @@ func TestProjectList(t *testing.T) {
 				"/?limit=10&offset=0",
 				nil,
 			),
-			claims: &authpkg.Claims{
+			claims: &serviceauthentication.Claims{
 				UserID: lo.ToPtr(uuid.MustParse("00000000-0000-0000-0000-000000000001")),
 			},
 
@@ -249,7 +249,7 @@ func TestProjectList(t *testing.T) {
 			w := httptest.NewRecorder()
 
 			rCtx := testCase.request.Context()
-			rCtx = authpkg.SetClaimsContext(rCtx, testCase.claims)
+			rCtx = serviceauthentication.SetClaimsContext(rCtx, testCase.claims)
 
 			handler.ServeHTTP(w, testCase.request.WithContext(rCtx))
 

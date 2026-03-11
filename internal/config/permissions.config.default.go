@@ -5,7 +5,7 @@ import (
 
 	"github.com/goccy/go-yaml"
 
-	authpkg "github.com/a-novel/service-authentication/v2/pkg"
+	"github.com/a-novel/service-authentication/v2/pkg/go"
 
 	"github.com/a-novel-kit/golib/config"
 )
@@ -13,4 +13,6 @@ import (
 //go:embed permissions.config.yaml
 var defaultPermissionsFile []byte
 
-var PermissionsConfigDefault = config.MustUnmarshal[authpkg.Permissions](yaml.Unmarshal, defaultPermissionsFile)
+var PermissionsConfigDefault = config.MustUnmarshal[serviceauthentication.Permissions](
+	yaml.Unmarshal, defaultPermissionsFile,
+)

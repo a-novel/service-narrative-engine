@@ -3,7 +3,7 @@ package config
 import (
 	"time"
 
-	authpkg "github.com/a-novel/service-authentication/v2/pkg"
+	"github.com/a-novel/service-authentication/v2/pkg/go"
 
 	"github.com/a-novel-kit/golib/grpcf"
 	"github.com/a-novel-kit/golib/logging"
@@ -48,8 +48,8 @@ type App struct {
 	App  Main `json:"app"  yaml:"app"`
 	Rest Rest `json:"rest" yaml:"rest"`
 
-	DependenciesConfig Dependencies        `json:"dependencies" yaml:"dependencies"`
-	Permissions        authpkg.Permissions `json:"permissions"  yaml:"permissions"`
+	DependenciesConfig Dependencies                      `json:"dependencies" yaml:"dependencies"`
+	Permissions        serviceauthentication.Permissions `json:"permissions"  yaml:"permissions"`
 
 	Otel       otel.Config        `json:"otel"       yaml:"otel"`
 	Logger     logging.Log        `json:"logger"     yaml:"logger"`

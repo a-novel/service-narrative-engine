@@ -17,6 +17,6 @@
     "forceConsistentCasingInFileNames": true,
     "strictNullChecks": true,
     "noEmit": true,
-    "baseUrl": "."
+    "baseUrl": "./"
   }
 }

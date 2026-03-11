@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 
-	authpkg "github.com/a-novel/service-authentication/v2/pkg"
+	"github.com/a-novel/service-authentication/v2/pkg/go"
 
 	"github.com/a-novel-kit/golib/httpf"
 	"github.com/a-novel-kit/golib/logging"
@@ -52,7 +52,7 @@ func (handler *ProjectUpdate) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	claims, err := authpkg.MustGetClaimsContext(ctx)
+	claims, err := serviceauthentication.MustGetClaimsContext(ctx)
 	if err != nil {
 		httpf.HandleError(ctx, handler.logger, w, span, httpf.ErrMap{nil: http.StatusForbidden}, err)
 

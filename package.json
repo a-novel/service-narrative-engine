@@ -13,7 +13,7 @@
   ],
   "scripts": {
     "build": "pnpm build:rest && pnpm types:rest && pnpm types:rest-test",
-    "build:rest": "rm -rf ./pkg/rest-js/dist && vite build --outDir ./pkg/rest-js/dist -c pkg/rest-js/vite.config.ts",
+    "build:rest": "rm -rf ./pkg/js/rest/dist && vite build --outDir ./pkg/js/rest/dist -c pkg/js/rest/vite.config.ts",
     "format": "pnpm run format:prettier",
     "format:prettier": "prettier --write . --config prettier.config.ts",
     "preinstall": "npx only-allow pnpm",
@@ -22,10 +22,10 @@
     "lint:eslint": "eslint .",
     "lint:openapi": "pnpm redocly lint openapi.yaml",
     "lint:stylecheck": "prettier --check . --config prettier.config.ts",
-    "lint:typecheck": "pnpm lint:typecheck:base && pnpm lint:typecheck:rest-js && pnpm lint:typecheck:test:rest-js",
+    "lint:typecheck": "pnpm lint:typecheck:base && pnpm lint:typecheck:rest && pnpm lint:typecheck:test:rest",
     "lint:typecheck:base": "tsc --noEmit",
-    "lint:typecheck:rest-js": "pnpm tsc --p ./pkg/rest-js/tsconfig.json --noEmit",
-    "lint:typecheck:test:rest-js": "pnpm tsc --p ./pkg/test/rest-js/tsconfig.json --noEmit",
+    "lint:typecheck:rest": "pnpm tsc --p ./pkg/js/rest/tsconfig.json --noEmit",
+    "lint:typecheck:test:rest": "pnpm tsc --p ./pkg/js/test/rest/tsconfig.json --noEmit",
     "prepublish:doc": "pnpm prepublish:doc:readme && pnpm prepublish:doc:openapi",
     "prepublish:doc:openapi": "bash scripts/prepublish-version.sh 'version: ' openapi.yaml",
     "prepublish:doc:readme": "bash scripts/prepublish-version.sh 'a-novel/service-narrative-engine/[^/]+' README.md",
@@ -33,8 +33,8 @@
     "publish:minor": "bash scripts/publish.sh minor",
     "publish:patch": "bash scripts/publish.sh patch",
     "test": "vitest run -c vitest.config.ts",
-    "types:rest": "tsc --build pkg/rest-js/tsconfig.build.json",
-    "types:rest-test": "tsc --p ./pkg/test/rest-js/tsconfig.json --noEmit"
+    "types:rest": "tsc --build pkg/js/rest/tsconfig.build.json",
+    "types:rest-test": "tsc --p ./pkg/js/test/rest/tsconfig.json --noEmit"
   },
   "devDependencies": {
     "@a-novel-kit/nodelib-config": "^1.3.6",
@@ -61,7 +61,7 @@
     "vite": "^7.3.0",
     "vitest": "^4.0.16"
   },
-  "packageManager": "pnpm@10.32.1",
+  "packageManager": "pnpm@10.32.0",
   "engines": {
     "node": ">=23.11.0",
     "npm": ">=10.9.2"
