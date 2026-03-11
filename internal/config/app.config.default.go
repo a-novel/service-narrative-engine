@@ -4,8 +4,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/charmbracelet/lipgloss"
-	"github.com/muesli/termenv"
 	"github.com/samber/lo"
 
 	"github.com/a-novel-kit/golib/grpcf"
@@ -22,8 +20,7 @@ const (
 )
 
 var LoggerDev = &loggingpresets.LogLocal{
-	Out:      os.Stdout,
-	Renderer: lipgloss.NewRenderer(os.Stdout, termenv.WithTTY(true)),
+	Out: os.Stdout,
 }
 
 var LoggerProd = &loggingpresets.LogGcloud{
