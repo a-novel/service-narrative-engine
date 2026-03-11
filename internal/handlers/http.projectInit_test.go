@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	authpkg "github.com/a-novel/service-authentication/v2/pkg"
+	"github.com/a-novel/service-authentication/v2/pkg/go"
 
 	"github.com/a-novel/service-narrative-engine/internal/config"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
@@ -39,7 +39,7 @@ func TestProjectInit(t *testing.T) {
 		name string
 
 		request *http.Request
-		claims  *authpkg.Claims
+		claims  *serviceauthentication.Claims
 
 		serviceMock *serviceMock
 
@@ -54,7 +54,7 @@ func TestProjectInit(t *testing.T) {
 				"/",
 				strings.NewReader(`{"lang":"en","title":"Test Project","workflow":["step1","step2"]}`),
 			),
-			claims: &authpkg.Claims{
+			claims: &serviceauthentication.Claims{
 				UserID: lo.ToPtr(uuid.MustParse("00000000-0000-0000-0000-000000000001")),
 			},
 
@@ -106,7 +106,7 @@ func TestProjectInit(t *testing.T) {
 				"/",
 				strings.NewReader(`{invalid`),
 			),
-			claims: &authpkg.Claims{
+			claims: &serviceauthentication.Claims{
 				UserID: lo.ToPtr(uuid.MustParse("00000000-0000-0000-0000-000000000001")),
 			},
 
@@ -120,7 +120,7 @@ func TestProjectInit(t *testing.T) {
 				"/",
 				strings.NewReader(`{"lang":"en","title":"Test Project","workflow":["step1","step2"]}`),
 			),
-			claims: &authpkg.Claims{
+			claims: &serviceauthentication.Claims{
 				UserID: lo.ToPtr(uuid.MustParse("00000000-0000-0000-0000-000000000001")),
 			},
 
@@ -144,7 +144,7 @@ func TestProjectInit(t *testing.T) {
 				"/",
 				strings.NewReader(`{"lang":"en","title":"Test Project","workflow":["step1","step2"]}`),
 			),
-			claims: &authpkg.Claims{
+			claims: &serviceauthentication.Claims{
 				UserID: lo.ToPtr(uuid.MustParse("00000000-0000-0000-0000-000000000001")),
 			},
 
@@ -168,7 +168,7 @@ func TestProjectInit(t *testing.T) {
 				"/",
 				strings.NewReader(`{"lang":"en","title":"Test Project","workflow":["step1","step2"]}`),
 			),
-			claims: &authpkg.Claims{
+			claims: &serviceauthentication.Claims{
 				UserID: lo.ToPtr(uuid.MustParse("00000000-0000-0000-0000-000000000001")),
 			},
 
@@ -192,7 +192,7 @@ func TestProjectInit(t *testing.T) {
 				"/",
 				strings.NewReader(`{"lang":"en","title":"Test Project","workflow":["step1","step2"]}`),
 			),
-			claims: &authpkg.Claims{
+			claims: &serviceauthentication.Claims{
 				UserID: lo.ToPtr(uuid.MustParse("00000000-0000-0000-0000-000000000001")),
 			},
 
@@ -226,7 +226,7 @@ func TestProjectInit(t *testing.T) {
 			w := httptest.NewRecorder()
 
 			rCtx := testCase.request.Context()
-			rCtx = authpkg.SetClaimsContext(rCtx, testCase.claims)
+			rCtx = serviceauthentication.SetClaimsContext(rCtx, testCase.claims)
 
 			handler.ServeHTTP(w, testCase.request.WithContext(rCtx))
 

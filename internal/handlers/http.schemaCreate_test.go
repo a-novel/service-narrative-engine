@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	authpkg "github.com/a-novel/service-authentication/v2/pkg"
+	"github.com/a-novel/service-authentication/v2/pkg/go"
 
 	"github.com/a-novel/service-narrative-engine/internal/config"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
@@ -39,7 +39,7 @@ func TestSchemaCreate(t *testing.T) {
 		name string
 
 		request *http.Request
-		claims  *authpkg.Claims
+		claims  *serviceauthentication.Claims
 
 		serviceMock *serviceMock
 
@@ -54,7 +54,7 @@ func TestSchemaCreate(t *testing.T) {
 				"/",
 				strings.NewReader(`{"id":"00000000-0000-0000-0000-000000000001","projectID":"00000000-0000-0000-0000-000000000002","module":"namespace:module@v1.0.0","source":"USER","data":{"key":"value"}}`),
 			),
-			claims: &authpkg.Claims{
+			claims: &serviceauthentication.Claims{
 				UserID: lo.ToPtr(uuid.MustParse("00000000-0000-0000-0000-000000000003")),
 			},
 
@@ -99,7 +99,7 @@ func TestSchemaCreate(t *testing.T) {
 				"/",
 				strings.NewReader(`{"id":"00000000-0000-0000-0000-000000000001","projectID":"00000000-0000-0000-0000-000000000002","module":"namespace:module@v1.0.0-beta","source":"AI","data":{"foo":"bar"}}`),
 			),
-			claims: &authpkg.Claims{
+			claims: &serviceauthentication.Claims{
 				UserID: lo.ToPtr(uuid.MustParse("00000000-0000-0000-0000-000000000003")),
 			},
 
@@ -156,7 +156,7 @@ func TestSchemaCreate(t *testing.T) {
 				"/",
 				strings.NewReader(`{invalid`),
 			),
-			claims: &authpkg.Claims{
+			claims: &serviceauthentication.Claims{
 				UserID: lo.ToPtr(uuid.MustParse("00000000-0000-0000-0000-000000000003")),
 			},
 
@@ -170,7 +170,7 @@ func TestSchemaCreate(t *testing.T) {
 				"/",
 				strings.NewReader(`{"id":"00000000-0000-0000-0000-000000000001","projectID":"00000000-0000-0000-0000-000000000002","module":"namespace:module@v1.0.0","source":"USER","data":{}}`),
 			),
-			claims: &authpkg.Claims{
+			claims: &serviceauthentication.Claims{
 				UserID: lo.ToPtr(uuid.MustParse("00000000-0000-0000-0000-000000000003")),
 			},
 
@@ -196,7 +196,7 @@ func TestSchemaCreate(t *testing.T) {
 				"/",
 				strings.NewReader(`{"id":"00000000-0000-0000-0000-000000000001","projectID":"00000000-0000-0000-0000-000000000002","module":"namespace:module@v1.0.0","source":"USER","data":{}}`),
 			),
-			claims: &authpkg.Claims{
+			claims: &serviceauthentication.Claims{
 				UserID: lo.ToPtr(uuid.MustParse("00000000-0000-0000-0000-000000000003")),
 			},
 
@@ -222,7 +222,7 @@ func TestSchemaCreate(t *testing.T) {
 				"/",
 				strings.NewReader(`{"id":"00000000-0000-0000-0000-000000000001","projectID":"00000000-0000-0000-0000-000000000002","module":"namespace:module@v1.0.0","source":"USER","data":{}}`),
 			),
-			claims: &authpkg.Claims{
+			claims: &serviceauthentication.Claims{
 				UserID: lo.ToPtr(uuid.MustParse("00000000-0000-0000-0000-000000000003")),
 			},
 
@@ -248,7 +248,7 @@ func TestSchemaCreate(t *testing.T) {
 				"/",
 				strings.NewReader(`{"id":"00000000-0000-0000-0000-000000000001","projectID":"00000000-0000-0000-0000-000000000002","module":"namespace:module@v1.0.0","source":"USER","data":{}}`),
 			),
-			claims: &authpkg.Claims{
+			claims: &serviceauthentication.Claims{
 				UserID: lo.ToPtr(uuid.MustParse("00000000-0000-0000-0000-000000000003")),
 			},
 
@@ -274,7 +274,7 @@ func TestSchemaCreate(t *testing.T) {
 				"/",
 				strings.NewReader(`{"id":"00000000-0000-0000-0000-000000000001","projectID":"00000000-0000-0000-0000-000000000002","module":"namespace:module@v1.0.0","source":"USER","data":{}}`),
 			),
-			claims: &authpkg.Claims{
+			claims: &serviceauthentication.Claims{
 				UserID: lo.ToPtr(uuid.MustParse("00000000-0000-0000-0000-000000000003")),
 			},
 
@@ -300,7 +300,7 @@ func TestSchemaCreate(t *testing.T) {
 				"/",
 				strings.NewReader(`{"id":"00000000-0000-0000-0000-000000000001","projectID":"00000000-0000-0000-0000-000000000002","module":"namespace:module@v1.0.0","source":"USER","data":{}}`),
 			),
-			claims: &authpkg.Claims{
+			claims: &serviceauthentication.Claims{
 				UserID: lo.ToPtr(uuid.MustParse("00000000-0000-0000-0000-000000000003")),
 			},
 
@@ -336,7 +336,7 @@ func TestSchemaCreate(t *testing.T) {
 			w := httptest.NewRecorder()
 
 			rCtx := testCase.request.Context()
-			rCtx = authpkg.SetClaimsContext(rCtx, testCase.claims)
+			rCtx = serviceauthentication.SetClaimsContext(rCtx, testCase.claims)
 
 			handler.ServeHTTP(w, testCase.request.WithContext(rCtx))
 

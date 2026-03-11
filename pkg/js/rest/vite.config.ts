@@ -6,7 +6,7 @@ export default defineConfig({
   build: {
     lib: {
       entry: {
-        src: "pkg/rest-js/src/index.ts",
+        src: "pkg/js/rest/src/index.ts",
       },
       name,
       formats: ["es"],
