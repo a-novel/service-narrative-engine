@@ -33,7 +33,7 @@ importers:
     devDependencies:
       '@a-novel-kit/nodelib-config':
         specifier: ^1.3.6
-        version: 1.3.24(62925f5947b74b60f72d7ba6d15dc412)
+        version: 1.3.25(62925f5947b74b60f72d7ba6d15dc412)
       '@eslint/js':
         specifier: ^10.0.0
         version: 10.0.1(eslint@10.1.0(jiti@2.6.1))
@@ -179,8 +179,8 @@ packages:
     peerDependencies:
       zod: ^4.3.6
 
-  '@a-novel-kit/nodelib-config@1.3.24':
-    resolution: {integrity: sha512-uKIxMvsg8YLuyeJsIHXNF8gCopALLv1AhMefauLh+SJjrE5iri+8F/1Rv8wjArEMZbIuiVKaPqSFzv29f6i5wA==, tarball: https://npm.pkg.github.com/download/@a-novel-kit/nodelib-config/1.3.24/8124014af06c9a53836e9cfc0bf3cc4bfb77ec9c}
+  '@a-novel-kit/nodelib-config@1.3.25':
+    resolution: {integrity: sha512-bZa9c3jSM4KwzwxKBKe10ufMPVh14EnH3cOFz/Q6lOGzqzY+MPShjXJNlIwbdehUyQv78555HOBrWKArykrGng==, tarball: https://npm.pkg.github.com/download/@a-novel-kit/nodelib-config/1.3.25/1bc32c238fc6606d464389f6b9ff0cae8f260f47}
     engines: {node: '>=24.0.0', npm: '>=10.9.2'}
     peerDependencies:
       '@eslint/compat': ^2.0.3
@@ -188,18 +188,18 @@ packages:
       '@sveltejs/kit': ^2.55.0
       '@trivago/prettier-plugin-sort-imports': ^6.0.2
       '@types/node': ^24.12.0
-      eslint: ^10.0.3
+      eslint: ^10.1.0
       eslint-config-prettier: ^10.1.8
       eslint-plugin-prettier: ^5.5.5
       eslint-plugin-storybook: ^10.3.1
-      eslint-plugin-svelte: ^3.15.2
+      eslint-plugin-svelte: ^3.16.0
       prettier: ^3.8.1
       prettier-plugin-css-order: ^2.2.0
       prettier-plugin-packagejson: ^2.5.20 || ^3.0.0
-      prettier-plugin-sql: ^0.19.2
+      prettier-plugin-sql: ^0.20.0
       prettier-plugin-svelte: ^3.5.1
       storybook: ^10.3.1
-      svelte: ^5.54.0
+      svelte: ^5.54.1
       typescript: ^5.9.3
       typescript-eslint: ^8.57.1
 
@@ -1149,7 +1149,7 @@ packages:
       prettier: 2.x - 3.x
       prettier-plugin-ember-template-tag: '>= 2.0.0'
       prettier-plugin-svelte: 3.x
-      svelte: '>=5.51.5'
+      svelte: '>=5.53.5'
     peerDependenciesMeta:
       '@vue/compiler-sfc':
         optional: true
@@ -3169,8 +3169,8 @@ packages:
       utf-8-validate:
         optional: true
 
-  ws@8.19.0:
-    resolution: {integrity: sha512-blAT2mjOEIi0ZzruJfIhb3nps74PRWTCz1IjglWEEpQl5XS/UNama6u2/rjFkDDouqr4L67ry+1aGIALViWjDg==}
+  ws@8.20.0:
+    resolution: {integrity: sha512-sAt8BhgNbzCtgGbt2OxmpuryO63ZoDk/sqaB/znQm94T4fCEsy/yV+7CdC1kJhOU9lboAEU7R3kquuycDoibVA==}
     engines: {node: '>=10.0.0'}
     peerDependencies:
       bufferutil: ^4.0.1
@@ -3239,7 +3239,7 @@ snapshots:
     dependencies:
       zod: 4.3.6
 
-  '@a-novel-kit/nodelib-config@1.3.24(62925f5947b74b60f72d7ba6d15dc412)':
+  '@a-novel-kit/nodelib-config@1.3.25(62925f5947b74b60f72d7ba6d15dc412)':
     dependencies:
       '@eslint/compat': 2.0.3(eslint@10.1.0(jiti@2.6.1))
       '@eslint/js': 10.0.1(eslint@10.1.0(jiti@2.6.1))
@@ -5019,7 +5019,7 @@ snapshots:
       webidl-conversions: 8.0.1
       whatwg-mimetype: 4.0.0
       whatwg-url: 15.1.0
-      ws: 8.19.0
+      ws: 8.20.0
       xml-name-validator: 5.0.0
     transitivePeerDependencies:
       - '@noble/hashes'
@@ -5854,7 +5854,7 @@ snapshots:
       recast: 0.23.11
       semver: 7.7.4
       use-sync-external-store: 1.6.0(react@19.2.4)
-      ws: 8.19.0
+      ws: 8.20.0
     optionalDependencies:
       prettier: 3.8.1
     transitivePeerDependencies:
@@ -6211,7 +6211,7 @@ snapshots:
 
   ws@7.5.10: {}
 
-  ws@8.19.0: {}
+  ws@8.20.0: {}
 
   wsl-utils@0.1.0:
     dependencies:
