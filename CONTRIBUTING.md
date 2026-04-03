@@ -28,23 +28,9 @@ The following must be installed on your system.
 
 ### Bootstrap
 
-Create a `.envrc` file in the project root:
+You need an openAI API key. Export it under the `OPENAI_API_KEY` environment variable.
 
-```bash
-cp .envrc.template .envrc
-```
-
-Ask for an admin to replace placeholder values (prefixed with `SECRET_`).
-
-Then, load the environment variables:
-
-```bash
-direnv allow .
-# Alternatively, if you don't have direnv on your system
-source .envrc
-```
-
-Finally, install the dependencies:
+Install the dependencies:
 
 ```bash
 make install
