@@ -1,6 +1,6 @@
 module github.com/a-novel/service-narrative-engine
 
-go 1.26.1
+go 1.26.2
 
 tool github.com/vektra/mockery/v3
 
