@@ -25,14 +25,10 @@ github.com/GoogleCloudPlatform/opentelemetry-operations-go/propagator v0.56.0 h1
 github.com/GoogleCloudPlatform/opentelemetry-operations-go/propagator v0.56.0/go.mod h1:sKE2BdlsRRPL7ONGioxJnjUhEA1NbF484vFq8LX6znI=
 github.com/a-novel-kit/golib v0.20.25 h1:fL90BmnoKyp1TQJX/yrgBWF2FpPhW6Ptbp/5Yc69ym0=
 github.com/a-novel-kit/golib v0.20.25/go.mod h1:klXCvoZoGlK3u4+1x+b34D5zOvHt77v+HKrQwUqCTeQ=
-github.com/a-novel-kit/jwt v1.1.41 h1:qbyzzF7/Ed0/kAavrM+u7+KGF0MJ/BX3ihSnPhEsihk=
-github.com/a-novel-kit/jwt v1.1.41/go.mod h1:fROl2EkACa+ExbIni3KEUAtQyc7pXeTi2eu5WtwsmjM=
 github.com/a-novel-kit/jwt v1.1.50 h1:XHtHdXQODIbNpVDIysbsdEJBNjZWlbFtiE6auGH91SQ=
 github.com/a-novel-kit/jwt v1.1.50/go.mod h1:IegZVa2g9VUei37XMh1ltwtaNQptr+BEfpVXO4nWlJA=
 github.com/a-novel/service-authentication/v2 v2.4.2 h1:+hJz94zD01NPg4Ri8vmW02fT2z6etjYMfqTVKUvsZrg=
 github.com/a-novel/service-authentication/v2 v2.4.2/go.mod h1:hdP1nBEPJ0oSZOltyqROgoFRaw0UB7LYLGfVvT/7Bko=
-github.com/a-novel/service-json-keys/v2 v2.2.5 h1:DmlzFEl5jAxpnd6XHsQg6r391i4jnzN/u2QdGJh8gyU=
-github.com/a-novel/service-json-keys/v2 v2.2.5/go.mod h1:EkBGMBffNrxj2RW7zNlwPSdgKj7GFRo+qfNaNwDbPWE=
 github.com/a-novel/service-json-keys/v2 v2.2.6 h1:hd1D5lIilYVI7OqQoIat+5okwggordoqJOMAd5MCFJ4=
 github.com/a-novel/service-json-keys/v2 v2.2.6/go.mod h1:isn+MbLuxP+7R8y461qIcaeIXDe61mtjqqesRjFgW7g=
 github.com/brunoga/deep v1.3.1 h1:bSrL6FhAZa6JlVv4vsi7Hg8SLwroDb1kgDERRVipBCo=
@@ -168,8 +164,8 @@ github.com/mitchellh/reflectwalk v1.0.2 h1:G2LzWKi524PWgd3mLHV8Y5k7s6XUvT0Gef6zx
 github.com/mitchellh/reflectwalk v1.0.2/go.mod h1:mSTlrgnPZtwu0c4WaC2kGObEpuNDbx0jmZXqmk4esnw=
 github.com/muesli/cancelreader v0.2.2 h1:3I4Kt4BQjOR54NavqnDogx/MIoWBFa0StPA8ELUXHmA=
 github.com/muesli/cancelreader v0.2.2/go.mod h1:3XuTXfFS2VjM+HTLZY9Ak0l6eUKfijIfMUZ4EgX0QYo=
-github.com/openai/openai-go/v3 v3.31.0 h1:3KxL3H+gw6vBkBW6dmcwhbFqP4kyMgmaWTsuRheyF8w=
-github.com/openai/openai-go/v3 v3.31.0/go.mod h1:cdufnVK14cWcT9qA1rRtrXx4FTRsgbDPW7Ia7SS5cZo=
+github.com/openai/openai-go/v3 v3.32.0 h1:aHp/3wkX1W6jB8zTtf9xV0aK0qPFSVDqS7AHmlJ4hXs=
+github.com/openai/openai-go/v3 v3.32.0/go.mod h1:cdufnVK14cWcT9qA1rRtrXx4FTRsgbDPW7Ia7SS5cZo=
 github.com/pingcap/errors v0.11.4 h1:lFuQV/oaUMGcD2tqt+01ROSmJs75VG1ToEOkZIZ4nE4=
 github.com/pingcap/errors v0.11.4/go.mod h1:Oi8TUi2kEtXXLMJk9l1cGmz20kV3TaQ0usTwv5KuLY8=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
