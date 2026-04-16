@@ -34,7 +34,7 @@ RUN go build -o /rest cmd/rest/main.go
 RUN go build -o /init cmd/init/main.go
 RUN go build -o /migrations cmd/migrations/main.go
 
-FROM docker.io/library/node:24.14.1-alpine AS version
+FROM docker.io/library/node:24.15.0-alpine AS version
 
 COPY ./package.json ./package.json
 
