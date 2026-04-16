@@ -7,7 +7,7 @@ tool github.com/vektra/mockery/v3
 require (
 	github.com/a-novel-kit/golib v0.20.25
 	github.com/a-novel/service-authentication/v2 v2.4.2
-	github.com/a-novel/service-json-keys/v2 v2.2.5
+	github.com/a-novel/service-json-keys/v2 v2.2.6
 	github.com/go-chi/chi/v5 v5.2.5
 	github.com/go-chi/cors v1.2.2
 	github.com/go-playground/validator/v10 v10.30.2
@@ -34,7 +34,7 @@ require (
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/trace v1.32.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.56.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/propagator v0.56.0 // indirect
-	github.com/a-novel-kit/jwt v1.1.41 // indirect
+	github.com/a-novel-kit/jwt v1.1.50 // indirect
 	github.com/brunoga/deep v1.3.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/charmbracelet/colorprofile v0.4.3 // indirect
