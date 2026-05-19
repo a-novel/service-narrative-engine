@@ -1,7 +1,7 @@
 #!/bin/bash
 
 APP_NAME="service-template-test"
-PODMAN_FILE="$PWD/builds/podman-compose.test.yaml"
+PODMAN_FILE="$PWD/builds/podman-compose.go.internal.test.yaml"
 
 # Ensure containers are properly shut down when the program exits abnormally.
 int_handler()
