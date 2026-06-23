@@ -130,7 +130,7 @@ const file_item_create_proto_rawDesc = "" +
 	"\x04item\x18\x01 \x01(\v2\x05.ItemR\x04item2J\n" +
 	"\x11ItemCreateService\x125\n" +
 	"\n" +
-	"ItemCreate\x12\x12.ItemCreateRequest\x1a\x13.ItemCreateResponseB\\B\x0fItemCreateProtoP\x01ZGgithub.com/a-novel/service-template/internal/handlers/protogen;protogenb\x06proto3"
+	"ItemCreate\x12\x12.ItemCreateRequest\x1a\x13.ItemCreateResponseBdB\x0fItemCreateProtoP\x01ZOgithub.com/a-novel/service-narrative-engine/internal/handlers/protogen;protogenb\x06proto3"
 
 var (
 	file_item_create_proto_rawDescOnce sync.Once

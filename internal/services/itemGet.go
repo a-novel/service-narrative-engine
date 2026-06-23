@@ -10,7 +10,7 @@ import (
 
 	"github.com/a-novel-kit/golib/otel"
 
-	"github.com/a-novel/service-template/internal/dao"
+	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
 type ItemGetRepository interface {

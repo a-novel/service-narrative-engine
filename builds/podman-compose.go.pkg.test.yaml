@@ -12,7 +12,7 @@ services:
       POSTGRES_HOST_AUTH_METHOD: scram-sha-256
       POSTGRES_INITDB_ARGS: --auth=scram-sha-256
 
-  service-template:
+  service-narrative-engine:
     build:
       context: ..
       dockerfile: ./builds/standalone.grpc.Dockerfile

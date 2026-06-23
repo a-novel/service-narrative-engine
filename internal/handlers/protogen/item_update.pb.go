@@ -139,7 +139,7 @@ const file_item_update_proto_rawDesc = "" +
 	"\x04item\x18\x01 \x01(\v2\x05.ItemR\x04item2J\n" +
 	"\x11ItemUpdateService\x125\n" +
 	"\n" +
-	"ItemUpdate\x12\x12.ItemUpdateRequest\x1a\x13.ItemUpdateResponseB\\B\x0fItemUpdateProtoP\x01ZGgithub.com/a-novel/service-template/internal/handlers/protogen;protogenb\x06proto3"
+	"ItemUpdate\x12\x12.ItemUpdateRequest\x1a\x13.ItemUpdateResponseBdB\x0fItemUpdateProtoP\x01ZOgithub.com/a-novel/service-narrative-engine/internal/handlers/protogen;protogenb\x06proto3"
 
 var (
 	file_item_update_proto_rawDescOnce sync.Once

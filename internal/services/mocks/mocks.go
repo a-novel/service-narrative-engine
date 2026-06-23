@@ -7,7 +7,7 @@ package servicesmocks
 import (
 	"context"
 
-	"github.com/a-novel/service-template/internal/dao"
+	"github.com/a-novel/service-narrative-engine/internal/dao"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -74,7 +74,7 @@ type MockItemCreateRepository_Exec_Call struct {
 // Exec is a helper method to define mock.On call
 //   - ctx context.Context
 //   - request *dao.ItemCreateRequest
-func (_e *MockItemCreateRepository_Expecter) Exec(ctx interface{}, request interface{}) *MockItemCreateRepository_Exec_Call {
+func (_e *MockItemCreateRepository_Expecter) Exec(ctx any, request any) *MockItemCreateRepository_Exec_Call {
 	return &MockItemCreateRepository_Exec_Call{Call: _e.mock.On("Exec", ctx, request)}
 }
 
@@ -169,7 +169,7 @@ type MockItemDeleteRepository_Exec_Call struct {
 // Exec is a helper method to define mock.On call
 //   - ctx context.Context
 //   - request *dao.ItemDeleteRequest
-func (_e *MockItemDeleteRepository_Expecter) Exec(ctx interface{}, request interface{}) *MockItemDeleteRepository_Exec_Call {
+func (_e *MockItemDeleteRepository_Expecter) Exec(ctx any, request any) *MockItemDeleteRepository_Exec_Call {
 	return &MockItemDeleteRepository_Exec_Call{Call: _e.mock.On("Exec", ctx, request)}
 }
 
@@ -264,7 +264,7 @@ type MockItemGetRepository_Exec_Call struct {
 // Exec is a helper method to define mock.On call
 //   - ctx context.Context
 //   - request *dao.ItemGetRequest
-func (_e *MockItemGetRepository_Expecter) Exec(ctx interface{}, request interface{}) *MockItemGetRepository_Exec_Call {
+func (_e *MockItemGetRepository_Expecter) Exec(ctx any, request any) *MockItemGetRepository_Exec_Call {
 	return &MockItemGetRepository_Exec_Call{Call: _e.mock.On("Exec", ctx, request)}
 }
 
@@ -359,7 +359,7 @@ type MockItemListRepository_Exec_Call struct {
 // Exec is a helper method to define mock.On call
 //   - ctx context.Context
 //   - request *dao.ItemListRequest
-func (_e *MockItemListRepository_Expecter) Exec(ctx interface{}, request interface{}) *MockItemListRepository_Exec_Call {
+func (_e *MockItemListRepository_Expecter) Exec(ctx any, request any) *MockItemListRepository_Exec_Call {
 	return &MockItemListRepository_Exec_Call{Call: _e.mock.On("Exec", ctx, request)}
 }
 
@@ -454,7 +454,7 @@ type MockItemUpdateRepository_Exec_Call struct {
 // Exec is a helper method to define mock.On call
 //   - ctx context.Context
 //   - request *dao.ItemUpdateRequest
-func (_e *MockItemUpdateRepository_Expecter) Exec(ctx interface{}, request interface{}) *MockItemUpdateRepository_Exec_Call {
+func (_e *MockItemUpdateRepository_Expecter) Exec(ctx any, request any) *MockItemUpdateRepository_Exec_Call {
 	return &MockItemUpdateRepository_Exec_Call{Call: _e.mock.On("Exec", ctx, request)}
 }
 

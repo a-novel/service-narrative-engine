@@ -9,8 +9,8 @@ import (
 
 	"github.com/a-novel-kit/golib/otel"
 
-	"github.com/a-novel/service-template/internal/handlers/protogen"
-	"github.com/a-novel/service-template/internal/services"
+	"github.com/a-novel/service-narrative-engine/internal/handlers/protogen"
+	"github.com/a-novel/service-narrative-engine/internal/services"
 )
 
 type ItemListService interface {

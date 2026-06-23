@@ -225,7 +225,7 @@ const file_status_proto_rawDesc = "" +
 	"\x14DEPENDENCY_STATUS_UP\x10\x01\x12\x1a\n" +
 	"\x16DEPENDENCY_STATUS_DOWN\x10\x022:\n" +
 	"\rStatusService\x12)\n" +
-	"\x06Status\x12\x0e.StatusRequest\x1a\x0f.StatusResponseBXB\vStatusProtoP\x01ZGgithub.com/a-novel/service-template/internal/handlers/protogen;protogenb\x06proto3"
+	"\x06Status\x12\x0e.StatusRequest\x1a\x0f.StatusResponseB`B\vStatusProtoP\x01ZOgithub.com/a-novel/service-narrative-engine/internal/handlers/protogen;protogenb\x06proto3"
 
 var (
 	file_status_proto_rawDescOnce sync.Once

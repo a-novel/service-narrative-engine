@@ -1,4 +1,4 @@
-package servicetemplate_test
+package servicenarrativeengine_test
 
 import (
 	"testing"
@@ -9,14 +9,14 @@ import (
 
 	golibproto "github.com/a-novel-kit/golib/grpcf/proto/gen"
 
-	"github.com/a-novel/service-template/internal/config/env"
-	"github.com/a-novel/service-template/pkg/go"
+	"github.com/a-novel/service-narrative-engine/internal/config/env"
+	"github.com/a-novel/service-narrative-engine/pkg/go"
 )
 
 func TestClient(t *testing.T) {
 	t.Parallel()
 
-	client, err := servicetemplate.NewClient(env.GrpcUrl, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	client, err := servicenarrativeengine.NewClient(env.GrpcUrl, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)
 
 	defer client.Close()

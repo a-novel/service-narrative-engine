@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import { expectStatus } from "@a-novel-kit/nodelib-test/http";
-import { TemplateApi, itemCreate, itemDelete, itemGet, itemList, itemUpdate } from "@a-novel/service-template-rest";
+import {
+  TemplateApi,
+  itemCreate,
+  itemDelete,
+  itemGet,
+  itemList,
+  itemUpdate,
+} from "@a-novel/service-narrative-engine-rest";
 
 describe("itemCreate", () => {
   it("creates a new item", async () => {

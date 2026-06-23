@@ -19,11 +19,11 @@ import (
 	"github.com/a-novel-kit/golib/otel"
 	"github.com/a-novel-kit/golib/postgres"
 
-	"github.com/a-novel/service-template/internal/config"
-	"github.com/a-novel/service-template/internal/config/env"
-	"github.com/a-novel/service-template/internal/dao"
-	"github.com/a-novel/service-template/internal/handlers"
-	"github.com/a-novel/service-template/internal/services"
+	"github.com/a-novel/service-narrative-engine/internal/config"
+	"github.com/a-novel/service-narrative-engine/internal/config/env"
+	"github.com/a-novel/service-narrative-engine/internal/dao"
+	"github.com/a-novel/service-narrative-engine/internal/handlers"
+	"github.com/a-novel/service-narrative-engine/internal/services"
 )
 
 // Runs the main REST server.
@@ -81,7 +81,7 @@ func main() {
 	router := chi.NewRouter()
 
 	router.Use(middleware.Recoverer)
-	router.Use(middleware.RealIP)
+	router.Use(middleware.ClientIPFromRemoteAddr)
 	router.Use(middleware.Timeout(cfg.Rest.Timeouts.Request))
 	router.Use(middleware.RequestSize(cfg.Rest.MaxRequestSize))
 	router.Use(cfg.Otel.HttpHandler())

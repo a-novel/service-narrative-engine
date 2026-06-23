@@ -9,9 +9,9 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/a-novel/service-template/internal/dao"
-	"github.com/a-novel/service-template/internal/services"
-	servicesmocks "github.com/a-novel/service-template/internal/services/mocks"
+	"github.com/a-novel/service-narrative-engine/internal/dao"
+	"github.com/a-novel/service-narrative-engine/internal/services"
+	servicesmocks "github.com/a-novel/service-narrative-engine/internal/services/mocks"
 )
 
 func TestItemGet(t *testing.T) {

@@ -19,12 +19,12 @@ import (
 	"github.com/a-novel-kit/golib/otel"
 	"github.com/a-novel-kit/golib/postgres"
 
-	"github.com/a-novel/service-template/internal/config"
-	"github.com/a-novel/service-template/internal/config/env"
-	"github.com/a-novel/service-template/internal/dao"
-	"github.com/a-novel/service-template/internal/handlers"
-	"github.com/a-novel/service-template/internal/handlers/protogen"
-	"github.com/a-novel/service-template/internal/services"
+	"github.com/a-novel/service-narrative-engine/internal/config"
+	"github.com/a-novel/service-narrative-engine/internal/config/env"
+	"github.com/a-novel/service-narrative-engine/internal/dao"
+	"github.com/a-novel/service-narrative-engine/internal/handlers"
+	"github.com/a-novel/service-narrative-engine/internal/handlers/protogen"
+	"github.com/a-novel/service-narrative-engine/internal/services"
 )
 
 // Runs the main gRPC server.

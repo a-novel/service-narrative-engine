@@ -20,7 +20,7 @@ export default defineConfig({
       globalConfigValue: true,
     },
     alias: {
-      "@a-novel/service-template-rest": resolve("./pkg/js/rest/src/index"),
+      "@a-novel/service-narrative-engine-rest": resolve("./pkg/js/rest/src/index"),
     },
     coverage: {
       enabled: true,

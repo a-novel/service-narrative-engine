@@ -152,7 +152,3 @@ linters:
           - gocritic
           - err113
           - prealloc
-      - path: dao/(.+)_test.go
-        linters:
-          - paralleltest
-          - tparallel

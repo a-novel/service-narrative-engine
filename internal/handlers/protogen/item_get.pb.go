@@ -120,7 +120,7 @@ const file_item_get_proto_rawDesc = "" +
 	"\x0fItemGetResponse\x12\x19\n" +
 	"\x04item\x18\x01 \x01(\v2\x05.ItemR\x04item2>\n" +
 	"\x0eItemGetService\x12,\n" +
-	"\aItemGet\x12\x0f.ItemGetRequest\x1a\x10.ItemGetResponseBYB\fItemGetProtoP\x01ZGgithub.com/a-novel/service-template/internal/handlers/protogen;protogenb\x06proto3"
+	"\aItemGet\x12\x0f.ItemGetRequest\x1a\x10.ItemGetResponseBaB\fItemGetProtoP\x01ZOgithub.com/a-novel/service-narrative-engine/internal/handlers/protogen;protogenb\x06proto3"
 
 var (
 	file_item_get_proto_rawDescOnce sync.Once
