@@ -129,7 +129,7 @@ const file_item_list_proto_rawDesc = "" +
 	"\x10ItemListResponse\x12\x1b\n" +
 	"\x05items\x18\x01 \x03(\v2\x05.ItemR\x05items2B\n" +
 	"\x0fItemListService\x12/\n" +
-	"\bItemList\x12\x10.ItemListRequest\x1a\x11.ItemListResponseBZB\rItemListProtoP\x01ZGgithub.com/a-novel/service-template/internal/handlers/protogen;protogenb\x06proto3"
+	"\bItemList\x12\x10.ItemListRequest\x1a\x11.ItemListResponseBbB\rItemListProtoP\x01ZOgithub.com/a-novel/service-narrative-engine/internal/handlers/protogen;protogenb\x06proto3"
 
 var (
 	file_item_list_proto_rawDescOnce sync.Once

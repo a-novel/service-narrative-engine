@@ -12,8 +12,8 @@ import (
 
 	"github.com/a-novel-kit/golib/postgres"
 
-	"github.com/a-novel/service-template/internal/config/configtest"
-	"github.com/a-novel/service-template/internal/handlers"
+	"github.com/a-novel/service-narrative-engine/internal/config/configtest"
+	"github.com/a-novel/service-narrative-engine/internal/handlers"
 )
 
 func TestHealth(t *testing.T) {

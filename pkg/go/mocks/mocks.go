@@ -8,7 +8,7 @@ import (
 	"context"
 
 	"github.com/a-novel-kit/golib/grpcf/proto/gen"
-	"github.com/a-novel/service-template/pkg/go"
+	"github.com/a-novel/service-narrative-engine/pkg/go"
 	mock "github.com/stretchr/testify/mock"
 	"google.golang.org/grpc"
 )
@@ -74,7 +74,7 @@ func (_c *MockClient_Close_Call) RunAndReturn(run func()) *MockClient_Close_Call
 }
 
 // ItemCreate provides a mock function for the type MockClient
-func (_mock *MockClient) ItemCreate(ctx context.Context, req *servicetemplate.ItemCreateRequest, opts ...grpc.CallOption) (*servicetemplate.ItemCreateResponse, error) {
+func (_mock *MockClient) ItemCreate(ctx context.Context, req *servicenarrativeengine.ItemCreateRequest, opts ...grpc.CallOption) (*servicenarrativeengine.ItemCreateResponse, error) {
 	var tmpRet mock.Arguments
 	if len(opts) > 0 {
 		tmpRet = _mock.Called(ctx, req, opts)
@@ -87,19 +87,19 @@ func (_mock *MockClient) ItemCreate(ctx context.Context, req *servicetemplate.It
 		panic("no return value specified for ItemCreate")
 	}
 
-	var r0 *servicetemplate.ItemCreateResponse
+	var r0 *servicenarrativeengine.ItemCreateResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *servicetemplate.ItemCreateRequest, ...grpc.CallOption) (*servicetemplate.ItemCreateResponse, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *servicenarrativeengine.ItemCreateRequest, ...grpc.CallOption) (*servicenarrativeengine.ItemCreateResponse, error)); ok {
 		return returnFunc(ctx, req, opts...)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *servicetemplate.ItemCreateRequest, ...grpc.CallOption) *servicetemplate.ItemCreateResponse); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *servicenarrativeengine.ItemCreateRequest, ...grpc.CallOption) *servicenarrativeengine.ItemCreateResponse); ok {
 		r0 = returnFunc(ctx, req, opts...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*servicetemplate.ItemCreateResponse)
+			r0 = ret.Get(0).(*servicenarrativeengine.ItemCreateResponse)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *servicetemplate.ItemCreateRequest, ...grpc.CallOption) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *servicenarrativeengine.ItemCreateRequest, ...grpc.CallOption) error); ok {
 		r1 = returnFunc(ctx, req, opts...)
 	} else {
 		r1 = ret.Error(1)
@@ -114,22 +114,22 @@ type MockClient_ItemCreate_Call struct {
 
 // ItemCreate is a helper method to define mock.On call
 //   - ctx context.Context
-//   - req *servicetemplate.ItemCreateRequest
+//   - req *servicenarrativeengine.ItemCreateRequest
 //   - opts ...grpc.CallOption
-func (_e *MockClient_Expecter) ItemCreate(ctx interface{}, req interface{}, opts ...interface{}) *MockClient_ItemCreate_Call {
+func (_e *MockClient_Expecter) ItemCreate(ctx any, req any, opts ...any) *MockClient_ItemCreate_Call {
 	return &MockClient_ItemCreate_Call{Call: _e.mock.On("ItemCreate",
-		append([]interface{}{ctx, req}, opts...)...)}
+		append([]any{ctx, req}, opts...)...)}
 }
 
-func (_c *MockClient_ItemCreate_Call) Run(run func(ctx context.Context, req *servicetemplate.ItemCreateRequest, opts ...grpc.CallOption)) *MockClient_ItemCreate_Call {
+func (_c *MockClient_ItemCreate_Call) Run(run func(ctx context.Context, req *servicenarrativeengine.ItemCreateRequest, opts ...grpc.CallOption)) *MockClient_ItemCreate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 *servicetemplate.ItemCreateRequest
+		var arg1 *servicenarrativeengine.ItemCreateRequest
 		if args[1] != nil {
-			arg1 = args[1].(*servicetemplate.ItemCreateRequest)
+			arg1 = args[1].(*servicenarrativeengine.ItemCreateRequest)
 		}
 		var arg2 []grpc.CallOption
 		var variadicArgs []grpc.CallOption
@@ -146,18 +146,18 @@ func (_c *MockClient_ItemCreate_Call) Run(run func(ctx context.Context, req *ser
 	return _c
 }
 
-func (_c *MockClient_ItemCreate_Call) Return(v *servicetemplate.ItemCreateResponse, err error) *MockClient_ItemCreate_Call {
+func (_c *MockClient_ItemCreate_Call) Return(v *servicenarrativeengine.ItemCreateResponse, err error) *MockClient_ItemCreate_Call {
 	_c.Call.Return(v, err)
 	return _c
 }
 
-func (_c *MockClient_ItemCreate_Call) RunAndReturn(run func(ctx context.Context, req *servicetemplate.ItemCreateRequest, opts ...grpc.CallOption) (*servicetemplate.ItemCreateResponse, error)) *MockClient_ItemCreate_Call {
+func (_c *MockClient_ItemCreate_Call) RunAndReturn(run func(ctx context.Context, req *servicenarrativeengine.ItemCreateRequest, opts ...grpc.CallOption) (*servicenarrativeengine.ItemCreateResponse, error)) *MockClient_ItemCreate_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ItemDelete provides a mock function for the type MockClient
-func (_mock *MockClient) ItemDelete(ctx context.Context, req *servicetemplate.ItemDeleteRequest, opts ...grpc.CallOption) (*servicetemplate.ItemDeleteResponse, error) {
+func (_mock *MockClient) ItemDelete(ctx context.Context, req *servicenarrativeengine.ItemDeleteRequest, opts ...grpc.CallOption) (*servicenarrativeengine.ItemDeleteResponse, error) {
 	var tmpRet mock.Arguments
 	if len(opts) > 0 {
 		tmpRet = _mock.Called(ctx, req, opts)
@@ -170,19 +170,19 @@ func (_mock *MockClient) ItemDelete(ctx context.Context, req *servicetemplate.It
 		panic("no return value specified for ItemDelete")
 	}
 
-	var r0 *servicetemplate.ItemDeleteResponse
+	var r0 *servicenarrativeengine.ItemDeleteResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *servicetemplate.ItemDeleteRequest, ...grpc.CallOption) (*servicetemplate.ItemDeleteResponse, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *servicenarrativeengine.ItemDeleteRequest, ...grpc.CallOption) (*servicenarrativeengine.ItemDeleteResponse, error)); ok {
 		return returnFunc(ctx, req, opts...)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *servicetemplate.ItemDeleteRequest, ...grpc.CallOption) *servicetemplate.ItemDeleteResponse); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *servicenarrativeengine.ItemDeleteRequest, ...grpc.CallOption) *servicenarrativeengine.ItemDeleteResponse); ok {
 		r0 = returnFunc(ctx, req, opts...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*servicetemplate.ItemDeleteResponse)
+			r0 = ret.Get(0).(*servicenarrativeengine.ItemDeleteResponse)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *servicetemplate.ItemDeleteRequest, ...grpc.CallOption) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *servicenarrativeengine.ItemDeleteRequest, ...grpc.CallOption) error); ok {
 		r1 = returnFunc(ctx, req, opts...)
 	} else {
 		r1 = ret.Error(1)
@@ -197,22 +197,22 @@ type MockClient_ItemDelete_Call struct {
 
 // ItemDelete is a helper method to define mock.On call
 //   - ctx context.Context
-//   - req *servicetemplate.ItemDeleteRequest
+//   - req *servicenarrativeengine.ItemDeleteRequest
 //   - opts ...grpc.CallOption
-func (_e *MockClient_Expecter) ItemDelete(ctx interface{}, req interface{}, opts ...interface{}) *MockClient_ItemDelete_Call {
+func (_e *MockClient_Expecter) ItemDelete(ctx any, req any, opts ...any) *MockClient_ItemDelete_Call {
 	return &MockClient_ItemDelete_Call{Call: _e.mock.On("ItemDelete",
-		append([]interface{}{ctx, req}, opts...)...)}
+		append([]any{ctx, req}, opts...)...)}
 }
 
-func (_c *MockClient_ItemDelete_Call) Run(run func(ctx context.Context, req *servicetemplate.ItemDeleteRequest, opts ...grpc.CallOption)) *MockClient_ItemDelete_Call {
+func (_c *MockClient_ItemDelete_Call) Run(run func(ctx context.Context, req *servicenarrativeengine.ItemDeleteRequest, opts ...grpc.CallOption)) *MockClient_ItemDelete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 *servicetemplate.ItemDeleteRequest
+		var arg1 *servicenarrativeengine.ItemDeleteRequest
 		if args[1] != nil {
-			arg1 = args[1].(*servicetemplate.ItemDeleteRequest)
+			arg1 = args[1].(*servicenarrativeengine.ItemDeleteRequest)
 		}
 		var arg2 []grpc.CallOption
 		var variadicArgs []grpc.CallOption
@@ -229,18 +229,18 @@ func (_c *MockClient_ItemDelete_Call) Run(run func(ctx context.Context, req *ser
 	return _c
 }
 
-func (_c *MockClient_ItemDelete_Call) Return(v *servicetemplate.ItemDeleteResponse, err error) *MockClient_ItemDelete_Call {
+func (_c *MockClient_ItemDelete_Call) Return(v *servicenarrativeengine.ItemDeleteResponse, err error) *MockClient_ItemDelete_Call {
 	_c.Call.Return(v, err)
 	return _c
 }
 
-func (_c *MockClient_ItemDelete_Call) RunAndReturn(run func(ctx context.Context, req *servicetemplate.ItemDeleteRequest, opts ...grpc.CallOption) (*servicetemplate.ItemDeleteResponse, error)) *MockClient_ItemDelete_Call {
+func (_c *MockClient_ItemDelete_Call) RunAndReturn(run func(ctx context.Context, req *servicenarrativeengine.ItemDeleteRequest, opts ...grpc.CallOption) (*servicenarrativeengine.ItemDeleteResponse, error)) *MockClient_ItemDelete_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ItemGet provides a mock function for the type MockClient
-func (_mock *MockClient) ItemGet(ctx context.Context, req *servicetemplate.ItemGetRequest, opts ...grpc.CallOption) (*servicetemplate.ItemGetResponse, error) {
+func (_mock *MockClient) ItemGet(ctx context.Context, req *servicenarrativeengine.ItemGetRequest, opts ...grpc.CallOption) (*servicenarrativeengine.ItemGetResponse, error) {
 	var tmpRet mock.Arguments
 	if len(opts) > 0 {
 		tmpRet = _mock.Called(ctx, req, opts)
@@ -253,19 +253,19 @@ func (_mock *MockClient) ItemGet(ctx context.Context, req *servicetemplate.ItemG
 		panic("no return value specified for ItemGet")
 	}
 
-	var r0 *servicetemplate.ItemGetResponse
+	var r0 *servicenarrativeengine.ItemGetResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *servicetemplate.ItemGetRequest, ...grpc.CallOption) (*servicetemplate.ItemGetResponse, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *servicenarrativeengine.ItemGetRequest, ...grpc.CallOption) (*servicenarrativeengine.ItemGetResponse, error)); ok {
 		return returnFunc(ctx, req, opts...)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *servicetemplate.ItemGetRequest, ...grpc.CallOption) *servicetemplate.ItemGetResponse); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *servicenarrativeengine.ItemGetRequest, ...grpc.CallOption) *servicenarrativeengine.ItemGetResponse); ok {
 		r0 = returnFunc(ctx, req, opts...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*servicetemplate.ItemGetResponse)
+			r0 = ret.Get(0).(*servicenarrativeengine.ItemGetResponse)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *servicetemplate.ItemGetRequest, ...grpc.CallOption) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *servicenarrativeengine.ItemGetRequest, ...grpc.CallOption) error); ok {
 		r1 = returnFunc(ctx, req, opts...)
 	} else {
 		r1 = ret.Error(1)
@@ -280,22 +280,22 @@ type MockClient_ItemGet_Call struct {
 
 // ItemGet is a helper method to define mock.On call
 //   - ctx context.Context
-//   - req *servicetemplate.ItemGetRequest
+//   - req *servicenarrativeengine.ItemGetRequest
 //   - opts ...grpc.CallOption
-func (_e *MockClient_Expecter) ItemGet(ctx interface{}, req interface{}, opts ...interface{}) *MockClient_ItemGet_Call {
+func (_e *MockClient_Expecter) ItemGet(ctx any, req any, opts ...any) *MockClient_ItemGet_Call {
 	return &MockClient_ItemGet_Call{Call: _e.mock.On("ItemGet",
-		append([]interface{}{ctx, req}, opts...)...)}
+		append([]any{ctx, req}, opts...)...)}
 }
 
-func (_c *MockClient_ItemGet_Call) Run(run func(ctx context.Context, req *servicetemplate.ItemGetRequest, opts ...grpc.CallOption)) *MockClient_ItemGet_Call {
+func (_c *MockClient_ItemGet_Call) Run(run func(ctx context.Context, req *servicenarrativeengine.ItemGetRequest, opts ...grpc.CallOption)) *MockClient_ItemGet_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 *servicetemplate.ItemGetRequest
+		var arg1 *servicenarrativeengine.ItemGetRequest
 		if args[1] != nil {
-			arg1 = args[1].(*servicetemplate.ItemGetRequest)
+			arg1 = args[1].(*servicenarrativeengine.ItemGetRequest)
 		}
 		var arg2 []grpc.CallOption
 		var variadicArgs []grpc.CallOption
@@ -312,18 +312,18 @@ func (_c *MockClient_ItemGet_Call) Run(run func(ctx context.Context, req *servic
 	return _c
 }
 
-func (_c *MockClient_ItemGet_Call) Return(v *servicetemplate.ItemGetResponse, err error) *MockClient_ItemGet_Call {
+func (_c *MockClient_ItemGet_Call) Return(v *servicenarrativeengine.ItemGetResponse, err error) *MockClient_ItemGet_Call {
 	_c.Call.Return(v, err)
 	return _c
 }
 
-func (_c *MockClient_ItemGet_Call) RunAndReturn(run func(ctx context.Context, req *servicetemplate.ItemGetRequest, opts ...grpc.CallOption) (*servicetemplate.ItemGetResponse, error)) *MockClient_ItemGet_Call {
+func (_c *MockClient_ItemGet_Call) RunAndReturn(run func(ctx context.Context, req *servicenarrativeengine.ItemGetRequest, opts ...grpc.CallOption) (*servicenarrativeengine.ItemGetResponse, error)) *MockClient_ItemGet_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ItemList provides a mock function for the type MockClient
-func (_mock *MockClient) ItemList(ctx context.Context, req *servicetemplate.ItemListRequest, opts ...grpc.CallOption) (*servicetemplate.ItemListResponse, error) {
+func (_mock *MockClient) ItemList(ctx context.Context, req *servicenarrativeengine.ItemListRequest, opts ...grpc.CallOption) (*servicenarrativeengine.ItemListResponse, error) {
 	var tmpRet mock.Arguments
 	if len(opts) > 0 {
 		tmpRet = _mock.Called(ctx, req, opts)
@@ -336,19 +336,19 @@ func (_mock *MockClient) ItemList(ctx context.Context, req *servicetemplate.Item
 		panic("no return value specified for ItemList")
 	}
 
-	var r0 *servicetemplate.ItemListResponse
+	var r0 *servicenarrativeengine.ItemListResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *servicetemplate.ItemListRequest, ...grpc.CallOption) (*servicetemplate.ItemListResponse, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *servicenarrativeengine.ItemListRequest, ...grpc.CallOption) (*servicenarrativeengine.ItemListResponse, error)); ok {
 		return returnFunc(ctx, req, opts...)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *servicetemplate.ItemListRequest, ...grpc.CallOption) *servicetemplate.ItemListResponse); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *servicenarrativeengine.ItemListRequest, ...grpc.CallOption) *servicenarrativeengine.ItemListResponse); ok {
 		r0 = returnFunc(ctx, req, opts...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*servicetemplate.ItemListResponse)
+			r0 = ret.Get(0).(*servicenarrativeengine.ItemListResponse)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *servicetemplate.ItemListRequest, ...grpc.CallOption) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *servicenarrativeengine.ItemListRequest, ...grpc.CallOption) error); ok {
 		r1 = returnFunc(ctx, req, opts...)
 	} else {
 		r1 = ret.Error(1)
@@ -363,22 +363,22 @@ type MockClient_ItemList_Call struct {
 
 // ItemList is a helper method to define mock.On call
 //   - ctx context.Context
-//   - req *servicetemplate.ItemListRequest
+//   - req *servicenarrativeengine.ItemListRequest
 //   - opts ...grpc.CallOption
-func (_e *MockClient_Expecter) ItemList(ctx interface{}, req interface{}, opts ...interface{}) *MockClient_ItemList_Call {
+func (_e *MockClient_Expecter) ItemList(ctx any, req any, opts ...any) *MockClient_ItemList_Call {
 	return &MockClient_ItemList_Call{Call: _e.mock.On("ItemList",
-		append([]interface{}{ctx, req}, opts...)...)}
+		append([]any{ctx, req}, opts...)...)}
 }
 
-func (_c *MockClient_ItemList_Call) Run(run func(ctx context.Context, req *servicetemplate.ItemListRequest, opts ...grpc.CallOption)) *MockClient_ItemList_Call {
+func (_c *MockClient_ItemList_Call) Run(run func(ctx context.Context, req *servicenarrativeengine.ItemListRequest, opts ...grpc.CallOption)) *MockClient_ItemList_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 *servicetemplate.ItemListRequest
+		var arg1 *servicenarrativeengine.ItemListRequest
 		if args[1] != nil {
-			arg1 = args[1].(*servicetemplate.ItemListRequest)
+			arg1 = args[1].(*servicenarrativeengine.ItemListRequest)
 		}
 		var arg2 []grpc.CallOption
 		var variadicArgs []grpc.CallOption
@@ -395,18 +395,18 @@ func (_c *MockClient_ItemList_Call) Run(run func(ctx context.Context, req *servi
 	return _c
 }
 
-func (_c *MockClient_ItemList_Call) Return(v *servicetemplate.ItemListResponse, err error) *MockClient_ItemList_Call {
+func (_c *MockClient_ItemList_Call) Return(v *servicenarrativeengine.ItemListResponse, err error) *MockClient_ItemList_Call {
 	_c.Call.Return(v, err)
 	return _c
 }
 
-func (_c *MockClient_ItemList_Call) RunAndReturn(run func(ctx context.Context, req *servicetemplate.ItemListRequest, opts ...grpc.CallOption) (*servicetemplate.ItemListResponse, error)) *MockClient_ItemList_Call {
+func (_c *MockClient_ItemList_Call) RunAndReturn(run func(ctx context.Context, req *servicenarrativeengine.ItemListRequest, opts ...grpc.CallOption) (*servicenarrativeengine.ItemListResponse, error)) *MockClient_ItemList_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ItemUpdate provides a mock function for the type MockClient
-func (_mock *MockClient) ItemUpdate(ctx context.Context, req *servicetemplate.ItemUpdateRequest, opts ...grpc.CallOption) (*servicetemplate.ItemUpdateResponse, error) {
+func (_mock *MockClient) ItemUpdate(ctx context.Context, req *servicenarrativeengine.ItemUpdateRequest, opts ...grpc.CallOption) (*servicenarrativeengine.ItemUpdateResponse, error) {
 	var tmpRet mock.Arguments
 	if len(opts) > 0 {
 		tmpRet = _mock.Called(ctx, req, opts)
@@ -419,19 +419,19 @@ func (_mock *MockClient) ItemUpdate(ctx context.Context, req *servicetemplate.It
 		panic("no return value specified for ItemUpdate")
 	}
 
-	var r0 *servicetemplate.ItemUpdateResponse
+	var r0 *servicenarrativeengine.ItemUpdateResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *servicetemplate.ItemUpdateRequest, ...grpc.CallOption) (*servicetemplate.ItemUpdateResponse, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *servicenarrativeengine.ItemUpdateRequest, ...grpc.CallOption) (*servicenarrativeengine.ItemUpdateResponse, error)); ok {
 		return returnFunc(ctx, req, opts...)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *servicetemplate.ItemUpdateRequest, ...grpc.CallOption) *servicetemplate.ItemUpdateResponse); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *servicenarrativeengine.ItemUpdateRequest, ...grpc.CallOption) *servicenarrativeengine.ItemUpdateResponse); ok {
 		r0 = returnFunc(ctx, req, opts...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*servicetemplate.ItemUpdateResponse)
+			r0 = ret.Get(0).(*servicenarrativeengine.ItemUpdateResponse)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *servicetemplate.ItemUpdateRequest, ...grpc.CallOption) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *servicenarrativeengine.ItemUpdateRequest, ...grpc.CallOption) error); ok {
 		r1 = returnFunc(ctx, req, opts...)
 	} else {
 		r1 = ret.Error(1)
@@ -446,22 +446,22 @@ type MockClient_ItemUpdate_Call struct {
 
 // ItemUpdate is a helper method to define mock.On call
 //   - ctx context.Context
-//   - req *servicetemplate.ItemUpdateRequest
+//   - req *servicenarrativeengine.ItemUpdateRequest
 //   - opts ...grpc.CallOption
-func (_e *MockClient_Expecter) ItemUpdate(ctx interface{}, req interface{}, opts ...interface{}) *MockClient_ItemUpdate_Call {
+func (_e *MockClient_Expecter) ItemUpdate(ctx any, req any, opts ...any) *MockClient_ItemUpdate_Call {
 	return &MockClient_ItemUpdate_Call{Call: _e.mock.On("ItemUpdate",
-		append([]interface{}{ctx, req}, opts...)...)}
+		append([]any{ctx, req}, opts...)...)}
 }
 
-func (_c *MockClient_ItemUpdate_Call) Run(run func(ctx context.Context, req *servicetemplate.ItemUpdateRequest, opts ...grpc.CallOption)) *MockClient_ItemUpdate_Call {
+func (_c *MockClient_ItemUpdate_Call) Run(run func(ctx context.Context, req *servicenarrativeengine.ItemUpdateRequest, opts ...grpc.CallOption)) *MockClient_ItemUpdate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 *servicetemplate.ItemUpdateRequest
+		var arg1 *servicenarrativeengine.ItemUpdateRequest
 		if args[1] != nil {
-			arg1 = args[1].(*servicetemplate.ItemUpdateRequest)
+			arg1 = args[1].(*servicenarrativeengine.ItemUpdateRequest)
 		}
 		var arg2 []grpc.CallOption
 		var variadicArgs []grpc.CallOption
@@ -478,18 +478,18 @@ func (_c *MockClient_ItemUpdate_Call) Run(run func(ctx context.Context, req *ser
 	return _c
 }
 
-func (_c *MockClient_ItemUpdate_Call) Return(v *servicetemplate.ItemUpdateResponse, err error) *MockClient_ItemUpdate_Call {
+func (_c *MockClient_ItemUpdate_Call) Return(v *servicenarrativeengine.ItemUpdateResponse, err error) *MockClient_ItemUpdate_Call {
 	_c.Call.Return(v, err)
 	return _c
 }
 
-func (_c *MockClient_ItemUpdate_Call) RunAndReturn(run func(ctx context.Context, req *servicetemplate.ItemUpdateRequest, opts ...grpc.CallOption) (*servicetemplate.ItemUpdateResponse, error)) *MockClient_ItemUpdate_Call {
+func (_c *MockClient_ItemUpdate_Call) RunAndReturn(run func(ctx context.Context, req *servicenarrativeengine.ItemUpdateRequest, opts ...grpc.CallOption) (*servicenarrativeengine.ItemUpdateResponse, error)) *MockClient_ItemUpdate_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Status provides a mock function for the type MockClient
-func (_mock *MockClient) Status(ctx context.Context, req *servicetemplate.StatusRequest, opts ...grpc.CallOption) (*servicetemplate.StatusResponse, error) {
+func (_mock *MockClient) Status(ctx context.Context, req *servicenarrativeengine.StatusRequest, opts ...grpc.CallOption) (*servicenarrativeengine.StatusResponse, error) {
 	var tmpRet mock.Arguments
 	if len(opts) > 0 {
 		tmpRet = _mock.Called(ctx, req, opts)
@@ -502,19 +502,19 @@ func (_mock *MockClient) Status(ctx context.Context, req *servicetemplate.Status
 		panic("no return value specified for Status")
 	}
 
-	var r0 *servicetemplate.StatusResponse
+	var r0 *servicenarrativeengine.StatusResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *servicetemplate.StatusRequest, ...grpc.CallOption) (*servicetemplate.StatusResponse, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *servicenarrativeengine.StatusRequest, ...grpc.CallOption) (*servicenarrativeengine.StatusResponse, error)); ok {
 		return returnFunc(ctx, req, opts...)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *servicetemplate.StatusRequest, ...grpc.CallOption) *servicetemplate.StatusResponse); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *servicenarrativeengine.StatusRequest, ...grpc.CallOption) *servicenarrativeengine.StatusResponse); ok {
 		r0 = returnFunc(ctx, req, opts...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*servicetemplate.StatusResponse)
+			r0 = ret.Get(0).(*servicenarrativeengine.StatusResponse)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *servicetemplate.StatusRequest, ...grpc.CallOption) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *servicenarrativeengine.StatusRequest, ...grpc.CallOption) error); ok {
 		r1 = returnFunc(ctx, req, opts...)
 	} else {
 		r1 = ret.Error(1)
@@ -529,22 +529,22 @@ type MockClient_Status_Call struct {
 
 // Status is a helper method to define mock.On call
 //   - ctx context.Context
-//   - req *servicetemplate.StatusRequest
+//   - req *servicenarrativeengine.StatusRequest
 //   - opts ...grpc.CallOption
-func (_e *MockClient_Expecter) Status(ctx interface{}, req interface{}, opts ...interface{}) *MockClient_Status_Call {
+func (_e *MockClient_Expecter) Status(ctx any, req any, opts ...any) *MockClient_Status_Call {
 	return &MockClient_Status_Call{Call: _e.mock.On("Status",
-		append([]interface{}{ctx, req}, opts...)...)}
+		append([]any{ctx, req}, opts...)...)}
 }
 
-func (_c *MockClient_Status_Call) Run(run func(ctx context.Context, req *servicetemplate.StatusRequest, opts ...grpc.CallOption)) *MockClient_Status_Call {
+func (_c *MockClient_Status_Call) Run(run func(ctx context.Context, req *servicenarrativeengine.StatusRequest, opts ...grpc.CallOption)) *MockClient_Status_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 *servicetemplate.StatusRequest
+		var arg1 *servicenarrativeengine.StatusRequest
 		if args[1] != nil {
-			arg1 = args[1].(*servicetemplate.StatusRequest)
+			arg1 = args[1].(*servicenarrativeengine.StatusRequest)
 		}
 		var arg2 []grpc.CallOption
 		var variadicArgs []grpc.CallOption
@@ -561,12 +561,12 @@ func (_c *MockClient_Status_Call) Run(run func(ctx context.Context, req *service
 	return _c
 }
 
-func (_c *MockClient_Status_Call) Return(v *servicetemplate.StatusResponse, err error) *MockClient_Status_Call {
+func (_c *MockClient_Status_Call) Return(v *servicenarrativeengine.StatusResponse, err error) *MockClient_Status_Call {
 	_c.Call.Return(v, err)
 	return _c
 }
 
-func (_c *MockClient_Status_Call) RunAndReturn(run func(ctx context.Context, req *servicetemplate.StatusRequest, opts ...grpc.CallOption) (*servicetemplate.StatusResponse, error)) *MockClient_Status_Call {
+func (_c *MockClient_Status_Call) RunAndReturn(run func(ctx context.Context, req *servicenarrativeengine.StatusRequest, opts ...grpc.CallOption) (*servicenarrativeengine.StatusResponse, error)) *MockClient_Status_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -614,9 +614,9 @@ type MockClient_UnaryEcho_Call struct {
 //   - ctx context.Context
 //   - req *golibproto.UnaryEchoRequest
 //   - opts ...grpc.CallOption
-func (_e *MockClient_Expecter) UnaryEcho(ctx interface{}, req interface{}, opts ...interface{}) *MockClient_UnaryEcho_Call {
+func (_e *MockClient_Expecter) UnaryEcho(ctx any, req any, opts ...any) *MockClient_UnaryEcho_Call {
 	return &MockClient_UnaryEcho_Call{Call: _e.mock.On("UnaryEcho",
-		append([]interface{}{ctx, req}, opts...)...)}
+		append([]any{ctx, req}, opts...)...)}
 }
 
 func (_c *MockClient_UnaryEcho_Call) Run(run func(ctx context.Context, req *golibproto.UnaryEchoRequest, opts ...grpc.CallOption)) *MockClient_UnaryEcho_Call {

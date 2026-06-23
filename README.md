@@ -5,15 +5,15 @@
 
 <hr />
 
-![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/a-novel/service-template)
-![GitHub repo file or directory count](https://img.shields.io/github/directory-file-count/a-novel/service-template)
-![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/a-novel/service-template)
+![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/a-novel/service-narrative-engine)
+![GitHub repo file or directory count](https://img.shields.io/github/directory-file-count/a-novel/service-narrative-engine)
+![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/a-novel/service-narrative-engine)
 
-![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/a-novel/service-template/main.yaml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/a-novel/service-template)](https://goreportcard.com/report/github.com/a-novel/service-template)
-[![codecov](https://codecov.io/gh/a-novel/service-template/graph/badge.svg?token=XK5D0l728E)](https://codecov.io/gh/a-novel/service-template)
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/a-novel/service-narrative-engine/main.yaml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/a-novel/service-narrative-engine)](https://goreportcard.com/report/github.com/a-novel/service-narrative-engine)
+[![codecov](https://codecov.io/gh/a-novel/service-narrative-engine/graph/badge.svg)](https://codecov.io/gh/a-novel/service-narrative-engine)
 
-![Coverage graph](https://codecov.io/gh/a-novel/service-template/graphs/sunburst.svg?token=XK5D0l728E)
+![Coverage graph](https://codecov.io/gh/a-novel/service-narrative-engine/graphs/sunburst.svg)
 
 ## Using this template
 
@@ -24,30 +24,30 @@ copy. Replace it with your own resource, rename the module, and you have a worki
 
 ### 1. Rename the module and the service identity
 
-| What                   | Where                                                                                                                  | From → to                                                                   |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| Go module path         | `go.mod` (`module …`) + every import in `internal/`, `cmd/`, `pkg/go/`, `*_test.go`                                    | `github.com/a-novel/service-template` → `github.com/a-novel/<your-service>` |
-| Module path in tooling | `.mockery.yaml`, `buf.gen.yaml`                                                                                        | same rename                                                                 |
-| Root generate file     | `generate.go` (`package …`)                                                                                            | the placeholder package name → `package <yourservice>`                      |
-| Env-var prefix         | `internal/config/env/env.go` (`os.Getenv("SERVICE_TEMPLATE_ENV_PREFIX")`)                                              | `SERVICE_TEMPLATE_ENV_PREFIX` → `<YOUR_SERVICE>_ENV_PREFIX`                 |
-| App name default       | `internal/config/env/env.go` (`AppNameDefault`)                                                                        | `"service-template"` → `"<your-service>"`                                   |
-| Repo references        | `README.md` (badges, image names, doc links), CI workflows (`image_name:`), `package.json`, `pkg/js/rest/package.json` | `service-template` → `<your-service>`                                       |
+| What                   | Where                                                                                                                  | From → to                                                                           |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Go module path         | `go.mod` (`module …`) + every import in `internal/`, `cmd/`, `pkg/go/`, `*_test.go`                                    | `github.com/a-novel/service-narrative-engine` → `github.com/a-novel/<your-service>` |
+| Module path in tooling | `.mockery.yaml`, `buf.gen.yaml`                                                                                        | same rename                                                                         |
+| Root generate file     | `generate.go` (`package …`)                                                                                            | the placeholder package name → `package <yourservice>`                              |
+| Env-var prefix         | `internal/config/env/env.go` (`os.Getenv("SERVICE_NARRATIVE_ENGINE_ENV_PREFIX")`)                                      | `SERVICE_NARRATIVE_ENGINE_ENV_PREFIX` → `<YOUR_SERVICE>_ENV_PREFIX`                 |
+| App name default       | `internal/config/env/env.go` (`AppNameDefault`)                                                                        | `"service-narrative-engine"` → `"<your-service>"`                                   |
+| Repo references        | `README.md` (badges, image names, doc links), CI workflows (`image_name:`), `package.json`, `pkg/js/rest/package.json` | `service-narrative-engine` → `<your-service>`                                       |
 
 A `go mod edit -module github.com/a-novel/<your-service>` followed by a project-wide find/replace
-of `service-template` → `<your-service>` covers most of it (the import paths use the
-`github.com/a-novel/service-template/internal/...` form, so the same replace catches them);
-then `make format` and `make generate`.
+of `service-narrative-engine` → `<your-service>` covers most of it (the import paths use the
+`github.com/a-novel/service-narrative-engine/internal/...` form, so the same replace catches them);
+then `pnpm format:go` and `pnpm generate`.
 
 ### 2. Replace the `item` resource
 
 Swap `item` for your own resource (call it `widget`, say) — touch each of these, renaming
 `item`/`Item` → `widget`/`Widget` and adjusting fields:
 
-- **Migration** — `internal/models/migrations/20250306000000_items_table.{up,down}.sql` (and `make migrations` / `date '+%Y%m%d%H%M%S'` for a fresh timestamp if you'd rather start over).
+- **Migration** — `internal/models/migrations/20250306000000_items_table.{up,down}.sql` (use `date '+%Y%m%d%H%M%S'` for a fresh timestamp if you'd rather start over).
 - **DAO** — `internal/dao/pg.item.go` (the bun model), `pg.itemCreate.go` / `.sql` and the `Get` / `List` / `Update` / `Delete` siblings, plus the `*_test.go` files.
 - **Services** — `internal/services/item.go`, `itemCreate.go` … `itemDelete.go`, the `*_test.go` files, and `internal/services/validate.go` if your fields need different custom validators (it currently only registers `notblank`).
 - **Handlers** — REST: `internal/handlers/http.item.go`, `http.itemCreatePublic.go` … `http.itemDeletePublic.go`; gRPC: `internal/handlers/grpc.itemCreate.go` … `grpc.itemDelete.go`; plus the `*_test.go` files.
-- **Proto** — `internal/models/proto/item*.proto` (then `make generate` to refresh `internal/handlers/protogen/`).
+- **Proto** — `internal/models/proto/item*.proto` (then `pnpm generate` to refresh `internal/handlers/protogen/`).
 - **API surface** — `openapi.yaml` (+ regenerate `openapi.html`), `pkg/go/client.go`, `pkg/js/rest/src/item.ts` and `pkg/js/rest/src/index.ts`, and the integration tests under `pkg/js/test/`.
 - **Wiring** — the constructor calls and route registrations in `cmd/rest/main.go` and `cmd/grpc/main.go`.
 
@@ -58,14 +58,15 @@ These are not dummy code — leave them in place (adjusting only as your service
 - `internal/config/` (env loading, presets), the `cmd/*/main.go` startup shape (config → otel → DB
   context → DAOs → services → handlers → routes → graceful shutdown), `internal/handlers/http.ping.go`
   / `http.health.go` / `http.decoder.go` / `grpc.status.go`, `internal/models/migrations/migrations.go`.
-- `Makefile`, `builds/`, `scripts/`, `.github/workflows/`, the `*.mod` tool-dep files, `renovate.json`,
+- `builds/`, `.github/workflows/`, the `*.mod` tool-dep files, `renovate.json`,
   `buf.*`, the prettier/pnpm config — all org-standard, shared with the other services.
 - `LICENSE`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md` — update only the bits that name
   the service.
 
 ### 4. Verify
 
-`make generate` → `make format` → `make lint` → `make test`. Then refresh `openapi.html`, update
+`pnpm generate` → `pnpm format:go && pnpm format` → `pnpm lint:go && pnpm lint:proto && pnpm lint` →
+`a-novel test -y`. Then refresh `openapi.html`, update
 this README (delete this section, fix the badges/links/Docker image names), and you have a service.
 
 Conventions for writing the Go (layering, naming, error handling, telemetry, tests) are governed by
@@ -80,12 +81,12 @@ Run the service as a containerized application (the below examples use docker-co
 
 #### gRPC
 
-> Set the SERVICE_TEMPLATE_GRPC_PORT env variable to whatever port you want to use for the service.
+> Set the SERVICE_NARRATIVE_ENGINE_GRPC_PORT env variable to whatever port you want to use for the service.
 
 ```yaml
 services:
   postgres-template:
-    image: ghcr.io/a-novel/service-template/database:v0.0.0
+    image: ghcr.io/a-novel/service-narrative-engine/database:v0.0.0
     networks:
       - api
     environment:
@@ -97,10 +98,10 @@ services:
     volumes:
       - template-postgres-data:/var/lib/postgresql/
 
-  service-template:
-    image: ghcr.io/a-novel/service-template/standalone-grpc:v0.0.0
+  service-narrative-engine:
+    image: ghcr.io/a-novel/service-narrative-engine/standalone-grpc:v0.0.0
     ports:
-      - "${SERVICE_TEMPLATE_GRPC_PORT}:8080"
+      - "${SERVICE_NARRATIVE_ENGINE_GRPC_PORT}:8080"
     depends_on:
       postgres-template:
         condition: service_healthy
@@ -123,7 +124,7 @@ production deployments. Instead, consider using the separate, optimized images f
 ```yaml
 services:
   postgres-template:
-    image: ghcr.io/a-novel/service-template/database:v0.0.0
+    image: ghcr.io/a-novel/service-narrative-engine/database:v0.0.0
     networks:
       - api
     environment:
@@ -136,7 +137,7 @@ services:
       - template-postgres-data:/var/lib/postgresql/
 
   migrations-template:
-    image: ghcr.io/a-novel/service-template/jobs/migrations:v0.0.0
+    image: ghcr.io/a-novel/service-narrative-engine/jobs/migrations:v0.0.0
     depends_on:
       postgres-template:
         condition: service_healthy
@@ -145,10 +146,10 @@ services:
     networks:
       - api
 
-  service-template:
-    image: ghcr.io/a-novel/service-template/grpc:v0.0.0
+  service-narrative-engine:
+    image: ghcr.io/a-novel/service-narrative-engine/grpc:v0.0.0
     ports:
-      - "${SERVICE_TEMPLATE_GRPC_PORT}:8080"
+      - "${SERVICE_NARRATIVE_ENGINE_GRPC_PORT}:8080"
     depends_on:
       postgres-template:
         condition: service_healthy
@@ -168,12 +169,12 @@ volumes:
 
 #### REST
 
-> Set the SERVICE_TEMPLATE_REST_PORT env variable to whatever port you want to use for the service.
+> Set the SERVICE_NARRATIVE_ENGINE_REST_PORT env variable to whatever port you want to use for the service.
 
 ```yaml
 services:
   postgres-template:
-    image: ghcr.io/a-novel/service-template/database:v0.0.0
+    image: ghcr.io/a-novel/service-narrative-engine/database:v0.0.0
     networks:
       - api
     environment:
@@ -185,10 +186,10 @@ services:
     volumes:
       - template-postgres-data:/var/lib/postgresql/
 
-  service-template:
-    image: ghcr.io/a-novel/service-template/standalone-rest:v0.0.0
+  service-narrative-engine:
+    image: ghcr.io/a-novel/service-narrative-engine/standalone-rest:v0.0.0
     ports:
-      - "${SERVICE_TEMPLATE_REST_PORT}:8080"
+      - "${SERVICE_NARRATIVE_ENGINE_REST_PORT}:8080"
     depends_on:
       postgres-template:
         condition: service_healthy
@@ -211,7 +212,7 @@ production deployments. Instead, consider using the separate, optimized images f
 ```yaml
 services:
   postgres-template:
-    image: ghcr.io/a-novel/service-template/database:v0.0.0
+    image: ghcr.io/a-novel/service-narrative-engine/database:v0.0.0
     networks:
       - api
     environment:
@@ -224,7 +225,7 @@ services:
       - template-postgres-data:/var/lib/postgresql/
 
   migrations-template:
-    image: ghcr.io/a-novel/service-template/jobs/migrations:v0.0.0
+    image: ghcr.io/a-novel/service-narrative-engine/jobs/migrations:v0.0.0
     depends_on:
       postgres-template:
         condition: service_healthy
@@ -233,10 +234,10 @@ services:
     networks:
       - api
 
-  service-template:
-    image: ghcr.io/a-novel/service-template/rest:v0.0.0
+  service-narrative-engine:
+    image: ghcr.io/a-novel/service-narrative-engine/rest:v0.0.0
     ports:
-      - "${SERVICE_TEMPLATE_REST_PORT}:8080"
+      - "${SERVICE_NARRATIVE_ENGINE_REST_PORT}:8080"
     depends_on:
       postgres-template:
         condition: service_healthy
@@ -286,11 +287,11 @@ customize the REST API behavior.
 For now, OTEL is only provided using 2 exporters: stdout and Google Cloud. Other integrations may come
 in the future.
 
-| Name              | Description                                                                             | Default value      | Images                                                        |
-| ----------------- | --------------------------------------------------------------------------------------- | ------------------ | ------------------------------------------------------------- |
-| OTEL              | Activate OTEL tracing (use options below to switch between exporters)                   | `false`            | `standalone-grpc`<br/>`standalone-rest`<br/>`grpc`<br/>`rest` |
-| GCLOUD_PROJECT_ID | Google Cloud project id for the OTEL exporter. Switch to Google Cloud exporter when set |                    | `standalone-grpc`<br/>`standalone-rest`<br/>`grpc`<br/>`rest` |
-| APP_NAME          | Application name to be used in traces                                                   | `service-template` | `standalone-grpc`<br/>`standalone-rest`<br/>`grpc`<br/>`rest` |
+| Name              | Description                                                                             | Default value              | Images                                                        |
+| ----------------- | --------------------------------------------------------------------------------------- | -------------------------- | ------------------------------------------------------------- |
+| OTEL              | Activate OTEL tracing (use options below to switch between exporters)                   | `false`                    | `standalone-grpc`<br/>`standalone-rest`<br/>`grpc`<br/>`rest` |
+| GCLOUD_PROJECT_ID | Google Cloud project id for the OTEL exporter. Switch to Google Cloud exporter when set |                            | `standalone-grpc`<br/>`standalone-rest`<br/>`grpc`<br/>`rest` |
+| APP_NAME          | Application name to be used in traces                                                   | `service-narrative-engine` | `standalone-grpc`<br/>`standalone-rest`<br/>`grpc`<br/>`rest` |
 
 ### Javascript (npm)
 
@@ -314,13 +315,20 @@ Then, install the package using pnpm:
 # pnpm config set auto-install-peers true
 #  Or
 # pnpm config set auto-install-peers true --location project
-pnpm add @a-novel/service-template-rest
+pnpm add @a-novel/service-narrative-engine-rest
 ```
 
 To use it, create a `TemplateApi` instance. A single instance can be shared across your client.
 
 ```typescript
-import { TemplateApi, itemCreate, itemDelete, itemGet, itemList, itemUpdate } from "@a-novel/service-template-rest";
+import {
+  TemplateApi,
+  itemCreate,
+  itemDelete,
+  itemGet,
+  itemList,
+  itemUpdate,
+} from "@a-novel/service-narrative-engine-rest";
 
 export const templateApi = new TemplateApi("<base_api_url>");
 
@@ -348,7 +356,7 @@ const updated = await itemUpdate(templateApi, "<item-id>", "Updated Name", "Upda
 const deleted = await itemDelete(templateApi, "<item-id>");
 ```
 
-The API reference is available at [GitHub Pages](https://a-novel.github.io/service-template).
+The API reference is available at [GitHub Pages](https://a-novel.github.io/service-narrative-engine).
 
 ### Go module
 
@@ -356,7 +364,7 @@ You can integrate the service capabilities directly into your Go services by usi
 Go module. It requires a connection to a running gRPC instance of this service.
 
 ```bash
-go get -u github.com/a-novel/service-template
+go get -u github.com/a-novel/service-narrative-engine
 ```
 
 ```go
@@ -369,14 +377,14 @@ import (
   "google.golang.org/grpc"
   "google.golang.org/grpc/credentials/insecure"
 
-  pkg "github.com/a-novel/service-template/pkg"
+  pkg "github.com/a-novel/service-narrative-engine/pkg"
 )
 
 func main() {
   ctx := context.Background()
 
   client, _ := pkg.NewClient(
-    "<service-template-grpc-url>",
+    "<service-narrative-engine-grpc-url>",
     grpc.WithTransportCredentials(insecure.NewCredentials()),
   )
   defer client.Close()

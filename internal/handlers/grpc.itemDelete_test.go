@@ -11,11 +11,11 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/a-novel/service-template/internal/dao"
-	"github.com/a-novel/service-template/internal/handlers"
-	handlersmocks "github.com/a-novel/service-template/internal/handlers/mocks"
-	"github.com/a-novel/service-template/internal/handlers/protogen"
-	"github.com/a-novel/service-template/internal/services"
+	"github.com/a-novel/service-narrative-engine/internal/dao"
+	"github.com/a-novel/service-narrative-engine/internal/handlers"
+	handlersmocks "github.com/a-novel/service-narrative-engine/internal/handlers/mocks"
+	"github.com/a-novel/service-narrative-engine/internal/handlers/protogen"
+	"github.com/a-novel/service-narrative-engine/internal/services"
 )
 
 func TestGrpcItemDelete(t *testing.T) {

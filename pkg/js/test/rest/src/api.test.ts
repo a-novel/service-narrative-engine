@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { TemplateApi } from "@a-novel/service-template-rest";
+import { TemplateApi } from "@a-novel/service-narrative-engine-rest";
 
 describe("ping", () => {
   it("returns success", async () => {

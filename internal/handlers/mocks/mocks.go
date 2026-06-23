@@ -7,7 +7,7 @@ package handlersmocks
 import (
 	"context"
 
-	"github.com/a-novel/service-template/internal/services"
+	"github.com/a-novel/service-narrative-engine/internal/services"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -74,7 +74,7 @@ type MockItemCreateService_Exec_Call struct {
 // Exec is a helper method to define mock.On call
 //   - ctx context.Context
 //   - request *services.ItemCreateRequest
-func (_e *MockItemCreateService_Expecter) Exec(ctx interface{}, request interface{}) *MockItemCreateService_Exec_Call {
+func (_e *MockItemCreateService_Expecter) Exec(ctx any, request any) *MockItemCreateService_Exec_Call {
 	return &MockItemCreateService_Exec_Call{Call: _e.mock.On("Exec", ctx, request)}
 }
 
@@ -169,7 +169,7 @@ type MockItemDeleteService_Exec_Call struct {
 // Exec is a helper method to define mock.On call
 //   - ctx context.Context
 //   - request *services.ItemDeleteRequest
-func (_e *MockItemDeleteService_Expecter) Exec(ctx interface{}, request interface{}) *MockItemDeleteService_Exec_Call {
+func (_e *MockItemDeleteService_Expecter) Exec(ctx any, request any) *MockItemDeleteService_Exec_Call {
 	return &MockItemDeleteService_Exec_Call{Call: _e.mock.On("Exec", ctx, request)}
 }
 
@@ -264,7 +264,7 @@ type MockItemGetService_Exec_Call struct {
 // Exec is a helper method to define mock.On call
 //   - ctx context.Context
 //   - request *services.ItemGetRequest
-func (_e *MockItemGetService_Expecter) Exec(ctx interface{}, request interface{}) *MockItemGetService_Exec_Call {
+func (_e *MockItemGetService_Expecter) Exec(ctx any, request any) *MockItemGetService_Exec_Call {
 	return &MockItemGetService_Exec_Call{Call: _e.mock.On("Exec", ctx, request)}
 }
 
@@ -359,7 +359,7 @@ type MockItemListService_Exec_Call struct {
 // Exec is a helper method to define mock.On call
 //   - ctx context.Context
 //   - request *services.ItemListRequest
-func (_e *MockItemListService_Expecter) Exec(ctx interface{}, request interface{}) *MockItemListService_Exec_Call {
+func (_e *MockItemListService_Expecter) Exec(ctx any, request any) *MockItemListService_Exec_Call {
 	return &MockItemListService_Exec_Call{Call: _e.mock.On("Exec", ctx, request)}
 }
 
@@ -454,7 +454,7 @@ type MockItemUpdateService_Exec_Call struct {
 // Exec is a helper method to define mock.On call
 //   - ctx context.Context
 //   - request *services.ItemUpdateRequest
-func (_e *MockItemUpdateService_Expecter) Exec(ctx interface{}, request interface{}) *MockItemUpdateService_Exec_Call {
+func (_e *MockItemUpdateService_Expecter) Exec(ctx any, request any) *MockItemUpdateService_Exec_Call {
 	return &MockItemUpdateService_Exec_Call{Call: _e.mock.On("Exec", ctx, request)}
 }
 
@@ -549,7 +549,7 @@ type MockItemCreatePublicService_Exec_Call struct {
 // Exec is a helper method to define mock.On call
 //   - ctx context.Context
 //   - request *services.ItemCreateRequest
-func (_e *MockItemCreatePublicService_Expecter) Exec(ctx interface{}, request interface{}) *MockItemCreatePublicService_Exec_Call {
+func (_e *MockItemCreatePublicService_Expecter) Exec(ctx any, request any) *MockItemCreatePublicService_Exec_Call {
 	return &MockItemCreatePublicService_Exec_Call{Call: _e.mock.On("Exec", ctx, request)}
 }
 
@@ -644,7 +644,7 @@ type MockItemDeletePublicService_Exec_Call struct {
 // Exec is a helper method to define mock.On call
 //   - ctx context.Context
 //   - request *services.ItemDeleteRequest
-func (_e *MockItemDeletePublicService_Expecter) Exec(ctx interface{}, request interface{}) *MockItemDeletePublicService_Exec_Call {
+func (_e *MockItemDeletePublicService_Expecter) Exec(ctx any, request any) *MockItemDeletePublicService_Exec_Call {
 	return &MockItemDeletePublicService_Exec_Call{Call: _e.mock.On("Exec", ctx, request)}
 }
 
@@ -739,7 +739,7 @@ type MockItemGetPublicService_Exec_Call struct {
 // Exec is a helper method to define mock.On call
 //   - ctx context.Context
 //   - request *services.ItemGetRequest
-func (_e *MockItemGetPublicService_Expecter) Exec(ctx interface{}, request interface{}) *MockItemGetPublicService_Exec_Call {
+func (_e *MockItemGetPublicService_Expecter) Exec(ctx any, request any) *MockItemGetPublicService_Exec_Call {
 	return &MockItemGetPublicService_Exec_Call{Call: _e.mock.On("Exec", ctx, request)}
 }
 
@@ -834,7 +834,7 @@ type MockItemListPublicService_Exec_Call struct {
 // Exec is a helper method to define mock.On call
 //   - ctx context.Context
 //   - request *services.ItemListRequest
-func (_e *MockItemListPublicService_Expecter) Exec(ctx interface{}, request interface{}) *MockItemListPublicService_Exec_Call {
+func (_e *MockItemListPublicService_Expecter) Exec(ctx any, request any) *MockItemListPublicService_Exec_Call {
 	return &MockItemListPublicService_Exec_Call{Call: _e.mock.On("Exec", ctx, request)}
 }
 
@@ -929,7 +929,7 @@ type MockItemUpdatePublicService_Exec_Call struct {
 // Exec is a helper method to define mock.On call
 //   - ctx context.Context
 //   - request *services.ItemUpdateRequest
-func (_e *MockItemUpdatePublicService_Expecter) Exec(ctx interface{}, request interface{}) *MockItemUpdatePublicService_Exec_Call {
+func (_e *MockItemUpdatePublicService_Expecter) Exec(ctx any, request any) *MockItemUpdatePublicService_Exec_Call {
 	return &MockItemUpdatePublicService_Exec_Call{Call: _e.mock.On("Exec", ctx, request)}
 }
 

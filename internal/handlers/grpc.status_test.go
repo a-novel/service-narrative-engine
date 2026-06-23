@@ -9,9 +9,9 @@ import (
 
 	"github.com/a-novel-kit/golib/postgres"
 
-	"github.com/a-novel/service-template/internal/config/configtest"
-	"github.com/a-novel/service-template/internal/handlers"
-	"github.com/a-novel/service-template/internal/handlers/protogen"
+	"github.com/a-novel/service-narrative-engine/internal/config/configtest"
+	"github.com/a-novel/service-narrative-engine/internal/handlers"
+	"github.com/a-novel/service-narrative-engine/internal/handlers/protogen"
 )
 
 func TestStatus(t *testing.T) {

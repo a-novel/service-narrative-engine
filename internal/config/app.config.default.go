@@ -11,7 +11,7 @@ import (
 	"github.com/a-novel-kit/golib/otel"
 	otelpresets "github.com/a-novel-kit/golib/otel/presets"
 
-	"github.com/a-novel/service-template/internal/config/env"
+	"github.com/a-novel/service-narrative-engine/internal/config/env"
 )
 
 const (

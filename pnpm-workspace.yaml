@@ -14,6 +14,9 @@ gitChecks: false
 
 linkWorkspacePackages: true
 
+minimumReleaseAgeExclude:
+  - "@typescript-eslint/types@8.60.1"
+
 onlyBuiltDependencies:
   - core-js
   - esbuild

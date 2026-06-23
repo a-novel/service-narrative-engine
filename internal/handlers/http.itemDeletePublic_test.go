@@ -13,11 +13,11 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/a-novel/service-template/internal/config"
-	"github.com/a-novel/service-template/internal/dao"
-	"github.com/a-novel/service-template/internal/handlers"
-	handlersmocks "github.com/a-novel/service-template/internal/handlers/mocks"
-	"github.com/a-novel/service-template/internal/services"
+	"github.com/a-novel/service-narrative-engine/internal/config"
+	"github.com/a-novel/service-narrative-engine/internal/dao"
+	"github.com/a-novel/service-narrative-engine/internal/handlers"
+	handlersmocks "github.com/a-novel/service-narrative-engine/internal/handlers/mocks"
+	"github.com/a-novel/service-narrative-engine/internal/services"
 )
 
 func TestRestItemDeletePublic(t *testing.T) {

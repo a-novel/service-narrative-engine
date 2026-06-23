@@ -18,7 +18,7 @@ info:
   version: v0.0.0
   license:
     name: AGPL-3.0
-    url: "https://raw.githubusercontent.com/a-novel/service-template/refs/heads/master/LICENSE"
+    url: "https://raw.githubusercontent.com/a-novel/service-narrative-engine/refs/heads/master/LICENSE"
 
 paths:
   /ping:

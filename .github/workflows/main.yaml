@@ -13,14 +13,14 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v6
         with:
           go-version-file: "go.mod"
       - name: go generate
         shell: bash
         run: go generate ./...
-      - uses: a-novel-kit/workflows/generic-actions/check-changes@master
+      - uses: a-novel-kit/workflows/generic-actions/check-changes@v1.0.3
         with:
           fail_message: go generate definitions are not up-to-date, please run 'go generate ./...' and commit the changes
 
@@ -30,14 +30,14 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: a-novel-kit/workflows/go-actions/lint-go@master
+      - uses: a-novel-kit/workflows/go-actions/lint-go@v1.0.3
 
   lint-proto:
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: bufbuild/buf-action@v1
 
   lint-node:
@@ -46,7 +46,7 @@ jobs:
       contents: read
       packages: read
     steps:
-      - uses: a-novel-kit/workflows/node-actions/lint-node@master
+      - uses: a-novel-kit/workflows/node-actions/lint-node@v1.0.3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           app_private_key: ${{ secrets.DEPENDENCY_BOT_PRIVATE_KEY }}
@@ -62,7 +62,7 @@ jobs:
       artifact-id: ${{ steps.test.outputs.artifact-id }}
     services:
       postgres:
-        image: ghcr.io/a-novel/service-template/database@${{ needs.build-database.outputs.digest }}
+        image: ghcr.io/a-novel/service-narrative-engine/database@${{ needs.build-database.outputs.digest }}
         ports:
           - "5432:5432"
         env:
@@ -79,9 +79,9 @@ jobs:
     env:
       POSTGRES_DSN: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/run-migrations
-      - uses: a-novel-kit/workflows/go-actions/test-go@master
+      - uses: a-novel-kit/workflows/go-actions/test-go@v1.0.3
         id: test
         with:
           filter_extra_patterns: "| grep /internal | grep -v /protogen"
@@ -100,7 +100,7 @@ jobs:
       artifact-id: ${{ steps.test.outputs.artifact-id }}
     services:
       postgres-template:
-        image: ghcr.io/a-novel/service-template/database@${{ needs.build-database.outputs.digest }}
+        image: ghcr.io/a-novel/service-narrative-engine/database@${{ needs.build-database.outputs.digest }}
         ports:
           - "5432:5432"
         env:
@@ -115,8 +115,8 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
-      service-template:
-        image: ghcr.io/a-novel/service-template/standalone-grpc@${{ needs.build-standalone-grpc.outputs.digest }}
+      service-narrative-engine:
+        image: ghcr.io/a-novel/service-narrative-engine/standalone-grpc@${{ needs.build-standalone-grpc.outputs.digest }}
         ports:
           - "8080:8080"
         credentials:
@@ -127,8 +127,8 @@ jobs:
     env:
       GRPC_URL: "localhost:8080"
     steps:
-      - uses: actions/checkout@v6
-      - uses: a-novel-kit/workflows/go-actions/test-go@master
+      - uses: actions/checkout@v7
+      - uses: a-novel-kit/workflows/go-actions/test-go@v1.0.3
         id: test
         with:
           filter_extra_patterns: "| grep /pkg"
@@ -148,7 +148,7 @@ jobs:
       artifact-id: ${{ steps.test.outputs.artifact-id }}
     services:
       postgres-template:
-        image: ghcr.io/a-novel/service-template/database@${{ needs.build-database.outputs.digest }}
+        image: ghcr.io/a-novel/service-narrative-engine/database@${{ needs.build-database.outputs.digest }}
         ports:
           - "5432:5432"
         env:
@@ -163,8 +163,8 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
-      service-template:
-        image: ghcr.io/a-novel/service-template/standalone-rest@${{ needs.build-standalone-rest.outputs.digest }}
+      service-narrative-engine:
+        image: ghcr.io/a-novel/service-narrative-engine/standalone-rest@${{ needs.build-standalone-rest.outputs.digest }}
         ports:
           - "8080:8080"
         credentials:
@@ -175,7 +175,7 @@ jobs:
     env:
       REST_URL: "http://localhost:8080"
     steps:
-      - uses: a-novel-kit/workflows/node-actions/test-node@master
+      - uses: a-novel-kit/workflows/node-actions/test-node@v1.0.3
         id: test
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -200,7 +200,7 @@ jobs:
       POSTGRES_HOST_AUTH_METHOD: scram-sha-256
       POSTGRES_INITDB_ARGS: --auth=scram-sha-256
     steps:
-      - uses: a-novel-kit/workflows/build-actions/docker@master
+      - uses: a-novel-kit/workflows/build-actions/docker@v1.0.3
         id: build
         with:
           file: builds/database.Dockerfile
@@ -223,7 +223,7 @@ jobs:
       id-token: write
     services:
       postgres-template:
-        image: ghcr.io/a-novel/service-template/database@${{ needs.build-database.outputs.digest }}
+        image: ghcr.io/a-novel/service-narrative-engine/database@${{ needs.build-database.outputs.digest }}
         ports:
           - "5432:5432"
         env:
@@ -240,7 +240,7 @@ jobs:
     env:
       POSTGRES_DSN: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
     steps:
-      - uses: a-novel-kit/workflows/build-actions/docker-job@master
+      - uses: a-novel-kit/workflows/build-actions/docker-job@v1.0.3
         with:
           file: builds/migrations.Dockerfile
           image_name: ${{ github.repository }}/jobs/migrations
@@ -257,7 +257,7 @@ jobs:
       id-token: write
     services:
       postgres-template:
-        image: ghcr.io/a-novel/service-template/database@${{ needs.build-database.outputs.digest }}
+        image: ghcr.io/a-novel/service-narrative-engine/database@${{ needs.build-database.outputs.digest }}
         ports:
           - "5432:5432"
         env:
@@ -274,9 +274,9 @@ jobs:
     env:
       POSTGRES_DSN: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/run-migrations
-      - uses: a-novel-kit/workflows/build-actions/docker@master
+      - uses: a-novel-kit/workflows/build-actions/docker@v1.0.3
         with:
           file: builds/grpc.Dockerfile
           image_name: ${{ github.repository }}/grpc
@@ -295,7 +295,7 @@ jobs:
       digest: ${{ steps.build.outputs.digest }}
     services:
       postgres-template:
-        image: ghcr.io/a-novel/service-template/database@${{ needs.build-database.outputs.digest }}
+        image: ghcr.io/a-novel/service-narrative-engine/database@${{ needs.build-database.outputs.digest }}
         ports:
           - "5432:5432"
         env:
@@ -312,9 +312,9 @@ jobs:
     env:
       POSTGRES_DSN: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/run-migrations
-      - uses: a-novel-kit/workflows/build-actions/docker@master
+      - uses: a-novel-kit/workflows/build-actions/docker@v1.0.3
         id: build
         with:
           file: builds/standalone.grpc.Dockerfile
@@ -332,7 +332,7 @@ jobs:
       id-token: write
     services:
       postgres-template:
-        image: ghcr.io/a-novel/service-template/database@${{ needs.build-database.outputs.digest }}
+        image: ghcr.io/a-novel/service-narrative-engine/database@${{ needs.build-database.outputs.digest }}
         ports:
           - "5432:5432"
         env:
@@ -349,9 +349,9 @@ jobs:
     env:
       POSTGRES_DSN: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/run-migrations
-      - uses: a-novel-kit/workflows/build-actions/docker@master
+      - uses: a-novel-kit/workflows/build-actions/docker@v1.0.3
         with:
           file: builds/rest.Dockerfile
           image_name: ${{ github.repository }}/rest
@@ -370,7 +370,7 @@ jobs:
       digest: ${{ steps.build.outputs.digest }}
     services:
       postgres-template:
-        image: ghcr.io/a-novel/service-template/database@${{ needs.build-database.outputs.digest }}
+        image: ghcr.io/a-novel/service-narrative-engine/database@${{ needs.build-database.outputs.digest }}
         ports:
           - "5432:5432"
         env:
@@ -387,9 +387,9 @@ jobs:
     env:
       POSTGRES_DSN: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/run-migrations
-      - uses: a-novel-kit/workflows/build-actions/docker@master
+      - uses: a-novel-kit/workflows/build-actions/docker@v1.0.3
         id: build
         with:
           file: builds/standalone.rest.Dockerfile
@@ -404,7 +404,7 @@ jobs:
       contents: read
       packages: read
     steps:
-      - uses: a-novel-kit/workflows/node-actions/build-node@master
+      - uses: a-novel-kit/workflows/node-actions/build-node@v1.0.3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           app_private_key: ${{ secrets.DEPENDENCY_BOT_PRIVATE_KEY }}
@@ -418,7 +418,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: a-novel-kit/workflows/go-actions/go-report-card@master
+      - uses: a-novel-kit/workflows/go-actions/go-report-card@v1.0.3
         if: github.ref == 'refs/heads/master' && success()
 
   report-codecov:
@@ -427,7 +427,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: a-novel-kit/workflows/generic-actions/codecov@master
+      - uses: a-novel-kit/workflows/generic-actions/codecov@v1.0.3
         with:
           codecov_token: ${{ secrets.CODECOV_TOKEN }}
           coverage_files: coverage.txt,coverage_pkg.txt,coverage/*
@@ -442,7 +442,7 @@ jobs:
       pages: write
       id-token: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - run: |
           mkdir _site
           mv openapi.html _site/index.html

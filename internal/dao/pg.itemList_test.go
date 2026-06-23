@@ -10,11 +10,14 @@ import (
 
 	"github.com/a-novel-kit/golib/postgres"
 
-	"github.com/a-novel/service-template/internal/config/configtest"
-	"github.com/a-novel/service-template/internal/dao"
+	"github.com/a-novel/service-narrative-engine/internal/config/configtest"
+	"github.com/a-novel/service-narrative-engine/internal/dao"
+	"github.com/a-novel/service-narrative-engine/internal/models/migrations"
 )
 
 func TestItemList(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		name string
 
@@ -159,7 +162,9 @@ func TestItemList(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			postgres.RunTransactionalTest(t, configtest.PostgresPreset, func(ctx context.Context, t *testing.T) {
+			t.Parallel()
+
+			postgres.RunDBTest(t, configtest.PostgresPreset, migrations.Migrations, func(ctx context.Context, t *testing.T) {
 				t.Helper()
 
 				db, err := postgres.GetContext(ctx)

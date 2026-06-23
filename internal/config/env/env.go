@@ -10,7 +10,7 @@ import (
 // Prefix allows to set a custom prefix to all configuration environment variables.
 // This is useful when importing the package in another project, when env variable names
 // might conflict with the source project.
-var prefix = os.Getenv("SERVICE_TEMPLATE_ENV_PREFIX")
+var prefix = os.Getenv("SERVICE_NARRATIVE_ENGINE_ENV_PREFIX")
 
 func getEnv(name string) string {
 	return os.Getenv(prefix + name)
@@ -18,7 +18,7 @@ func getEnv(name string) string {
 
 // Default values for environment variables, if applicable.
 const (
-	AppNameDefault = "service-template"
+	AppNameDefault = "service-narrative-engine"
 
 	GrpcPortDefault = 8080
 	GrpcDefaultPing = time.Second * 5
