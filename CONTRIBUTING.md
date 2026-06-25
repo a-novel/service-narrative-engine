@@ -38,7 +38,7 @@ pnpm i --frozen-lockfile
 ### Secrets
 
 The narrative engine calls an OpenAI-compatible API for text generation, so it
-needs an API key to run end-to-end (the model-backed tests, `run`, and `ui`).
+needs an API key for the model-backed tests and for running the service.
 Provision it once with the CLI's secret manager — the value is stored encrypted
 locally and injected into the service process only, never printed or committed
 (the [onboarding guide](https://github.com/a-novel-kit/.github/blob/master/README.md)
@@ -48,10 +48,10 @@ explains how the manager works):
 a-novel secrets set openai-key
 ```
 
-Create the key at <https://platform.openai.com/api-keys>. The service maps it to
-the `OPENAI_API_KEY` environment variable through its `.a-novel/secrets.yaml`, so
-no further wiring is needed once the key is set; until then, model-backed runs
-are skipped with a warning naming exactly what to set.
+Create the key at <https://platform.openai.com/api-keys>. The engine reads it
+from the `OPENAI_API_KEY` environment variable; the `.a-novel/secrets.yaml`
+manifest that maps `openai-key` to that variable — so the CLI injects it
+automatically — lands with the generation code.
 
 ### Common Commands
 
