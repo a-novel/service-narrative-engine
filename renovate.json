@@ -60,7 +60,7 @@
       "matchManagers": ["npm"],
       "postUpdateOptions": ["pnpmDedupe"],
       "postUpgradeTasks": {
-        "commands": ["pnpm format"],
+        "commands": ["pnpm format:js"],
         "executionMode": "branch"
       }
     }
