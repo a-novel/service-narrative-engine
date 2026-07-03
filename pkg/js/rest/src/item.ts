@@ -72,7 +72,12 @@ export async function itemList(api: NarrativeEngineApi, limit?: number, offset?:
   });
 }
 
-export async function itemUpdate(api: NarrativeEngineApi, id: string, name: string, description?: string): Promise<Item> {
+export async function itemUpdate(
+  api: NarrativeEngineApi,
+  id: string,
+  name: string,
+  description?: string
+): Promise<Item> {
   return await api.fetch(`/item`, ItemSchema, {
     method: "PUT",
     headers: HTTP_HEADERS.JSON,
