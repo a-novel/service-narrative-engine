@@ -1,0 +1,328 @@
+name: main
+
+on:
+  push:
+    tags-ignore:
+      - "**"
+    branches:
+      - "**"
+
+jobs:
+  generated-go:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: "go.mod"
+      - name: go generate
+        shell: bash
+        run: go generate ./...
+      - uses: a-novel-kit/workflows/generic-actions/check-changes@v1.9.0
+        with:
+          fail_message: go generate definitions are not up-to-date, please run 'go generate ./...' and commit the changes
+
+  lint-go:
+    runs-on: ubuntu-latest
+    needs: [generated-go]
+    permissions:
+      contents: read
+    steps:
+      - uses: a-novel-kit/workflows/go-actions/lint-go@v1.9.0
+
+  lint-node:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: a-novel-kit/workflows/node-actions/lint-node@v1.9.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          app_private_key: ${{ secrets.DEPENDENCY_BOT_PRIVATE_KEY }}
+          client_id: ${{ vars.DEPENDENCY_BOT_CLIENT_ID }}
+          lint_action: "lint:ci"
+
+  test-go:
+    needs: [lint-go, build-database]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      artifact-id: ${{ steps.test.outputs.artifact-id }}
+    services:
+      postgres:
+        image: ghcr.io/a-novel/service-narrative-engine/database@${{ needs.build-database.outputs.digest }}
+        ports:
+          - "5432:5432"
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: postgres
+          POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+          POSTGRES_INITDB_ARGS: --auth=scram-sha-256
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      POSTGRES_DSN: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/run-migrations
+      - uses: a-novel-kit/workflows/go-actions/test-go@v1.9.0
+        id: test
+        with:
+          filter_extra_patterns: "| grep /internal"
+          skip_setup: true
+          test_artifact: gotest
+          coverage_artifact: gocover
+          coverage_file: coverage.txt
+          modfile: gotestsum.mod
+
+  test-pkg-js:
+    runs-on: ubuntu-latest
+    needs: [build-database, build-standalone-rest]
+    permissions:
+      contents: read
+      packages: read
+    outputs:
+      artifact-id: ${{ steps.test.outputs.artifact-id }}
+    services:
+      postgres-narrative-engine:
+        image: ghcr.io/a-novel/service-narrative-engine/database@${{ needs.build-database.outputs.digest }}
+        ports:
+          - "5432:5432"
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: postgres
+          POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+          POSTGRES_INITDB_ARGS: --auth=scram-sha-256
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      service-narrative-engine:
+        image: ghcr.io/a-novel/service-narrative-engine/standalone-rest@${{ needs.build-standalone-rest.outputs.digest }}
+        ports:
+          - "8080:8080"
+        credentials:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          POSTGRES_DSN: postgres://postgres:postgres@postgres-narrative-engine:5432/postgres?sslmode=disable
+    env:
+      REST_URL: "http://localhost:8080"
+    steps:
+      - uses: a-novel-kit/workflows/node-actions/test-node@v1.9.0
+        id: test
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          app_private_key: ${{ secrets.DEPENDENCY_BOT_PRIVATE_KEY }}
+          client_id: ${{ vars.DEPENDENCY_BOT_CLIENT_ID }}
+          coverage_artifact: jscover
+          test_action: "test:ci"
+
+  build-database:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+    env:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+      POSTGRES_INITDB_ARGS: --auth=scram-sha-256
+    steps:
+      - uses: a-novel-kit/workflows/build-actions/docker@v1.9.0
+        id: build
+        with:
+          file: builds/database.Dockerfile
+          image_name: ${{ github.repository }}/database
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          run_args: >-
+            -e POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" 
+            -e POSTGRES_USER="${POSTGRES_USER}" 
+            -e POSTGRES_DB="${POSTGRES_DB}"
+            -e POSTGRES_HOST_AUTH_METHOD="${POSTGRES_HOST_AUTH_METHOD}"
+            -e POSTGRES_INITDB_ARGS="${POSTGRES_INITDB_ARGS}"
+
+  build-migrations:
+    runs-on: ubuntu-latest
+    needs: [build-database]
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    services:
+      postgres-narrative-engine:
+        image: ghcr.io/a-novel/service-narrative-engine/database@${{ needs.build-database.outputs.digest }}
+        ports:
+          - "5432:5432"
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: postgres
+          POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+          POSTGRES_INITDB_ARGS: --auth=scram-sha-256
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      POSTGRES_DSN: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
+    steps:
+      - uses: a-novel-kit/workflows/build-actions/docker-job@v1.9.0
+        with:
+          file: builds/migrations.Dockerfile
+          image_name: ${{ github.repository }}/jobs/migrations
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          run_args: -e POSTGRES_DSN="${POSTGRES_DSN}"
+
+  build-rest:
+    needs: [test-go, build-database]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    services:
+      postgres-narrative-engine:
+        image: ghcr.io/a-novel/service-narrative-engine/database@${{ needs.build-database.outputs.digest }}
+        ports:
+          - "5432:5432"
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: postgres
+          POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+          POSTGRES_INITDB_ARGS: --auth=scram-sha-256
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      POSTGRES_DSN: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/run-migrations
+      - uses: a-novel-kit/workflows/build-actions/docker@v1.9.0
+        with:
+          file: builds/rest.Dockerfile
+          image_name: ${{ github.repository }}/rest
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          run_args: -e POSTGRES_DSN="${POSTGRES_DSN}"
+
+  build-standalone-rest:
+    needs: [test-go, build-database]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+    services:
+      postgres-narrative-engine:
+        image: ghcr.io/a-novel/service-narrative-engine/database@${{ needs.build-database.outputs.digest }}
+        ports:
+          - "5432:5432"
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: postgres
+          POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+          POSTGRES_INITDB_ARGS: --auth=scram-sha-256
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      POSTGRES_DSN: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/run-migrations
+      - uses: a-novel-kit/workflows/build-actions/docker@v1.9.0
+        id: build
+        with:
+          file: builds/standalone.rest.Dockerfile
+          image_name: ${{ github.repository }}/standalone-rest
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          run_args: -e POSTGRES_DSN="${POSTGRES_DSN}"
+
+  build-js:
+    needs: [test-pkg-js]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: a-novel-kit/workflows/node-actions/build-node@v1.9.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          app_private_key: ${{ secrets.DEPENDENCY_BOT_PRIVATE_KEY }}
+          client_id: ${{ vars.DEPENDENCY_BOT_CLIENT_ID }}
+          build_action: "build:rest"
+
+  report-grc:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master' && success()
+    needs: [test-go]
+    permissions:
+      contents: read
+    steps:
+      - uses: a-novel-kit/workflows/go-actions/go-report-card@v1.9.0
+        if: github.ref == 'refs/heads/master' && success()
+
+  report-codecov:
+    runs-on: ubuntu-latest
+    needs: [test-go, test-pkg-js]
+    permissions:
+      contents: read
+    steps:
+      - uses: a-novel-kit/workflows/generic-actions/codecov@v1.9.0
+        with:
+          codecov_token: ${{ secrets.CODECOV_TOKEN }}
+          coverage_files: coverage.txt,coverage/*
+          coverage_artifact_ids: ${{ needs.test-go.outputs.artifact-id }},${{ needs.test-pkg-js.outputs.artifact-id }}
+
+  publish-docs:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master' && success()
+    needs: [build-js]
+    # GitHub Pages allows a single deployment in flight per site; without this
+    # group, concurrent master runs fail with "in progress deployment" errors.
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      - run: |
+          mkdir _site
+          mv openapi.html _site/index.html
+          mv openapi.yaml _site/openapi.yaml
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+      - id: deployment
+        uses: actions/deploy-pages@v5

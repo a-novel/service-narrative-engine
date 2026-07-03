@@ -1,0 +1,31 @@
+package handlers
+
+import (
+	"time"
+
+	"github.com/google/uuid"
+
+	"github.com/a-novel/service-narrative-engine/internal/core"
+)
+
+type Item struct {
+	ID          uuid.UUID `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description,omitempty"`
+	CreatedAt   time.Time `json:"createdAt"`
+	UpdatedAt   time.Time `json:"updatedAt"`
+}
+
+func loadItem(s *core.Item) Item {
+	return Item{
+		ID:          s.ID,
+		Name:        s.Name,
+		Description: s.Description,
+		CreatedAt:   s.CreatedAt,
+		UpdatedAt:   s.UpdatedAt,
+	}
+}
+
+func loadItemMap(item *core.Item, _ int) Item {
+	return loadItem(item)
+}

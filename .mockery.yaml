@@ -1,0 +1,13 @@
+packages:
+  github.com/a-novel/service-narrative-engine/internal/core:
+    config:
+      all: true
+      pkgname: coremocks
+      dir: internal/core/mocks
+      filename: mocks.go
+  github.com/a-novel/service-narrative-engine/internal/handlers:
+    config:
+      all: true
+      pkgname: handlersmocks
+      dir: internal/handlers/mocks
+      filename: mocks.go
