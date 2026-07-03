@@ -33,7 +33,7 @@ The service runs as published OCI images plus a PostgreSQL database. The server 
 | ------------------------------------------ | --------------------------------------------------------------------------- |
 | `service-narrative-engine/rest`            | Public item CRUD + health API.                                              |
 | `service-narrative-engine/jobs/migrations` | One-shot schema migration job; runs to completion before the servers start. |
-| `service-narrative-engine/database`        | Pre-tuned PostgreSQL image — or bring your own Postgres.                     |
+| `service-narrative-engine/database`        | Pre-tuned PostgreSQL image — or bring your own Postgres.                    |
 
 Pin every image to the same release tag. A production deployment runs `database`, then `migrations` to completion, then any number of `rest` replicas:
 
