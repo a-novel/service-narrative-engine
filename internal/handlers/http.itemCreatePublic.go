@@ -12,20 +12,24 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/core"
 )
 
+// ItemCreatePublicService is the service port ItemCreatePublic depends on to create an item.
 type ItemCreatePublicService interface {
 	Exec(ctx context.Context, request *core.ItemCreateRequest) (*core.Item, error)
 }
 
+// ItemCreatePublicRequest is the JSON body accepted by the create-item endpoint.
 type ItemCreatePublicRequest struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 }
 
+// ItemCreatePublic is the REST handler that creates a new item.
 type ItemCreatePublic struct {
 	service ItemCreatePublicService
 	logger  logging.Log
 }
 
+// NewItemCreatePublic returns a new ItemCreatePublic handler backed by the given service.
 func NewItemCreatePublic(service ItemCreatePublicService, logger logging.Log) *ItemCreatePublic {
 	return &ItemCreatePublic{service: service, logger: logger}
 }

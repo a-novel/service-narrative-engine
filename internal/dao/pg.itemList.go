@@ -14,14 +14,16 @@ import (
 //go:embed pg.itemList.sql
 var itemListQuery string
 
+// ItemListRequest holds the parameters for an [ItemList.Exec] call.
 type ItemListRequest struct {
 	Limit  int
 	Offset int
 }
 
-// ItemList retrieves a paginated list of items ordered by creation date (newest first).
+// An ItemList retrieves a paginated list of items ordered by creation date, newest first.
 type ItemList struct{}
 
+// NewItemList returns a new ItemList DAO.
 func NewItemList() *ItemList {
 	return new(ItemList)
 }

@@ -13,15 +13,22 @@ import (
 )
 
 const (
-	RestHealthStatusUp   = "up"
+	// RestHealthStatusUp is the status reported when a dependency is reachable.
+	RestHealthStatusUp = "up"
+	// RestHealthStatusDown is the status reported when a dependency is unreachable.
 	RestHealthStatusDown = "down"
 )
 
+// RestHealthStatus is the JSON representation of a single dependency's health.
 type RestHealthStatus struct {
+	// Status is either [RestHealthStatusUp] or [RestHealthStatusDown].
 	Status string `json:"status"`
-	Err    string `json:"err,omitempty"`
+	// Err carries the failure message when the dependency is down; empty when it is up.
+	Err string `json:"err,omitempty"`
 }
 
+// NewRestHealthStatus builds a RestHealthStatus from a dependency probe result, mapping a
+// nil error to [RestHealthStatusUp] and any non-nil error to [RestHealthStatusDown].
 func NewRestHealthStatus(err error) *RestHealthStatus {
 	errMsg := ""
 	if err != nil {
@@ -34,8 +41,11 @@ func NewRestHealthStatus(err error) *RestHealthStatus {
 	}
 }
 
+// RestHealth is the REST handler that reports the operational health of the service and
+// its dependencies as a JSON object keyed by dependency.
 type RestHealth struct{}
 
+// NewRestHealth returns a new RestHealth handler.
 func NewRestHealth() *RestHealth {
 	return &RestHealth{}
 }
@@ -60,7 +70,8 @@ func (handler *RestHealth) reportPostgres(ctx context.Context) error {
 
 	pgdb, ok := pg.(*bun.DB)
 	if !ok {
-		// Cannot assess db connection if we are running on transaction mode
+		// In transaction mode the pool is a transaction rather than a *bun.DB, so there is
+		// no connection to ping; report healthy.
 		return nil
 	}
 

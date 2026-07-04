@@ -16,7 +16,7 @@ type RestCors struct {
 	MaxAge           int      `json:"maxAge"           yaml:"maxAge"`
 }
 
-// Main application configuration.
+// Main holds the top-level application settings.
 type Main struct {
 	// Name of the application, as it will appear in logs and tracing.
 	Name string `json:"name" yaml:"name"`
@@ -31,11 +31,11 @@ type RestTimeouts struct {
 	Request    time.Duration `json:"request"    yaml:"request"`
 }
 
-// Rest server configuration.
+// Rest holds the REST server configuration.
 type Rest struct {
 	// Port on which the REST server will listen for incoming requests.
 	Port int `json:"port" yaml:"port"`
-	// Timeouts holds the various timeout settings for the REST server.
+	// Timeouts groups the REST server timeout settings.
 	Timeouts RestTimeouts `json:"timeouts" yaml:"timeouts"`
 	// MaxRequestSize is the maximum size of an incoming request body.
 	MaxRequestSize int64 `json:"maxRequestSize" yaml:"maxRequestSize"`
@@ -43,6 +43,8 @@ type Rest struct {
 	Cors RestCors `json:"cors" yaml:"cors"`
 }
 
+// App is the root service configuration, aggregating the HTTP server, observability, and database
+// settings.
 type App struct {
 	App  Main `json:"app"  yaml:"app"`
 	Rest Rest `json:"rest" yaml:"rest"`

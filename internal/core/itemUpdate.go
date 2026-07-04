@@ -14,10 +14,14 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
+// ItemUpdateDao is the DAO port ItemUpdate depends on to overwrite an item's
+// fields and return the stored entity.
 type ItemUpdateDao interface {
 	Exec(ctx context.Context, request *dao.ItemUpdateRequest) (*dao.Item, error)
 }
 
+// ItemUpdateRequest holds the validated input for [ItemUpdate.Exec]; ID selects
+// the item to modify.
 type ItemUpdateRequest struct {
 	ID          uuid.UUID
 	Name        string `validate:"required,notblank,max=256"`
@@ -29,6 +33,7 @@ type ItemUpdate struct {
 	dao ItemUpdateDao
 }
 
+// NewItemUpdate builds an ItemUpdate that persists through the given DAO.
 func NewItemUpdate(dao ItemUpdateDao) *ItemUpdate {
 	return &ItemUpdate{dao: dao}
 }

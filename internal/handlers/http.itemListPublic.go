@@ -13,20 +13,25 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/core"
 )
 
+// ItemListPublicService is the service port ItemListPublic depends on to list items.
 type ItemListPublicService interface {
 	Exec(ctx context.Context, request *core.ItemListRequest) ([]*core.Item, error)
 }
 
+// ItemListPublicRequest is the query string accepted by the list-items endpoint. Limit and
+// Offset paginate the result set.
 type ItemListPublicRequest struct {
 	Limit  int `schema:"limit"`
 	Offset int `schema:"offset"`
 }
 
+// ItemListPublic is the REST handler that lists items page by page.
 type ItemListPublic struct {
 	service ItemListPublicService
 	logger  logging.Log
 }
 
+// NewItemListPublic returns a new ItemListPublic handler backed by the given service.
 func NewItemListPublic(service ItemListPublicService, logger logging.Log) *ItemListPublic {
 	return &ItemListPublic{service: service, logger: logger}
 }

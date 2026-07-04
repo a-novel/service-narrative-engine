@@ -1,3 +1,6 @@
+// Command rest wires the service layers together and runs the public REST server. It builds the
+// DAO, core, and handler stack, mounts the routes, and serves until a termination signal triggers
+// a graceful shutdown.
 package main
 
 import (
@@ -26,7 +29,6 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/handlers"
 )
 
-// Runs the main REST server.
 func main() {
 	cfg := config.AppPresetDefault
 	ctx := context.Background()

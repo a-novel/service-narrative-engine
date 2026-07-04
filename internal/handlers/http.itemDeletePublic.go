@@ -14,19 +14,24 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
+// ItemDeletePublicService is the service port ItemDeletePublic depends on to delete an item
+// and return the deleted record.
 type ItemDeletePublicService interface {
 	Exec(ctx context.Context, request *core.ItemDeleteRequest) (*core.Item, error)
 }
 
+// ItemDeletePublicRequest is the query string accepted by the delete-item endpoint.
 type ItemDeletePublicRequest struct {
 	ID uuid.UUID `schema:"id"`
 }
 
+// ItemDeletePublic is the REST handler that deletes an item by ID.
 type ItemDeletePublic struct {
 	service ItemDeletePublicService
 	logger  logging.Log
 }
 
+// NewItemDeletePublic returns a new ItemDeletePublic handler backed by the given service.
 func NewItemDeletePublic(service ItemDeletePublicService, logger logging.Log) *ItemDeletePublic {
 	return &ItemDeletePublic{service: service, logger: logger}
 }

@@ -7,9 +7,8 @@ import (
 	"github.com/a-novel-kit/golib/config"
 )
 
-// Prefix allows to set a custom prefix to all configuration environment variables.
-// This is useful when importing the package in another project, when env variable names
-// might conflict with the source project.
+// prefix is prepended to every configuration environment variable name. Setting
+// SERVICE_NARRATIVE_ENGINE_ENV_PREFIX avoids name clashes when another project embeds this service.
 var prefix = os.Getenv("SERVICE_NARRATIVE_ENGINE_ENV_PREFIX")
 
 func getEnv(name string) string {
@@ -61,14 +60,14 @@ var (
 )
 
 var (
-	// PostgresDsn is the url used to connect to the postgres database instance.
+	// PostgresDsn is the URL used to connect to the PostgreSQL database instance.
 	// Typically formatted as:
 	//	postgres://<user>:<password>@<host>:<port>/<database>
 	PostgresDsn = postgresDsn
 
 	// AppName is the name of the application, as it will appear in logs and tracing.
 	AppName = config.LoadEnv(appName, AppNameDefault, config.StringParser)
-	// Otel flag configures whether to use Open Telemetry or not.
+	// Otel enables OpenTelemetry instrumentation.
 	//
 	// See: https://opentelemetry.io/
 	Otel = config.LoadEnv(otel, false, config.BoolParser)

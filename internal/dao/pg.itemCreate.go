@@ -16,16 +16,19 @@ import (
 //go:embed pg.itemCreate.sql
 var itemCreateQuery string
 
+// ItemCreateRequest holds the parameters for an [ItemCreate.Exec] call.
 type ItemCreateRequest struct {
 	ID          uuid.UUID
 	Name        string
 	Description string
-	Now         time.Time
+	// Now is the timestamp recorded as the item's creation time.
+	Now time.Time
 }
 
-// ItemCreate inserts a new item into the database.
+// An ItemCreate inserts a new item into the database.
 type ItemCreate struct{}
 
+// NewItemCreate returns a new ItemCreate DAO.
 func NewItemCreate() *ItemCreate {
 	return new(ItemCreate)
 }

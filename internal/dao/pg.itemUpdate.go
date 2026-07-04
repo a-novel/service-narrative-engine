@@ -18,18 +18,22 @@ import (
 //go:embed pg.itemUpdate.sql
 var itemUpdateQuery string
 
+// ErrItemUpdateNotFound is returned when no item matches the update request.
 var ErrItemUpdateNotFound = errors.New("item not found")
 
+// ItemUpdateRequest holds the parameters for an [ItemUpdate.Exec] call.
 type ItemUpdateRequest struct {
 	ID          uuid.UUID
 	Name        string
 	Description string
-	Now         time.Time
+	// Now is the timestamp recorded as the item's last-update time.
+	Now time.Time
 }
 
-// ItemUpdate modifies the name and description of an existing item.
+// An ItemUpdate modifies the name and description of an existing item.
 type ItemUpdate struct{}
 
+// NewItemUpdate returns a new ItemUpdate DAO.
 func NewItemUpdate() *ItemUpdate {
 	return new(ItemUpdate)
 }

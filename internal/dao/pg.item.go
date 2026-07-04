@@ -7,7 +7,7 @@ import (
 	"github.com/uptrace/bun"
 )
 
-// Item is a placeholder resource stored in the database.
+// An Item is a placeholder resource stored in the database.
 type Item struct {
 	bun.BaseModel `bun:"table:items,alias:items"`
 
