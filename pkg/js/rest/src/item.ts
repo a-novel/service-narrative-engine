@@ -80,7 +80,8 @@ export async function itemGet(api: NarrativeEngineApi, id: string): Promise<Item
 }
 
 /**
- * Returns a page of Items. When omitted, `limit` defaults to 100 and `offset` to 0.
+ * Returns a page of Items. `limit` defaults to 100 and `offset` to 0 when omitted; a `limit` of 0
+ * also falls back to 100.
  */
 export async function itemList(api: NarrativeEngineApi, limit?: number, offset?: number): Promise<Item[]> {
   const params = new URLSearchParams();
