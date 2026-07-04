@@ -19,9 +19,9 @@ An A-Novel backend service. It currently ships a placeholder `item` resource —
 
 ## What it does
 
-The service's only domain object today is `item` — a named entity with an optional description — exposed through full CRUD. It demonstrates the [layered architecture](https://github.com/a-novel/.github/blob/master/CONTRIBUTING.md) (DAO → core → handler) and the client packages a real service inherits.
+The narrative-engine domain does not exist yet. Until it does, the service ships one placeholder resource — `item`, a named entity with an optional description — behind full CRUD, so that the surrounding machinery is wired and exercised end to end: the [layered architecture](https://github.com/a-novel/.github/blob/master/CONTRIBUTING.md) (DAO → core → handler), the published client packages, migrations, and health checks. Swapping `item` for the real domain then becomes an additive change rather than a build from scratch.
 
-The service exposes a **public REST API** (`cmd/rest`) — `/ping`, `/healthcheck`, and the `/items` + `/item` CRUD routes — for any HTTP client.
+The surface is a **public REST API**, served by `cmd/rest` and callable by any HTTP client: liveness and health endpoints alongside the `item` CRUD routes. Request and response shapes live in [`openapi.yaml`](./openapi.yaml).
 
 ## Deploying
 

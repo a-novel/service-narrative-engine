@@ -15,21 +15,26 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
+// ItemUpdatePublicService is the service port ItemUpdatePublic depends on to update an item
+// and return the updated record.
 type ItemUpdatePublicService interface {
 	Exec(ctx context.Context, request *core.ItemUpdateRequest) (*core.Item, error)
 }
 
+// ItemUpdatePublicRequest is the JSON body accepted by the update-item endpoint.
 type ItemUpdatePublicRequest struct {
 	ID          uuid.UUID `json:"id"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
 }
 
+// ItemUpdatePublic is the REST handler that updates an existing item.
 type ItemUpdatePublic struct {
 	service ItemUpdatePublicService
 	logger  logging.Log
 }
 
+// NewItemUpdatePublic returns a new ItemUpdatePublic handler backed by the given service.
 func NewItemUpdatePublic(service ItemUpdatePublicService, logger logging.Log) *ItemUpdatePublic {
 	return &ItemUpdatePublic{service: service, logger: logger}
 }

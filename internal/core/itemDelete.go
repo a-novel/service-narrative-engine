@@ -13,14 +13,15 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
+// ItemDeleteDao is the DAO port ItemDelete depends on to remove an item and
+// return the deleted entity.
 type ItemDeleteDao interface {
 	Exec(ctx context.Context, request *dao.ItemDeleteRequest) (*dao.Item, error)
 }
 
+// ItemDeleteRequest holds the input for [ItemDelete.Exec].
 type ItemDeleteRequest struct {
-	// ID identifies the item to remove; must be a non-zero UUID. `uuid.Nil`
-	// (the all-zero UUID) is almost always a missing path/query parameter
-	// rather than a real lookup.
+	// ID selects the item to remove; the required tag rejects the zero UUID.
 	ID uuid.UUID `validate:"required"`
 }
 
@@ -29,6 +30,7 @@ type ItemDelete struct {
 	dao ItemDeleteDao
 }
 
+// NewItemDelete builds an ItemDelete that persists through the given DAO.
 func NewItemDelete(dao ItemDeleteDao) *ItemDelete {
 	return &ItemDelete{dao: dao}
 }

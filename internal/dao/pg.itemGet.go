@@ -17,15 +17,18 @@ import (
 //go:embed pg.itemGet.sql
 var itemGetQuery string
 
+// ErrItemGetNotFound is returned when no item matches the requested ID.
 var ErrItemGetNotFound = errors.New("item not found")
 
+// ItemGetRequest holds the parameters for an [ItemGet.Exec] call.
 type ItemGetRequest struct {
 	ID uuid.UUID
 }
 
-// ItemGet retrieves an item by its ID.
+// An ItemGet retrieves an item by its ID.
 type ItemGet struct{}
 
+// NewItemGet returns a new ItemGet DAO.
 func NewItemGet() *ItemGet {
 	return new(ItemGet)
 }

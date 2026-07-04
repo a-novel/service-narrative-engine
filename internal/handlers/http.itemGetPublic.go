@@ -14,19 +14,23 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
+// ItemGetPublicService is the service port ItemGetPublic depends on to fetch a single item.
 type ItemGetPublicService interface {
 	Exec(ctx context.Context, request *core.ItemGetRequest) (*core.Item, error)
 }
 
+// ItemGetPublicRequest is the query string accepted by the get-item endpoint.
 type ItemGetPublicRequest struct {
 	ID uuid.UUID `schema:"id"`
 }
 
+// ItemGetPublic is the REST handler that fetches a single item by ID.
 type ItemGetPublic struct {
 	service ItemGetPublicService
 	logger  logging.Log
 }
 
+// NewItemGetPublic returns a new ItemGetPublic handler backed by the given service.
 func NewItemGetPublic(service ItemGetPublicService, logger logging.Log) *ItemGetPublic {
 	return &ItemGetPublic{service: service, logger: logger}
 }

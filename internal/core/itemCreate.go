@@ -14,10 +14,13 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
+// ItemCreateDao is the DAO port ItemCreate depends on to persist a new item and
+// return the stored entity.
 type ItemCreateDao interface {
 	Exec(ctx context.Context, request *dao.ItemCreateRequest) (*dao.Item, error)
 }
 
+// ItemCreateRequest holds the validated input for [ItemCreate.Exec].
 type ItemCreateRequest struct {
 	Name        string `validate:"required,notblank,max=256"`
 	Description string `validate:"max=1024"`
@@ -28,6 +31,7 @@ type ItemCreate struct {
 	dao ItemCreateDao
 }
 
+// NewItemCreate builds an ItemCreate that persists through the given DAO.
 func NewItemCreate(dao ItemCreateDao) *ItemCreate {
 	return &ItemCreate{dao: dao}
 }

@@ -17,15 +17,18 @@ import (
 //go:embed pg.itemDelete.sql
 var itemDeleteQuery string
 
+// ErrItemDeleteNotFound is returned when no item matches the delete request.
 var ErrItemDeleteNotFound = errors.New("item not found")
 
+// ItemDeleteRequest holds the parameters for an [ItemDelete.Exec] call.
 type ItemDeleteRequest struct {
 	ID uuid.UUID
 }
 
-// ItemDelete permanently removes an item by its ID.
+// An ItemDelete permanently removes an item by its ID.
 type ItemDelete struct{}
 
+// NewItemDelete returns a new ItemDelete DAO.
 func NewItemDelete() *ItemDelete {
 	return new(ItemDelete)
 }

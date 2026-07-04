@@ -1,4 +1,3 @@
-# Created with https://editor.swagger.io/
 openapi: 3.1.0
 
 servers:
@@ -28,8 +27,8 @@ paths:
       description: |
         A simple endpoint to check if the server is up and running. It always returns the same response.
 
-        Note this **DOES NOT** give information about the server dependencies. To get more information about the
-        server actual health, please use the `/healthcheck` endpoint.
+        It does not check the server dependencies; use the `/healthcheck` endpoint to diagnose the server's
+        actual health.
       tags: [health]
       security: []
       responses:
@@ -161,7 +160,7 @@ paths:
 components:
   responses:
     pong:
-      description: "101100001100101011001010"
+      description: A plain-text pong response.
       content:
         text/plain:
           schema:
@@ -215,7 +214,7 @@ components:
   schemas:
     healthStatus:
       type: object
-      description: Summary of a server's dependencies status.
+      description: Connection status of a single server dependency.
       required: [status]
       examples:
         - { "status": "up" }
@@ -223,7 +222,7 @@ components:
       properties:
         status:
           type: string
-          description: Exposes whether the server managed to connect to the dependency.
+          description: Whether the server could reach the dependency.
           enum: [up, down]
         err:
           type: string
