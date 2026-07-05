@@ -75,6 +75,7 @@ jobs:
         with:
           file: builds/database.Dockerfile
           image_name: ${{ github.repository }}/database
+          cache: false
           version: ${{ needs.release.outputs.version }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           run_args: >-
