@@ -11,6 +11,7 @@ overrides:
   '@sveltejs/kit@>=2.49.0 <=2.49.4': '>=2.49.5'
   '@sveltejs/kit@>=2.49.0 <=2.52.1': '>=2.52.2'
   brace-expansion@<5.0.5: '>=5.0.5'
+  brace-expansion@>=3.0.0 <5.0.7: ^5.0.7
   cookie@<0.7.0: '>=0.7.0'
   dompurify@<=3.3.3: '>=3.4.0'
   esbuild@>=0.27.3 <0.28.1: ^0.28.1
@@ -1468,8 +1469,8 @@ packages:
     resolution: {integrity: sha512-QxD8cf2eVqJOOz63z6JIN9BzvVs/dlySa5HGSBH5xtR8dPteIRQnBxxKqkNTiT6jbDTF6jAfrd4oMcND9RGbQg==}
     engines: {node: '>=0.6'}
 
-  brace-expansion@5.0.6:
-    resolution: {integrity: sha512-kLpxurY4Z4r9sgMsyG0Z9uzsBlgiU/EFKhj/h91/8yHu0edo7XuixOIH3VcJ8kkxs6/jPzoI6U9Vj3WqbMQ94g==}
+  brace-expansion@5.0.7:
+    resolution: {integrity: sha512-7oFy703dxfY3/NLxC1fh2SUCQ0H9rmAY+5EpDVfXjUTTs+HEwR2nYaqLv+GWcTsumwxPfiz6CzCNkwXwBUwqCA==}
     engines: {node: 18 || 20 || >=22}
 
   bundle-name@4.1.0:
@@ -3887,7 +3888,7 @@ snapshots:
 
   big-integer@1.6.52: {}
 
-  brace-expansion@5.0.6:
+  brace-expansion@5.0.7:
     dependencies:
       balanced-match: 4.0.4
 
@@ -4484,7 +4485,7 @@ snapshots:
 
   minimatch@10.2.5:
     dependencies:
-      brace-expansion: 5.0.6
+      brace-expansion: 5.0.7
 
   moo@0.5.3: {}
 
