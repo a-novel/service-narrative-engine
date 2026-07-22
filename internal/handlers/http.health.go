@@ -13,39 +13,34 @@ import (
 )
 
 const (
-	// RestHealthStatusUp is the status reported when a dependency is reachable.
+	// RestHealthStatusUp marks a dependency the service can currently reach.
 	RestHealthStatusUp = "up"
-	// RestHealthStatusDown is the status reported when a dependency is unreachable.
+	// RestHealthStatusDown marks a dependency the service failed to reach.
 	RestHealthStatusDown = "down"
 )
 
 // RestHealthStatus is the JSON representation of a single dependency's health.
+// /healthcheck is unauthenticated, so the body carries the state alone. A raw error
+// message carries internal hostnames, ports, or schema names. The underlying error
+// goes to the trace span, where operators can read it.
 type RestHealthStatus struct {
 	// Status is either [RestHealthStatusUp] or [RestHealthStatusDown].
 	Status string `json:"status"`
-	// Err carries the failure message when the dependency is down; empty when it is up.
-	Err string `json:"err,omitempty"`
 }
 
-// NewRestHealthStatus builds a RestHealthStatus from a dependency probe result, mapping a
-// nil error to [RestHealthStatusUp] and any non-nil error to [RestHealthStatusDown].
+// NewRestHealthStatus converts an error into a RestHealthStatus, mapping nil to
+// [RestHealthStatusUp] and any non-nil error to [RestHealthStatusDown]. The error
+// itself is dropped from the public response; see [RestHealthStatus].
 func NewRestHealthStatus(err error) *RestHealthStatus {
-	errMsg := ""
-	if err != nil {
-		errMsg = err.Error()
-	}
-
 	return &RestHealthStatus{
 		Status: lo.Ternary(err == nil, RestHealthStatusUp, RestHealthStatusDown),
-		Err:    errMsg,
 	}
 }
 
-// RestHealth is the REST handler that reports the operational health of the service and
-// its dependencies as a JSON object keyed by dependency.
+// RestHealth is the HTTP handler for the health endpoint. It probes each
+// backing dependency and reports their individual status.
 type RestHealth struct{}
 
-// NewRestHealth returns a new RestHealth handler.
 func NewRestHealth() *RestHealth {
 	return &RestHealth{}
 }
@@ -70,8 +65,8 @@ func (handler *RestHealth) reportPostgres(ctx context.Context) error {
 
 	pgdb, ok := pg.(*bun.DB)
 	if !ok {
-		// In transaction mode the pool is a transaction rather than a *bun.DB, so there is
-		// no connection to ping; report healthy.
+		// In transaction mode the pooled handle is a transaction, which exposes
+		// no Ping; treat the dependency as healthy.
 		return nil
 	}
 

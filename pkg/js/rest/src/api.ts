@@ -8,12 +8,13 @@ async function decodeRawHttpResponse<T>(response: Response): Promise<T> {
   return await response.json();
 }
 
-/** Health status of a single service dependency reported by the `/healthcheck` endpoint. */
+/**
+ * Health of a single upstream dependency reported by the service. The endpoint is
+ * unauthenticated, so it carries the state alone — a failure's detail is recorded on
+ * the server's traces rather than published here.
+ */
 export type HealthDependency = {
-  /** Whether the dependency is reachable. */
   status: "up" | "down";
-  /** Error detail present when the dependency is down. */
-  err?: string;
 };
 
 /**
