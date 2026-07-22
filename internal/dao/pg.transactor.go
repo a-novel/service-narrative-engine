@@ -13,6 +13,11 @@ import (
 
 // A Transactor is the PostgreSQL implementation of the transaction scope the business layer
 // declares.
+//
+// It lives here rather than in the shared library only because the epic that introduced it took no
+// cross-repo release train. Once the library absorbs these primitives this collapses to a delegate,
+// and the semantics below stop being defined in two places:
+// https://github.com/a-novel-kit/golib/issues/369
 type Transactor struct {
 	opts *sql.TxOptions
 }
