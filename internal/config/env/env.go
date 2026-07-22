@@ -28,6 +28,15 @@ const (
 	RestMaxRequestSizeDefault    = 2 << 20 // 2 MiB
 	CorsAllowCredentialsDefault  = false
 	CorsMaxAgeDefault            = 3600
+
+	// PostgresMaxOpenConnsDefault bounds the pool well below a stock PostgreSQL max_connections of
+	// 100, leaving room for the migration job, a psql session, and the other services sharing the
+	// instance. Go's own default is unlimited, which turns a traffic spike into connection refusals
+	// for everything pointed at that database rather than queueing inside this process.
+	PostgresMaxOpenConnsDefault = 20
+	// PostgresMaxIdleConnsDefault matches the open limit so a burst does not close connections it is
+	// about to reopen. Idle connections are cheap here; the TCP and TLS handshake they save is not.
+	PostgresMaxIdleConnsDefault = 20
 )
 
 // Default values for environment variables, if applicable.
@@ -38,7 +47,9 @@ var (
 
 // Raw values for environment variables.
 var (
-	postgresDsn = getEnv("POSTGRES_DSN")
+	postgresDsn          = getEnv("POSTGRES_DSN")
+	postgresMaxOpenConns = getEnv("POSTGRES_MAX_OPEN_CONNS")
+	postgresMaxIdleConns = getEnv("POSTGRES_MAX_IDLE_CONNS")
 
 	appName = getEnv("APP_NAME")
 	otel    = getEnv("OTEL")
@@ -64,6 +75,11 @@ var (
 	// Typically formatted as:
 	//	postgres://<user>:<password>@<host>:<port>/<database>
 	PostgresDsn = postgresDsn
+
+	// PostgresMaxOpenConns is the maximum number of open connections to the database.
+	PostgresMaxOpenConns = config.LoadEnv(postgresMaxOpenConns, PostgresMaxOpenConnsDefault, config.IntParser)
+	// PostgresMaxIdleConns is the maximum number of connections kept open while idle.
+	PostgresMaxIdleConns = config.LoadEnv(postgresMaxIdleConns, PostgresMaxIdleConnsDefault, config.IntParser)
 
 	// AppName is the name of the application, as it will appear in logs and tracing.
 	AppName = config.LoadEnv(appName, AppNameDefault, config.StringParser)

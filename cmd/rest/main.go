@@ -42,7 +42,14 @@ func main() {
 		log.SetFlags(log.Flags() &^ (log.Ldate | log.Ltime))
 	}
 
-	ctx = lo.Must(postgres.NewContext(ctx, config.PostgresPresetDefault))
+	// Size the pool before seeding the context. The preset caches its handle, so this is the same
+	// *bun.DB that NewContext then puts on the context — and the only chance to bound it, since the
+	// pool is otherwise handed out with Go's unlimited default.
+	pool := lo.Must(cfg.Postgres.DB(ctx))
+	pool.SetMaxOpenConns(cfg.PostgresPool.MaxOpenConns)
+	pool.SetMaxIdleConns(cfg.PostgresPool.MaxIdleConns)
+
+	ctx = lo.Must(postgres.NewContext(ctx, cfg.Postgres))
 
 	// =================================================================================================================
 	// DAO

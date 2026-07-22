@@ -77,4 +77,8 @@ var AppPresetDefault = App{
 		&loggingpresets.HTTPGcloud{BaseLogger: LoggerProdHttp},
 	),
 	Postgres: PostgresPresetDefault,
+	PostgresPool: PostgresPool{
+		MaxOpenConns: env.PostgresMaxOpenConns,
+		MaxIdleConns: env.PostgresMaxIdleConns,
+	},
 }
