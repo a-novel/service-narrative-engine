@@ -104,7 +104,7 @@ REST tuning (images `rest`, `standalone-rest`):
 | `REST_CORS_ALLOW_CREDENTIALS` | CORS allow-credentials flag.         | `false`          |
 | `REST_CORS_MAX_AGE`           | CORS max-age, in seconds.            | `3600`           |
 
-Database connection pool (all images). The limits are per process, so a database shared with other services wants the sum of every pool to stay under its `max_connections`:
+Database connection pool (all images). The limits are **per process**, so what has to stay under the database's `max_connections` is the sum across every replica plus the migration job — not one replica's limit. The stock `postgres` default is 100; raise these only alongside it.
 
 | Name                      | Description                               | Default |
 | ------------------------- | ----------------------------------------- | ------- |
