@@ -52,6 +52,10 @@ type JobEnqueueRequest struct {
 //
 // The database handle comes from the context, so an enqueue made inside a caller's transaction is
 // part of that caller's unit of work.
+//
+// A conflicting insert takes a row lock, so two concurrent calls under one key serialize until the
+// first commits. Enqueue exactly one key per transaction: inserting several in a caller-determined
+// order is what would turn that lock into a deadlock between two callers holding each other's rows.
 type JobEnqueue struct{}
 
 // NewJobEnqueue returns a new JobEnqueue DAO.
