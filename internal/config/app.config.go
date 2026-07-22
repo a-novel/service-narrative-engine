@@ -43,15 +43,28 @@ type Rest struct {
 	Cors RestCors `json:"cors" yaml:"cors"`
 }
 
+// PostgresPool holds the connection-pool limits applied to the database handle.
+//
+// They live here rather than on [postgres.Config] because that interface only knows how to open a
+// connection, and the pool it returns carries Go's defaults — an unlimited number of open
+// connections. The limits belong to the service, which knows how many of them it intends to use.
+type PostgresPool struct {
+	// MaxOpenConns is the maximum number of open connections to the database.
+	MaxOpenConns int `json:"maxOpenConns" yaml:"maxOpenConns"`
+	// MaxIdleConns is the maximum number of connections kept open while idle.
+	MaxIdleConns int `json:"maxIdleConns" yaml:"maxIdleConns"`
+}
+
 // App is the root service configuration, aggregating the HTTP server, observability, and database
 // settings.
 type App struct {
 	App  Main `json:"app"  yaml:"app"`
 	Rest Rest `json:"rest" yaml:"rest"`
 
-	Otel       otel.Config        `json:"otel"       yaml:"otel"`
-	Log        logging.Log        `json:"log"        yaml:"log"`
-	Logger     logging.RPCConfig  `json:"logger"     yaml:"logger"`
-	HttpLogger logging.HTTPConfig `json:"httpLogger" yaml:"httpLogger"`
-	Postgres   postgres.Config    `json:"postgres"   yaml:"postgres"`
+	Otel         otel.Config        `json:"otel"         yaml:"otel"`
+	Log          logging.Log        `json:"log"          yaml:"log"`
+	Logger       logging.RPCConfig  `json:"logger"       yaml:"logger"`
+	HttpLogger   logging.HTTPConfig `json:"httpLogger"   yaml:"httpLogger"`
+	Postgres     postgres.Config    `json:"postgres"     yaml:"postgres"`
+	PostgresPool PostgresPool       `json:"postgresPool" yaml:"postgresPool"`
 }
