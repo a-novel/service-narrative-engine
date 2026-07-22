@@ -104,6 +104,14 @@ REST tuning (images `rest`, `standalone-rest`):
 | `REST_CORS_ALLOW_CREDENTIALS` | CORS allow-credentials flag.         | `false`          |
 | `REST_CORS_MAX_AGE`           | CORS max-age, in seconds.            | `3600`           |
 
+Database connection pool (all images). The limits are per process, so a database shared with other
+services wants the sum of every pool to stay under its `max_connections`:
+
+| Name                       | Description                                       | Default |
+| -------------------------- | ------------------------------------------------- | ------- |
+| `POSTGRES_MAX_OPEN_CONNS`  | Maximum open connections to the database.         | `20`    |
+| `POSTGRES_MAX_IDLE_CONNS`  | Maximum connections kept open while idle.         | `20`    |
+
 Logs and tracing — OpenTelemetry supports a stdout and a Google Cloud exporter (all server images):
 
 | Name                | Description                                                           | Default                    |
