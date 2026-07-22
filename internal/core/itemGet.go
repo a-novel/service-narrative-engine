@@ -13,14 +13,15 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// ItemGetDao is the DAO port ItemGet depends on to fetch a single item by its ID.
+// ItemGetDao is the persistence dependency ItemGet uses to read an item.
 type ItemGetDao interface {
 	Exec(ctx context.Context, request *dao.ItemGetRequest) (*dao.Item, error)
 }
 
-// ItemGetRequest holds the input for [ItemGet.Exec].
+// ItemGetRequest identifies the item to fetch.
 type ItemGetRequest struct {
-	// ID selects the item to fetch; the required tag rejects the zero UUID.
+	// ID of the item. uuid.Nil is rejected as an unset identifier, usually a
+	// missing request parameter.
 	ID uuid.UUID `validate:"required"`
 }
 
@@ -29,7 +30,6 @@ type ItemGet struct {
 	dao ItemGetDao
 }
 
-// NewItemGet builds an ItemGet that reads through the given DAO.
 func NewItemGet(dao ItemGetDao) *ItemGet {
 	return &ItemGet{dao: dao}
 }

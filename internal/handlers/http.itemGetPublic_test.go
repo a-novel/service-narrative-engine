@@ -137,7 +137,7 @@ func TestRestItemGetPublic(t *testing.T) {
 					Return(testCase.serviceMock.resp, testCase.serviceMock.err)
 			}
 
-			handler := handlers.NewItemGetPublic(service, config.LoggerDevHttp)
+			handler := handlers.NewItemGetPublic(service, config.LoggerDev)
 			w := httptest.NewRecorder()
 
 			handler.ServeHTTP(w, testCase.request)

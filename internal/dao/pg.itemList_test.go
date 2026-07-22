@@ -156,6 +156,87 @@ func TestItemList(t *testing.T) {
 				},
 			},
 		},
+		// The two cases below give every fixture the same created_at, so only the id tiebreaker
+		// makes the result deterministic. Fixtures go in by ascending id and come out descending,
+		// so an untied query returns them in insertion order and both cases fail.
+		{
+			name: "Success/SameTimestamp",
+
+			fixtures: []*dao.Item{
+				{
+					ID:        uuid.MustParse("00000000-0000-0000-0000-000000000001"),
+					Name:      "item one",
+					CreatedAt: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+					UpdatedAt: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+				},
+				{
+					ID:        uuid.MustParse("00000000-0000-0000-0000-000000000002"),
+					Name:      "item two",
+					CreatedAt: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+					UpdatedAt: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+				},
+				{
+					ID:        uuid.MustParse("00000000-0000-0000-0000-000000000003"),
+					Name:      "item three",
+					CreatedAt: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+					UpdatedAt: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+				},
+			},
+
+			request: &dao.ItemListRequest{Limit: 2, Offset: 0},
+
+			expect: []*dao.Item{
+				{
+					ID:        uuid.MustParse("00000000-0000-0000-0000-000000000003"),
+					Name:      "item three",
+					CreatedAt: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+					UpdatedAt: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+				},
+				{
+					ID:        uuid.MustParse("00000000-0000-0000-0000-000000000002"),
+					Name:      "item two",
+					CreatedAt: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+					UpdatedAt: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+				},
+			},
+		},
+		{
+			// The second page of the same tied set must continue where the first left off; an
+			// unstable sort re-serves a row here.
+			name: "Success/SameTimestampSecondPage",
+
+			fixtures: []*dao.Item{
+				{
+					ID:        uuid.MustParse("00000000-0000-0000-0000-000000000001"),
+					Name:      "item one",
+					CreatedAt: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+					UpdatedAt: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+				},
+				{
+					ID:        uuid.MustParse("00000000-0000-0000-0000-000000000002"),
+					Name:      "item two",
+					CreatedAt: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+					UpdatedAt: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+				},
+				{
+					ID:        uuid.MustParse("00000000-0000-0000-0000-000000000003"),
+					Name:      "item three",
+					CreatedAt: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+					UpdatedAt: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+				},
+			},
+
+			request: &dao.ItemListRequest{Limit: 2, Offset: 2},
+
+			expect: []*dao.Item{
+				{
+					ID:        uuid.MustParse("00000000-0000-0000-0000-000000000001"),
+					Name:      "item one",
+					CreatedAt: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+					UpdatedAt: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+				},
+			},
+		},
 	}
 
 	dao := dao.NewItemList()

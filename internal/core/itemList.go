@@ -12,7 +12,7 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// ItemListDao is the DAO port ItemList depends on to read a page of items.
+// ItemListDao is the persistence dependency ItemList uses to read a page of items.
 type ItemListDao interface {
 	Exec(ctx context.Context, request *dao.ItemListRequest) ([]*dao.Item, error)
 }
@@ -26,9 +26,9 @@ const (
 	ItemListMaxSize = 100
 )
 
-// ItemListRequest holds the pagination input for [ItemList.Exec].
+// ItemListRequest selects a page of items.
 type ItemListRequest struct {
-	// Limit falls back to ItemListDefaultSize when zero or negative.
+	// Limit defaults to ItemListDefaultSize when zero or negative.
 	Limit  int `validate:"max=100"`
 	Offset int `validate:"min=0"`
 }
@@ -38,7 +38,6 @@ type ItemList struct {
 	dao ItemListDao
 }
 
-// NewItemList builds an ItemList that reads through the given DAO.
 func NewItemList(dao ItemListDao) *ItemList {
 	return &ItemList{dao: dao}
 }
@@ -47,7 +46,7 @@ func (service *ItemList) Exec(ctx context.Context, request *ItemListRequest) ([]
 	ctx, span := otel.Tracer().Start(ctx, "service.ItemList")
 	defer span.End()
 
-	// Resolve the page size into a local so the caller's request stays untouched.
+	// Resolved locally so the caller's request stays untouched.
 	limit := request.Limit
 	if limit <= 0 {
 		limit = ItemListDefaultSize

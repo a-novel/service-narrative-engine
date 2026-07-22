@@ -15,30 +15,24 @@ import (
 )
 
 const (
-	// OtelFlushTimeout bounds how long shutdown waits for OpenTelemetry to flush buffered data.
+	// OtelFlushTimeout bounds how long the OpenTelemetry exporter waits to flush
+	// pending spans on shutdown before giving up.
 	OtelFlushTimeout = 2 * time.Second
 )
 
-// LoggerProd sends production-ready logs to a Google Cloud environment.
-var LoggerProd = loggingpresets.GRPCGcloud{
-	Component: env.GcloudProjectId,
-}
-
-// LoggerDev pretty-prints logs to the console.
-var LoggerDev = loggingpresets.GRPCLocal{}
-
-// LoggerDevHttp pretty-prints HTTP-level logs to the console.
-var LoggerDevHttp = &loggingpresets.LogLocal{
+// LoggerDev pretty-prints logs to the console for local development.
+var LoggerDev = &loggingpresets.LogLocal{
 	Out: os.Stdout,
 }
 
-// LoggerProdHttp sends production-ready HTTP-level logs to a Google Cloud environment.
-var LoggerProdHttp = &loggingpresets.LogGcloud{
+// LoggerProd ships production logs to Google Cloud Logging.
+var LoggerProd = &loggingpresets.LogGcloud{
 	ProjectId: env.GcloudProjectId,
 }
 
-// AppPresetDefault is the default application configuration, assembled from environment variables.
-// Logging and telemetry fall back to local presets when no Google Cloud project is configured.
+// AppPresetDefault is the configuration the service starts with. It reads every
+// value from the environment, and picks the Google Cloud logging and tracing
+// backends once a project ID is set.
 var AppPresetDefault = App{
 	App: Main{
 		Name: env.AppName,
@@ -69,16 +63,11 @@ var AppPresetDefault = App{
 			ProjectID:    env.GcloudProjectId,
 			FlushTimeout: OtelFlushTimeout,
 		}),
-	Log:    lo.Ternary[logging.Log](env.GcloudProjectId == "", LoggerDevHttp, LoggerProdHttp),
-	Logger: lo.Ternary[logging.RPCConfig](env.GcloudProjectId == "", &LoggerDev, &LoggerProd),
+	Logger: lo.Ternary[logging.Log](env.GcloudProjectId == "", LoggerDev, LoggerProd),
 	HttpLogger: lo.Ternary[logging.HTTPConfig](
 		env.GcloudProjectId == "",
-		&loggingpresets.HTTPLocal{BaseLogger: LoggerDevHttp},
-		&loggingpresets.HTTPGcloud{BaseLogger: LoggerProdHttp},
+		&loggingpresets.HTTPLocal{BaseLogger: LoggerDev},
+		&loggingpresets.HTTPGcloud{BaseLogger: LoggerProd},
 	),
 	Postgres: PostgresPresetDefault,
-	PostgresPool: PostgresPool{
-		MaxOpenConns: env.PostgresMaxOpenConns,
-		MaxIdleConns: env.PostgresMaxIdleConns,
-	},
 }

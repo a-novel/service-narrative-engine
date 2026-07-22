@@ -1,3 +1,5 @@
+// Package configtest holds configuration presets shared across the service's
+// integration tests.
 package configtest
 
 import (
@@ -8,11 +10,12 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/config/env"
 )
 
-// PostgresPreset is the PostgreSQL configuration used by integration tests. It targets the same
-// database as the production preset; the transactional test harness isolates each test in a
-// rolled-back transaction.
+// PostgresPreset carries the connection options integration tests reach PostgreSQL with. The
+// harness at [github.com/a-novel-kit/golib/postgres.RunDBTest] migrates one template database from
+// them, then clones a throwaway database per test and drops it afterwards, so tests never observe
+// each other's writes.
 //
-// Go has no test-only package: the `_test.go` suffix is the only build-time test exclusion, and it
-// cannot apply here because other test packages import this preset. The boundary is a convention —
-// production code never imports configtest.
+// It lives in a regular (non-_test.go) file so other packages' tests can import it: Go excludes
+// _test.go files from a package's exported surface. Keeping production code out of configtest is a
+// convention enforced in review.
 var PostgresPreset = postgrespresets.NewDefault(pgdriver.WithDSN(env.PostgresDsn))

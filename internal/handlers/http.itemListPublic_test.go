@@ -105,7 +105,7 @@ func TestRestItemListPublic(t *testing.T) {
 					Return(testCase.serviceMock.resp, testCase.serviceMock.err)
 			}
 
-			handler := handlers.NewItemListPublic(service, config.LoggerDevHttp)
+			handler := handlers.NewItemListPublic(service, config.LoggerDev)
 			w := httptest.NewRecorder()
 
 			handler.ServeHTTP(w, testCase.request)

@@ -42,13 +42,6 @@ func main() {
 		log.SetFlags(log.Flags() &^ (log.Ldate | log.Ltime))
 	}
 
-	// Size the pool before seeding the context. The preset caches its handle, so this is the same
-	// *bun.DB that NewContext then puts on the context — and the only chance to bound it, since the
-	// pool is otherwise handed out with Go's unlimited default.
-	pool := lo.Must(cfg.Postgres.DB(ctx))
-	pool.SetMaxOpenConns(cfg.PostgresPool.MaxOpenConns)
-	pool.SetMaxIdleConns(cfg.PostgresPool.MaxIdleConns)
-
 	ctx = lo.Must(postgres.NewContext(ctx, cfg.Postgres))
 
 	// =================================================================================================================
@@ -77,11 +70,11 @@ func main() {
 
 	handlerPing := handlers.NewPing()
 	handlerHealth := handlers.NewRestHealth()
-	handlerItemCreate := handlers.NewItemCreatePublic(serviceItemCreate, cfg.Log)
-	handlerItemGet := handlers.NewItemGetPublic(serviceItemGet, cfg.Log)
-	handlerItemList := handlers.NewItemListPublic(serviceItemList, cfg.Log)
-	handlerItemUpdate := handlers.NewItemUpdatePublic(serviceItemUpdate, cfg.Log)
-	handlerItemDelete := handlers.NewItemDeletePublic(serviceItemDelete, cfg.Log)
+	handlerItemCreate := handlers.NewItemCreatePublic(serviceItemCreate, cfg.Logger)
+	handlerItemGet := handlers.NewItemGetPublic(serviceItemGet, cfg.Logger)
+	handlerItemList := handlers.NewItemListPublic(serviceItemList, cfg.Logger)
+	handlerItemUpdate := handlers.NewItemUpdatePublic(serviceItemUpdate, cfg.Logger)
+	handlerItemDelete := handlers.NewItemDeletePublic(serviceItemDelete, cfg.Logger)
 
 	// =================================================================================================================
 	// ROUTER

@@ -1,4 +1,4 @@
-# This image runs a job that will apply the latest migrations to a database instance.
+# Runs a one-shot job applying the service's schema migrations to a database instance.
 FROM docker.io/library/golang:1.26.5-alpine AS builder
 
 ENV CGO_ENABLED=0
@@ -23,5 +23,4 @@ WORKDIR /
 
 COPY --from=builder /migrations /migrations
 
-# Applies the migrations to a linked database instance.
 CMD ["/migrations"]
