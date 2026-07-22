@@ -197,8 +197,8 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           run_args: -e POSTGRES_DSN="${POSTGRES_DSN}"
 
-  # Publish the JS client from the bumped tag (ref) so it carries the new
-  # version rather than the pre-bump default branch.
+  # Publish the JS client from the bumped tag (ref): the dispatch runs on master, which is
+  # still pre-bump.
   build-js:
     needs: [release]
     if: ${{ !inputs.dry_run }}

@@ -15,22 +15,24 @@ import (
 )
 
 const (
-	// OtelFlushTimeout bounds how long shutdown waits for OpenTelemetry to flush buffered data.
+	// OtelFlushTimeout bounds how long the OpenTelemetry exporter waits to flush
+	// pending spans on shutdown before giving up.
 	OtelFlushTimeout = 2 * time.Second
 )
 
-// LoggerDev pretty-prints logs to the console.
+// LoggerDev pretty-prints logs to the console for local development.
 var LoggerDev = &loggingpresets.LogLocal{
 	Out: os.Stdout,
 }
 
-// LoggerProd sends production-ready logs to a Google Cloud environment.
+// LoggerProd ships production logs to Google Cloud Logging.
 var LoggerProd = &loggingpresets.LogGcloud{
 	ProjectId: env.GcloudProjectId,
 }
 
-// AppPresetDefault is the default application configuration, assembled from environment variables.
-// Logging and telemetry fall back to local presets when no Google Cloud project is configured.
+// AppPresetDefault is the configuration the service starts with. It reads every
+// value from the environment, and picks the Google Cloud logging and tracing
+// backends once a project ID is set.
 var AppPresetDefault = App{
 	App: Main{
 		Name: env.AppName,

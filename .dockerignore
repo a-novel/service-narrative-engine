@@ -11,7 +11,8 @@ node_modules
 **/*_test.go
 **/*.test.go
 
-# Go client package — not part of any server build.
+# Client packages — not part of any server build. This service publishes a JS
+# client only, and no builder stage copies pkg/.
 pkg/
 
 # Scripts, docs, and frontend config — not part of any server build.

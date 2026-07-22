@@ -1,9 +1,7 @@
-# This image exposes our app as a REST server.
+# Exposes the service as a REST server, against a database whose schema may be out of date.
 #
-# It requires a database instance to run properly. The instance may not be patched.
-#
-# This image will make sure all patches are applied before starting the server. It is a larger
-# version of the base REST image, suited for local development rather than full scale production.
+# It ships the migrations binary alongside the server and applies pending migrations on start,
+# which makes it larger than the base REST image and suited to local development.
 FROM docker.io/library/golang:1.26.5-alpine AS builder
 
 ENV CGO_ENABLED=0
@@ -39,11 +37,10 @@ COPY --from=builder /migrations /migrations
 HEALTHCHECK --interval=1s --timeout=5s --retries=10 --start-period=1s \
   CMD wget -qO /dev/null http://localhost:8080/ping || exit 1
 
-# Make sure the executable uses the default port.
 ENV REST_PORT=8080
 
 # REST port.
 EXPOSE 8080
 
-# Run patches before starting the server.
+# Apply pending migrations, then start the server.
 CMD ["sh", "-c", "/migrations && /rest"]

@@ -1,8 +1,6 @@
-# This is a custom postgres image that comes with pre-loaded extensions. It allows us to customize
-# our instance at build time.
+# A postgres image with the extensions the service needs pre-loaded at build time.
 #
-# Note: this image does not run the migrations from the main image, make sure to call the appropriate
-# patch for this.
+# It does not run the service's schema migrations; run the migrations target separately.
 FROM docker.io/library/postgres:18.4
 
 ARG DEBIAN_FRONTEND=noninteractive
@@ -10,24 +8,22 @@ ARG DEBIAN_FRONTEND=noninteractive
 # ======================================================================================================================
 # Prepare extension scripts.
 # ======================================================================================================================
-# Custom entrypoint used to run postgres with extensions.
+# Entrypoint that starts postgres with the extension settings applied.
 COPY ./builds/database.entrypoint.sh /usr/local/bin/database.entrypoint.sh
 RUN chmod +x /usr/local/bin/database.entrypoint.sh
 
-# Initial migration of the image, used to setup extensions within postgres.
+# Runs once on an empty data directory, to create the extensions.
 COPY ./builds/database.sql /docker-entrypoint-initdb.d/init.sql
 
 # ======================================================================================================================
 # Finish setup.
 # ======================================================================================================================
-# Default postgres port.
 EXPOSE 5432
 
 # Postgres does not provide a healthcheck by default.
 HEALTHCHECK --interval=1s --timeout=5s --retries=10 --start-period=1s \
   CMD pg_isready || exit 1
 
-# Use our entrypoint instead of the native one.
 ENTRYPOINT ["/usr/local/bin/database.entrypoint.sh"]
 
 # Restore the original command from the base image.
