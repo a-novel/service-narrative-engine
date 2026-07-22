@@ -47,6 +47,36 @@ Unit-test a service that takes a transactor with `transactiontest.NewTransactor`
 
 ---
 
+## Schema conventions
+
+These hold for every new table. The scaffold `items` table predates some of them and is not the reference.
+
+**Identifiers are time-ordered and minted in Go.** Columns default to `uuidv7()`, which the project's PostgreSQL 18 image provides natively, so a table under insert churn keeps index locality instead of scattering writes across the whole B-tree. Core still generates the identifier and passes it in: an insert that has to read back a database-generated id cannot tell its own row from one a concurrent caller inserted under the same unique key.
+
+**Timestamps are full precision, and the database is the clock.** Declare `timestamptz`, never `timestamp(0)` — second precision cannot order two commits, let alone express a lease expiry. Default them to `clock_timestamp()`, never `now()` or `CURRENT_TIMESTAMP`: those two are frozen at transaction start, so a column written inside a transaction can never advance past a value its neighbors already hold. Where several services or workers compare timestamps, the database has to be the single clock, or application-server skew enters the arithmetic.
+
+**Owned rows carry an `owner_id`, with no cross-service foreign key.** The column holds the acting user from the verified token, never a value from the request payload. Identity belongs to another service, so there is nothing local to reference and no constraint to declare — the token is what makes the value trustworthy.
+
+**Ownership is a query predicate, not a check after the fact:**
+
+```sql
+SELECT
+  *
+FROM
+  jobs
+WHERE
+  id = ?0
+  AND owner_id = ?1;
+```
+
+A predicate is fail-closed: a caller that forgets the owner argument fails to scan rather than returning someone else's row, whereas a later `if row.OwnerID != actor.UserID` is one early return away from being skipped. It also collapses "no such row" and "not your row" into one no-rows result, which removes an existence oracle over a priced resource at no cost.
+
+**A cross-owner read is not-found, never access-denied.** The data-access object joins `sql.ErrNoRows` onto its own sentinel and the handler maps that to 404. Answering 403 would confirm the row exists.
+
+**Every migration gets its own deliberately allocated prefix.** Take it from `date '+%Y%m%d%H%M%S'` at the moment you create the file. bun derives a migration's identity from that numeric prefix alone, so two files sharing one merge into a single migration: the second replaces the first, with no error at discovery and none at apply, and the first migration simply never runs. The `test-go` job checks prefixes for uniqueness per direction before it applies anything — an `.up.sql` and its `.down.sql` are meant to share a prefix, two different migrations are not.
+
+---
+
 ## Questions?
 
 [Open an issue](https://github.com/a-novel/service-narrative-engine/issues) — include logs and environment details.

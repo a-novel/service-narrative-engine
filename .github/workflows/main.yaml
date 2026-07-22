@@ -72,6 +72,22 @@ jobs:
       POSTGRES_DSN: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
     steps:
       - uses: actions/checkout@v7
+      # bun derives a migration's identity from the numeric prefix alone, so two files sharing one
+      # merge into a single migration and the second silently replaces the first — no error at
+      # discovery, none at apply, and the first migration simply never runs. Prefixes are checked per
+      # direction, since an .up.sql and its .down.sql are meant to share theirs. This gates the job
+      # that applies them, so a collision cannot reach the database.
+      - name: Check migration prefixes are unique
+        shell: bash
+        run: |
+          for direction in up down; do
+            dupes=$(find internal/models/migrations -name "*.${direction}.sql" -printf '%f\n' \
+              | cut -d_ -f1 | sort | uniq -d)
+            if [ -n "$dupes" ]; then
+              echo "::error::duplicate ${direction} migration prefix(es): ${dupes//$'\n'/, }"
+              exit 1
+            fi
+          done
       - uses: ./.github/actions/run-migrations
       - uses: a-novel-kit/workflows/go-actions/test-go@v1.20.3
         id: test
