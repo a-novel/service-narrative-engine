@@ -160,7 +160,7 @@ func TestRestItemUpdatePublic(t *testing.T) {
 					Return(testCase.serviceMock.resp, testCase.serviceMock.err)
 			}
 
-			handler := handlers.NewItemUpdatePublic(service, config.LoggerDevHttp)
+			handler := handlers.NewItemUpdatePublic(service, config.LoggerDev)
 			w := httptest.NewRecorder()
 
 			handler.ServeHTTP(w, testCase.request)

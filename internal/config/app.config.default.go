@@ -19,21 +19,13 @@ const (
 	OtelFlushTimeout = 2 * time.Second
 )
 
-// LoggerProd sends production-ready logs to a Google Cloud environment.
-var LoggerProd = loggingpresets.GRPCGcloud{
-	Component: env.GcloudProjectId,
-}
-
 // LoggerDev pretty-prints logs to the console.
-var LoggerDev = loggingpresets.GRPCLocal{}
-
-// LoggerDevHttp pretty-prints HTTP-level logs to the console.
-var LoggerDevHttp = &loggingpresets.LogLocal{
+var LoggerDev = &loggingpresets.LogLocal{
 	Out: os.Stdout,
 }
 
-// LoggerProdHttp sends production-ready HTTP-level logs to a Google Cloud environment.
-var LoggerProdHttp = &loggingpresets.LogGcloud{
+// LoggerProd sends production-ready logs to a Google Cloud environment.
+var LoggerProd = &loggingpresets.LogGcloud{
 	ProjectId: env.GcloudProjectId,
 }
 
@@ -69,12 +61,11 @@ var AppPresetDefault = App{
 			ProjectID:    env.GcloudProjectId,
 			FlushTimeout: OtelFlushTimeout,
 		}),
-	Log:    lo.Ternary[logging.Log](env.GcloudProjectId == "", LoggerDevHttp, LoggerProdHttp),
-	Logger: lo.Ternary[logging.RPCConfig](env.GcloudProjectId == "", &LoggerDev, &LoggerProd),
+	Logger: lo.Ternary[logging.Log](env.GcloudProjectId == "", LoggerDev, LoggerProd),
 	HttpLogger: lo.Ternary[logging.HTTPConfig](
 		env.GcloudProjectId == "",
-		&loggingpresets.HTTPLocal{BaseLogger: LoggerDevHttp},
-		&loggingpresets.HTTPGcloud{BaseLogger: LoggerProdHttp},
+		&loggingpresets.HTTPLocal{BaseLogger: LoggerDev},
+		&loggingpresets.HTTPGcloud{BaseLogger: LoggerProd},
 	),
 	Postgres: PostgresPresetDefault,
 }

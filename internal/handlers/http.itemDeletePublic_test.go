@@ -137,7 +137,7 @@ func TestRestItemDeletePublic(t *testing.T) {
 					Return(testCase.serviceMock.resp, testCase.serviceMock.err)
 			}
 
-			handler := handlers.NewItemDeletePublic(service, config.LoggerDevHttp)
+			handler := handlers.NewItemDeletePublic(service, config.LoggerDev)
 			w := httptest.NewRecorder()
 
 			handler.ServeHTTP(w, testCase.request)
