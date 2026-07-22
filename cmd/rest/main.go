@@ -49,7 +49,7 @@ func main() {
 	pool.SetMaxOpenConns(cfg.PostgresPool.MaxOpenConns)
 	pool.SetMaxIdleConns(cfg.PostgresPool.MaxIdleConns)
 
-	ctx = lo.Must(postgres.NewContext(ctx, config.PostgresPresetDefault))
+	ctx = lo.Must(postgres.NewContext(ctx, cfg.Postgres))
 
 	// =================================================================================================================
 	// DAO

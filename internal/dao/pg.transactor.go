@@ -33,7 +33,7 @@ func (dao *Transactor) WithinTx(ctx context.Context, fn func(ctx context.Context
 
 	db, err := postgres.GetContext(ctx)
 	if err != nil {
-		return otel.ReportError(span, fmt.Errorf("get transaction: %w", err))
+		return otel.ReportError(span, fmt.Errorf("get database handle: %w", err))
 	}
 
 	pool, isPool := db.(*bun.DB)
