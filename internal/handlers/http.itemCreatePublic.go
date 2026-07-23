@@ -61,6 +61,5 @@ func (handler *ItemCreatePublic) ServeHTTP(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
-	httpf.SendJSON(ctx, w, span, loadItem(item))
+	httpf.SendJSONStatus(ctx, w, span, http.StatusCreated, loadItem(item))
 }

@@ -61,5 +61,5 @@ func (handler *ItemListPublic) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	httpf.SendJSON(ctx, w, span, lo.Map(items, loadItemMap))
+	httpf.SendJSONStatus(ctx, w, span, http.StatusOK, lo.Map(items, loadItemMap))
 }
