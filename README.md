@@ -12,7 +12,6 @@ An A-Novel backend service. It currently ships a placeholder `item` resource —
 ![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/a-novel/service-narrative-engine)
 
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/a-novel/service-narrative-engine/main.yaml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/a-novel/service-narrative-engine)](https://goreportcard.com/report/github.com/a-novel/service-narrative-engine)
 [![codecov](https://codecov.io/gh/a-novel/service-narrative-engine/graph/badge.svg)](https://codecov.io/gh/a-novel/service-narrative-engine)
 
 ![Coverage graph](https://codecov.io/gh/a-novel/service-narrative-engine/graphs/sunburst.svg)
