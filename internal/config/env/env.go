@@ -37,6 +37,15 @@ const (
 	// PostgresMaxIdleConnsDefault matches the open limit so a burst does not close connections it is
 	// about to reopen. Idle connections are cheap here; the TCP and TLS handshake they save is not.
 	PostgresMaxIdleConnsDefault = 20
+
+	// HTTPClientMaxIdleConnsDefault matches the standard library's own transport default. It is a
+	// ceiling across every provider host, so it only binds once several hosts are in play.
+	HTTPClientMaxIdleConnsDefault = 100
+	// HTTPClientMaxIdleConnsPerHostDefault must be at least the number of jobs the worker runs at
+	// once, and tracks that default. Go's own default is two and it is not raised by the transport
+	// this service replaces, so every concurrent call past the limit reopens a connection to the
+	// same provider and pays a fresh TLS handshake for it, on the latency-critical path.
+	HTTPClientMaxIdleConnsPerHostDefault = 4
 )
 
 // Default values for environment variables, if applicable.
@@ -61,6 +70,9 @@ var (
 	restTimeoutIdle       = getEnv("REST_TIMEOUT_IDLE")
 	restTimeoutRequest    = getEnv("REST_TIMEOUT_REQUEST")
 	restMaxRequestSize    = getEnv("REST_MAX_REQUEST_SIZE")
+
+	httpClientMaxIdleConns        = getEnv("HTTP_CLIENT_MAX_IDLE_CONNS")
+	httpClientMaxIdleConnsPerHost = getEnv("HTTP_CLIENT_MAX_IDLE_CONNS_PER_HOST")
 
 	corsAllowedOrigins   = getEnv("REST_CORS_ALLOWED_ORIGINS")
 	corsAllowedHeaders   = getEnv("REST_CORS_ALLOWED_HEADERS")
@@ -102,6 +114,18 @@ var (
 	RestTimeoutRequest = config.LoadEnv(restTimeoutRequest, RestTimeoutRequestDefault, config.DurationParser)
 	// RestMaxRequestSize is the maximum size of an incoming REST request body.
 	RestMaxRequestSize = config.LoadEnv(restMaxRequestSize, RestMaxRequestSizeDefault, config.Int64Parser)
+
+	// HTTPClientMaxIdleConns is the number of idle connections the shared outbound client keeps
+	// across every provider host.
+	HTTPClientMaxIdleConns = config.LoadEnv(
+		httpClientMaxIdleConns, HTTPClientMaxIdleConnsDefault, config.IntParser,
+	)
+	// HTTPClientMaxIdleConnsPerHost is the number of idle connections the shared outbound client
+	// keeps for one provider host. See [HTTPClientMaxIdleConnsPerHostDefault] for why it has a
+	// floor rather than just a default.
+	HTTPClientMaxIdleConnsPerHost = config.LoadEnv(
+		httpClientMaxIdleConnsPerHost, HTTPClientMaxIdleConnsPerHostDefault, config.IntParser,
+	)
 
 	// CorsAllowedOrigins lists the origins allowed to access the REST API.
 	CorsAllowedOrigins = config.LoadEnv(

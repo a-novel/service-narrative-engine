@@ -27,6 +27,7 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/core"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 	"github.com/a-novel/service-narrative-engine/internal/handlers"
+	"github.com/a-novel/service-narrative-engine/internal/lib"
 )
 
 func main() {
@@ -43,6 +44,20 @@ func main() {
 	}
 
 	ctx = lo.Must(postgres.NewContext(ctx, cfg.Postgres))
+
+	// =================================================================================================================
+	// CLIENTS
+	// =================================================================================================================
+
+	// The one client every outbound provider call shares, built once so its sizing lives on a single
+	// code path. Nothing calls a provider yet, so it is discarded rather than injected: the first
+	// data-access object that does arrives with the generation epic and takes it as a constructor
+	// dependency. Constructing it here anyway is what makes a drift between the configuration and
+	// the client's options fail the build rather than wait to be noticed.
+	_ = lib.NewHTTPClient(lib.HTTPClientOptions{
+		MaxIdleConns:        cfg.HTTPClient.MaxIdleConns,
+		MaxIdleConnsPerHost: cfg.HTTPClient.MaxIdleConnsPerHost,
+	})
 
 	// =================================================================================================================
 	// DAO
