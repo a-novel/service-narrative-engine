@@ -130,6 +130,19 @@ linters:
     - zerologlint
 
   settings:
+    forbidigo:
+      forbid:
+        # Declaring forbid replaces the linter's built-in pattern outright rather than adding to it,
+        # so the print rule has to be restated here. Dropping it would be a silent regression inside
+        # the very change that adds the rules below.
+        - pattern: ^(fmt\.Print(|f|ln)|print|println)$
+          msg: Remove the print statement. The service reports through logging.Log.
+        - pattern: ^http\.DefaultClient$
+          msg: Use the client cmd builds from lib.NewHTTPClient. The process-global one is unsized and untraced.
+        - pattern: ^http\.DefaultTransport$
+          msg: Use lib.NewTransport. The process-global transport keeps two idle connections per host.
+        - pattern: ^http\.(Get|Head|Post|PostForm)$
+          msg: These run on http.DefaultClient and take no context. Use the injected client.
     tagliatelle:
       case:
         rules:
