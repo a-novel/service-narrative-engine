@@ -19,6 +19,7 @@ COPY ./internal/dao ./internal/dao
 COPY ./internal/core ./internal/core
 COPY ./internal/models ./internal/models
 COPY ./internal/config ./internal/config
+COPY ./internal/lib ./internal/lib
 
 # One RUN so the two binaries share a single warm module + build cache.
 RUN --mount=type=cache,target=/go/pkg/mod \
