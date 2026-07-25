@@ -122,39 +122,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: read
     outputs:
       artifact-id: ${{ steps.test.outputs.artifact-id }}
     services:
-      postgres-jobs:
-        image: ghcr.io/a-novel/service-jobs/database:v0.2.0
-        credentials:
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_USER: postgres
-          POSTGRES_DB: postgres
-          POSTGRES_HOST_AUTH_METHOD: scram-sha-256
-          POSTGRES_INITDB_ARGS: --auth=scram-sha-256
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-      service-jobs:
-        image: ghcr.io/a-novel/service-jobs/standalone-grpc:v0.2.0
-        ports:
-          - "8080:8080"
-        credentials:
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-        env:
-          POSTGRES_DSN: postgres://postgres:postgres@postgres-jobs:5432/postgres?sslmode=disable
-        options: >-
-          --restart on-failure:10
-
       postgres:
         image: ghcr.io/a-novel/service-narrative-engine/database@${{ needs.build-database.outputs.digest }}
         ports:
@@ -172,8 +142,6 @@ jobs:
           --health-retries 5
     env:
       POSTGRES_DSN: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
-      SERVICE_JOBS_HOST: localhost
-      SERVICE_JOBS_PORT: 8080
     steps:
       - uses: actions/checkout@v7
         with:
