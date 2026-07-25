@@ -1,0 +1,97 @@
+name: start-ci-services
+description: Start and wait for the requested CI Compose topology.
+
+inputs:
+  services:
+    required: true
+    description: Space-separated Compose services to start.
+  database_image:
+    required: false
+    default: service-narrative-engine-database:ci
+    description: Narrative database image reference.
+  standalone_rest_image:
+    required: false
+    default: service-narrative-engine-standalone-rest:ci
+    description: Narrative standalone REST image reference.
+  json_keys_database_image:
+    required: false
+    default: ghcr.io/a-novel/service-json-keys/database:v2.4.1
+    description: JSON keys database image reference.
+  json_keys_grpc_image:
+    required: false
+    default: ghcr.io/a-novel/service-json-keys/standalone-grpc:v2.4.1
+    description: JSON keys gRPC image reference.
+  authentication_database_image:
+    required: false
+    default: ghcr.io/a-novel/service-authentication/database:v2.4.5
+    description: Authentication database image reference.
+  authentication_rest_image:
+    required: false
+    default: ghcr.io/a-novel/service-authentication/standalone-rest:v2.4.5
+    description: Authentication REST image reference.
+  jobs_database_image:
+    required: false
+    default: ghcr.io/a-novel/service-jobs/database:v0.2.1
+    description: Jobs database image reference.
+  jobs_migrations_image:
+    required: false
+    default: ghcr.io/a-novel/service-jobs/jobs/migrations:v0.2.1
+    description: Jobs migrations image reference.
+  jobs_grpc_image:
+    required: false
+    default: ghcr.io/a-novel/service-jobs/standalone-grpc:v0.2.1
+    description: Jobs gRPC image reference.
+  registry_login:
+    required: false
+    default: "false"
+    description: When "true", authenticate to ghcr.io with the current job token.
+
+runs:
+  using: composite
+  steps:
+    - name: Log in to the container registry
+      if: inputs.registry_login == 'true'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        REGISTRY_USERNAME: ${{ github.actor }}
+      run: |
+        set -euo pipefail
+        printf '%s' "${GH_TOKEN}" | docker login ghcr.io --username "${REGISTRY_USERNAME}" --password-stdin
+
+    - name: Start CI services
+      shell: bash
+      env:
+        CI_SERVICES: ${{ inputs.services }}
+        COMPOSE_PROJECT_NAME: ci-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
+        DATABASE_IMAGE: ${{ inputs.database_image }}
+        STANDALONE_REST_IMAGE: ${{ inputs.standalone_rest_image }}
+        JSON_KEYS_DATABASE_IMAGE: ${{ inputs.json_keys_database_image }}
+        JSON_KEYS_GRPC_IMAGE: ${{ inputs.json_keys_grpc_image }}
+        AUTHENTICATION_DATABASE_IMAGE: ${{ inputs.authentication_database_image }}
+        AUTHENTICATION_REST_IMAGE: ${{ inputs.authentication_rest_image }}
+        JOBS_DATABASE_IMAGE: ${{ inputs.jobs_database_image }}
+        JOBS_MIGRATIONS_IMAGE: ${{ inputs.jobs_migrations_image }}
+        JOBS_GRPC_IMAGE: ${{ inputs.jobs_grpc_image }}
+        POSTGRES_PASSWORD: postgres
+      run: |
+        set -euo pipefail
+        read -r -a services <<< "${CI_SERVICES}"
+
+        set +e
+        docker compose --file builds/compose.ci.yaml up \
+          --detach \
+          --no-build \
+          --wait \
+          --wait-timeout 120 \
+          "${services[@]}"
+        status=$?
+        set -e
+
+        if (( status == 0 )); then
+          exit 0
+        fi
+
+        docker compose --file builds/compose.ci.yaml ps --all || true
+        docker compose --file builds/compose.ci.yaml logs --no-color || true
+        exit "${status}"
