@@ -26,7 +26,7 @@ services:
     environment:
       POSTGRES_DSN: postgres://postgres:postgres@postgres-json-keys:5432/postgres?sslmode=disable
       # Local-only key for the standalone development stack.
-      APP_MASTER_KEY: fec0681a2f57242211c559ca347721766f8a3acd8ed2e63b36b3768051c702ca
+      APP_MASTER_KEY: 0000000000000000000000000000000000000000000000000000000000000001
     networks:
       - api
 
