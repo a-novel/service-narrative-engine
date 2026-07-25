@@ -112,7 +112,7 @@ func (service *JobExecute) Exec(ctx context.Context, request *JobExecuteRequest)
 	handlerCtx, cancelHandler := context.WithTimeout(ctx, request.Deadline)
 	result, err := handler.Handle(handlerCtx, request.Job, &jobExecuteProviderCallRecorder{
 		service:  service.jobRecordProviderCall,
-		jobID:    request.Job.GetId(),
+		job:      request.Job,
 		workerID: request.WorkerID,
 	})
 
@@ -130,7 +130,9 @@ func (service *JobExecute) Exec(ctx context.Context, request *JobExecuteRequest)
 		Outcome:  &servicejobs.JobSettleResult{Result: result},
 	})
 	if err != nil {
-		return nil, service.reportSettleError(ctx, span, request, err)
+		settleErr := service.reportSettleError(ctx, request, err)
+
+		return nil, otel.ReportError(span, settleErr)
 	}
 
 	setJobSpanAttributes(span, response.GetJob())
@@ -144,6 +146,11 @@ func (service *JobExecute) settleFailure(
 	request *JobExecuteRequest,
 	handlerErr error,
 ) (*Job, error) {
+	ctx, settleSpan := otel.Tracer().Start(ctx, "core.JobExecute(settleFailure)")
+	defer settleSpan.End()
+
+	setJobSpanAttributes(settleSpan, request.Job)
+
 	failure := strconv.AppendQuote([]byte(`{"message":`), handlerErr.Error())
 	failure = append(failure, '}')
 
@@ -156,20 +163,28 @@ func (service *JobExecute) settleFailure(
 		}},
 	})
 	if err != nil {
-		return nil, service.reportSettleError(ctx, span, request, err)
+		settleErr := service.reportSettleError(ctx, request, err)
+		_ = otel.ReportError(span, settleErr)
+
+		return nil, otel.ReportError(settleSpan, settleErr)
 	}
 
 	setJobSpanAttributes(span, response.GetJob())
+	setJobSpanAttributes(settleSpan, response.GetJob())
 
-	return response.GetJob(), nil
+	return otel.ReportSuccess(settleSpan, response.GetJob()), nil
 }
 
 func (service *JobExecute) reportSettleError(
 	ctx context.Context,
-	span trace.Span,
 	request *JobExecuteRequest,
 	err error,
 ) error {
+	ctx, span := otel.Tracer().Start(ctx, "core.JobExecute(reportSettleError)")
+	defer span.End()
+
+	setJobSpanAttributes(span, request.Job)
+
 	if status.Code(err) == codes.FailedPrecondition {
 		service.logger.Err(
 			ctx,
@@ -188,21 +203,28 @@ func (service *JobExecute) reportSettleError(
 
 type jobExecuteProviderCallRecorder struct {
 	service  JobExecuteServiceRecordProviderCall
-	jobID    string
+	job      *Job
 	workerID string
 }
 
 func (recorder *jobExecuteProviderCallRecorder) Record(
 	ctx context.Context, providerCallID string,
 ) error {
+	ctx, span := otel.Tracer().Start(ctx, "core.JobExecute(recordProviderCall)")
+	defer span.End()
+
+	setJobSpanAttributes(span, recorder.job)
+
 	_, err := recorder.service.JobRecordProviderCall(ctx, &servicejobs.JobRecordProviderCallRequest{
-		Id:             recorder.jobID,
+		Id:             recorder.job.GetId(),
 		WorkerId:       recorder.workerID,
 		ProviderCallId: providerCallID,
 	})
 	if err != nil {
-		return fmt.Errorf("record provider call: %w", err)
+		return otel.ReportError(span, fmt.Errorf("record provider call: %w", err))
 	}
+
+	otel.ReportSuccessNoContent(span)
 
 	return nil
 }
