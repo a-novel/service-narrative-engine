@@ -19,6 +19,7 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/samber/lo"
 
+	"github.com/a-novel-kit/golib/httpf"
 	"github.com/a-novel-kit/golib/otel"
 	"github.com/a-novel-kit/golib/postgres"
 
@@ -27,7 +28,6 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/core"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 	"github.com/a-novel/service-narrative-engine/internal/handlers"
-	"github.com/a-novel/service-narrative-engine/internal/lib"
 )
 
 func main() {
@@ -49,12 +49,9 @@ func main() {
 	// CLIENTS
 	// =================================================================================================================
 
-	// The one client every outbound provider call shares, built once so its sizing lives on a single
-	// code path. Nothing calls a provider yet, so it is discarded rather than injected: the first
-	// data-access object that does arrives with the generation epic and takes it as a constructor
-	// dependency. Constructing it here anyway is what makes a drift between the configuration and
-	// the client's options fail the build rather than wait to be noticed.
-	_ = lib.NewHTTPClient(lib.HTTPClientOptions{
+	// Provider callers will share this client once they exist. Constructing it now keeps the pool
+	// configuration wired at boot; the value is discarded until a caller can receive it.
+	_ = httpf.NewPoolClient(httpf.PoolOptions{
 		MaxIdleConns:        cfg.HTTPClient.MaxIdleConns,
 		MaxIdleConnsPerHost: cfg.HTTPClient.MaxIdleConnsPerHost,
 	})

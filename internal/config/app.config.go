@@ -47,9 +47,8 @@ type Rest struct {
 type HTTPClient struct {
 	// MaxIdleConns is the number of idle connections kept across every provider host.
 	MaxIdleConns int `json:"maxIdleConns" yaml:"maxIdleConns"`
-	// MaxIdleConnsPerHost is the number of idle connections kept for one provider host. It must be
-	// at least the number of jobs the worker runs at once, or every concurrent call past the limit
-	// pays a fresh TLS handshake against a host the process is already connected to.
+	// MaxIdleConnsPerHost is the number of idle connections kept for one provider host.
+	// Keep it at least as large as provider concurrency so calls reuse existing connections.
 	MaxIdleConnsPerHost int `json:"maxIdleConnsPerHost" yaml:"maxIdleConnsPerHost"`
 }
 

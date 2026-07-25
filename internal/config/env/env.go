@@ -41,10 +41,8 @@ const (
 	// HTTPClientMaxIdleConnsDefault matches the standard library's own transport default. It is a
 	// ceiling across every provider host, so it only binds once several hosts are in play.
 	HTTPClientMaxIdleConnsDefault = 100
-	// HTTPClientMaxIdleConnsPerHostDefault must be at least the number of jobs the worker runs at
-	// once, and tracks that default. Go's own default is two and it is not raised by the transport
-	// this service replaces, so every concurrent call past the limit reopens a connection to the
-	// same provider and pays a fresh TLS handshake for it, on the latency-critical path.
+	// HTTPClientMaxIdleConnsPerHostDefault tracks the default provider concurrency so each call can
+	// reuse an existing connection. The standard library keeps two idle connections per host.
 	HTTPClientMaxIdleConnsPerHostDefault = 4
 )
 
@@ -121,8 +119,7 @@ var (
 		httpClientMaxIdleConns, HTTPClientMaxIdleConnsDefault, config.IntParser,
 	)
 	// HTTPClientMaxIdleConnsPerHost is the number of idle connections the shared outbound client
-	// keeps for one provider host. See [HTTPClientMaxIdleConnsPerHostDefault] for why it has a
-	// floor rather than just a default.
+	// keeps for one provider host.
 	HTTPClientMaxIdleConnsPerHost = config.LoadEnv(
 		httpClientMaxIdleConnsPerHost, HTTPClientMaxIdleConnsPerHostDefault, config.IntParser,
 	)

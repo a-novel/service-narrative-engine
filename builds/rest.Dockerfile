@@ -17,7 +17,6 @@ COPY ./internal/dao ./internal/dao
 COPY ./internal/core ./internal/core
 COPY ./internal/models ./internal/models
 COPY ./internal/config ./internal/config
-COPY ./internal/lib ./internal/lib
 
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \

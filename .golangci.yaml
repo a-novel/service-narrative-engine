@@ -138,9 +138,9 @@ linters:
         - pattern: ^(fmt\.Print(|f|ln)|print|println)$
           msg: Remove the print statement. The service reports through logging.Log.
         - pattern: ^http\.DefaultClient$
-          msg: Use the client cmd builds from lib.NewHTTPClient. The process-global one is unsized and untraced.
+          msg: Use the client cmd builds with httpf.NewPoolClient. The process-global one is unsized and untraced.
         - pattern: ^http\.DefaultTransport$
-          msg: Use lib.NewTransport. The process-global transport keeps two idle connections per host.
+          msg: Use httpf.NewPoolTransport. The process-global transport keeps two idle connections per host.
         - pattern: ^http\.(Get|Head|Post|PostForm)$
           msg: These run on http.DefaultClient and take no context. Use the injected client.
     tagliatelle:
