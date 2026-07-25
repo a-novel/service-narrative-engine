@@ -45,8 +45,8 @@ services:
       POSTGRES_DSN: postgres://postgres:postgres@postgres-authentication:5432/postgres?sslmode=disable
       SERVICE_JSON_KEYS_HOST: service-json-keys
       SERVICE_JSON_KEYS_PORT: 8080
-      SUPER_ADMIN_EMAIL: "${SUPER_ADMIN_EMAIL}"
-      SUPER_ADMIN_PASSWORD: "${SUPER_ADMIN_PASSWORD}"
+      SUPER_ADMIN_EMAIL: "${SUPER_ADMIN_EMAIL:-noreply@agorastoryverse.com}"
+      SUPER_ADMIN_PASSWORD: "${SUPER_ADMIN_PASSWORD:-admin}"
     networks:
       - narrative-engine-integration-rest-test
   postgres-jobs:

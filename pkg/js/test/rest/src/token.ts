@@ -4,8 +4,8 @@ import { AuthenticationApi, tokenCreate } from "@a-novel/service-authentication-
 export async function superAdminAccessToken(): Promise<string> {
   const api = new AuthenticationApi(process.env.SERVICE_AUTHENTICATION_URL!);
   const { accessToken } = await tokenCreate(api, {
-    email: process.env.SUPER_ADMIN_EMAIL!,
-    password: process.env.SUPER_ADMIN_PASSWORD!,
+    email: process.env.SUPER_ADMIN_EMAIL ?? "noreply@agorastoryverse.com",
+    password: process.env.SUPER_ADMIN_PASSWORD ?? "admin",
   });
   return accessToken;
 }
