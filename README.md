@@ -110,6 +110,13 @@ Database connection pool (all images). The limits are **per process**, so what h
 | `POSTGRES_MAX_OPEN_CONNS` | Maximum open connections to the database. | `20`    |
 | `POSTGRES_MAX_IDLE_CONNS` | Maximum connections kept open while idle. | `20`    |
 
+Outbound HTTP client (images `rest`, `standalone-rest`). The service sizes the pooled, traced client supplied by golib's [`httpf`](https://pkg.go.dev/github.com/a-novel-kit/golib/httpf) package. Keep `HTTP_CLIENT_MAX_IDLE_CONNS_PER_HOST` at or above provider concurrency so calls reuse existing connections.
+
+| Name                                  | Description                                       | Default |
+| ------------------------------------- | ------------------------------------------------- | ------- |
+| `HTTP_CLIENT_MAX_IDLE_CONNS`          | Idle connections kept across every provider host. | `100`   |
+| `HTTP_CLIENT_MAX_IDLE_CONNS_PER_HOST` | Idle connections kept for a single provider host. | `4`     |
+
 Logs and tracing — OpenTelemetry supports a stdout and a Google Cloud exporter (all server images):
 
 | Name                | Description                                                           | Default                    |

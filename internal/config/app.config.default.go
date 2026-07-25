@@ -70,4 +70,8 @@ var AppPresetDefault = App{
 		&loggingpresets.HTTPGcloud{BaseLogger: LoggerProd},
 	),
 	Postgres: PostgresPresetDefault,
+	HTTPClient: HTTPClient{
+		MaxIdleConns:        env.HTTPClientMaxIdleConns,
+		MaxIdleConnsPerHost: env.HTTPClientMaxIdleConnsPerHost,
+	},
 }

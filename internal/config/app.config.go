@@ -43,6 +43,15 @@ type Rest struct {
 	Cors RestCors `json:"cors" yaml:"cors"`
 }
 
+// HTTPClient sizes the connection pool of the one client every outbound provider call shares.
+type HTTPClient struct {
+	// MaxIdleConns is the number of idle connections kept across every provider host.
+	MaxIdleConns int `json:"maxIdleConns" yaml:"maxIdleConns"`
+	// MaxIdleConnsPerHost is the number of idle connections kept for one provider host.
+	// Keep it at least as large as provider concurrency so calls reuse existing connections.
+	MaxIdleConnsPerHost int `json:"maxIdleConnsPerHost" yaml:"maxIdleConnsPerHost"`
+}
+
 // App is the root service configuration, aggregating the HTTP server, observability, and database
 // settings.
 type App struct {
@@ -53,4 +62,5 @@ type App struct {
 	Logger     logging.Log        `json:"logger"     yaml:"logger"`
 	HttpLogger logging.HTTPConfig `json:"httpLogger" yaml:"httpLogger"`
 	Postgres   postgres.Config    `json:"postgres"   yaml:"postgres"`
+	HTTPClient HTTPClient         `json:"httpClient" yaml:"httpClient"`
 }

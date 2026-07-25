@@ -47,6 +47,22 @@ Unit-test a service that takes a transactor with `transactiontest.NewTransactor`
 
 ---
 
+## Outbound calls
+
+The service constructs one process-wide client with [`httpf.NewPoolClient`](https://pkg.go.dev/github.com/a-novel-kit/golib/httpf), even before provider callers exist, so its pool configuration stays wired at boot. Provider integrations take that client as a constructor dependency. The linter refuses `http.DefaultClient`, `http.DefaultTransport` and the `http.Get`/`Head`/`Post`/`PostForm` helpers, which are unsized, untraced, and take no context.
+
+The golib client leaves both timeouts at zero because a non-streaming model call may send no response headers until generation finishes. Deadlines come from the caller's context. Keep `HTTP_CLIENT_MAX_IDLE_CONNS_PER_HOST` at least as large as provider concurrency so the process reuses its existing connections.
+
+---
+
+## Testing outbound calls
+
+Use [`httpftest.NewServer`](https://pkg.go.dev/github.com/a-novel-kit/golib/httpf/httpftest) from golib and reach it through the injected pool client. The server replays scripted responses in order and records each request. Its `Hang` and `Drop` options cover providers that stop answering or close the connection without a response.
+
+Store response bodies in the caller's `testdata/` directory as pretty-printed JSON and load them with `httpftest.Golden`. This keeps provider fixtures beside the tests that own them while the reusable server stays in golib.
+
+---
+
 ## Questions?
 
 [Open an issue](https://github.com/a-novel/service-narrative-engine/issues) — include logs and environment details.

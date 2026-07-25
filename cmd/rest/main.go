@@ -19,6 +19,7 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/samber/lo"
 
+	"github.com/a-novel-kit/golib/httpf"
 	"github.com/a-novel-kit/golib/otel"
 	"github.com/a-novel-kit/golib/postgres"
 
@@ -43,6 +44,17 @@ func main() {
 	}
 
 	ctx = lo.Must(postgres.NewContext(ctx, cfg.Postgres))
+
+	// =================================================================================================================
+	// CLIENTS
+	// =================================================================================================================
+
+	// Provider callers will share this client once they exist. Constructing it now keeps the pool
+	// configuration wired at boot; the value is discarded until a caller can receive it.
+	_ = httpf.NewPoolClient(httpf.PoolOptions{
+		MaxIdleConns:        cfg.HTTPClient.MaxIdleConns,
+		MaxIdleConnsPerHost: cfg.HTTPClient.MaxIdleConnsPerHost,
+	})
 
 	// =================================================================================================================
 	// DAO
