@@ -7,8 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"go.opentelemetry.io/otel/trace"
-	"google.golang.org/grpc"
+	"go.opentelemetry.io/otel/attribute"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -19,25 +18,6 @@ import (
 
 var errJobHandlerNotFound = errors.New("job handler not found")
 
-// JobExecuteServiceSettle is the queue operation JobExecute uses to report an outcome.
-type JobExecuteServiceSettle interface {
-	// JobSettle transitions the claimed job from the worker's reported outcome.
-	JobSettle(
-		ctx context.Context, request *servicejobs.JobSettleRequest, opts ...grpc.CallOption,
-	) (*servicejobs.JobSettleResponse, error)
-}
-
-// JobExecuteServiceRecordProviderCall is the queue operation that makes a
-// provider operation recoverable by a later attempt.
-type JobExecuteServiceRecordProviderCall interface {
-	// JobRecordProviderCall attaches a provider operation to the claimed job.
-	JobRecordProviderCall(
-		ctx context.Context,
-		request *servicejobs.JobRecordProviderCallRequest,
-		opts ...grpc.CallOption,
-	) (*servicejobs.JobRecordProviderCallResponse, error)
-}
-
 // JobExecuteLogger records a lost claim fence that prevents settlement.
 type JobExecuteLogger interface {
 	// Err records a failed operation with request-scoped trace information.
@@ -47,7 +27,7 @@ type JobExecuteLogger interface {
 // JobExecuteRequest carries a claimed job and the worker allowed to settle it.
 type JobExecuteRequest struct {
 	// Job is the claimed work to dispatch.
-	Job *Job `validate:"required"`
+	Job *servicejobs.Job `validate:"required"`
 	// WorkerID must match the worker holding the queue claim.
 	WorkerID string `validate:"required,notblank"`
 	// Deadline is the hard limit applied to the handler call.
@@ -56,17 +36,15 @@ type JobExecuteRequest struct {
 
 // JobExecute dispatches claimed work and settles its result with the queue.
 type JobExecute struct {
-	jobSettle             JobExecuteServiceSettle
-	jobRecordProviderCall JobExecuteServiceRecordProviderCall
-	logger                JobExecuteLogger
-	handlers              map[string]JobHandler
+	jobsClient servicejobs.Client
+	logger     JobExecuteLogger
+	handlers   map[string]JobHandler
 }
 
 // NewJobExecute builds a dispatcher from the registered handler set. An empty
 // set is valid and causes any accidentally claimed kind to settle as failed.
 func NewJobExecute(
-	jobSettle JobExecuteServiceSettle,
-	jobRecordProviderCall JobExecuteServiceRecordProviderCall,
+	jobsClient servicejobs.Client,
 	logger JobExecuteLogger,
 	handlers ...JobHandler,
 ) *JobExecute {
@@ -76,24 +54,24 @@ func NewJobExecute(
 	}
 
 	return &JobExecute{
-		jobSettle:             jobSettle,
-		jobRecordProviderCall: jobRecordProviderCall,
-		logger:                logger,
-		handlers:              handlersByKind,
+		jobsClient: jobsClient,
+		logger:     logger,
+		handlers:   handlersByKind,
 	}
 }
 
 // Exec runs a claimed job under its deadline and reports exactly one outcome
 // to the queue. Handler failures are represented by the returned job state;
 // errors report failures to validate or settle the run itself.
-func (service *JobExecute) Exec(ctx context.Context, request *JobExecuteRequest) (*Job, error) {
+func (service *JobExecute) Exec(
+	ctx context.Context,
+	request *JobExecuteRequest,
+) (*servicejobs.Job, error) {
 	ctx, span := otel.Tracer().Start(ctx, "service.JobExecute")
 	defer span.End()
 
-	setJobSpanAttributes(span, &Job{Status: JobStatusUnspecified})
-
 	if request != nil && request.Job != nil {
-		setJobSpanAttributes(span, request.Job)
+		span.SetAttributes(jobSpanAttributes(request.Job)...)
 	}
 
 	err := validate.Struct(request)
@@ -102,29 +80,36 @@ func (service *JobExecute) Exec(ctx context.Context, request *JobExecuteRequest)
 	}
 
 	handler, found := service.handlers[request.Job.GetKind()]
+
+	var result []byte
+
 	if !found {
 		err = fmt.Errorf("%w: %q", errJobHandlerNotFound, request.Job.GetKind())
-		_ = otel.ReportError(span, err)
+	} else {
+		handlerCtx, cancelHandler := context.WithTimeout(ctx, request.Deadline)
+		result, err = handler.Handle(handlerCtx, request.Job, &jobExecuteProviderCallRecorder{
+			jobsClient: service.jobsClient,
+			job:        request.Job,
+			workerID:   request.WorkerID,
+		})
 
-		return service.settleFailure(ctx, span, request, err)
+		cancelHandler()
 	}
-
-	handlerCtx, cancelHandler := context.WithTimeout(ctx, request.Deadline)
-	result, err := handler.Handle(handlerCtx, request.Job, &jobExecuteProviderCallRecorder{
-		service:  service.jobRecordProviderCall,
-		job:      request.Job,
-		workerID: request.WorkerID,
-	})
-
-	cancelHandler()
 
 	if err != nil {
 		_ = otel.ReportError(span, err)
 
-		return service.settleFailure(ctx, span, request, err)
+		job, settleErr := service.settleFailure(ctx, request, err)
+		if settleErr != nil {
+			return nil, otel.ReportError(span, settleErr)
+		}
+
+		span.SetAttributes(jobSpanAttributes(job)...)
+
+		return job, nil
 	}
 
-	response, err := service.jobSettle.JobSettle(ctx, &servicejobs.JobSettleRequest{
+	response, err := service.jobsClient.JobSettle(ctx, &servicejobs.JobSettleRequest{
 		Id:       request.Job.GetId(),
 		WorkerId: request.WorkerID,
 		Outcome:  &servicejobs.JobSettleResult{Result: result},
@@ -135,26 +120,29 @@ func (service *JobExecute) Exec(ctx context.Context, request *JobExecuteRequest)
 		return nil, otel.ReportError(span, settleErr)
 	}
 
-	setJobSpanAttributes(span, response.GetJob())
+	span.SetAttributes(jobSpanAttributes(response.GetJob())...)
 
 	return otel.ReportSuccess(span, response.GetJob()), nil
 }
 
+func jobSpanAttributes(job *servicejobs.Job) []attribute.KeyValue {
+	return []attribute.KeyValue{
+		attribute.String("job.id", job.GetId()),
+		attribute.String("job.kind", job.GetKind()),
+		attribute.Int("job.attempt", int(job.GetAttempt())),
+		attribute.String("job.status", job.GetStatus().String()),
+	}
+}
+
 func (service *JobExecute) settleFailure(
 	ctx context.Context,
-	span trace.Span,
 	request *JobExecuteRequest,
 	handlerErr error,
-) (*Job, error) {
-	ctx, settleSpan := otel.Tracer().Start(ctx, "core.JobExecute(settleFailure)")
-	defer settleSpan.End()
-
-	setJobSpanAttributes(settleSpan, request.Job)
-
+) (*servicejobs.Job, error) {
 	failure := strconv.AppendQuote([]byte(`{"message":`), handlerErr.Error())
 	failure = append(failure, '}')
 
-	response, err := service.jobSettle.JobSettle(ctx, &servicejobs.JobSettleRequest{
+	response, err := service.jobsClient.JobSettle(ctx, &servicejobs.JobSettleRequest{
 		Id:       request.Job.GetId(),
 		WorkerId: request.WorkerID,
 		Outcome: &servicejobs.JobSettleFailure{Failure: &servicejobs.JobFailure{
@@ -163,16 +151,10 @@ func (service *JobExecute) settleFailure(
 		}},
 	})
 	if err != nil {
-		settleErr := service.reportSettleError(ctx, request, err)
-		_ = otel.ReportError(span, settleErr)
-
-		return nil, otel.ReportError(settleSpan, settleErr)
+		return nil, service.reportSettleError(ctx, request, err)
 	}
 
-	setJobSpanAttributes(span, response.GetJob())
-	setJobSpanAttributes(settleSpan, response.GetJob())
-
-	return otel.ReportSuccess(settleSpan, response.GetJob()), nil
+	return response.GetJob(), nil
 }
 
 func (service *JobExecute) reportSettleError(
@@ -180,11 +162,6 @@ func (service *JobExecute) reportSettleError(
 	request *JobExecuteRequest,
 	err error,
 ) error {
-	ctx, span := otel.Tracer().Start(ctx, "core.JobExecute(reportSettleError)")
-	defer span.End()
-
-	setJobSpanAttributes(span, request.Job)
-
 	if status.Code(err) == codes.FailedPrecondition {
 		service.logger.Err(
 			ctx,
@@ -198,33 +175,29 @@ func (service *JobExecute) reportSettleError(
 		)
 	}
 
-	return otel.ReportError(span, fmt.Errorf("settle job: %w", err))
+	return fmt.Errorf("settle job: %w", err)
 }
 
 type jobExecuteProviderCallRecorder struct {
-	service  JobExecuteServiceRecordProviderCall
-	job      *Job
-	workerID string
+	jobsClient servicejobs.Client
+	job        *servicejobs.Job
+	workerID   string
 }
 
 func (recorder *jobExecuteProviderCallRecorder) Record(
 	ctx context.Context, providerCallID string,
 ) error {
-	ctx, span := otel.Tracer().Start(ctx, "core.JobExecute(recordProviderCall)")
-	defer span.End()
-
-	setJobSpanAttributes(span, recorder.job)
-
-	_, err := recorder.service.JobRecordProviderCall(ctx, &servicejobs.JobRecordProviderCallRequest{
-		Id:             recorder.job.GetId(),
-		WorkerId:       recorder.workerID,
-		ProviderCallId: providerCallID,
-	})
+	_, err := recorder.jobsClient.JobRecordProviderCall(
+		ctx,
+		&servicejobs.JobRecordProviderCallRequest{
+			Id:             recorder.job.GetId(),
+			WorkerId:       recorder.workerID,
+			ProviderCallId: providerCallID,
+		},
+	)
 	if err != nil {
-		return otel.ReportError(span, fmt.Errorf("record provider call: %w", err))
+		return fmt.Errorf("record provider call: %w", err)
 	}
-
-	otel.ReportSuccessNoContent(span)
 
 	return nil
 }

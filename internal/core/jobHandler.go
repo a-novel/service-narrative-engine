@@ -5,33 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/trace"
-
 	servicejobs "github.com/a-novel/service-jobs/pkg/go"
-)
-
-// Job exposes the queue's work record inside the core package.
-type Job = servicejobs.Job
-
-// JobStatus identifies where a job sits in the queue lifecycle.
-type JobStatus = servicejobs.JobStatus
-
-const (
-	// JobStatusUnspecified means the queue did not supply a lifecycle status.
-	JobStatusUnspecified = servicejobs.JobStatusUnspecified
-	// JobStatusPending means the job is waiting for a worker.
-	JobStatusPending = servicejobs.JobStatusPending
-	// JobStatusClaimed means a worker currently holds the job's lease.
-	JobStatusClaimed = servicejobs.JobStatusClaimed
-	// JobStatusSucceeded means the handler completed successfully.
-	JobStatusSucceeded = servicejobs.JobStatusSucceeded
-	// JobStatusFailed means the handler failed with no retry remaining.
-	JobStatusFailed = servicejobs.JobStatusFailed
-	// JobStatusAbandoned means recovery found an expired claim with no retry remaining.
-	JobStatusAbandoned = servicejobs.JobStatusAbandoned
-	// JobStatusCancelled means the owner stopped the job before completion.
-	JobStatusCancelled = servicejobs.JobStatusCancelled
 )
 
 // A JobHandler performs the provider-neutral work described by a job.
@@ -51,7 +25,11 @@ type JobHandler interface {
 	// Kind returns the queue kind this handler accepts.
 	Kind() string
 	// Handle runs a job until it completes or its context is cancelled.
-	Handle(ctx context.Context, job *Job, recorder ProviderCallRecorder) (json.RawMessage, error)
+	Handle(
+		ctx context.Context,
+		job *servicejobs.Job,
+		recorder ProviderCallRecorder,
+	) (json.RawMessage, error)
 }
 
 // ProviderCallRecorder makes a running provider operation recoverable after a
@@ -64,12 +42,3 @@ type ProviderCallRecorder interface {
 // ErrJobRetryable marks a handler failure that the queue may requeue while an
 // attempt remains. Handlers join it to the returned error.
 var ErrJobRetryable = errors.New("job failed but may be retried")
-
-func setJobSpanAttributes(span trace.Span, job *Job) {
-	span.SetAttributes(
-		attribute.String("job.id", job.GetId()),
-		attribute.String("job.kind", job.GetKind()),
-		attribute.Int("job.attempt", int(job.GetAttempt())),
-		attribute.String("job.status", job.GetStatus().String()),
-	)
-}

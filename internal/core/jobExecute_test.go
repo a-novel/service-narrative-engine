@@ -13,6 +13,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	servicejobs "github.com/a-novel/service-jobs/pkg/go"
+	jobsmocks "github.com/a-novel/service-jobs/pkg/go/mocks"
 
 	"github.com/a-novel/service-narrative-engine/internal/core"
 	coremocks "github.com/a-novel/service-narrative-engine/internal/core/mocks"
@@ -24,30 +25,30 @@ func TestJobExecute(t *testing.T) {
 	errFoo := errors.New("foo")
 	errLostClaim := status.Error(codes.FailedPrecondition, "job not claimed by this worker")
 	result := json.RawMessage(`{"manuscript_id":"00000000-0000-0000-0000-000000000007"}`)
-	claimedJob := &core.Job{
+	claimedJob := &servicejobs.Job{
 		Id:          "00000000-0000-0000-0000-000000000001",
 		Kind:        "narrative.generate",
 		Payload:     json.RawMessage(`{"owner_id":"00000000-0000-0000-0000-000000000099"}`),
 		OwnerId:     testActor.UserID.String(),
-		Status:      core.JobStatusClaimed,
+		Status:      servicejobs.JobStatusClaimed,
 		Attempt:     1,
 		MaxAttempts: 2,
 	}
-	runningProviderJob := &core.Job{
+	runningProviderJob := &servicejobs.Job{
 		Id:             "00000000-0000-0000-0000-000000000002",
 		Kind:           "narrative.generate",
 		Payload:        json.RawMessage(`{"idea_id":"00000000-0000-0000-0000-000000000003"}`),
 		OwnerId:        testActor.UserID.String(),
-		Status:         core.JobStatusClaimed,
+		Status:         servicejobs.JobStatusClaimed,
 		Attempt:        2,
 		MaxAttempts:    2,
 		ProviderCallId: "provider-operation-42",
 	}
-	unknownJob := &core.Job{
+	unknownJob := &servicejobs.Job{
 		Id:          "00000000-0000-0000-0000-000000000004",
 		Kind:        "unknown",
 		OwnerId:     testActor.UserID.String(),
-		Status:      core.JobStatusClaimed,
+		Status:      servicejobs.JobStatusClaimed,
 		Attempt:     1,
 		MaxAttempts: 1,
 	}
@@ -58,7 +59,7 @@ func TestJobExecute(t *testing.T) {
 		handle func(
 			t *testing.T,
 			ctx context.Context,
-			job *core.Job,
+			job *servicejobs.Job,
 			recorder core.ProviderCallRecorder,
 		) (json.RawMessage, error)
 	}
@@ -85,7 +86,7 @@ func TestJobExecute(t *testing.T) {
 		recordProviderCallMock *recordProviderCallMock
 		expectLostClaimLog     bool
 
-		expect    *core.Job
+		expect    *servicejobs.Job
 		expectErr error
 	}{
 		{
@@ -96,7 +97,7 @@ func TestJobExecute(t *testing.T) {
 			handlerMock: &handlerMock{
 				kind: "narrative.generate",
 				handle: func(
-					t *testing.T, _ context.Context, job *core.Job, _ core.ProviderCallRecorder,
+					t *testing.T, _ context.Context, job *servicejobs.Job, _ core.ProviderCallRecorder,
 				) (json.RawMessage, error) {
 					t.Helper()
 					require.Equal(t, testActor.UserID.String(), job.GetOwnerId())
@@ -111,12 +112,12 @@ func TestJobExecute(t *testing.T) {
 					WorkerId: workerID,
 					Outcome:  &servicejobs.JobSettleResult{Result: result},
 				},
-				response: &servicejobs.JobSettleResponse{Job: &core.Job{
-					Id: claimedJob.GetId(), Kind: claimedJob.GetKind(), Status: core.JobStatusSucceeded,
+				response: &servicejobs.JobSettleResponse{Job: &servicejobs.Job{
+					Id: claimedJob.GetId(), Kind: claimedJob.GetKind(), Status: servicejobs.JobStatusSucceeded,
 				}},
 			},
-			expect: &core.Job{
-				Id: claimedJob.GetId(), Kind: claimedJob.GetKind(), Status: core.JobStatusSucceeded,
+			expect: &servicejobs.Job{
+				Id: claimedJob.GetId(), Kind: claimedJob.GetKind(), Status: servicejobs.JobStatusSucceeded,
 			},
 		},
 		{
@@ -127,7 +128,7 @@ func TestJobExecute(t *testing.T) {
 			handlerMock: &handlerMock{
 				kind: "narrative.generate",
 				handle: func(
-					t *testing.T, ctx context.Context, _ *core.Job, recorder core.ProviderCallRecorder,
+					t *testing.T, ctx context.Context, _ *servicejobs.Job, recorder core.ProviderCallRecorder,
 				) (json.RawMessage, error) {
 					t.Helper()
 					require.NoError(t, recorder.Record(ctx, "provider-operation-7"))
@@ -149,12 +150,12 @@ func TestJobExecute(t *testing.T) {
 					WorkerId: workerID,
 					Outcome:  &servicejobs.JobSettleResult{Result: result},
 				},
-				response: &servicejobs.JobSettleResponse{Job: &core.Job{
-					Id: claimedJob.GetId(), Kind: claimedJob.GetKind(), Status: core.JobStatusSucceeded,
+				response: &servicejobs.JobSettleResponse{Job: &servicejobs.Job{
+					Id: claimedJob.GetId(), Kind: claimedJob.GetKind(), Status: servicejobs.JobStatusSucceeded,
 				}},
 			},
-			expect: &core.Job{
-				Id: claimedJob.GetId(), Kind: claimedJob.GetKind(), Status: core.JobStatusSucceeded,
+			expect: &servicejobs.Job{
+				Id: claimedJob.GetId(), Kind: claimedJob.GetKind(), Status: servicejobs.JobStatusSucceeded,
 			},
 		},
 		{
@@ -165,7 +166,7 @@ func TestJobExecute(t *testing.T) {
 			handlerMock: &handlerMock{
 				kind: "narrative.generate",
 				handle: func(
-					t *testing.T, _ context.Context, job *core.Job, _ core.ProviderCallRecorder,
+					t *testing.T, _ context.Context, job *servicejobs.Job, _ core.ProviderCallRecorder,
 				) (json.RawMessage, error) {
 					t.Helper()
 					require.Equal(t, "provider-operation-42", job.GetProviderCallId())
@@ -179,16 +180,16 @@ func TestJobExecute(t *testing.T) {
 					WorkerId: workerID,
 					Outcome:  &servicejobs.JobSettleResult{Result: result},
 				},
-				response: &servicejobs.JobSettleResponse{Job: &core.Job{
+				response: &servicejobs.JobSettleResponse{Job: &servicejobs.Job{
 					Id:     runningProviderJob.GetId(),
 					Kind:   runningProviderJob.GetKind(),
-					Status: core.JobStatusSucceeded,
+					Status: servicejobs.JobStatusSucceeded,
 				}},
 			},
-			expect: &core.Job{
+			expect: &servicejobs.Job{
 				Id:     runningProviderJob.GetId(),
 				Kind:   runningProviderJob.GetKind(),
-				Status: core.JobStatusSucceeded,
+				Status: servicejobs.JobStatusSucceeded,
 			},
 		},
 		{
@@ -199,7 +200,7 @@ func TestJobExecute(t *testing.T) {
 			handlerMock: &handlerMock{
 				kind: "narrative.generate",
 				handle: func(
-					_ *testing.T, ctx context.Context, _ *core.Job, recorder core.ProviderCallRecorder,
+					_ *testing.T, ctx context.Context, _ *servicejobs.Job, recorder core.ProviderCallRecorder,
 				) (json.RawMessage, error) {
 					return nil, recorder.Record(ctx, "provider-operation-8")
 				},
@@ -220,12 +221,12 @@ func TestJobExecute(t *testing.T) {
 						Error: json.RawMessage(`{"message":"record provider call: foo"}`),
 					}},
 				},
-				response: &servicejobs.JobSettleResponse{Job: &core.Job{
-					Id: claimedJob.GetId(), Kind: claimedJob.GetKind(), Status: core.JobStatusFailed,
+				response: &servicejobs.JobSettleResponse{Job: &servicejobs.Job{
+					Id: claimedJob.GetId(), Kind: claimedJob.GetKind(), Status: servicejobs.JobStatusFailed,
 				}},
 			},
-			expect: &core.Job{
-				Id: claimedJob.GetId(), Kind: claimedJob.GetKind(), Status: core.JobStatusFailed,
+			expect: &servicejobs.Job{
+				Id: claimedJob.GetId(), Kind: claimedJob.GetKind(), Status: servicejobs.JobStatusFailed,
 			},
 		},
 		{
@@ -236,7 +237,7 @@ func TestJobExecute(t *testing.T) {
 			handlerMock: &handlerMock{
 				kind: "narrative.generate",
 				handle: func(
-					_ *testing.T, _ context.Context, _ *core.Job, _ core.ProviderCallRecorder,
+					_ *testing.T, _ context.Context, _ *servicejobs.Job, _ core.ProviderCallRecorder,
 				) (json.RawMessage, error) {
 					return nil, errors.Join(errFoo, core.ErrJobRetryable)
 				},
@@ -250,12 +251,12 @@ func TestJobExecute(t *testing.T) {
 						Retryable: true,
 					}},
 				},
-				response: &servicejobs.JobSettleResponse{Job: &core.Job{
-					Id: claimedJob.GetId(), Kind: claimedJob.GetKind(), Status: core.JobStatusPending,
+				response: &servicejobs.JobSettleResponse{Job: &servicejobs.Job{
+					Id: claimedJob.GetId(), Kind: claimedJob.GetKind(), Status: servicejobs.JobStatusPending,
 				}},
 			},
-			expect: &core.Job{
-				Id: claimedJob.GetId(), Kind: claimedJob.GetKind(), Status: core.JobStatusPending,
+			expect: &servicejobs.Job{
+				Id: claimedJob.GetId(), Kind: claimedJob.GetKind(), Status: servicejobs.JobStatusPending,
 			},
 		},
 		{
@@ -266,7 +267,7 @@ func TestJobExecute(t *testing.T) {
 			handlerMock: &handlerMock{
 				kind: "narrative.generate",
 				handle: func(
-					_ *testing.T, _ context.Context, _ *core.Job, _ core.ProviderCallRecorder,
+					_ *testing.T, _ context.Context, _ *servicejobs.Job, _ core.ProviderCallRecorder,
 				) (json.RawMessage, error) {
 					return nil, errFoo
 				},
@@ -279,12 +280,12 @@ func TestJobExecute(t *testing.T) {
 						Error: json.RawMessage(`{"message":"foo"}`),
 					}},
 				},
-				response: &servicejobs.JobSettleResponse{Job: &core.Job{
-					Id: claimedJob.GetId(), Kind: claimedJob.GetKind(), Status: core.JobStatusFailed,
+				response: &servicejobs.JobSettleResponse{Job: &servicejobs.Job{
+					Id: claimedJob.GetId(), Kind: claimedJob.GetKind(), Status: servicejobs.JobStatusFailed,
 				}},
 			},
-			expect: &core.Job{
-				Id: claimedJob.GetId(), Kind: claimedJob.GetKind(), Status: core.JobStatusFailed,
+			expect: &servicejobs.Job{
+				Id: claimedJob.GetId(), Kind: claimedJob.GetKind(), Status: servicejobs.JobStatusFailed,
 			},
 		},
 		{
@@ -300,12 +301,12 @@ func TestJobExecute(t *testing.T) {
 						Error: json.RawMessage(`{"message":"job handler not found: \"unknown\""}`),
 					}},
 				},
-				response: &servicejobs.JobSettleResponse{Job: &core.Job{
-					Id: unknownJob.GetId(), Kind: unknownJob.GetKind(), Status: core.JobStatusFailed,
+				response: &servicejobs.JobSettleResponse{Job: &servicejobs.Job{
+					Id: unknownJob.GetId(), Kind: unknownJob.GetKind(), Status: servicejobs.JobStatusFailed,
 				}},
 			},
-			expect: &core.Job{
-				Id: unknownJob.GetId(), Kind: unknownJob.GetKind(), Status: core.JobStatusFailed,
+			expect: &servicejobs.Job{
+				Id: unknownJob.GetId(), Kind: unknownJob.GetKind(), Status: servicejobs.JobStatusFailed,
 			},
 		},
 		{
@@ -316,7 +317,7 @@ func TestJobExecute(t *testing.T) {
 			handlerMock: &handlerMock{
 				kind: "narrative.generate",
 				handle: func(
-					t *testing.T, ctx context.Context, _ *core.Job, _ core.ProviderCallRecorder,
+					t *testing.T, ctx context.Context, _ *servicejobs.Job, _ core.ProviderCallRecorder,
 				) (json.RawMessage, error) {
 					t.Helper()
 					<-ctx.Done()
@@ -333,12 +334,12 @@ func TestJobExecute(t *testing.T) {
 						Error: json.RawMessage(`{"message":"context deadline exceeded"}`),
 					}},
 				},
-				response: &servicejobs.JobSettleResponse{Job: &core.Job{
-					Id: claimedJob.GetId(), Kind: claimedJob.GetKind(), Status: core.JobStatusFailed,
+				response: &servicejobs.JobSettleResponse{Job: &servicejobs.Job{
+					Id: claimedJob.GetId(), Kind: claimedJob.GetKind(), Status: servicejobs.JobStatusFailed,
 				}},
 			},
-			expect: &core.Job{
-				Id: claimedJob.GetId(), Kind: claimedJob.GetKind(), Status: core.JobStatusFailed,
+			expect: &servicejobs.Job{
+				Id: claimedJob.GetId(), Kind: claimedJob.GetKind(), Status: servicejobs.JobStatusFailed,
 			},
 		},
 		{
@@ -349,7 +350,7 @@ func TestJobExecute(t *testing.T) {
 			handlerMock: &handlerMock{
 				kind: "narrative.generate",
 				handle: func(
-					_ *testing.T, _ context.Context, _ *core.Job, _ core.ProviderCallRecorder,
+					_ *testing.T, _ context.Context, _ *servicejobs.Job, _ core.ProviderCallRecorder,
 				) (json.RawMessage, error) {
 					return result, nil
 				},
@@ -373,7 +374,7 @@ func TestJobExecute(t *testing.T) {
 			handlerMock: &handlerMock{
 				kind: "narrative.generate",
 				handle: func(
-					_ *testing.T, _ context.Context, _ *core.Job, _ core.ProviderCallRecorder,
+					_ *testing.T, _ context.Context, _ *servicejobs.Job, _ core.ProviderCallRecorder,
 				) (json.RawMessage, error) {
 					return result, nil
 				},
@@ -396,7 +397,7 @@ func TestJobExecute(t *testing.T) {
 			handlerMock: &handlerMock{
 				kind: "narrative.generate",
 				handle: func(
-					_ *testing.T, _ context.Context, _ *core.Job, _ core.ProviderCallRecorder,
+					_ *testing.T, _ context.Context, _ *servicejobs.Job, _ core.ProviderCallRecorder,
 				) (json.RawMessage, error) {
 					return nil, errFoo
 				},
@@ -440,8 +441,7 @@ func TestJobExecute(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			settle := coremocks.NewMockJobExecuteServiceSettle(t)
-			recordProviderCall := coremocks.NewMockJobExecuteServiceRecordProviderCall(t)
+			jobsClient := jobsmocks.NewMockClient(t)
 			logger := coremocks.NewMockJobExecuteLogger(t)
 
 			var (
@@ -454,7 +454,7 @@ func TestJobExecute(t *testing.T) {
 				handler.EXPECT().
 					Handle(mock.Anything, testCase.request.Job, mock.Anything).
 					RunAndReturn(func(
-						ctx context.Context, job *core.Job, recorder core.ProviderCallRecorder,
+						ctx context.Context, job *servicejobs.Job, recorder core.ProviderCallRecorder,
 					) (json.RawMessage, error) {
 						return testCase.handlerMock.handle(t, ctx, job, recorder)
 					}).
@@ -463,7 +463,7 @@ func TestJobExecute(t *testing.T) {
 			}
 
 			if testCase.recordProviderCallMock != nil {
-				recordProviderCall.EXPECT().
+				jobsClient.EXPECT().
 					JobRecordProviderCall(mock.Anything, testCase.recordProviderCallMock.request).
 					Return(
 						testCase.recordProviderCallMock.response,
@@ -473,7 +473,7 @@ func TestJobExecute(t *testing.T) {
 			}
 
 			if testCase.settleMock != nil {
-				settle.EXPECT().
+				jobsClient.EXPECT().
 					JobSettle(mock.Anything, testCase.settleMock.request).
 					Return(testCase.settleMock.response, testCase.settleMock.err).
 					Once()
@@ -485,14 +485,13 @@ func TestJobExecute(t *testing.T) {
 					Once()
 			}
 
-			service := core.NewJobExecute(settle, recordProviderCall, logger, handlers...)
+			service := core.NewJobExecute(jobsClient, logger, handlers...)
 			response, err := service.Exec(t.Context(), testCase.request)
 
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, response)
 
-			settle.AssertExpectations(t)
-			recordProviderCall.AssertExpectations(t)
+			jobsClient.AssertExpectations(t)
 			logger.AssertExpectations(t)
 
 			if handler != nil {
