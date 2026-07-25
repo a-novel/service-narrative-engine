@@ -32,12 +32,9 @@ type JobHandler interface {
 	) (json.RawMessage, error)
 }
 
-// ProviderCallRecorder makes a running provider operation recoverable after a
-// worker crash.
-type ProviderCallRecorder interface {
-	// Record attaches the provider's operation identifier to the claimed job.
-	Record(ctx context.Context, providerCallID string) error
-}
+// ProviderCallRecorder attaches a provider operation to the claimed job. The
+// dispatcher binds it to the job, worker, and handler deadline.
+type ProviderCallRecorder func(providerCallID string) error
 
 // ErrJobRetryable marks a handler failure that the queue may requeue while an
 // attempt remains. Handlers join it to the returned error.

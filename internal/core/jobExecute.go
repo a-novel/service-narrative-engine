@@ -87,40 +87,68 @@ func (service *JobExecute) Exec(
 		err = fmt.Errorf("%w: %q", errJobHandlerNotFound, request.Job.GetKind())
 	} else {
 		handlerCtx, cancelHandler := context.WithTimeout(ctx, request.Deadline)
-		result, err = handler.Handle(handlerCtx, request.Job, &jobExecuteProviderCallRecorder{
-			jobsClient: service.jobsClient,
-			job:        request.Job,
-			workerID:   request.WorkerID,
+		recorder := ProviderCallRecorder(func(providerCallID string) error {
+			_, recordErr := service.jobsClient.JobRecordProviderCall(
+				handlerCtx,
+				&servicejobs.JobRecordProviderCallRequest{
+					Id:             request.Job.GetId(),
+					WorkerId:       request.WorkerID,
+					ProviderCallId: providerCallID,
+				},
+			)
+			if recordErr != nil {
+				return fmt.Errorf("record provider call: %w", recordErr)
+			}
+
+			return nil
 		})
 
+		result, err = handler.Handle(handlerCtx, request.Job, recorder)
+
 		cancelHandler()
+	}
+
+	settleRequest := &servicejobs.JobSettleRequest{
+		Id:       request.Job.GetId(),
+		WorkerId: request.WorkerID,
 	}
 
 	if err != nil {
 		_ = otel.ReportError(span, err)
 
-		job, settleErr := service.settleFailure(ctx, request, err)
-		if settleErr != nil {
-			return nil, otel.ReportError(span, settleErr)
-		}
-
-		span.SetAttributes(jobSpanAttributes(job)...)
-
-		return job, nil
+		failure := strconv.AppendQuote([]byte(`{"message":`), err.Error())
+		failure = append(failure, '}')
+		settleRequest.Outcome = &servicejobs.JobSettleFailure{Failure: &servicejobs.JobFailure{
+			Error:     failure,
+			Retryable: errors.Is(err, ErrJobRetryable),
+		}}
+	} else {
+		settleRequest.Outcome = &servicejobs.JobSettleResult{Result: result}
 	}
 
-	response, err := service.jobsClient.JobSettle(ctx, &servicejobs.JobSettleRequest{
-		Id:       request.Job.GetId(),
-		WorkerId: request.WorkerID,
-		Outcome:  &servicejobs.JobSettleResult{Result: result},
-	})
-	if err != nil {
-		settleErr := service.reportSettleError(ctx, request, err)
+	response, settleErr := service.jobsClient.JobSettle(ctx, settleRequest)
+	if settleErr != nil {
+		if status.Code(settleErr) == codes.FailedPrecondition {
+			service.logger.Err(
+				ctx,
+				"job settle lost its claim",
+				"job.id", request.Job.GetId(),
+				"job.kind", request.Job.GetKind(),
+				"job.attempt", request.Job.GetAttempt(),
+				"job.status", request.Job.GetStatus().String(),
+				"worker.id", request.WorkerID,
+				"error", settleErr,
+			)
+		}
 
-		return nil, otel.ReportError(span, settleErr)
+		return nil, otel.ReportError(span, fmt.Errorf("settle job: %w", settleErr))
 	}
 
 	span.SetAttributes(jobSpanAttributes(response.GetJob())...)
+
+	if err != nil {
+		return response.GetJob(), nil
+	}
 
 	return otel.ReportSuccess(span, response.GetJob()), nil
 }
@@ -132,72 +160,4 @@ func jobSpanAttributes(job *servicejobs.Job) []attribute.KeyValue {
 		attribute.Int("job.attempt", int(job.GetAttempt())),
 		attribute.String("job.status", job.GetStatus().String()),
 	}
-}
-
-func (service *JobExecute) settleFailure(
-	ctx context.Context,
-	request *JobExecuteRequest,
-	handlerErr error,
-) (*servicejobs.Job, error) {
-	failure := strconv.AppendQuote([]byte(`{"message":`), handlerErr.Error())
-	failure = append(failure, '}')
-
-	response, err := service.jobsClient.JobSettle(ctx, &servicejobs.JobSettleRequest{
-		Id:       request.Job.GetId(),
-		WorkerId: request.WorkerID,
-		Outcome: &servicejobs.JobSettleFailure{Failure: &servicejobs.JobFailure{
-			Error:     failure,
-			Retryable: errors.Is(handlerErr, ErrJobRetryable),
-		}},
-	})
-	if err != nil {
-		return nil, service.reportSettleError(ctx, request, err)
-	}
-
-	return response.GetJob(), nil
-}
-
-func (service *JobExecute) reportSettleError(
-	ctx context.Context,
-	request *JobExecuteRequest,
-	err error,
-) error {
-	if status.Code(err) == codes.FailedPrecondition {
-		service.logger.Err(
-			ctx,
-			"job settle lost its claim",
-			"job.id", request.Job.GetId(),
-			"job.kind", request.Job.GetKind(),
-			"job.attempt", request.Job.GetAttempt(),
-			"job.status", request.Job.GetStatus().String(),
-			"worker.id", request.WorkerID,
-			"error", err,
-		)
-	}
-
-	return fmt.Errorf("settle job: %w", err)
-}
-
-type jobExecuteProviderCallRecorder struct {
-	jobsClient servicejobs.Client
-	job        *servicejobs.Job
-	workerID   string
-}
-
-func (recorder *jobExecuteProviderCallRecorder) Record(
-	ctx context.Context, providerCallID string,
-) error {
-	_, err := recorder.jobsClient.JobRecordProviderCall(
-		ctx,
-		&servicejobs.JobRecordProviderCallRequest{
-			Id:             recorder.job.GetId(),
-			WorkerId:       recorder.workerID,
-			ProviderCallId: providerCallID,
-		},
-	)
-	if err != nil {
-		return fmt.Errorf("record provider call: %w", err)
-	}
-
-	return nil
 }

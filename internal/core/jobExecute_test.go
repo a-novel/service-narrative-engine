@@ -128,10 +128,10 @@ func TestJobExecute(t *testing.T) {
 			handlerMock: &handlerMock{
 				kind: "narrative.generate",
 				handle: func(
-					t *testing.T, ctx context.Context, _ *servicejobs.Job, recorder core.ProviderCallRecorder,
+					t *testing.T, _ context.Context, _ *servicejobs.Job, recorder core.ProviderCallRecorder,
 				) (json.RawMessage, error) {
 					t.Helper()
-					require.NoError(t, recorder.Record(ctx, "provider-operation-7"))
+					require.NoError(t, recorder("provider-operation-7"))
 
 					return result, nil
 				},
@@ -200,9 +200,9 @@ func TestJobExecute(t *testing.T) {
 			handlerMock: &handlerMock{
 				kind: "narrative.generate",
 				handle: func(
-					_ *testing.T, ctx context.Context, _ *servicejobs.Job, recorder core.ProviderCallRecorder,
+					_ *testing.T, _ context.Context, _ *servicejobs.Job, recorder core.ProviderCallRecorder,
 				) (json.RawMessage, error) {
-					return nil, recorder.Record(ctx, "provider-operation-8")
+					return nil, recorder("provider-operation-8")
 				},
 			},
 			recordProviderCallMock: &recordProviderCallMock{
