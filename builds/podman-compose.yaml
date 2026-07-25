@@ -1,5 +1,49 @@
 services:
   # ====================================================================================================================
+  # EXTERNAL DEPENDENCIES
+  # ====================================================================================================================
+
+  postgres-jobs:
+    profiles: ["jobs"]
+    image: ghcr.io/a-novel/service-jobs/database:v0.2.0
+    networks:
+      - api
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+      POSTGRES_INITDB_ARGS: --auth=scram-sha-256
+    volumes:
+      - jobs-postgres-data:/var/lib/postgresql/
+
+  service-jobs-migrations:
+    profiles: ["jobs"]
+    image: ghcr.io/a-novel/service-jobs/jobs/migrations:v0.2.0
+    depends_on:
+      postgres-jobs:
+        condition: service_healthy
+    environment:
+      POSTGRES_DSN: postgres://postgres:postgres@postgres-jobs:5432/postgres?sslmode=disable
+    networks:
+      - api
+
+  service-jobs:
+    profiles: ["jobs"]
+    image: ghcr.io/a-novel/service-jobs/standalone-grpc:v0.2.0
+    ports:
+      - "${SERVICE_JOBS_PORT}:8080"
+    depends_on:
+      postgres-jobs:
+        condition: service_healthy
+      service-jobs-migrations:
+        condition: service_completed_successfully
+    environment:
+      POSTGRES_DSN: postgres://postgres:postgres@postgres-jobs:5432/postgres?sslmode=disable
+    networks:
+      - api
+
+  # ====================================================================================================================
   # DATABASE
   # ====================================================================================================================
 
@@ -55,6 +99,8 @@ services:
         condition: service_completed_successfully
     environment:
       POSTGRES_DSN: postgres://postgres:postgres@postgres-narrative-engine:5432/postgres?sslmode=disable
+      SERVICE_JOBS_HOST: service-jobs
+      SERVICE_JOBS_PORT: 8080
     networks:
       - api
 
@@ -63,3 +109,4 @@ networks:
 
 volumes:
   narrative-engine-postgres-data:
+  jobs-postgres-data:
