@@ -19,6 +19,9 @@ info:
     name: AGPL-3.0
     url: "https://raw.githubusercontent.com/a-novel/service-narrative-engine/refs/heads/master/LICENSE"
 
+security:
+  - BearerAuth: []
+
 paths:
   /ping:
     get:
@@ -62,7 +65,8 @@ paths:
       description: |
         Creates a new item with the given name and optional description.
       tags: [item]
-      security: []
+      security:
+        - BearerAuth: ["narrative:item:write"]
       requestBody:
         required: true
         content:
@@ -74,6 +78,10 @@ paths:
           $ref: "#/components/responses/item"
         "400":
           $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "403":
+          $ref: "#/components/responses/forbidden"
         default:
           $ref: "#/components/responses/internalError"
 
@@ -83,7 +91,8 @@ paths:
       description: |
         Returns a paginated list of items, ordered by creation date descending.
       tags: [item]
-      security: []
+      security:
+        - BearerAuth: ["narrative:item:read"]
       parameters:
         - $ref: "#/components/parameters/limit"
         - $ref: "#/components/parameters/offset"
@@ -92,6 +101,10 @@ paths:
           $ref: "#/components/responses/itemList"
         "400":
           $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "403":
+          $ref: "#/components/responses/forbidden"
         default:
           $ref: "#/components/responses/internalError"
 
@@ -102,7 +115,8 @@ paths:
       description: |
         Returns a single item by its unique identifier.
       tags: [item]
-      security: []
+      security:
+        - BearerAuth: ["narrative:item:read"]
       parameters:
         - $ref: "#/components/parameters/itemID"
       responses:
@@ -110,6 +124,10 @@ paths:
           $ref: "#/components/responses/item"
         "400":
           $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "403":
+          $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
         default:
@@ -121,7 +139,8 @@ paths:
       description: |
         Updates the name and description of an existing item.
       tags: [item]
-      security: []
+      security:
+        - BearerAuth: ["narrative:item:write"]
       requestBody:
         required: true
         content:
@@ -133,6 +152,10 @@ paths:
           $ref: "#/components/responses/item"
         "400":
           $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "403":
+          $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
         default:
@@ -144,7 +167,8 @@ paths:
       description: |
         Permanently deletes an item by its unique identifier. Returns the deleted item.
       tags: [item]
-      security: []
+      security:
+        - BearerAuth: ["narrative:item:write"]
       parameters:
         - $ref: "#/components/parameters/itemID"
       responses:
@@ -152,12 +176,25 @@ paths:
           $ref: "#/components/responses/item"
         "400":
           $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "403":
+          $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
         default:
           $ref: "#/components/responses/internalError"
 
 components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        A JWT access token. The Authorization header must use `Bearer`, followed
+        by exactly one space and the token.
+
   responses:
     pong:
       description: A plain-text pong response.
@@ -204,6 +241,18 @@ components:
     badRequest:
       description: |
         The request sent to the server could not be parsed, or failed validation.
+
+    unauthorized:
+      description: A valid bearer access token is required.
+      headers:
+        WWW-Authenticate:
+          description: Bearer authentication challenge.
+          schema:
+            type: string
+            examples: ['Bearer realm="narrative-engine", error="invalid_token"']
+
+    forbidden:
+      description: The authenticated actor lacks a required permission.
 
     internalError:
       description: Something unexpected happened.

@@ -40,9 +40,18 @@ func (handler *ItemListPublic) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	ctx, span := otel.Tracer().Start(r.Context(), "rest.ItemListPublic")
 	defer span.End()
 
+	actor, err := actorFromContext(ctx)
+	if err != nil {
+		httpf.HandleError(ctx, handler.logger, w, span, httpf.ErrMap{
+			ErrAnonymousActor: http.StatusForbidden,
+		}, err)
+
+		return
+	}
+
 	var request ItemListPublicRequest
 
-	err := muxDecoder.Decode(&request, r.URL.Query())
+	err = muxDecoder.Decode(&request, r.URL.Query())
 	if err != nil {
 		httpf.HandleError(ctx, handler.logger, w, span, httpf.ErrMap{nil: http.StatusBadRequest}, err)
 
@@ -50,6 +59,7 @@ func (handler *ItemListPublic) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	}
 
 	items, err := handler.service.Exec(ctx, &core.ItemListRequest{
+		Actor:  *actor,
 		Limit:  request.Limit,
 		Offset: request.Offset,
 	})

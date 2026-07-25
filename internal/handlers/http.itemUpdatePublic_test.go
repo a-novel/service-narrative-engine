@@ -36,6 +36,7 @@ func TestRestItemUpdatePublic(t *testing.T) {
 		name string
 
 		request *http.Request
+		claims  testClaimsState
 
 		serviceMock *serviceMock
 
@@ -53,6 +54,7 @@ func TestRestItemUpdatePublic(t *testing.T) {
 
 			serviceMock: &serviceMock{
 				req: &core.ItemUpdateRequest{
+					Actor:       testActor,
 					ID:          uuid.MustParse("00000000-0000-0000-0000-000000000001"),
 					Name:        "updated item",
 					Description: "updated description",
@@ -74,6 +76,20 @@ func TestRestItemUpdatePublic(t *testing.T) {
 				"createdAt":   "2021-01-01T00:00:00Z",
 				"updatedAt":   "2021-01-02T00:00:00Z",
 			},
+		},
+		{
+			name: "Error/AnonymousActor",
+
+			request:      httptest.NewRequestWithContext(t.Context(), http.MethodPut, "/item", strings.NewReader(`{}`)),
+			claims:       testClaimsAnonymous,
+			expectStatus: http.StatusForbidden,
+		},
+		{
+			name: "Error/MissingClaims",
+
+			request:      httptest.NewRequestWithContext(t.Context(), http.MethodPut, "/item", strings.NewReader(`{}`)),
+			claims:       testClaimsMissing,
+			expectStatus: http.StatusInternalServerError,
 		},
 		{
 			name: "Error/InvalidBody",
@@ -102,8 +118,9 @@ func TestRestItemUpdatePublic(t *testing.T) {
 
 			serviceMock: &serviceMock{
 				req: &core.ItemUpdateRequest{
-					ID:   uuid.MustParse("00000000-0000-0000-0000-000000000001"),
-					Name: "",
+					Actor: testActor,
+					ID:    uuid.MustParse("00000000-0000-0000-0000-000000000001"),
+					Name:  "",
 				},
 				err: core.ErrInvalidRequest,
 			},
@@ -120,8 +137,9 @@ func TestRestItemUpdatePublic(t *testing.T) {
 
 			serviceMock: &serviceMock{
 				req: &core.ItemUpdateRequest{
-					ID:   uuid.MustParse("00000000-0000-0000-0000-000000000001"),
-					Name: "updated item",
+					Actor: testActor,
+					ID:    uuid.MustParse("00000000-0000-0000-0000-000000000001"),
+					Name:  "updated item",
 				},
 				err: dao.ErrItemUpdateNotFound,
 			},
@@ -138,8 +156,9 @@ func TestRestItemUpdatePublic(t *testing.T) {
 
 			serviceMock: &serviceMock{
 				req: &core.ItemUpdateRequest{
-					ID:   uuid.MustParse("00000000-0000-0000-0000-000000000001"),
-					Name: "updated item",
+					Actor: testActor,
+					ID:    uuid.MustParse("00000000-0000-0000-0000-000000000001"),
+					Name:  "updated item",
 				},
 				err: errFoo,
 			},
@@ -163,7 +182,7 @@ func TestRestItemUpdatePublic(t *testing.T) {
 			handler := handlers.NewItemUpdatePublic(service, config.LoggerDev)
 			w := httptest.NewRecorder()
 
-			handler.ServeHTTP(w, testCase.request)
+			handler.ServeHTTP(w, withTestClaims(testCase.request, testCase.claims))
 
 			res := w.Result()
 

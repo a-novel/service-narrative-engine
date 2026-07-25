@@ -40,16 +40,25 @@ func (handler *ItemDeletePublic) ServeHTTP(w http.ResponseWriter, r *http.Reques
 	ctx, span := otel.Tracer().Start(r.Context(), "rest.ItemDeletePublic")
 	defer span.End()
 
+	actor, err := actorFromContext(ctx)
+	if err != nil {
+		httpf.HandleError(ctx, handler.logger, w, span, httpf.ErrMap{
+			ErrAnonymousActor: http.StatusForbidden,
+		}, err)
+
+		return
+	}
+
 	var request ItemDeletePublicRequest
 
-	err := muxDecoder.Decode(&request, r.URL.Query())
+	err = muxDecoder.Decode(&request, r.URL.Query())
 	if err != nil {
 		httpf.HandleError(ctx, handler.logger, w, span, httpf.ErrMap{nil: http.StatusBadRequest}, err)
 
 		return
 	}
 
-	item, err := handler.service.Exec(ctx, &core.ItemDeleteRequest{ID: request.ID})
+	item, err := handler.service.Exec(ctx, &core.ItemDeleteRequest{Actor: *actor, ID: request.ID})
 	if err != nil {
 		httpf.HandleError(ctx, handler.logger, w, span, httpf.ErrMap{
 			dao.ErrItemDeleteNotFound: http.StatusNotFound,

@@ -20,6 +20,7 @@ type ItemGetDao interface {
 
 // ItemGetRequest identifies the item to fetch.
 type ItemGetRequest struct {
+	Actor Actor `validate:"required"`
 	// ID of the item. uuid.Nil is rejected as an unset identifier, usually a
 	// missing request parameter.
 	ID uuid.UUID `validate:"required"`

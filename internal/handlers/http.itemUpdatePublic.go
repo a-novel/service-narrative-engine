@@ -43,11 +43,20 @@ func (handler *ItemUpdatePublic) ServeHTTP(w http.ResponseWriter, r *http.Reques
 	ctx, span := otel.Tracer().Start(r.Context(), "rest.ItemUpdatePublic")
 	defer span.End()
 
+	actor, err := actorFromContext(ctx)
+	if err != nil {
+		httpf.HandleError(ctx, handler.logger, w, span, httpf.ErrMap{
+			ErrAnonymousActor: http.StatusForbidden,
+		}, err)
+
+		return
+	}
+
 	decoder := json.NewDecoder(r.Body)
 
 	var request ItemUpdatePublicRequest
 
-	err := decoder.Decode(&request)
+	err = decoder.Decode(&request)
 	if err != nil {
 		httpf.HandleError(ctx, handler.logger, w, span, httpf.ErrMap{nil: http.StatusBadRequest}, err)
 
@@ -55,6 +64,7 @@ func (handler *ItemUpdatePublic) ServeHTTP(w http.ResponseWriter, r *http.Reques
 	}
 
 	item, err := handler.service.Exec(ctx, &core.ItemUpdateRequest{
+		Actor:       *actor,
 		ID:          request.ID,
 		Name:        request.Name,
 		Description: request.Description,

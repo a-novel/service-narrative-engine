@@ -37,7 +37,7 @@ func TestItemList(t *testing.T) {
 		{
 			name: "Success",
 
-			request: &core.ItemListRequest{Limit: 10, Offset: 0},
+			request: &core.ItemListRequest{Actor: testActor, Limit: 10, Offset: 0},
 
 			daoMock: &daoMock{
 				resp: []*dao.Item{
@@ -74,7 +74,7 @@ func TestItemList(t *testing.T) {
 		{
 			name: "Success/Empty",
 
-			request: &core.ItemListRequest{Limit: 10, Offset: 0},
+			request: &core.ItemListRequest{Actor: testActor, Limit: 10, Offset: 0},
 
 			daoMock: &daoMock{resp: []*dao.Item{}},
 
@@ -83,28 +83,34 @@ func TestItemList(t *testing.T) {
 		{
 			name: "Success/LimitDefaulted",
 
-			request: &core.ItemListRequest{Limit: 0, Offset: 0},
+			request: &core.ItemListRequest{Actor: testActor, Limit: 0, Offset: 0},
 
 			daoMock: &daoMock{resp: []*dao.Item{}},
 
 			expect: []*core.Item{},
 		},
 		{
+			name: "Error/MissingActor",
+
+			request:   &core.ItemListRequest{Limit: 10, Offset: 0},
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
 			name: "Error/LimitTooHigh",
 
-			request:   &core.ItemListRequest{Limit: 101, Offset: 0},
+			request:   &core.ItemListRequest{Actor: testActor, Limit: 101, Offset: 0},
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
 			name: "Error/OffsetNegative",
 
-			request:   &core.ItemListRequest{Limit: 10, Offset: -1},
+			request:   &core.ItemListRequest{Actor: testActor, Limit: 10, Offset: -1},
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
 			name: "Error/Dao",
 
-			request: &core.ItemListRequest{Limit: 10, Offset: 0},
+			request: &core.ItemListRequest{Actor: testActor, Limit: 10, Offset: 0},
 
 			daoMock:   &daoMock{err: errFoo},
 			expectErr: errFoo,

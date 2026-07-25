@@ -34,6 +34,7 @@ func TestRestItemListPublic(t *testing.T) {
 		name string
 
 		request *http.Request
+		claims  testClaimsState
 
 		serviceMock *serviceMock
 
@@ -46,7 +47,7 @@ func TestRestItemListPublic(t *testing.T) {
 			request: httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/items?limit=10&offset=0", nil),
 
 			serviceMock: &serviceMock{
-				req: &core.ItemListRequest{Limit: 10, Offset: 0},
+				req: &core.ItemListRequest{Actor: testActor, Limit: 10, Offset: 0},
 				resp: []*core.Item{
 					{
 						ID:        uuid.MustParse("00000000-0000-0000-0000-000000000002"),
@@ -80,12 +81,26 @@ func TestRestItemListPublic(t *testing.T) {
 			},
 		},
 		{
+			name: "Error/AnonymousActor",
+
+			request:      httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/items", nil),
+			claims:       testClaimsAnonymous,
+			expectStatus: http.StatusForbidden,
+		},
+		{
+			name: "Error/MissingClaims",
+
+			request:      httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/items", nil),
+			claims:       testClaimsMissing,
+			expectStatus: http.StatusInternalServerError,
+		},
+		{
 			name: "Error/Internal",
 
 			request: httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/items?limit=10&offset=0", nil),
 
 			serviceMock: &serviceMock{
-				req: &core.ItemListRequest{Limit: 10, Offset: 0},
+				req: &core.ItemListRequest{Actor: testActor, Limit: 10, Offset: 0},
 				err: errFoo,
 			},
 
@@ -108,7 +123,7 @@ func TestRestItemListPublic(t *testing.T) {
 			handler := handlers.NewItemListPublic(service, config.LoggerDev)
 			w := httptest.NewRecorder()
 
-			handler.ServeHTTP(w, testCase.request)
+			handler.ServeHTTP(w, withTestClaims(testCase.request, testCase.claims))
 
 			res := w.Result()
 
