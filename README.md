@@ -112,10 +112,12 @@ Database connection pool (all images). The limits are **per process**, so what h
 
 Service dependencies (images `rest`, `standalone-rest`):
 
-| Name                | Description                               | Default     |
-| ------------------- | ----------------------------------------- | ----------- |
-| `SERVICE_JOBS_HOST` | Hostname of the service-jobs gRPC server. | `localhost` |
-| `SERVICE_JOBS_PORT` | Port of the service-jobs gRPC server.     | `8080`      |
+| Name                     | Description                               | Default     |
+| ------------------------ | ----------------------------------------- | ----------- |
+| `SERVICE_JOBS_HOST`      | Hostname of the service-jobs gRPC server. | `localhost` |
+| `SERVICE_JOBS_PORT`      | Port of the service-jobs gRPC server.     | `8080`      |
+| `SERVICE_JSON_KEYS_HOST` | Hostname of the JSON-keys gRPC server.    | `localhost` |
+| `SERVICE_JSON_KEYS_PORT` | Port of the JSON-keys gRPC server.        | `8080`      |
 
 Outbound HTTP client (images `rest`, `standalone-rest`). The service sizes the pooled, traced client supplied by golib's [`httpf`](https://pkg.go.dev/github.com/a-novel-kit/golib/httpf) package. Keep `HTTP_CLIENT_MAX_IDLE_CONNS_PER_HOST` at or above provider concurrency so calls reuse existing connections.
 

@@ -4,10 +4,13 @@ go 1.26.5
 
 require (
 	github.com/a-novel-kit/golib v0.30.0
-	github.com/a-novel/service-jobs v0.2.0
+	github.com/a-novel/service-authentication/v2 v2.4.5
+	github.com/a-novel/service-jobs v0.2.1-0.20260725030639-718c94974644
+	github.com/a-novel/service-json-keys/v2 v2.4.1
 	github.com/go-chi/chi/v5 v5.3.1
 	github.com/go-chi/cors v1.2.2
 	github.com/go-playground/validator/v10 v10.30.3
+	github.com/goccy/go-yaml v1.19.2
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/schema v1.4.1
 	github.com/samber/lo v1.53.0
@@ -26,6 +29,7 @@ require (
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/trace v1.35.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.59.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/propagator v0.59.0 // indirect
+	github.com/a-novel-kit/jwt/v2 v2.2.1 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/charmbracelet/colorprofile v0.4.3 // indirect

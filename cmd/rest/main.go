@@ -20,7 +20,9 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/samber/lo"
 
+	serviceauthentication "github.com/a-novel/service-authentication/v2/pkg/go"
 	servicejobs "github.com/a-novel/service-jobs/pkg/go"
+	servicejsonkeys "github.com/a-novel/service-json-keys/v2/pkg/go"
 
 	"github.com/a-novel-kit/golib/httpf"
 	"github.com/a-novel-kit/golib/otel"
@@ -66,6 +68,23 @@ func main() {
 		lo.Must(cfg.Dependencies.ServiceJobsCredentials.Options(ctx))...,
 	))
 	defer jobsClient.Close()
+
+	jsonKeysClient := lo.Must(servicejsonkeys.NewClient(
+		fmt.Sprintf(
+			"%s:%d",
+			cfg.Dependencies.ServiceJsonKeysHost,
+			cfg.Dependencies.ServiceJsonKeysPort,
+		),
+		lo.Must(cfg.Dependencies.ServiceJsonKeysCredentials.Options(ctx))...,
+	))
+	defer jsonKeysClient.Close()
+
+	claimsVerifier := lo.Must(
+		servicejsonkeys.NewClaimsVerifier[serviceauthentication.Claims](jsonKeysClient),
+	)
+	withAuth := serviceauthentication.NewAuthHandler(claimsVerifier, cfg.Permissions, cfg.Logger)
+	// Protected routes receive this wrapper once their handlers carry authenticated actors.
+	_ = withAuth
 
 	// =================================================================================================================
 	// DAO

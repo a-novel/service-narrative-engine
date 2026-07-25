@@ -1,0 +1,18 @@
+roles:
+  "auth:anon":
+    priority: 0
+  "auth:user":
+    priority: 1
+    inherits:
+      - "auth:anon"
+    permissions:
+      - "narrative:item:read"
+      - "narrative:item:write"
+  "auth:admin":
+    priority: 2
+    inherits:
+      - "auth:user"
+  "auth:superadmin":
+    priority: 3
+    inherits:
+      - "auth:admin"
