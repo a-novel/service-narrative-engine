@@ -8,10 +8,12 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"maps"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"slices"
 	"strconv"
 	"syscall"
 
@@ -22,6 +24,7 @@ import (
 
 	serviceauthentication "github.com/a-novel/service-authentication/v2/pkg/go"
 	servicejobs "github.com/a-novel/service-jobs/pkg/go"
+	jobworker "github.com/a-novel/service-jobs/pkg/go/worker"
 	servicejsonkeys "github.com/a-novel/service-json-keys/v2/pkg/go"
 
 	"github.com/a-novel-kit/golib/httpf"
@@ -54,15 +57,12 @@ func main() {
 	// CLIENTS
 	// =================================================================================================================
 
-	// Provider callers will share this client once they exist. Constructing it now keeps the pool
-	// configuration wired at boot; the value is discarded until a caller can receive it.
+	// TODO: Pass this shared client to narrative job handlers that call providers.
 	_ = httpf.NewPoolClient(httpf.PoolOptions{
 		MaxIdleConns:        cfg.HTTPClient.MaxIdleConns,
 		MaxIdleConnsPerHost: cfg.HTTPClient.MaxIdleConnsPerHost,
 	})
 
-	// The client remains unwired until a queue consumer exists. Its lazy dial keeps queue
-	// availability out of startup.
 	jobsClient := lo.Must(servicejobs.NewClient(
 		fmt.Sprintf("%s:%d", cfg.Dependencies.ServiceJobsHost, cfg.Dependencies.ServiceJobsPort),
 		lo.Must(cfg.Dependencies.ServiceJobsCredentials.Options(ctx))...,
@@ -103,6 +103,16 @@ func main() {
 	serviceItemList := core.NewItemList(daoItemList)
 	serviceItemUpdate := core.NewItemUpdate(daoItemUpdate)
 	serviceItemDelete := core.NewItemDelete(daoItemDelete)
+
+	jobHandlers := map[string]jobworker.Handler{}
+	jobExecutor := lo.Must(jobworker.NewExecutor(jobsClient, jobHandlers))
+	jobWorker := lo.Must(core.NewWorker(
+		jobsClient,
+		jobExecutor,
+		slices.Collect(maps.Keys(jobHandlers)),
+		cfg.Worker,
+		cfg.Logger,
+	))
 
 	// =================================================================================================================
 	// HANDLERS
@@ -171,6 +181,31 @@ func main() {
 	}
 
 	log.Println("Starting REST server on " + httpServer.Addr)
+	cfg.Logger.Info(ctx, fmt.Sprintf(
+		"starting job worker: concurrency=%d poll_interval=%s job_deadline=%s lease=%s drain_budget=%s",
+		cfg.Worker.Concurrency,
+		cfg.Worker.PollInterval,
+		cfg.Worker.JobDeadline,
+		cfg.Worker.Lease,
+		cfg.Worker.DrainBudget,
+	))
+
+	if cfg.HTTPClient.MaxIdleConnsPerHost < cfg.Worker.Concurrency {
+		cfg.Logger.Warn(ctx, fmt.Sprintf(
+			"HTTP_CLIENT_MAX_IDLE_CONNS_PER_HOST=%d is below WORKER_CONCURRENCY=%d",
+			cfg.HTTPClient.MaxIdleConnsPerHost,
+			cfg.Worker.Concurrency,
+		))
+	}
+
+	workerCtx, stopWorker := context.WithCancel(ctx)
+
+	workerDone := make(chan struct{})
+	go func() {
+		defer close(workerDone)
+
+		jobWorker.Run(workerCtx)
+	}()
 
 	go func() {
 		err := httpServer.ListenAndServe()
@@ -182,6 +217,10 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
+
+	log.Println("Stopping job worker...")
+	stopWorker()
+	<-workerDone
 
 	log.Println("Shutting down REST server...")
 
