@@ -50,7 +50,7 @@ services:
     networks:
       - narrative-engine-integration-rest-test
   postgres-jobs:
-    image: ghcr.io/a-novel/service-jobs/database:v0.2.1
+    image: ghcr.io/a-novel/service-jobs/database:v0.3.0
     networks:
       - narrative-engine-integration-rest-test
     environment:
