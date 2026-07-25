@@ -110,7 +110,7 @@ Database connection pool (all images). The limits are **per process**, so what h
 | `POSTGRES_MAX_OPEN_CONNS` | Maximum open connections to the database. | `20`    |
 | `POSTGRES_MAX_IDLE_CONNS` | Maximum connections kept open while idle. | `20`    |
 
-Outbound HTTP client (images `rest`, `standalone-rest`). One client is shared by every call to an outside provider. Keep `HTTP_CLIENT_MAX_IDLE_CONNS_PER_HOST` at or above the number of jobs the worker runs at once: below it, every concurrent call past the limit reopens a connection to a host the process is already talking to, and pays a fresh TLS handshake for it.
+Outbound HTTP client (images `rest`, `standalone-rest`). The service sizes the pooled, traced client supplied by golib's [`httpf`](https://pkg.go.dev/github.com/a-novel-kit/golib/httpf) package. Keep `HTTP_CLIENT_MAX_IDLE_CONNS_PER_HOST` at or above provider concurrency so calls reuse existing connections.
 
 | Name                                  | Description                                       | Default |
 | ------------------------------------- | ------------------------------------------------- | ------- |

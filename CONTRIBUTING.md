@@ -49,19 +49,17 @@ Unit-test a service that takes a transactor with `transactiontest.NewTransactor`
 
 ## Outbound calls
 
-Every call to an outside provider runs on the one client `cmd` builds from `lib.NewHTTPClient` and injects downward. The linter refuses `http.DefaultClient`, `http.DefaultTransport` and the `http.Get`/`Head`/`Post`/`PostForm` helpers, which are unsized, untraced, and take no context.
+The service constructs one process-wide client with [`httpf.NewPoolClient`](https://pkg.go.dev/github.com/a-novel-kit/golib/httpf), even before provider callers exist, so its pool configuration stays wired at boot. Provider integrations take that client as a constructor dependency. The linter refuses `http.DefaultClient`, `http.DefaultTransport` and the `http.Get`/`Head`/`Post`/`PostForm` helpers, which are unsized, untraced, and take no context.
 
-Two of that client's settings look like mistakes and are not. **Both timeouts are zero**: a non-streaming model call sends no response headers until generation finishes, so any value there kills exactly the long calls the client exists to carry, and only those — which means it passes CI and fails in production. Deadlines come from the caller's context instead. **`HTTP_CLIENT_MAX_IDLE_CONNS_PER_HOST` must be at least the number of jobs the worker runs at once**, because Go's default is two and every concurrent call past the limit pays a fresh TLS handshake against a host the process is already connected to.
-
-Exercise an outbound call against `daotest.NewProviderServer`, and reach it through `lib.NewHTTPClient` rather than a bare client, so the test runs on the transport the service actually uses. The server replays scripted responses in order and records what it received. Its `Hang` and `Drop` options cover the two failures a recorded fixture cannot reproduce — a provider that accepts a request and goes quiet, and one that drops the connection without answering. Response bodies worth reading live in `testdata/` as pretty-printed JSON and load with `daotest.Golden`, so a change to one reads in review as the lines that changed.
+The golib client leaves both timeouts at zero because a non-streaming model call may send no response headers until generation finishes. Deadlines come from the caller's context. Keep `HTTP_CLIENT_MAX_IDLE_CONNS_PER_HOST` at least as large as provider concurrency so the process reuses its existing connections.
 
 ---
 
-## Test-support packages
+## Testing outbound calls
 
-A fixture shared across packages cannot live in a `_test.go` file, because Go excludes those from a package's exported surface. It goes in a regular file in a `<layer>test` package beside the layer it supports — `internal/config/configtest`, `internal/dao/daotest`.
+Use [`httpftest.NewServer`](https://pkg.go.dev/github.com/a-novel-kit/golib/httpf/httpftest) from golib and reach it through the injected pool client. The server replays scripted responses in order and records each request. Its `Hang` and `Drop` options cover providers that stop answering or close the connection without a response.
 
-Those packages compile into the module, so their boundary is a rule review enforces rather than one the compiler does: **production code never imports them.** They ride into the Docker build context with the rest of their layer's directory, and are never linked, because no `cmd` reaches them.
+Store response bodies in the caller's `testdata/` directory as pretty-printed JSON and load them with `httpftest.Golden`. This keeps provider fixtures beside the tests that own them while the reusable server stays in golib.
 
 ---
 
