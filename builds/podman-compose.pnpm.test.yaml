@@ -71,7 +71,7 @@ services:
       - narrative-engine-integration-rest-test
 
   service-jobs:
-    image: ghcr.io/a-novel/service-jobs/standalone-grpc:v0.2.1
+    image: ghcr.io/a-novel/service-jobs/standalone-grpc:v0.3.0
     depends_on:
       postgres-jobs:
         condition: service_healthy
