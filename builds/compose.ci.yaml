@@ -1,0 +1,99 @@
+x-external-postgres-environment: &external-postgres-environment
+  POSTGRES_PASSWORD: postgres
+  POSTGRES_USER: postgres
+  POSTGRES_DB: postgres
+  POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+  POSTGRES_INITDB_ARGS: --auth=scram-sha-256
+
+x-postgres-healthcheck: &postgres-healthcheck
+  test: ["CMD", "pg_isready"]
+  interval: 10s
+  timeout: 5s
+  retries: 5
+
+services:
+  postgres:
+    image: "${DATABASE_IMAGE:?DATABASE_IMAGE is required}"
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
+    healthcheck: *postgres-healthcheck
+
+  postgres-json-keys:
+    image: "${JSON_KEYS_DATABASE_IMAGE:?JSON_KEYS_DATABASE_IMAGE is required}"
+    environment: *external-postgres-environment
+    healthcheck: *postgres-healthcheck
+
+  service-json-keys:
+    image: "${JSON_KEYS_GRPC_IMAGE:?JSON_KEYS_GRPC_IMAGE is required}"
+    restart: on-failure:10
+    depends_on:
+      postgres-json-keys:
+        condition: service_healthy
+    environment:
+      POSTGRES_DSN: postgres://postgres:postgres@postgres-json-keys:5432/postgres?sslmode=disable
+      APP_MASTER_KEY: "0000000000000000000000000000000000000000000000000000000000000001"
+
+  postgres-authentication:
+    image: "${AUTHENTICATION_DATABASE_IMAGE:?AUTHENTICATION_DATABASE_IMAGE is required}"
+    environment: *external-postgres-environment
+    healthcheck: *postgres-healthcheck
+
+  service-authentication:
+    image: "${AUTHENTICATION_REST_IMAGE:?AUTHENTICATION_REST_IMAGE is required}"
+    restart: on-failure:10
+    ports:
+      - "4000:8080"
+    depends_on:
+      postgres-authentication:
+        condition: service_healthy
+      service-json-keys:
+        condition: service_healthy
+    environment:
+      POSTGRES_DSN: postgres://postgres:postgres@postgres-authentication:5432/postgres?sslmode=disable
+      SERVICE_JSON_KEYS_HOST: service-json-keys
+      SERVICE_JSON_KEYS_PORT: 8080
+      SUPER_ADMIN_EMAIL: noreply@agorastoryverse.com
+      SUPER_ADMIN_PASSWORD: admin
+
+  postgres-jobs:
+    image: "${JOBS_DATABASE_IMAGE:?JOBS_DATABASE_IMAGE is required}"
+    environment: *external-postgres-environment
+    healthcheck: *postgres-healthcheck
+
+  service-jobs-migrations:
+    image: "${JOBS_MIGRATIONS_IMAGE:?JOBS_MIGRATIONS_IMAGE is required}"
+    restart: on-failure:10
+    depends_on:
+      postgres-jobs:
+        condition: service_healthy
+    environment:
+      POSTGRES_DSN: postgres://postgres:postgres@postgres-jobs:5432/postgres?sslmode=disable
+
+  service-jobs:
+    image: "${JOBS_GRPC_IMAGE:?JOBS_GRPC_IMAGE is required}"
+    restart: on-failure:10
+    depends_on:
+      service-jobs-migrations:
+        condition: service_completed_successfully
+    environment:
+      POSTGRES_DSN: postgres://postgres:postgres@postgres-jobs:5432/postgres?sslmode=disable
+
+  standalone-rest:
+    image: "${STANDALONE_REST_IMAGE:?STANDALONE_REST_IMAGE is required}"
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      service-json-keys:
+        condition: service_healthy
+      service-jobs:
+        condition: service_healthy
+    environment:
+      POSTGRES_DSN: postgres://postgres:postgres@postgres:5432/postgres?sslmode=disable
+      SERVICE_JOBS_HOST: service-jobs
+      SERVICE_JOBS_PORT: 8080
+      SERVICE_JSON_KEYS_HOST: service-json-keys
+      SERVICE_JSON_KEYS_PORT: 8080

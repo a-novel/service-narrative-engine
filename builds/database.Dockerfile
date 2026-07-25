@@ -3,6 +3,8 @@
 # It does not run the service's schema migrations; run the migrations target separately.
 FROM docker.io/library/postgres:18.4
 
+ENV POSTGRES_INITDB_ARGS=--auth=scram-sha-256
+
 ARG DEBIAN_FRONTEND=noninteractive
 
 # ======================================================================================================================
