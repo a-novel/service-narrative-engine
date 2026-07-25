@@ -61,7 +61,7 @@ services:
       POSTGRES_INITDB_ARGS: --auth=scram-sha-256
 
   service-jobs-migrations:
-    image: ghcr.io/a-novel/service-jobs/jobs/migrations:v0.2.1
+    image: ghcr.io/a-novel/service-jobs/jobs/migrations:v0.3.0
     depends_on:
       postgres-jobs:
         condition: service_healthy
