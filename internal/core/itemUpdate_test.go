@@ -39,6 +39,7 @@ func TestItemUpdate(t *testing.T) {
 			name: "Success",
 
 			request: &core.ItemUpdateRequest{
+				Actor:       testActor,
 				ID:          uuid.MustParse("00000000-0000-0000-0000-000000000001"),
 				Name:        "updated item",
 				Description: "updated description",
@@ -63,23 +64,41 @@ func TestItemUpdate(t *testing.T) {
 			},
 		},
 		{
+			name: "Error/MissingActor",
+
+			request: &core.ItemUpdateRequest{
+				ID:   uuid.MustParse("00000000-0000-0000-0000-000000000001"),
+				Name: "updated item",
+			},
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
 			name: "Error/EmptyName",
 
-			request:   &core.ItemUpdateRequest{ID: uuid.MustParse("00000000-0000-0000-0000-000000000001"), Name: ""},
+			request: &core.ItemUpdateRequest{
+				Actor: testActor,
+				ID:    uuid.MustParse("00000000-0000-0000-0000-000000000001"),
+				Name:  "",
+			},
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
 			name: "Error/WhitespaceOnlyName",
 
-			request:   &core.ItemUpdateRequest{ID: uuid.MustParse("00000000-0000-0000-0000-000000000001"), Name: "   "},
+			request: &core.ItemUpdateRequest{
+				Actor: testActor,
+				ID:    uuid.MustParse("00000000-0000-0000-0000-000000000001"),
+				Name:  "   ",
+			},
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
 			name: "Error/NameTooLong",
 
 			request: &core.ItemUpdateRequest{
-				ID:   uuid.MustParse("00000000-0000-0000-0000-000000000001"),
-				Name: string(make([]byte, 257)),
+				Actor: testActor,
+				ID:    uuid.MustParse("00000000-0000-0000-0000-000000000001"),
+				Name:  string(make([]byte, 257)),
 			},
 			expectErr: core.ErrInvalidRequest,
 		},
@@ -87,8 +106,9 @@ func TestItemUpdate(t *testing.T) {
 			name: "Error/Dao",
 
 			request: &core.ItemUpdateRequest{
-				ID:   uuid.MustParse("00000000-0000-0000-0000-000000000001"),
-				Name: "updated item",
+				Actor: testActor,
+				ID:    uuid.MustParse("00000000-0000-0000-0000-000000000001"),
+				Name:  "updated item",
 			},
 
 			daoMock:   &daoMock{err: errFoo},

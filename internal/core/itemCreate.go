@@ -22,6 +22,7 @@ type ItemCreateDao interface {
 
 // ItemCreateRequest holds the validated input for [ItemCreate.Exec].
 type ItemCreateRequest struct {
+	Actor       Actor  `validate:"required"`
 	Name        string `validate:"required,notblank,max=256"`
 	Description string `validate:"max=1024"`
 }

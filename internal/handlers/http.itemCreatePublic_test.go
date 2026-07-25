@@ -35,6 +35,7 @@ func TestRestItemCreatePublic(t *testing.T) {
 		name string
 
 		request *http.Request
+		claims  testClaimsState
 
 		serviceMock *serviceMock
 
@@ -51,6 +52,7 @@ func TestRestItemCreatePublic(t *testing.T) {
 
 			serviceMock: &serviceMock{
 				req: &core.ItemCreateRequest{
+					Actor:       testActor,
 					Name:        "test item",
 					Description: "test description",
 				},
@@ -73,6 +75,20 @@ func TestRestItemCreatePublic(t *testing.T) {
 			},
 		},
 		{
+			name: "Error/AnonymousActor",
+
+			request:      httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/items", strings.NewReader(`{}`)),
+			claims:       testClaimsAnonymous,
+			expectStatus: http.StatusForbidden,
+		},
+		{
+			name: "Error/MissingClaims",
+
+			request:      httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/items", strings.NewReader(`{}`)),
+			claims:       testClaimsMissing,
+			expectStatus: http.StatusInternalServerError,
+		},
+		{
 			name: "Error/InvalidBody",
 
 			request: httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/items", strings.NewReader(`not json`)),
@@ -87,7 +103,7 @@ func TestRestItemCreatePublic(t *testing.T) {
 			}`)),
 
 			serviceMock: &serviceMock{
-				req: &core.ItemCreateRequest{Name: ""},
+				req: &core.ItemCreateRequest{Actor: testActor, Name: ""},
 				err: core.ErrInvalidRequest,
 			},
 
@@ -101,7 +117,7 @@ func TestRestItemCreatePublic(t *testing.T) {
 			}`)),
 
 			serviceMock: &serviceMock{
-				req: &core.ItemCreateRequest{Name: "test item"},
+				req: &core.ItemCreateRequest{Actor: testActor, Name: "test item"},
 				err: errFoo,
 			},
 
@@ -124,7 +140,7 @@ func TestRestItemCreatePublic(t *testing.T) {
 			handler := handlers.NewItemCreatePublic(service, config.LoggerDev)
 			w := httptest.NewRecorder()
 
-			handler.ServeHTTP(w, testCase.request)
+			handler.ServeHTTP(w, withTestClaims(testCase.request, testCase.claims))
 
 			res := w.Result()
 

@@ -28,6 +28,7 @@ const (
 
 // ItemListRequest selects a page of items.
 type ItemListRequest struct {
+	Actor Actor `validate:"required"`
 	// Limit defaults to ItemListDefaultSize when zero or negative.
 	Limit  int `validate:"max=100"`
 	Offset int `validate:"min=0"`

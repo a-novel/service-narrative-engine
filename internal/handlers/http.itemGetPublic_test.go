@@ -35,6 +35,7 @@ func TestRestItemGetPublic(t *testing.T) {
 		name string
 
 		request *http.Request
+		claims  testClaimsState
 
 		serviceMock *serviceMock
 
@@ -53,7 +54,8 @@ func TestRestItemGetPublic(t *testing.T) {
 
 			serviceMock: &serviceMock{
 				req: &core.ItemGetRequest{
-					ID: uuid.MustParse("00000000-0000-0000-0000-000000000001"),
+					Actor: testActor,
+					ID:    uuid.MustParse("00000000-0000-0000-0000-000000000001"),
 				},
 				resp: &core.Item{
 					ID:          uuid.MustParse("00000000-0000-0000-0000-000000000001"),
@@ -72,6 +74,26 @@ func TestRestItemGetPublic(t *testing.T) {
 				"createdAt":   "2021-01-01T00:00:00Z",
 				"updatedAt":   "2021-01-02T00:00:00Z",
 			},
+		},
+		{
+			name: "Error/AnonymousActor",
+
+			request: httptest.NewRequestWithContext(
+				t.Context(), http.MethodGet, "/item?id=00000000-0000-0000-0000-000000000001", nil,
+			),
+			claims: testClaimsAnonymous,
+
+			expectStatus: http.StatusForbidden,
+		},
+		{
+			name: "Error/MissingClaims",
+
+			request: httptest.NewRequestWithContext(
+				t.Context(), http.MethodGet, "/item?id=00000000-0000-0000-0000-000000000001", nil,
+			),
+			claims: testClaimsMissing,
+
+			expectStatus: http.StatusInternalServerError,
 		},
 		{
 			name: "Error/InvalidID",
@@ -97,7 +119,8 @@ func TestRestItemGetPublic(t *testing.T) {
 
 			serviceMock: &serviceMock{
 				req: &core.ItemGetRequest{
-					ID: uuid.MustParse("00000000-0000-0000-0000-000000000001"),
+					Actor: testActor,
+					ID:    uuid.MustParse("00000000-0000-0000-0000-000000000001"),
 				},
 				err: dao.ErrItemGetNotFound,
 			},
@@ -116,7 +139,8 @@ func TestRestItemGetPublic(t *testing.T) {
 
 			serviceMock: &serviceMock{
 				req: &core.ItemGetRequest{
-					ID: uuid.MustParse("00000000-0000-0000-0000-000000000001"),
+					Actor: testActor,
+					ID:    uuid.MustParse("00000000-0000-0000-0000-000000000001"),
 				},
 				err: errFoo,
 			},
@@ -140,7 +164,7 @@ func TestRestItemGetPublic(t *testing.T) {
 			handler := handlers.NewItemGetPublic(service, config.LoggerDev)
 			w := httptest.NewRecorder()
 
-			handler.ServeHTTP(w, testCase.request)
+			handler.ServeHTTP(w, withTestClaims(testCase.request, testCase.claims))
 
 			res := w.Result()
 

@@ -39,6 +39,7 @@ func TestItemCreate(t *testing.T) {
 			name: "Success",
 
 			request: &core.ItemCreateRequest{
+				Actor:       testActor,
 				Name:        "test item",
 				Description: "test description",
 			},
@@ -62,27 +63,33 @@ func TestItemCreate(t *testing.T) {
 			},
 		},
 		{
+			name: "Error/MissingActor",
+
+			request:   &core.ItemCreateRequest{Name: "test item"},
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
 			name: "Error/EmptyName",
 
-			request:   &core.ItemCreateRequest{Name: ""},
+			request:   &core.ItemCreateRequest{Actor: testActor, Name: ""},
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
 			name: "Error/WhitespaceOnlyName",
 
-			request:   &core.ItemCreateRequest{Name: "   "},
+			request:   &core.ItemCreateRequest{Actor: testActor, Name: "   "},
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
 			name: "Error/NameTooLong",
 
-			request:   &core.ItemCreateRequest{Name: string(make([]byte, 257))},
+			request:   &core.ItemCreateRequest{Actor: testActor, Name: string(make([]byte, 257))},
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
 			name: "Error/Dao",
 
-			request: &core.ItemCreateRequest{Name: "test item"},
+			request: &core.ItemCreateRequest{Actor: testActor, Name: "test item"},
 
 			daoMock:   &daoMock{err: errFoo},
 			expectErr: errFoo,

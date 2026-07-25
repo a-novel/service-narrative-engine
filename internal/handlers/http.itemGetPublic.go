@@ -39,16 +39,25 @@ func (handler *ItemGetPublic) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	ctx, span := otel.Tracer().Start(r.Context(), "rest.ItemGetPublic")
 	defer span.End()
 
+	actor, err := actorFromContext(ctx)
+	if err != nil {
+		httpf.HandleError(ctx, handler.logger, w, span, httpf.ErrMap{
+			ErrAnonymousActor: http.StatusForbidden,
+		}, err)
+
+		return
+	}
+
 	var request ItemGetPublicRequest
 
-	err := muxDecoder.Decode(&request, r.URL.Query())
+	err = muxDecoder.Decode(&request, r.URL.Query())
 	if err != nil {
 		httpf.HandleError(ctx, handler.logger, w, span, httpf.ErrMap{nil: http.StatusBadRequest}, err)
 
 		return
 	}
 
-	item, err := handler.service.Exec(ctx, &core.ItemGetRequest{ID: request.ID})
+	item, err := handler.service.Exec(ctx, &core.ItemGetRequest{Actor: *actor, ID: request.ID})
 	if err != nil {
 		httpf.HandleError(ctx, handler.logger, w, span, httpf.ErrMap{
 			dao.ErrItemGetNotFound: http.StatusNotFound,

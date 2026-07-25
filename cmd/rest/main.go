@@ -83,8 +83,6 @@ func main() {
 		servicejsonkeys.NewClaimsVerifier[serviceauthentication.Claims](jsonKeysClient),
 	)
 	withAuth := serviceauthentication.NewAuthHandler(claimsVerifier, cfg.Permissions, cfg.Logger)
-	// Protected routes receive this wrapper once their handlers carry authenticated actors.
-	_ = withAuth
 
 	// =================================================================================================================
 	// DAO
@@ -146,11 +144,17 @@ func main() {
 
 	router.Get("/ping", handlerPing.ServeHTTP)
 	router.Get("/healthcheck", handlerHealth.ServeHTTP)
-	router.Post("/items", handlerItemCreate.ServeHTTP)
-	router.Get("/items", handlerItemList.ServeHTTP)
-	router.Get("/item", handlerItemGet.ServeHTTP)
-	router.Put("/item", handlerItemUpdate.ServeHTTP)
-	router.Delete("/item", handlerItemDelete.ServeHTTP)
+	router.Route("/items", func(r chi.Router) {
+		r.Use(handlers.BearerChallenge)
+		withAuth(r, config.PermissionItemWrite).Post("/", handlerItemCreate.ServeHTTP)
+		withAuth(r, config.PermissionItemRead).Get("/", handlerItemList.ServeHTTP)
+	})
+	router.Route("/item", func(r chi.Router) {
+		r.Use(handlers.BearerChallenge)
+		withAuth(r, config.PermissionItemRead).Get("/", handlerItemGet.ServeHTTP)
+		withAuth(r, config.PermissionItemWrite).Put("/", handlerItemUpdate.ServeHTTP)
+		withAuth(r, config.PermissionItemWrite).Delete("/", handlerItemDelete.ServeHTTP)
+	})
 
 	// =================================================================================================================
 	// RUN

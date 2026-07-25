@@ -64,52 +64,69 @@ export const ItemDeleteRequestSchema = z.object({
 export type ItemDeleteRequest = z.infer<typeof ItemDeleteRequestSchema>;
 
 /** Creates an Item with the given name and optional description, returning the stored record. */
-export async function itemCreate(api: NarrativeEngineApi, name: string, description?: string): Promise<Item> {
+export async function itemCreate(
+  api: NarrativeEngineApi,
+  accessToken: string,
+  name: string,
+  description?: string
+): Promise<Item> {
   return await api.fetch("/items", ItemSchema, {
     method: "POST",
-    headers: HTTP_HEADERS.JSON,
+    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
     body: JSON.stringify({ name, description }),
   });
 }
 
 /** Returns a single Item by its ID. */
-export async function itemGet(api: NarrativeEngineApi, id: string): Promise<Item> {
+export async function itemGet(api: NarrativeEngineApi, accessToken: string, id: string): Promise<Item> {
   const params = new URLSearchParams();
   params.set("id", id);
-  return await api.fetch(`/item?${params.toString()}`, ItemSchema, { method: "GET", headers: HTTP_HEADERS.JSON });
+  return await api.fetch(`/item?${params.toString()}`, ItemSchema, {
+    method: "GET",
+    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
+  });
 }
 
 /**
  * Returns a page of Items. `limit` defaults to 100 and `offset` to 0 when omitted; a `limit` of 0
  * also falls back to 100.
  */
-export async function itemList(api: NarrativeEngineApi, limit?: number, offset?: number): Promise<Item[]> {
+export async function itemList(
+  api: NarrativeEngineApi,
+  accessToken: string,
+  limit?: number,
+  offset?: number
+): Promise<Item[]> {
   const params = new URLSearchParams();
   params.set("limit", `${limit || 100}`);
   params.set("offset", `${offset || 0}`);
   return await api.fetch(`/items?${params.toString()}`, z.array(ItemSchema), {
     method: "GET",
-    headers: HTTP_HEADERS.JSON,
+    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
   });
 }
 
 /** Replaces the name and description of the Item with the given ID, returning the updated record. */
 export async function itemUpdate(
   api: NarrativeEngineApi,
+  accessToken: string,
   id: string,
   name: string,
   description?: string
 ): Promise<Item> {
   return await api.fetch(`/item`, ItemSchema, {
     method: "PUT",
-    headers: HTTP_HEADERS.JSON,
+    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
     body: JSON.stringify({ id, name, description }),
   });
 }
 
 /** Deletes the Item with the given ID, returning the deleted record. */
-export async function itemDelete(api: NarrativeEngineApi, id: string): Promise<Item> {
+export async function itemDelete(api: NarrativeEngineApi, accessToken: string, id: string): Promise<Item> {
   const params = new URLSearchParams();
   params.set("id", id);
-  return await api.fetch(`/item?${params.toString()}`, ItemSchema, { method: "DELETE", headers: HTTP_HEADERS.JSON });
+  return await api.fetch(`/item?${params.toString()}`, ItemSchema, {
+    method: "DELETE",
+    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
+  });
 }

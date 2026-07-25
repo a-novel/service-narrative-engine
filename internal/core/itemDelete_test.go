@@ -38,7 +38,8 @@ func TestItemDelete(t *testing.T) {
 			name: "Success",
 
 			request: &core.ItemDeleteRequest{
-				ID: uuid.MustParse("00000000-0000-0000-0000-000000000001"),
+				Actor: testActor,
+				ID:    uuid.MustParse("00000000-0000-0000-0000-000000000001"),
 			},
 
 			daoMock: &daoMock{
@@ -60,16 +61,25 @@ func TestItemDelete(t *testing.T) {
 			},
 		},
 		{
+			name: "Error/MissingActor",
+
+			request: &core.ItemDeleteRequest{
+				ID: uuid.MustParse("00000000-0000-0000-0000-000000000001"),
+			},
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
 			name: "Error/InvalidID",
 
-			request:   &core.ItemDeleteRequest{ID: uuid.Nil},
+			request:   &core.ItemDeleteRequest{Actor: testActor, ID: uuid.Nil},
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
 			name: "Error/Dao",
 
 			request: &core.ItemDeleteRequest{
-				ID: uuid.MustParse("00000000-0000-0000-0000-000000000001"),
+				Actor: testActor,
+				ID:    uuid.MustParse("00000000-0000-0000-0000-000000000001"),
 			},
 
 			daoMock:   &daoMock{err: errFoo},

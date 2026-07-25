@@ -158,9 +158,10 @@ pnpm add @a-novel/service-narrative-engine-rest
 import { NarrativeEngineApi, itemCreate, itemList } from "@a-novel/service-narrative-engine-rest";
 
 const api = new NarrativeEngineApi("http://service-narrative-engine:8080");
+const accessToken = "<access-token>";
 
-const created = await itemCreate(api, "My Item", "An optional description.");
-const items = await itemList(api, 10, 0);
+const created = await itemCreate(api, accessToken, "My Item", "An optional description.");
+const items = await itemList(api, accessToken, 10, 0);
 ```
 
 API reference: [a-novel.github.io/service-narrative-engine](https://a-novel.github.io/service-narrative-engine).

@@ -23,6 +23,7 @@ type ItemUpdateDao interface {
 // ItemUpdateRequest holds the validated input for [ItemUpdate.Exec]; ID selects
 // the item to modify.
 type ItemUpdateRequest struct {
+	Actor       Actor `validate:"required"`
 	ID          uuid.UUID
 	Name        string `validate:"required,notblank,max=256"`
 	Description string `validate:"max=1024"`

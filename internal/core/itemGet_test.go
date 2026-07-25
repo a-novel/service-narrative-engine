@@ -38,7 +38,8 @@ func TestItemGet(t *testing.T) {
 			name: "Success",
 
 			request: &core.ItemGetRequest{
-				ID: uuid.MustParse("00000000-0000-0000-0000-000000000001"),
+				Actor: testActor,
+				ID:    uuid.MustParse("00000000-0000-0000-0000-000000000001"),
 			},
 
 			daoMock: &daoMock{
@@ -60,16 +61,25 @@ func TestItemGet(t *testing.T) {
 			},
 		},
 		{
+			name: "Error/MissingActor",
+
+			request: &core.ItemGetRequest{
+				ID: uuid.MustParse("00000000-0000-0000-0000-000000000001"),
+			},
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
 			name: "Error/InvalidID",
 
-			request:   &core.ItemGetRequest{ID: uuid.Nil},
+			request:   &core.ItemGetRequest{Actor: testActor, ID: uuid.Nil},
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
 			name: "Error/Dao",
 
 			request: &core.ItemGetRequest{
-				ID: uuid.MustParse("00000000-0000-0000-0000-000000000001"),
+				Actor: testActor,
+				ID:    uuid.MustParse("00000000-0000-0000-0000-000000000001"),
 			},
 
 			daoMock:   &daoMock{err: errFoo},
