@@ -29,8 +29,8 @@ github.com/a-novel-kit/jwt/v2 v2.2.1 h1:Oqu29DG6k9/v3Eo3uLpYPCGP1c8xp4cFcjaVlUpR
 github.com/a-novel-kit/jwt/v2 v2.2.1/go.mod h1:QLLGdh58mLRNb0SiRCrYww2EJrdyaMSVKPn3jovPEQg=
 github.com/a-novel/service-authentication/v2 v2.4.5 h1:+I42jKAig3B7/Hh/dumT+Vae++Q9DiVgyBsf2xgw/ek=
 github.com/a-novel/service-authentication/v2 v2.4.5/go.mod h1:3wEqcETJjY0SxCjQk26n9+qF9bMhMh+WtS/QoP8/Uzc=
-github.com/a-novel/service-jobs v0.2.1-0.20260725030639-718c94974644 h1:sGodBHnIuI3eMvrTMQiuvoI6UhDxA2YKsehGpz3dOno=
-github.com/a-novel/service-jobs v0.2.1-0.20260725030639-718c94974644/go.mod h1:mT3EJZs3Fk6bnUv8zZd+fjr2uwBs6Y0jSQFApeeqJ+k=
+github.com/a-novel/service-jobs v0.2.1 h1:SoNhgwrupj6BH9HFOrzw6vM6e+CPBmgdBX3rlgCtwR8=
+github.com/a-novel/service-jobs v0.2.1/go.mod h1:mT3EJZs3Fk6bnUv8zZd+fjr2uwBs6Y0jSQFApeeqJ+k=
 github.com/a-novel/service-json-keys/v2 v2.4.1 h1:sPxa36bwmskLQC+bhpjQkg6zSFY5FrAevcc5eWZ+wRI=
 github.com/a-novel/service-json-keys/v2 v2.4.1/go.mod h1:EfbACeOmjbcNXGbb89cGsjkiGz3hpjKvbd+smoMfk6Y=
 github.com/cenkalti/backoff/v5 v5.0.3 h1:ZN+IMa753KfX5hd8vVaMixjnqRZ3y8CuJKRKj1xcsSM=
