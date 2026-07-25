@@ -128,11 +128,11 @@ Outbound HTTP client (images `rest`, `standalone-rest`). The service sizes the p
 
 Narrative job worker (images `rest`, `standalone-rest`). The lease and shutdown drain budget are derived from the job deadline, so they cannot be configured shorter than a handler run.
 
-| Name                   | Description                                      | Default |
-| ---------------------- | ------------------------------------------------ | ------- |
-| `WORKER_CONCURRENCY`   | Concurrent claim pollers and job executions.     | `4`     |
-| `WORKER_POLL_INTERVAL` | Delay after an empty or failed claim.            | `5s`    |
-| `WORKER_JOB_DEADLINE`  | Maximum duration of one narrative job handler.   | `150s`  |
+| Name                   | Description                                    | Default |
+| ---------------------- | ---------------------------------------------- | ------- |
+| `WORKER_CONCURRENCY`   | Concurrent claim pollers and job executions.   | `4`     |
+| `WORKER_POLL_INTERVAL` | Delay after an empty or failed claim.          | `5s`    |
+| `WORKER_JOB_DEADLINE`  | Maximum duration of one narrative job handler. | `150s`  |
 
 Logs and tracing — OpenTelemetry supports a stdout and a Google Cloud exporter (all server images):
 
