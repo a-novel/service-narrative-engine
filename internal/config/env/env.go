@@ -22,6 +22,9 @@ const (
 	ServiceJobsHostDefault = "localhost"
 	ServiceJobsPortDefault = 8080
 
+	ServiceJsonKeysHostDefault = "localhost"
+	ServiceJsonKeysPortDefault = 8080
+
 	RestPortDefault              = 8080
 	RestTimeoutReadDefault       = 15 * time.Second
 	RestTimeoutReadHeaderDefault = 3 * time.Second
@@ -67,6 +70,9 @@ var (
 	serviceJobsHost = getEnv("SERVICE_JOBS_HOST")
 	serviceJobsPort = getEnv("SERVICE_JOBS_PORT")
 
+	serviceJsonKeysHost = getEnv("SERVICE_JSON_KEYS_HOST")
+	serviceJsonKeysPort = getEnv("SERVICE_JSON_KEYS_PORT")
+
 	restPort              = getEnv("REST_PORT")
 	restTimeoutRead       = getEnv("REST_TIMEOUT_READ")
 	restTimeoutReadHeader = getEnv("REST_TIMEOUT_READ_HEADER")
@@ -108,6 +114,11 @@ var (
 	ServiceJobsHost = config.LoadEnv(serviceJobsHost, ServiceJobsHostDefault, config.StringParser)
 	// ServiceJobsPort is the port of the service-jobs gRPC server.
 	ServiceJobsPort = config.LoadEnv(serviceJobsPort, ServiceJobsPortDefault, config.IntParser)
+
+	// ServiceJsonKeysHost is the hostname of the JSON-keys gRPC server.
+	ServiceJsonKeysHost = config.LoadEnv(serviceJsonKeysHost, ServiceJsonKeysHostDefault, config.StringParser)
+	// ServiceJsonKeysPort is the port of the JSON-keys gRPC server.
+	ServiceJsonKeysPort = config.LoadEnv(serviceJsonKeysPort, ServiceJsonKeysPortDefault, config.IntParser)
 
 	// RestPort is the port on which the REST server will listen for incoming requests.
 	RestPort = config.LoadEnv(restPort, RestPortDefault, config.IntParser)

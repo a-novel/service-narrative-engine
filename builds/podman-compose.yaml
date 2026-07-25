@@ -3,9 +3,68 @@ services:
   # EXTERNAL DEPENDENCIES
   # ====================================================================================================================
 
+  postgres-json-keys:
+    profiles: ["auth"]
+    image: ghcr.io/a-novel/service-json-keys/database:v2.4.1
+    networks:
+      - api
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+      POSTGRES_INITDB_ARGS: --auth=scram-sha-256
+    volumes:
+      - json-keys-postgres-data:/var/lib/postgresql/
+
+  service-json-keys:
+    profiles: ["auth"]
+    image: ghcr.io/a-novel/service-json-keys/standalone-grpc:v2.4.1
+    depends_on:
+      postgres-json-keys:
+        condition: service_healthy
+    environment:
+      POSTGRES_DSN: postgres://postgres:postgres@postgres-json-keys:5432/postgres?sslmode=disable
+      # Local-only key for the standalone development stack.
+      APP_MASTER_KEY: 0000000000000000000000000000000000000000000000000000000000000001
+    networks:
+      - api
+
+  postgres-authentication:
+    profiles: ["auth"]
+    image: ghcr.io/a-novel/service-authentication/database:v2.4.5
+    networks:
+      - api
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+      POSTGRES_INITDB_ARGS: --auth=scram-sha-256
+    volumes:
+      - authentication-postgres-data:/var/lib/postgresql/
+
+  service-authentication:
+    profiles: ["auth"]
+    image: ghcr.io/a-novel/service-authentication/standalone-rest:v2.4.5
+    ports:
+      - "${SERVICE_AUTHENTICATION_PORT}:8080"
+    depends_on:
+      postgres-authentication:
+        condition: service_healthy
+      service-json-keys:
+        condition: service_healthy
+    environment:
+      POSTGRES_DSN: postgres://postgres:postgres@postgres-authentication:5432/postgres?sslmode=disable
+      SERVICE_JSON_KEYS_HOST: service-json-keys
+      SERVICE_JSON_KEYS_PORT: 8080
+      SUPER_ADMIN_EMAIL: noreply@agorastoryverse.com
+      SUPER_ADMIN_PASSWORD: admin
+    networks:
+      - api
   postgres-jobs:
     profiles: ["jobs"]
-    image: ghcr.io/a-novel/service-jobs/database:v0.2.0
+    image: ghcr.io/a-novel/service-jobs/database:v0.2.1
     networks:
       - api
     environment:
@@ -19,7 +78,7 @@ services:
 
   service-jobs-migrations:
     profiles: ["jobs"]
-    image: ghcr.io/a-novel/service-jobs/jobs/migrations:v0.2.0
+    image: ghcr.io/a-novel/service-jobs/jobs/migrations:v0.2.1
     depends_on:
       postgres-jobs:
         condition: service_healthy
@@ -30,7 +89,7 @@ services:
 
   service-jobs:
     profiles: ["jobs"]
-    image: ghcr.io/a-novel/service-jobs/standalone-grpc:v0.2.0
+    image: ghcr.io/a-novel/service-jobs/standalone-grpc:v0.2.1
     ports:
       - "${SERVICE_JOBS_PORT}:8080"
     depends_on:
@@ -101,6 +160,8 @@ services:
       POSTGRES_DSN: postgres://postgres:postgres@postgres-narrative-engine:5432/postgres?sslmode=disable
       SERVICE_JOBS_HOST: service-jobs
       SERVICE_JOBS_PORT: 8080
+      SERVICE_JSON_KEYS_HOST: service-json-keys
+      SERVICE_JSON_KEYS_PORT: 8080
     networks:
       - api
 
@@ -110,3 +171,5 @@ networks:
 volumes:
   narrative-engine-postgres-data:
   jobs-postgres-data:
+  json-keys-postgres-data:
+  authentication-postgres-data:

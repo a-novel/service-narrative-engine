@@ -66,7 +66,17 @@ var AppPresetDefault = App{
 				Host: env.ServiceJobsHost,
 			},
 		),
+		ServiceJsonKeysHost: env.ServiceJsonKeysHost,
+		ServiceJsonKeysPort: env.ServiceJsonKeysPort,
+		ServiceJsonKeysCredentials: lo.Ternary[grpcf.CredentialsProvider](
+			env.GcloudProjectId == "",
+			&grpcf.LocalCredentialsProvider{},
+			&grpcf.GcloudCredentialsProvider{
+				Host: env.ServiceJsonKeysHost,
+			},
+		),
 	},
+	Permissions: PermissionsConfigDefault,
 	Otel: lo.If[otel.Config](!env.Otel, &otelpresets.Disabled{}).
 		ElseIf(env.GcloudProjectId == "", &otelpresets.Local{
 			FlushTimeout: OtelFlushTimeout,

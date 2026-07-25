@@ -3,6 +3,8 @@ package config
 import (
 	"time"
 
+	serviceauthentication "github.com/a-novel/service-authentication/v2/pkg/go"
+
 	"github.com/a-novel-kit/golib/grpcf"
 	"github.com/a-novel-kit/golib/logging"
 	"github.com/a-novel-kit/golib/otel"
@@ -11,9 +13,12 @@ import (
 
 // Dependencies configures the backing services this service calls.
 type Dependencies struct {
-	ServiceJobsHost        string                    `json:"serviceJobsHost" yaml:"serviceJobsHost"`
-	ServiceJobsPort        int                       `json:"serviceJobsPort" yaml:"serviceJobsPort"`
-	ServiceJobsCredentials grpcf.CredentialsProvider `json:"-"               yaml:"-"`
+	ServiceJobsHost            string                    `json:"serviceJobsHost"     yaml:"serviceJobsHost"`
+	ServiceJobsPort            int                       `json:"serviceJobsPort"     yaml:"serviceJobsPort"`
+	ServiceJobsCredentials     grpcf.CredentialsProvider `json:"-"                   yaml:"-"`
+	ServiceJsonKeysHost        string                    `json:"serviceJSONKeysHost" yaml:"serviceJSONKeysHost"`
+	ServiceJsonKeysPort        int                       `json:"serviceJSONKeysPort" yaml:"serviceJSONKeysPort"`
+	ServiceJsonKeysCredentials grpcf.CredentialsProvider `json:"-"                   yaml:"-"`
 }
 
 // RestCors holds CORS configuration for the REST server.
@@ -65,7 +70,8 @@ type App struct {
 	App  Main `json:"app"  yaml:"app"`
 	Rest Rest `json:"rest" yaml:"rest"`
 
-	Dependencies Dependencies `json:"dependencies" yaml:"dependencies"`
+	Dependencies Dependencies                      `json:"dependencies" yaml:"dependencies"`
+	Permissions  serviceauthentication.Permissions `json:"permissions"  yaml:"permissions"`
 
 	Otel       otel.Config        `json:"otel"       yaml:"otel"`
 	Logger     logging.Log        `json:"logger"     yaml:"logger"`
