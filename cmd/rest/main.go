@@ -6,6 +6,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -18,6 +19,8 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/samber/lo"
+
+	servicejobs "github.com/a-novel/service-jobs/pkg/go"
 
 	"github.com/a-novel-kit/golib/httpf"
 	"github.com/a-novel-kit/golib/otel"
@@ -55,6 +58,14 @@ func main() {
 		MaxIdleConns:        cfg.HTTPClient.MaxIdleConns,
 		MaxIdleConnsPerHost: cfg.HTTPClient.MaxIdleConnsPerHost,
 	})
+
+	// The client remains unwired until a queue consumer exists. Its lazy dial keeps queue
+	// availability out of startup.
+	jobsClient := lo.Must(servicejobs.NewClient(
+		fmt.Sprintf("%s:%d", cfg.Dependencies.ServiceJobsHost, cfg.Dependencies.ServiceJobsPort),
+		lo.Must(cfg.Dependencies.ServiceJobsCredentials.Options(ctx))...,
+	))
+	defer jobsClient.Close()
 
 	// =================================================================================================================
 	// DAO

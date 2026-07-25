@@ -6,6 +6,7 @@ import (
 
 	"github.com/samber/lo"
 
+	"github.com/a-novel-kit/golib/grpcf"
 	"github.com/a-novel-kit/golib/logging"
 	loggingpresets "github.com/a-novel-kit/golib/logging/presets"
 	"github.com/a-novel-kit/golib/otel"
@@ -55,6 +56,17 @@ var AppPresetDefault = App{
 		},
 	},
 
+	Dependencies: Dependencies{
+		ServiceJobsHost: env.ServiceJobsHost,
+		ServiceJobsPort: env.ServiceJobsPort,
+		ServiceJobsCredentials: lo.Ternary[grpcf.CredentialsProvider](
+			env.GcloudProjectId == "",
+			&grpcf.LocalCredentialsProvider{},
+			&grpcf.GcloudCredentialsProvider{
+				Host: env.ServiceJobsHost,
+			},
+		),
+	},
 	Otel: lo.If[otel.Config](!env.Otel, &otelpresets.Disabled{}).
 		ElseIf(env.GcloudProjectId == "", &otelpresets.Local{
 			FlushTimeout: OtelFlushTimeout,

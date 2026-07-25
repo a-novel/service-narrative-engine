@@ -19,6 +19,9 @@ func getEnv(name string) string {
 const (
 	AppNameDefault = "service-narrative-engine"
 
+	ServiceJobsHostDefault = "localhost"
+	ServiceJobsPortDefault = 8080
+
 	RestPortDefault              = 8080
 	RestTimeoutReadDefault       = 15 * time.Second
 	RestTimeoutReadHeaderDefault = 3 * time.Second
@@ -61,6 +64,9 @@ var (
 	appName = getEnv("APP_NAME")
 	otel    = getEnv("OTEL")
 
+	serviceJobsHost = getEnv("SERVICE_JOBS_HOST")
+	serviceJobsPort = getEnv("SERVICE_JOBS_PORT")
+
 	restPort              = getEnv("REST_PORT")
 	restTimeoutRead       = getEnv("REST_TIMEOUT_READ")
 	restTimeoutReadHeader = getEnv("REST_TIMEOUT_READ_HEADER")
@@ -97,6 +103,11 @@ var (
 	//
 	// See: https://opentelemetry.io/
 	Otel = config.LoadEnv(otel, false, config.BoolParser)
+
+	// ServiceJobsHost is the hostname of the service-jobs gRPC server.
+	ServiceJobsHost = config.LoadEnv(serviceJobsHost, ServiceJobsHostDefault, config.StringParser)
+	// ServiceJobsPort is the port of the service-jobs gRPC server.
+	ServiceJobsPort = config.LoadEnv(serviceJobsPort, ServiceJobsPortDefault, config.IntParser)
 
 	// RestPort is the port on which the REST server will listen for incoming requests.
 	RestPort = config.LoadEnv(restPort, RestPortDefault, config.IntParser)
