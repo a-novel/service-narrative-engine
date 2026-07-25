@@ -14,6 +14,7 @@ import (
 	jobworker "github.com/a-novel/service-jobs/pkg/go/worker"
 
 	"github.com/a-novel-kit/golib/logging"
+	"github.com/a-novel-kit/golib/otel"
 	golibworker "github.com/a-novel-kit/golib/worker"
 
 	"github.com/a-novel/service-narrative-engine/internal/config"
@@ -59,6 +60,46 @@ func NewWorker(
 // Run polls until ctx is cancelled, then waits for already-claimed jobs to finish within their
 // drain budgets.
 func (worker *Worker) Run(ctx context.Context) {
+	ctx, span := otel.Tracer().Start(ctx, "core.Worker")
+	defer span.End()
+
+	// Poll owns the per-tick span; Run owns only the process-lifetime span.
+	runOnce := func(ctx context.Context) (bool, error) {
+		response, err := worker.client.JobClaim(ctx, &servicejobs.JobClaimRequest{
+			Kinds:        worker.kinds,
+			WorkerId:     worker.id,
+			Limit:        jobClaimLimit,
+			LeaseSeconds: durationSecondsCeil(worker.config.Lease),
+		})
+		if err != nil {
+			return false, fmt.Errorf("claim narrative job: %w", err)
+		}
+
+		jobs := response.GetJobs()
+		for _, job := range jobs {
+			executionCtx, cancelExecution := context.WithTimeout(
+				context.WithoutCancel(ctx), worker.config.DrainBudget,
+			)
+			_, err = worker.executor.Execute(executionCtx, &jobworker.ExecuteRequest{
+				Job: job, WorkerID: worker.id, Deadline: worker.config.JobDeadline,
+			})
+
+			cancelExecution()
+
+			if errors.Is(err, jobworker.ErrClaimLost) {
+				worker.logger.Warn(executionCtx, fmt.Sprintf("execute narrative job %s: claim lost", job.GetId()))
+
+				continue
+			}
+
+			if err != nil {
+				return false, fmt.Errorf("execute narrative job %s: %w", job.GetId(), err)
+			}
+		}
+
+		return len(jobs) > 0, nil
+	}
+
 	var pollers sync.WaitGroup
 
 	for pollerIndex := range worker.config.Concurrency {
@@ -72,48 +113,14 @@ func (worker *Worker) Run(ctx context.Context) {
 				fmt.Sprintf("narrative-jobs-%d", pollerIndex+1),
 				worker.config.PollInterval,
 				stagger,
-				worker.runOnce,
+				runOnce,
 			)
 		})
 	}
 
 	pollers.Wait()
-}
 
-func (worker *Worker) runOnce(ctx context.Context) (bool, error) {
-	response, err := worker.client.JobClaim(ctx, &servicejobs.JobClaimRequest{
-		Kinds:        worker.kinds,
-		WorkerId:     worker.id,
-		Limit:        jobClaimLimit,
-		LeaseSeconds: durationSecondsCeil(worker.config.Lease),
-	})
-	if err != nil {
-		return false, fmt.Errorf("claim narrative job: %w", err)
-	}
-
-	jobs := response.GetJobs()
-	for _, job := range jobs {
-		executionCtx, cancelExecution := context.WithTimeout(
-			context.WithoutCancel(ctx), worker.config.DrainBudget,
-		)
-		_, err = worker.executor.Execute(executionCtx, &jobworker.ExecuteRequest{
-			Job: job, WorkerID: worker.id, Deadline: worker.config.JobDeadline,
-		})
-
-		cancelExecution()
-
-		if errors.Is(err, jobworker.ErrClaimLost) {
-			worker.logger.Warn(executionCtx, fmt.Sprintf("execute narrative job %s: claim lost", job.GetId()))
-
-			continue
-		}
-
-		if err != nil {
-			return false, fmt.Errorf("execute narrative job %s: %w", job.GetId(), err)
-		}
-	}
-
-	return len(jobs) > 0, nil
+	otel.ReportSuccessNoContent(span)
 }
 
 func validateWorkerConfig(workerConfig config.Worker) error {
