@@ -3,7 +3,7 @@ module github.com/a-novel/service-narrative-engine
 go 1.26.5
 
 require (
-	github.com/a-novel-kit/golib v0.29.0
+	github.com/a-novel-kit/golib v0.30.0
 	github.com/go-chi/chi/v5 v5.3.1
 	github.com/go-chi/cors v1.2.2
 	github.com/go-playground/validator/v10 v10.30.3
@@ -13,7 +13,6 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/uptrace/bun v1.2.18
 	github.com/uptrace/bun/driver/pgdriver v1.2.18
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.69.0
 	go.opentelemetry.io/otel v1.44.0
 )
 
@@ -68,6 +67,7 @@ require (
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/contrib/bridges/otelslog v0.19.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.69.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.69.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.43.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.43.0 // indirect
 	go.opentelemetry.io/otel/exporters/stdout/stdoutlog v0.20.0 // indirect
