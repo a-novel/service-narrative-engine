@@ -1,3 +1,4 @@
+migration-history	sha256:c933f9b619f376e820a51e916ceb93e908f8ed7e6ae3d6cbbe7b841966aba544
 column	items.created_at	timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
 column	items.description	text
 column	items.id	uuid NOT NULL DEFAULT gen_random_uuid()

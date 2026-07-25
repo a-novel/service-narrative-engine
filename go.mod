@@ -3,7 +3,7 @@ module github.com/a-novel/service-narrative-engine
 go 1.26.5
 
 require (
-	github.com/a-novel-kit/golib v0.30.0
+	github.com/a-novel-kit/golib v0.30.1
 	github.com/a-novel/service-authentication/v2 v2.4.5
 	github.com/a-novel/service-jobs v0.2.1
 	github.com/a-novel/service-json-keys/v2 v2.4.1
