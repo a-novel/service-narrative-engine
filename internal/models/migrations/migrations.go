@@ -10,5 +10,6 @@ import (
 // bring a database up to the service's current schema. Each timestamped file has an .up.sql step to
 // apply the change and a matching .down.sql step to revert it.
 //
+//go:generate env GOLIB_UPDATE_SNAPSHOTS=1 go test -run ^TestMigrationRoundtrip$
 //go:embed *.sql
 var Migrations embed.FS
