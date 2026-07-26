@@ -2,6 +2,7 @@ package dao_test
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -18,8 +19,16 @@ import (
 func TestPgGenerationCallInsert(t *testing.T) {
 	t.Parallel()
 
-	now := time.Date(2026, 7, 26, 1, 2, 3, 0, time.UTC)
+	now := time.Date(2026, 7, 26, 1, 2, 3, 123456000, time.UTC)
 	ownerID := uuid.MustParse("00000000-0000-0000-0000-000000000042")
+	engineVersionID := uuid.MustParse("00000000-0000-0000-0000-000000000100")
+	engineVersion := &dao.EngineVersion{
+		ID:         engineVersionID,
+		Slug:       "walking-skeleton",
+		Version:    "0.0.1",
+		Definition: json.RawMessage(`{"kind":"project","steps":[]}`),
+		CreatedAt:  now,
+	}
 	idea := &dao.Idea{
 		ID:        uuid.MustParse("00000000-0000-0000-0000-000000000321"),
 		OwnerID:   ownerID,
@@ -29,31 +38,54 @@ func TestPgGenerationCallInsert(t *testing.T) {
 		UpdatedAt: now,
 	}
 	providerCallID := "resp_test"
-	rawOutput := `{"title":"The Answering Light","format":"prose","scenes":[]}`
+	rawOutput := `{
+  "title": "The Answering Light",
+  "format": "prose",
+  "scenes": [{
+    "title": "The Reply",
+    "blocks": [{"kind": "prose", "text": "The buried foghorn answers."}]
+  }]
+}`
 	inputTokens := int64(10)
 	outputTokens := int64(20)
 	totalTokens := int64(30)
 
 	call := &dao.GenerationCall{
-		JobID:               uuid.MustParse("00000000-0000-0000-0000-000000000322"),
+		ID:                  uuid.MustParse("00000000-0000-0000-0000-000000000322"),
+		JobID:               uuid.MustParse("00000000-0000-0000-0000-000000000330"),
+		Attempt:             1,
 		OwnerID:             ownerID,
 		IdeaID:              idea.ID,
-		EngineVersionID:     dao.FixtureEngineVersionID,
+		EngineVersionID:     engineVersionID,
 		Provider:            "openai",
 		ProviderCallID:      &providerCallID,
 		RequestHash:         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 		Model:               "fixture-model",
-		Outcome:             "ok",
+		Outcome:             dao.GenerationOutcomeOK,
 		RawOutput:           &rawOutput,
 		InputTokens:         &inputTokens,
 		OutputTokens:        &outputTokens,
 		TotalTokens:         &totalTokens,
 		LatencyMilliseconds: 250,
 		CreatedAt:           now,
-		CompletedAt:         now.Add(time.Second),
+		CompletedAt:         now.Add(250 * time.Millisecond),
 	}
-	duplicateProviderCall := *call
-	duplicateProviderCall.JobID = uuid.MustParse("00000000-0000-0000-0000-000000000324")
+	duplicateAttempt := *call
+	duplicateAttempt.ID = uuid.MustParse("00000000-0000-0000-0000-000000000323")
+
+	retryWithSameProviderCall := *call
+	retryWithSameProviderCall.ID = uuid.MustParse("00000000-0000-0000-0000-000000000324")
+	retryWithSameProviderCall.Attempt = 2
+
+	missingIdea := *call
+	missingIdea.ID = uuid.MustParse("00000000-0000-0000-0000-000000000325")
+	missingIdea.JobID = uuid.MustParse("00000000-0000-0000-0000-000000000331")
+	missingIdea.IdeaID = uuid.MustParse("00000000-0000-0000-0000-000000000399")
+
+	missingEngineVersion := *call
+	missingEngineVersion.ID = uuid.MustParse("00000000-0000-0000-0000-000000000326")
+	missingEngineVersion.JobID = uuid.MustParse("00000000-0000-0000-0000-000000000332")
+	missingEngineVersion.EngineVersionID = uuid.MustParse("00000000-0000-0000-0000-000000000398")
 
 	insertCall := func(ctx context.Context, t *testing.T, generationCall *dao.GenerationCall) {
 		t.Helper()
@@ -72,7 +104,7 @@ func TestPgGenerationCallInsert(t *testing.T) {
 		setup   func(context.Context, *testing.T)
 
 		expect    *dao.GenerationCall
-		expectErr bool
+		expectErr error
 	}{
 		{
 			name:    "Success",
@@ -80,41 +112,34 @@ func TestPgGenerationCallInsert(t *testing.T) {
 			expect:  call,
 		},
 		{
-			name:    "Error/DuplicateJob",
-			request: &dao.GenerationCallInsertRequest{Call: call},
+			name:    "Success/RetryReusesProviderCall",
+			request: &dao.GenerationCallInsertRequest{Call: &retryWithSameProviderCall},
 			setup: func(ctx context.Context, t *testing.T) {
 				t.Helper()
 
 				insertCall(ctx, t, call)
 			},
-			expectErr: true,
+			expect: &retryWithSameProviderCall,
 		},
 		{
-			name:    "Error/DuplicateProviderCall",
-			request: &dao.GenerationCallInsertRequest{Call: &duplicateProviderCall},
+			name:    "Error/DuplicateAttempt",
+			request: &dao.GenerationCallInsertRequest{Call: &duplicateAttempt},
 			setup: func(ctx context.Context, t *testing.T) {
 				t.Helper()
 
 				insertCall(ctx, t, call)
 			},
-			expectErr: true,
+			expectErr: dao.ErrGenerationCallInsertAlreadyExists,
 		},
 		{
-			name: "Error/CrossOwnerIdea",
-			request: &dao.GenerationCallInsertRequest{Call: &dao.GenerationCall{
-				JobID:               uuid.MustParse("00000000-0000-0000-0000-000000000323"),
-				OwnerID:             uuid.MustParse("00000000-0000-0000-0000-000000000043"),
-				IdeaID:              idea.ID,
-				EngineVersionID:     dao.FixtureEngineVersionID,
-				Provider:            "openai",
-				RequestHash:         "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-				Model:               "fixture-model",
-				Outcome:             "error",
-				LatencyMilliseconds: 250,
-				CreatedAt:           now,
-				CompletedAt:         now.Add(time.Second),
-			}},
-			expectErr: true,
+			name:      "Error/IdeaNotFound",
+			request:   &dao.GenerationCallInsertRequest{Call: &missingIdea},
+			expectErr: dao.ErrGenerationCallInsertIdeaNotFound,
+		},
+		{
+			name:      "Error/EngineVersionNotFound",
+			request:   &dao.GenerationCallInsertRequest{Call: &missingEngineVersion},
+			expectErr: dao.ErrGenerationCallInsertEngineVersionNotFound,
 		},
 	}
 
@@ -134,6 +159,9 @@ func TestPgGenerationCallInsert(t *testing.T) {
 					db, err := postgres.GetContext(ctx)
 					require.NoError(t, err)
 
+					_, err = db.NewInsert().Model(engineVersion).Exec(ctx)
+					require.NoError(t, err)
+
 					_, err = db.NewInsert().Model(idea).Exec(ctx)
 					require.NoError(t, err)
 
@@ -142,8 +170,8 @@ func TestPgGenerationCallInsert(t *testing.T) {
 					}
 
 					generationCall, err := operation.Exec(ctx, testCase.request)
-					if testCase.expectErr {
-						require.Error(t, err)
+					if testCase.expectErr != nil {
+						require.ErrorIs(t, err, testCase.expectErr)
 						require.Nil(t, generationCall)
 
 						return

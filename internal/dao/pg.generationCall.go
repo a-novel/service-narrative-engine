@@ -7,12 +7,30 @@ import (
 	"github.com/uptrace/bun"
 )
 
-// GenerationCall records the provider exchange that spent model capacity for one job.
+// GenerationOutcome classifies a terminal provider response.
+type GenerationOutcome string
+
+const (
+	// GenerationOutcomeOK means the provider returned usable output.
+	GenerationOutcomeOK GenerationOutcome = "ok"
+	// GenerationOutcomeRefusal means the provider declined the request.
+	GenerationOutcomeRefusal GenerationOutcome = "refusal"
+	// GenerationOutcomeIncomplete means the provider stopped before producing complete output.
+	GenerationOutcomeIncomplete GenerationOutcome = "incomplete"
+	// GenerationOutcomeError means the provider operation failed.
+	GenerationOutcomeError GenerationOutcome = "error"
+)
+
+// GenerationCall records one provider attempt for a service-jobs job.
 type GenerationCall struct {
 	bun.BaseModel `bun:"table:generation_calls,alias:generation_call"`
 
-	// JobID is both the generation identifier and the owning service-jobs record.
-	JobID uuid.UUID `bun:"job_id,pk,type:uuid"`
+	// ID identifies this provider attempt.
+	ID uuid.UUID `bun:"id,pk,type:uuid"`
+	// JobID identifies the owning service-jobs record.
+	JobID uuid.UUID `bun:"job_id,type:uuid"`
+	// Attempt is the one-based execution number within the job.
+	Attempt int `bun:"attempt"`
 	// OwnerID identifies the user billed for the generation.
 	OwnerID uuid.UUID `bun:"owner_id,type:uuid"`
 	// IdeaID identifies the input Idea.
@@ -21,14 +39,14 @@ type GenerationCall struct {
 	EngineVersionID uuid.UUID `bun:"engine_version_id,type:uuid"`
 	// Provider names the model provider.
 	Provider string `bun:"provider"`
-	// ProviderCallID identifies the resumable provider operation when one exists.
+	// ProviderCallID identifies the provider operation billed to this attempt.
 	ProviderCallID *string `bun:"provider_call_id"`
 	// RequestHash is the lowercase hexadecimal SHA-256 digest of the stable request.
 	RequestHash string `bun:"request_hash"`
 	// Model is the actual model identifier returned by the provider.
 	Model string `bun:"model"`
 	// Outcome classifies the terminal provider response.
-	Outcome string `bun:"outcome"`
+	Outcome GenerationOutcome `bun:"outcome"`
 	// RawOutput preserves the provider payload for audit and replay.
 	RawOutput *string `bun:"raw_output"`
 	// InputTokens records billed input usage when the provider reports it.

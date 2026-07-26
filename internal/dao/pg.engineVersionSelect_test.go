@@ -2,7 +2,9 @@ package dao_test
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -17,6 +19,8 @@ import (
 func TestPgEngineVersionSelect(t *testing.T) {
 	t.Parallel()
 
+	engineVersionID := uuid.MustParse("00000000-0000-0000-0000-000000000100")
+	publishedAt := time.Date(2026, 7, 26, 1, 2, 3, 123456000, time.UTC)
 	expectDefinition := `{
   "kind": "project",
   "steps": [{
@@ -59,6 +63,13 @@ func TestPgEngineVersionSelect(t *testing.T) {
     }
   }]
 }`
+	engineVersionFixture := &dao.EngineVersion{
+		ID:         engineVersionID,
+		Slug:       "walking-skeleton",
+		Version:    "0.0.1",
+		Definition: json.RawMessage(expectDefinition),
+		CreatedAt:  publishedAt,
+	}
 
 	testCases := []struct {
 		name string
@@ -70,7 +81,7 @@ func TestPgEngineVersionSelect(t *testing.T) {
 	}{
 		{
 			name:       "Success",
-			request:    &dao.EngineVersionSelectRequest{ID: dao.FixtureEngineVersionID},
+			request:    &dao.EngineVersionSelectRequest{ID: engineVersionID},
 			expectSlug: "walking-skeleton",
 		},
 		{
@@ -95,6 +106,12 @@ func TestPgEngineVersionSelect(t *testing.T) {
 				func(ctx context.Context, t *testing.T) {
 					t.Helper()
 
+					db, err := postgres.GetContext(ctx)
+					require.NoError(t, err)
+
+					_, err = db.NewInsert().Model(engineVersionFixture).Exec(ctx)
+					require.NoError(t, err)
+
 					engineVersion, err := operation.Exec(ctx, testCase.request)
 					require.ErrorIs(t, err, testCase.expectErr)
 
@@ -104,10 +121,10 @@ func TestPgEngineVersionSelect(t *testing.T) {
 						return
 					}
 
-					require.Equal(t, dao.FixtureEngineVersionID, engineVersion.ID)
+					require.Equal(t, engineVersionID, engineVersion.ID)
 					require.Equal(t, testCase.expectSlug, engineVersion.Slug)
 					require.Equal(t, "0.0.1", engineVersion.Version)
-					require.Len(t, engineVersion.ContentHash, 64)
+					require.Equal(t, publishedAt, engineVersion.CreatedAt)
 					require.JSONEq(t, expectDefinition, string(engineVersion.Definition))
 				},
 			)

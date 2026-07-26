@@ -1,6 +1,8 @@
 INSERT INTO
   generation_calls (
+    id,
     job_id,
+    attempt,
     owner_id,
     idea_id,
     engine_version_id,
@@ -38,7 +40,9 @@ VALUES
     ?14,
     ?15,
     ?16,
-    ?17
+    ?17,
+    ?18,
+    ?19
   )
 RETURNING
   *;

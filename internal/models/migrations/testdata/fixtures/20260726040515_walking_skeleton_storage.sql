@@ -1,4 +1,71 @@
 INSERT INTO
+  engine_versions (id, slug, version, definition, created_at)
+VALUES
+  (
+    '00000000-0000-0000-0000-000000000100',
+    'walking-skeleton',
+    '0.0.1',
+    '{
+      "kind": "project",
+      "steps": [
+        {
+          "key": "manuscript",
+          "promptTemplate": "Turn the idea into a concise prose manuscript proposal.",
+          "outputSchema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["title", "format", "scenes"],
+            "properties": {
+              "title": {
+                "type": "string",
+                "minLength": 1
+              },
+              "format": {
+                "const": "prose"
+              },
+              "scenes": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["title", "blocks"],
+                  "properties": {
+                    "title": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "blocks": {
+                      "type": "array",
+                      "minItems": 1,
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": ["kind", "text"],
+                        "properties": {
+                          "kind": {
+                            "enum": ["prose", "dialogue", "cue"]
+                          },
+                          "text": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }'::jsonb,
+    '2026-07-26T00:00:00.123456Z'
+  );
+
+INSERT INTO
   ideas (
     id,
     owner_id,
@@ -15,13 +82,15 @@ VALUES
     'A lighthouse keeper hears a second foghorn answer from beneath the sea.',
     'speculative',
     'The Answering Light',
-    '2026-07-26T00:00:00Z',
-    '2026-07-26T00:00:00Z'
+    '2026-07-26T00:00:00.123456Z',
+    '2026-07-26T00:00:00.123456Z'
   );
 
 INSERT INTO
   generation_calls (
+    id,
     job_id,
+    attempt,
     owner_id,
     idea_id,
     engine_version_id,
@@ -41,6 +110,8 @@ INSERT INTO
 VALUES
   (
     '00000000-0000-0000-0000-000000000202',
+    '00000000-0000-0000-0000-000000000210',
+    1,
     '00000000-0000-0000-0000-000000000042',
     '00000000-0000-0000-0000-000000000201',
     '00000000-0000-0000-0000-000000000100',
@@ -49,13 +120,13 @@ VALUES
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
     'fixture-model',
     'ok',
-    '{"title":"The Answering Light","format":"prose","scenes":[]}',
+    '{"title":"The Answering Light","format":"prose","scenes":[{"title":"The Reply","blocks":[{"kind":"prose","text":"The buried foghorn answers."}]}]}',
     10,
     20,
     30,
     250,
-    '2026-07-26T00:00:00Z',
-    '2026-07-26T00:00:01Z'
+    '2026-07-26T00:00:00.123456Z',
+    '2026-07-26T00:00:00.373456Z'
   );
 
 INSERT INTO
@@ -65,7 +136,7 @@ INSERT INTO
     idea_id,
     engine_version_id,
     step_key,
-    generation_job_id,
+    generation_call_id,
     value,
     created_at
   )
@@ -77,8 +148,8 @@ VALUES
     '00000000-0000-0000-0000-000000000100',
     'manuscript',
     '00000000-0000-0000-0000-000000000202',
-    '{"title":"The Answering Light","format":"prose","scenes":[]}',
-    '2026-07-26T00:00:01Z'
+    '{"title":"The Answering Light","format":"prose","scenes":[{"title":"The Reply","blocks":[{"kind":"prose","text":"The buried foghorn answers."}]}]}',
+    '2026-07-26T00:00:00.373456Z'
   );
 
 INSERT INTO
@@ -86,9 +157,9 @@ INSERT INTO
     id,
     owner_id,
     idea_id,
-    accepted_generation_job_id,
-    title,
-    format,
+    engine_version_id,
+    accepted_generation_call_id,
+    value,
     created_at,
     updated_at
   )
@@ -97,30 +168,9 @@ VALUES
     '00000000-0000-0000-0000-000000000204',
     '00000000-0000-0000-0000-000000000042',
     '00000000-0000-0000-0000-000000000201',
+    '00000000-0000-0000-0000-000000000100',
     '00000000-0000-0000-0000-000000000202',
-    'The Answering Light',
-    'prose',
-    '2026-07-26T00:00:01Z',
-    '2026-07-26T00:00:01Z'
-  );
-
-INSERT INTO
-  manuscript_scenes (id, manuscript_id, ordinal, title)
-VALUES
-  (
-    '00000000-0000-0000-0000-000000000205',
-    '00000000-0000-0000-0000-000000000204',
-    0,
-    'The Reply'
-  );
-
-INSERT INTO
-  manuscript_blocks (id, scene_id, ordinal, kind, text)
-VALUES
-  (
-    '00000000-0000-0000-0000-000000000206',
-    '00000000-0000-0000-0000-000000000205',
-    0,
-    'prose',
-    'The second foghorn answered from below.'
+    '{"title":"The Answering Light","format":"prose","scenes":[{"title":"The Reply","blocks":[{"kind":"prose","text":"The buried foghorn answers."}]}]}',
+    '2026-07-26T00:00:00.373456Z',
+    '2026-07-26T00:00:00.373456Z'
   );

@@ -1,7 +1,4 @@
-DROP TABLE IF EXISTS manuscript_blocks;
-
-DROP TABLE IF EXISTS manuscript_scenes;
-
+-- This rollback restores the placeholder schema; rows stored by the narrative schema are discarded.
 DROP TABLE IF EXISTS manuscripts;
 
 DROP TABLE IF EXISTS step_values;

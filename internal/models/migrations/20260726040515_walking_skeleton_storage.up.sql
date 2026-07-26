@@ -9,8 +9,8 @@ CREATE TABLE ideas (
     title IS NULL
     OR title <> ''
   ),
-  created_at timestamp(0) with time zone NOT NULL,
-  updated_at timestamp(0) with time zone NOT NULL,
+  created_at timestamp with time zone NOT NULL,
+  updated_at timestamp with time zone NOT NULL,
   UNIQUE (id, owner_id)
 );
 
@@ -21,17 +21,17 @@ CREATE TABLE engine_versions (
   slug text NOT NULL CHECK (slug <> ''),
   version text NOT NULL CHECK (version <> ''),
   definition jsonb NOT NULL CHECK (jsonb_typeof(definition) = 'object'),
-  content_hash text NOT NULL CHECK (content_hash ~ '^[0-9a-f]{64}$'),
-  created_at timestamp(0) with time zone NOT NULL,
-  UNIQUE (slug, version),
-  UNIQUE (content_hash)
+  created_at timestamp with time zone NOT NULL,
+  UNIQUE (slug, version)
 );
 
 CREATE TABLE generation_calls (
-  job_id uuid PRIMARY KEY NOT NULL,
+  id uuid PRIMARY KEY NOT NULL,
+  job_id uuid NOT NULL,
+  attempt integer NOT NULL CHECK (attempt >= 1),
   owner_id uuid NOT NULL,
   idea_id uuid NOT NULL,
-  engine_version_id uuid NOT NULL REFERENCES engine_versions (id),
+  engine_version_id uuid NOT NULL,
   provider text NOT NULL CHECK (provider <> ''),
   provider_call_id text CHECK (
     provider_call_id IS NULL
@@ -64,15 +64,37 @@ CREATE TABLE generation_calls (
     error IS NULL
     OR error <> ''
   ),
-  created_at timestamp(0) with time zone NOT NULL,
-  completed_at timestamp(0) with time zone NOT NULL,
-  FOREIGN KEY (idea_id, owner_id) REFERENCES ideas (id, owner_id),
-  UNIQUE (job_id, owner_id)
+  created_at timestamp with time zone NOT NULL,
+  completed_at timestamp with time zone NOT NULL,
+  CONSTRAINT generation_calls_outcome_details_check CHECK (
+    (
+      outcome = 'ok'
+      AND raw_output IS NOT NULL
+      AND refusal IS NULL
+      AND error IS NULL
+    )
+    OR (
+      outcome = 'refusal'
+      AND refusal IS NOT NULL
+      AND error IS NULL
+    )
+    OR (
+      outcome = 'incomplete'
+      AND refusal IS NULL
+      AND error IS NULL
+    )
+    OR (
+      outcome = 'error'
+      AND refusal IS NULL
+      AND error IS NOT NULL
+    )
+  ),
+  CONSTRAINT generation_calls_completion_order_check CHECK (completed_at >= created_at),
+  CONSTRAINT generation_calls_idea_owner_fk FOREIGN KEY (idea_id, owner_id) REFERENCES ideas (id, owner_id),
+  CONSTRAINT generation_calls_engine_version_fk FOREIGN KEY (engine_version_id) REFERENCES engine_versions (id),
+  CONSTRAINT generation_calls_job_attempt_key UNIQUE (job_id, attempt),
+  CONSTRAINT generation_calls_identity_key UNIQUE (id, idea_id, owner_id, engine_version_id)
 );
-
-CREATE UNIQUE INDEX generation_calls_provider_call_id_idx ON generation_calls (provider_call_id)
-WHERE
-  provider_call_id IS NOT NULL;
 
 CREATE INDEX generation_calls_owner_id_idx ON generation_calls (owner_id);
 
@@ -82,13 +104,17 @@ CREATE TABLE step_values (
   id uuid PRIMARY KEY NOT NULL,
   owner_id uuid NOT NULL,
   idea_id uuid NOT NULL,
-  engine_version_id uuid NOT NULL REFERENCES engine_versions (id),
+  engine_version_id uuid NOT NULL,
   step_key text NOT NULL CHECK (step_key <> ''),
-  generation_job_id uuid NOT NULL UNIQUE,
+  generation_call_id uuid NOT NULL UNIQUE,
   value jsonb NOT NULL CHECK (jsonb_typeof(value) = 'object'),
-  created_at timestamp(0) with time zone NOT NULL,
-  FOREIGN KEY (idea_id, owner_id) REFERENCES ideas (id, owner_id),
-  FOREIGN KEY (generation_job_id, owner_id) REFERENCES generation_calls (job_id, owner_id),
+  created_at timestamp with time zone NOT NULL,
+  FOREIGN KEY (
+    generation_call_id,
+    idea_id,
+    owner_id,
+    engine_version_id
+  ) REFERENCES generation_calls (id, idea_id, owner_id, engine_version_id),
   UNIQUE (idea_id, engine_version_id, step_key)
 );
 
@@ -98,111 +124,19 @@ CREATE TABLE manuscripts (
   id uuid PRIMARY KEY NOT NULL,
   owner_id uuid NOT NULL,
   idea_id uuid NOT NULL,
-  accepted_generation_job_id uuid NOT NULL UNIQUE,
-  title text NOT NULL CHECK (title <> ''),
-  format text NOT NULL CHECK (format <> ''),
-  created_at timestamp(0) with time zone NOT NULL,
-  updated_at timestamp(0) with time zone NOT NULL,
-  FOREIGN KEY (idea_id, owner_id) REFERENCES ideas (id, owner_id),
-  FOREIGN KEY (accepted_generation_job_id, owner_id) REFERENCES generation_calls (job_id, owner_id)
+  engine_version_id uuid NOT NULL,
+  accepted_generation_call_id uuid NOT NULL UNIQUE,
+  value jsonb NOT NULL CHECK (jsonb_typeof(value) = 'object'),
+  created_at timestamp with time zone NOT NULL,
+  updated_at timestamp with time zone NOT NULL,
+  FOREIGN KEY (
+    accepted_generation_call_id,
+    idea_id,
+    owner_id,
+    engine_version_id
+  ) REFERENCES generation_calls (id, idea_id, owner_id, engine_version_id)
 );
 
 CREATE INDEX manuscripts_owner_id_idx ON manuscripts (owner_id);
 
 CREATE INDEX manuscripts_idea_id_idx ON manuscripts (idea_id);
-
-CREATE TABLE manuscript_scenes (
-  id uuid PRIMARY KEY NOT NULL,
-  manuscript_id uuid NOT NULL REFERENCES manuscripts (id) ON DELETE CASCADE,
-  ordinal integer NOT NULL CHECK (ordinal >= 0),
-  title text NOT NULL CHECK (title <> ''),
-  UNIQUE (manuscript_id, ordinal)
-);
-
-CREATE INDEX manuscript_scenes_manuscript_id_idx ON manuscript_scenes (manuscript_id);
-
-CREATE TABLE manuscript_blocks (
-  id uuid PRIMARY KEY NOT NULL,
-  scene_id uuid NOT NULL REFERENCES manuscript_scenes (id) ON DELETE CASCADE,
-  ordinal integer NOT NULL CHECK (ordinal >= 0),
-  kind text NOT NULL CHECK (kind IN ('prose', 'dialogue', 'cue')),
-  text text NOT NULL CHECK (text <> ''),
-  UNIQUE (scene_id, ordinal)
-);
-
-CREATE INDEX manuscript_blocks_scene_id_idx ON manuscript_blocks (scene_id);
-
-INSERT INTO
-  engine_versions (
-    id,
-    slug,
-    version,
-    definition,
-    content_hash,
-    created_at
-  )
-VALUES
-  (
-    '00000000-0000-0000-0000-000000000100',
-    'walking-skeleton',
-    '0.0.1',
-    '{
-      "kind": "project",
-      "steps": [
-        {
-          "key": "manuscript",
-          "promptTemplate": "Turn the idea into a concise prose manuscript proposal.",
-          "outputSchema": {
-            "$schema": "https://json-schema.org/draft/2020-12/schema",
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["title", "format", "scenes"],
-            "properties": {
-              "title": {
-                "type": "string",
-                "minLength": 1
-              },
-              "format": {
-                "const": "prose"
-              },
-              "scenes": {
-                "type": "array",
-                "minItems": 1,
-                "items": {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "required": ["title", "blocks"],
-                  "properties": {
-                    "title": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "blocks": {
-                      "type": "array",
-                      "minItems": 1,
-                      "items": {
-                        "type": "object",
-                        "additionalProperties": false,
-                        "required": ["kind", "text"],
-                        "properties": {
-                          "kind": {
-                            "enum": ["prose", "dialogue", "cue"]
-                          },
-                          "text": {
-                            "type": "string",
-                            "minLength": 1
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      ]
-    }'::jsonb,
-    '42a95e527dda098d5ed17109a0106c3a29cce826e78a75c5b4fea102b143d30c',
-    '2026-07-26T00:00:00Z'
-  );
