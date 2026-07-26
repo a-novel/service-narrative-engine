@@ -47,7 +47,8 @@ paths:
       operationId: healthcheck
       summary: Health diagnosis of the server.
       description: |
-        Performs a complete health diagnosis of the server dependencies, by trying to reach them each.
+        Returns a dependency report cached for about 30 seconds. It checks PostgreSQL and
+        JSON-keys reachability, and includes the service-jobs queue backlog when available.
       tags: [health]
       security: []
       responses:
@@ -205,18 +206,33 @@ components:
             examples: [pong]
 
     health:
-      description: Summary of the server dependencies.
+      description: Cached health and queue summary for every server dependency.
       content:
         application/json:
           schema:
             type: object
-            required: ["client:postgres"]
+            required: ["client:postgres", "client:json-keys", "client:jobs"]
+            additionalProperties: false
             properties:
               "client:postgres":
                 $ref: "#/components/schemas/healthStatus"
-            examples:
-              - { "client:postgres": { "status": "up" } }
-              - { "client:postgres": { "status": "down" } }
+              "client:json-keys":
+                $ref: "#/components/schemas/healthStatus"
+              "client:jobs":
+                $ref: "#/components/schemas/healthJobsStatus"
+          examples:
+            healthy:
+              value:
+                "client:postgres": { "status": "up" }
+                "client:json-keys": { "status": "up" }
+                "client:jobs":
+                  status: up
+                  queue: { "pending": 3, "oldestPendingAge": "1m30s" }
+            degraded-jobs:
+              value:
+                "client:postgres": { "status": "up" }
+                "client:json-keys": { "status": "up" }
+                "client:jobs": { "status": "down" }
 
     item:
       description: An item resource.
@@ -277,6 +293,42 @@ components:
           type: string
           description: Exposes whether the server managed to connect to the dependency.
           enum: [up, down]
+
+    healthJobsStatus:
+      type: object
+      description: |
+        Health of the service-jobs dependency. Queue is present only when the
+        service can measure its backlog.
+      required: [status]
+      additionalProperties: false
+      examples:
+        - { "status": "up", "queue": { "pending": 0 } }
+        - { "status": "down" }
+      properties:
+        status:
+          type: string
+          description: Exposes whether the service-jobs queue could be measured.
+          enum: [up, down]
+        queue:
+          $ref: "#/components/schemas/healthQueue"
+
+    healthQueue:
+      type: object
+      description: Backlog measured by service-jobs for due and unclaimed jobs.
+      required: [pending]
+      additionalProperties: false
+      properties:
+        pending:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Number of due jobs still waiting for a worker.
+          examples: [3]
+        oldestPendingAge:
+          type: string
+          description: |
+            Go duration of the oldest pending job. Omitted when the queue is empty.
+          examples: ["1m30s"]
 
     item:
       type: object

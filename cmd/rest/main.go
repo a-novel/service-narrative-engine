@@ -110,7 +110,7 @@ func main() {
 	// =================================================================================================================
 
 	handlerPing := handlers.NewPing()
-	handlerHealth := handlers.NewRestHealth()
+	handlerHealth := handlers.NewRestHealth(jsonKeysClient, jobsClient)
 	handlerItemCreate := handlers.NewItemCreatePublic(serviceItemCreate, cfg.Logger)
 	handlerItemGet := handlers.NewItemGetPublic(serviceItemGet, cfg.Logger)
 	handlerItemList := handlers.NewItemListPublic(serviceItemList, cfg.Logger)
