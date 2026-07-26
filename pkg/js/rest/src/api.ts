@@ -7,13 +7,27 @@ async function decodeRawHttpResponse<T>(response: Response): Promise<T> {
   return await response.json();
 }
 
-/**
- * Health of a single upstream dependency reported by the service. The endpoint is
- * unauthenticated, so it carries the dependency's state alone; the failure itself is
- * recorded on the server's traces.
- */
+/** Health of one upstream dependency; failure details stay on server traces. */
 export type HealthDependency = {
   status: "up" | "down";
+};
+
+/** Queue backlog returned when service-jobs can measure its queue. */
+export type HealthQueue = {
+  pending: number;
+  oldestPendingAge?: string;
+};
+
+/** Health and queue depth reported for the service-jobs dependency. */
+export type HealthJobsDependency = HealthDependency & {
+  queue?: HealthQueue;
+};
+
+/** Complete dependency report returned by the narrative-engine service. */
+export type HealthReport = {
+  "client:postgres": HealthDependency;
+  "client:json-keys": HealthDependency;
+  "client:jobs": HealthJobsDependency;
 };
 
 /**
@@ -44,8 +58,8 @@ export class NarrativeEngineApi {
     await this.fetchVoid("/ping", { method: "GET" });
   }
 
-  /** Reports the health of the service, keyed by upstream dependency name. */
-  async health(): Promise<Record<string, HealthDependency>> {
+  /** Reports the cached health and queue metrics for every upstream dependency. */
+  async health(): Promise<HealthReport> {
     return await this.fetch("/healthcheck", undefined, { method: "GET" });
   }
 }

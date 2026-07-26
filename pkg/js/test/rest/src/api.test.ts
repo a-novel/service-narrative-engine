@@ -10,10 +10,15 @@ describe("ping", () => {
 });
 
 describe("health", () => {
-  it("returns success", async () => {
+  it("reports every dependency and the jobs queue", async () => {
     const api = new NarrativeEngineApi(process.env.REST_URL!);
     await expect(api.health()).resolves.toEqual({
       "client:postgres": { status: "up" },
+      "client:json-keys": { status: "up" },
+      "client:jobs": {
+        status: "up",
+        queue: { pending: 0 },
+      },
     });
   });
 });
