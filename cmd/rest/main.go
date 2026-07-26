@@ -20,6 +20,7 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/samber/lo"
 
+	serviceauthentication "github.com/a-novel/service-authentication/v2/pkg/go"
 	servicejobs "github.com/a-novel/service-jobs/pkg/go"
 	jobworker "github.com/a-novel/service-jobs/pkg/go/worker"
 	servicejsonkeys "github.com/a-novel/service-json-keys/v2/pkg/go"
@@ -73,6 +74,13 @@ func main() {
 		lo.Must(cfg.Dependencies.ServiceJsonKeysCredentials.Options(ctx))...,
 	))
 	defer jsonKeysClient.Close()
+
+	claimsVerifier := lo.Must(
+		servicejsonkeys.NewClaimsVerifier[serviceauthentication.Claims](jsonKeysClient),
+	)
+	withAuth := serviceauthentication.NewAuthHandler(claimsVerifier, cfg.Permissions, cfg.Logger)
+	// Protected routes receive this wrapper once their handlers carry authenticated actors.
+	_ = withAuth
 
 	// =================================================================================================================
 	// SERVICES

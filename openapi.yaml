@@ -16,6 +16,9 @@ info:
     name: AGPL-3.0
     url: "https://raw.githubusercontent.com/a-novel/service-narrative-engine/refs/heads/master/LICENSE"
 
+security:
+  - BearerAuth: []
+
 paths:
   /ping:
     get:
@@ -54,6 +57,15 @@ paths:
           $ref: "#/components/responses/internalError"
 
 components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        A JWT access token. The Authorization header must use `Bearer`, followed
+        by exactly one space and the token.
+
   responses:
     pong:
       description: A plain-text pong response.
