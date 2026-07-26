@@ -126,7 +126,7 @@ Outbound HTTP client (images `rest`, `standalone-rest`). The service sizes the p
 | `HTTP_CLIENT_MAX_IDLE_CONNS`          | Idle connections kept across every provider host. | `100`   |
 | `HTTP_CLIENT_MAX_IDLE_CONNS_PER_HOST` | Idle connections kept for a single provider host. | `4`     |
 
-Narrative job worker (images `rest`, `standalone-rest`). The lease and shutdown drain budget are derived from the job deadline, so they cannot be configured shorter than a handler run.
+Narrative job worker (images `rest`, `standalone-rest`). The claim lease and execution budget are derived by service-jobs from the job deadline, so they cannot be configured shorter than a handler run.
 
 | Name                   | Description                                    | Default |
 | ---------------------- | ---------------------------------------------- | ------- |
