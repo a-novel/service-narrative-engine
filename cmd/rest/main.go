@@ -20,7 +20,6 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/samber/lo"
 
-	serviceauthentication "github.com/a-novel/service-authentication/v2/pkg/go"
 	servicejobs "github.com/a-novel/service-jobs/pkg/go"
 	jobworker "github.com/a-novel/service-jobs/pkg/go/worker"
 	servicejsonkeys "github.com/a-novel/service-json-keys/v2/pkg/go"
@@ -31,8 +30,6 @@ import (
 
 	"github.com/a-novel/service-narrative-engine/internal/config"
 	"github.com/a-novel/service-narrative-engine/internal/config/env"
-	"github.com/a-novel/service-narrative-engine/internal/core"
-	"github.com/a-novel/service-narrative-engine/internal/dao"
 	"github.com/a-novel/service-narrative-engine/internal/handlers"
 )
 
@@ -77,30 +74,9 @@ func main() {
 	))
 	defer jsonKeysClient.Close()
 
-	claimsVerifier := lo.Must(
-		servicejsonkeys.NewClaimsVerifier[serviceauthentication.Claims](jsonKeysClient),
-	)
-	withAuth := serviceauthentication.NewAuthHandler(claimsVerifier, cfg.Permissions, cfg.Logger)
-
-	// =================================================================================================================
-	// DAO
-	// =================================================================================================================
-
-	daoItemCreate := dao.NewItemCreate()
-	daoItemGet := dao.NewItemGet()
-	daoItemList := dao.NewItemList()
-	daoItemUpdate := dao.NewItemUpdate()
-	daoItemDelete := dao.NewItemDelete()
-
 	// =================================================================================================================
 	// SERVICES
 	// =================================================================================================================
-
-	serviceItemCreate := core.NewItemCreate(daoItemCreate)
-	serviceItemGet := core.NewItemGet(daoItemGet)
-	serviceItemList := core.NewItemList(daoItemList)
-	serviceItemUpdate := core.NewItemUpdate(daoItemUpdate)
-	serviceItemDelete := core.NewItemDelete(daoItemDelete)
 
 	jobHandlers := map[string]jobworker.Handler{}
 	jobRunner := lo.Must(jobworker.NewRunner(jobsClient, jobHandlers, cfg.Worker, cfg.Logger))
@@ -111,11 +87,6 @@ func main() {
 
 	handlerPing := handlers.NewPing()
 	handlerHealth := handlers.NewRestHealth(jsonKeysClient, jobsClient)
-	handlerItemCreate := handlers.NewItemCreatePublic(serviceItemCreate, cfg.Logger)
-	handlerItemGet := handlers.NewItemGetPublic(serviceItemGet, cfg.Logger)
-	handlerItemList := handlers.NewItemListPublic(serviceItemList, cfg.Logger)
-	handlerItemUpdate := handlers.NewItemUpdatePublic(serviceItemUpdate, cfg.Logger)
-	handlerItemDelete := handlers.NewItemDeletePublic(serviceItemDelete, cfg.Logger)
 
 	// =================================================================================================================
 	// ROUTER
@@ -145,17 +116,6 @@ func main() {
 
 	router.Get("/ping", handlerPing.ServeHTTP)
 	router.Get("/healthcheck", handlerHealth.ServeHTTP)
-	router.Route("/items", func(r chi.Router) {
-		r.Use(handlers.BearerChallenge)
-		withAuth(r, config.PermissionItemWrite).Post("/", handlerItemCreate.ServeHTTP)
-		withAuth(r, config.PermissionItemRead).Get("/", handlerItemList.ServeHTTP)
-	})
-	router.Route("/item", func(r chi.Router) {
-		r.Use(handlers.BearerChallenge)
-		withAuth(r, config.PermissionItemRead).Get("/", handlerItemGet.ServeHTTP)
-		withAuth(r, config.PermissionItemWrite).Put("/", handlerItemUpdate.ServeHTTP)
-		withAuth(r, config.PermissionItemWrite).Delete("/", handlerItemDelete.ServeHTTP)
-	})
 
 	// =================================================================================================================
 	// RUN

@@ -1,0 +1,195 @@
+migration-history	sha256:a816c4785edaaaf87ff751991fa43307a37a09f05ebb82c4e6fccbd2028ac04f
+column	engine_versions.content_hash	text NOT NULL
+column	engine_versions.created_at	timestamp(0) with time zone NOT NULL
+column	engine_versions.definition	jsonb NOT NULL
+column	engine_versions.id	uuid NOT NULL
+column	engine_versions.slug	text NOT NULL
+column	engine_versions.version	text NOT NULL
+column	generation_calls.completed_at	timestamp(0) with time zone NOT NULL
+column	generation_calls.created_at	timestamp(0) with time zone NOT NULL
+column	generation_calls.engine_version_id	uuid NOT NULL
+column	generation_calls.error	text
+column	generation_calls.idea_id	uuid NOT NULL
+column	generation_calls.input_tokens	bigint
+column	generation_calls.job_id	uuid NOT NULL
+column	generation_calls.latency_ms	bigint NOT NULL
+column	generation_calls.model	text NOT NULL
+column	generation_calls.outcome	text NOT NULL
+column	generation_calls.output_tokens	bigint
+column	generation_calls.owner_id	uuid NOT NULL
+column	generation_calls.provider	text NOT NULL
+column	generation_calls.provider_call_id	text
+column	generation_calls.raw_output	text
+column	generation_calls.refusal	text
+column	generation_calls.request_hash	text NOT NULL
+column	generation_calls.total_tokens	bigint
+column	ideas.created_at	timestamp(0) with time zone NOT NULL
+column	ideas.genre	text NOT NULL
+column	ideas.id	uuid NOT NULL
+column	ideas.owner_id	uuid NOT NULL
+column	ideas.seed	text NOT NULL
+column	ideas.story_type	text NOT NULL
+column	ideas.title	text
+column	ideas.updated_at	timestamp(0) with time zone NOT NULL
+column	manuscript_blocks.id	uuid NOT NULL
+column	manuscript_blocks.kind	text NOT NULL
+column	manuscript_blocks.ordinal	integer NOT NULL
+column	manuscript_blocks.scene_id	uuid NOT NULL
+column	manuscript_blocks.text	text NOT NULL
+column	manuscript_scenes.id	uuid NOT NULL
+column	manuscript_scenes.manuscript_id	uuid NOT NULL
+column	manuscript_scenes.ordinal	integer NOT NULL
+column	manuscript_scenes.title	text NOT NULL
+column	manuscripts.accepted_generation_job_id	uuid NOT NULL
+column	manuscripts.created_at	timestamp(0) with time zone NOT NULL
+column	manuscripts.format	text NOT NULL
+column	manuscripts.id	uuid NOT NULL
+column	manuscripts.idea_id	uuid NOT NULL
+column	manuscripts.owner_id	uuid NOT NULL
+column	manuscripts.title	text NOT NULL
+column	manuscripts.updated_at	timestamp(0) with time zone NOT NULL
+column	step_values.created_at	timestamp(0) with time zone NOT NULL
+column	step_values.engine_version_id	uuid NOT NULL
+column	step_values.generation_job_id	uuid NOT NULL
+column	step_values.id	uuid NOT NULL
+column	step_values.idea_id	uuid NOT NULL
+column	step_values.owner_id	uuid NOT NULL
+column	step_values.step_key	text NOT NULL
+column	step_values.value	jsonb NOT NULL
+comment	schema public	standard public schema
+constraint	engine_versions.engine_versions_content_hash_check	CHECK ((content_hash ~ '^[0-9a-f]{64}$'::text))
+constraint	engine_versions.engine_versions_content_hash_key	UNIQUE (content_hash)
+constraint	engine_versions.engine_versions_content_hash_not_null	NOT NULL content_hash
+constraint	engine_versions.engine_versions_created_at_not_null	NOT NULL created_at
+constraint	engine_versions.engine_versions_definition_check	CHECK ((jsonb_typeof(definition) = 'object'::text))
+constraint	engine_versions.engine_versions_definition_not_null	NOT NULL definition
+constraint	engine_versions.engine_versions_id_not_null	NOT NULL id
+constraint	engine_versions.engine_versions_pkey	PRIMARY KEY (id)
+constraint	engine_versions.engine_versions_slug_check	CHECK ((slug <> ''::text))
+constraint	engine_versions.engine_versions_slug_not_null	NOT NULL slug
+constraint	engine_versions.engine_versions_slug_version_key	UNIQUE (slug, version)
+constraint	engine_versions.engine_versions_version_check	CHECK ((version <> ''::text))
+constraint	engine_versions.engine_versions_version_not_null	NOT NULL version
+constraint	generation_calls.generation_calls_completed_at_not_null	NOT NULL completed_at
+constraint	generation_calls.generation_calls_created_at_not_null	NOT NULL created_at
+constraint	generation_calls.generation_calls_engine_version_id_fkey	FOREIGN KEY (engine_version_id) REFERENCES engine_versions(id)
+constraint	generation_calls.generation_calls_engine_version_id_not_null	NOT NULL engine_version_id
+constraint	generation_calls.generation_calls_error_check	CHECK (((error IS NULL) OR (error <> ''::text)))
+constraint	generation_calls.generation_calls_idea_id_not_null	NOT NULL idea_id
+constraint	generation_calls.generation_calls_idea_id_owner_id_fkey	FOREIGN KEY (idea_id, owner_id) REFERENCES ideas(id, owner_id)
+constraint	generation_calls.generation_calls_input_tokens_check	CHECK (((input_tokens IS NULL) OR (input_tokens >= 0)))
+constraint	generation_calls.generation_calls_job_id_not_null	NOT NULL job_id
+constraint	generation_calls.generation_calls_job_id_owner_id_key	UNIQUE (job_id, owner_id)
+constraint	generation_calls.generation_calls_latency_ms_check	CHECK ((latency_ms >= 0))
+constraint	generation_calls.generation_calls_latency_ms_not_null	NOT NULL latency_ms
+constraint	generation_calls.generation_calls_model_check	CHECK ((model <> ''::text))
+constraint	generation_calls.generation_calls_model_not_null	NOT NULL model
+constraint	generation_calls.generation_calls_outcome_check	CHECK ((outcome = ANY (ARRAY['ok'::text, 'refusal'::text, 'incomplete'::text, 'error'::text])))
+constraint	generation_calls.generation_calls_outcome_not_null	NOT NULL outcome
+constraint	generation_calls.generation_calls_output_tokens_check	CHECK (((output_tokens IS NULL) OR (output_tokens >= 0)))
+constraint	generation_calls.generation_calls_owner_id_not_null	NOT NULL owner_id
+constraint	generation_calls.generation_calls_pkey	PRIMARY KEY (job_id)
+constraint	generation_calls.generation_calls_provider_call_id_check	CHECK (((provider_call_id IS NULL) OR (provider_call_id <> ''::text)))
+constraint	generation_calls.generation_calls_provider_check	CHECK ((provider <> ''::text))
+constraint	generation_calls.generation_calls_provider_not_null	NOT NULL provider
+constraint	generation_calls.generation_calls_refusal_check	CHECK (((refusal IS NULL) OR (refusal <> ''::text)))
+constraint	generation_calls.generation_calls_request_hash_check	CHECK ((request_hash ~ '^[0-9a-f]{64}$'::text))
+constraint	generation_calls.generation_calls_request_hash_not_null	NOT NULL request_hash
+constraint	generation_calls.generation_calls_total_tokens_check	CHECK (((total_tokens IS NULL) OR (total_tokens >= 0)))
+constraint	ideas.ideas_created_at_not_null	NOT NULL created_at
+constraint	ideas.ideas_genre_check	CHECK ((genre <> ''::text))
+constraint	ideas.ideas_genre_not_null	NOT NULL genre
+constraint	ideas.ideas_id_not_null	NOT NULL id
+constraint	ideas.ideas_id_owner_id_key	UNIQUE (id, owner_id)
+constraint	ideas.ideas_owner_id_not_null	NOT NULL owner_id
+constraint	ideas.ideas_pkey	PRIMARY KEY (id)
+constraint	ideas.ideas_seed_check	CHECK ((seed <> ''::text))
+constraint	ideas.ideas_seed_not_null	NOT NULL seed
+constraint	ideas.ideas_story_type_check	CHECK ((story_type <> ''::text))
+constraint	ideas.ideas_story_type_not_null	NOT NULL story_type
+constraint	ideas.ideas_title_check	CHECK (((title IS NULL) OR (title <> ''::text)))
+constraint	ideas.ideas_updated_at_not_null	NOT NULL updated_at
+constraint	manuscript_blocks.manuscript_blocks_id_not_null	NOT NULL id
+constraint	manuscript_blocks.manuscript_blocks_kind_check	CHECK ((kind = ANY (ARRAY['prose'::text, 'dialogue'::text, 'cue'::text])))
+constraint	manuscript_blocks.manuscript_blocks_kind_not_null	NOT NULL kind
+constraint	manuscript_blocks.manuscript_blocks_ordinal_check	CHECK ((ordinal >= 0))
+constraint	manuscript_blocks.manuscript_blocks_ordinal_not_null	NOT NULL ordinal
+constraint	manuscript_blocks.manuscript_blocks_pkey	PRIMARY KEY (id)
+constraint	manuscript_blocks.manuscript_blocks_scene_id_fkey	FOREIGN KEY (scene_id) REFERENCES manuscript_scenes(id) ON DELETE CASCADE
+constraint	manuscript_blocks.manuscript_blocks_scene_id_not_null	NOT NULL scene_id
+constraint	manuscript_blocks.manuscript_blocks_scene_id_ordinal_key	UNIQUE (scene_id, ordinal)
+constraint	manuscript_blocks.manuscript_blocks_text_check	CHECK ((text <> ''::text))
+constraint	manuscript_blocks.manuscript_blocks_text_not_null	NOT NULL text
+constraint	manuscript_scenes.manuscript_scenes_id_not_null	NOT NULL id
+constraint	manuscript_scenes.manuscript_scenes_manuscript_id_fkey	FOREIGN KEY (manuscript_id) REFERENCES manuscripts(id) ON DELETE CASCADE
+constraint	manuscript_scenes.manuscript_scenes_manuscript_id_not_null	NOT NULL manuscript_id
+constraint	manuscript_scenes.manuscript_scenes_manuscript_id_ordinal_key	UNIQUE (manuscript_id, ordinal)
+constraint	manuscript_scenes.manuscript_scenes_ordinal_check	CHECK ((ordinal >= 0))
+constraint	manuscript_scenes.manuscript_scenes_ordinal_not_null	NOT NULL ordinal
+constraint	manuscript_scenes.manuscript_scenes_pkey	PRIMARY KEY (id)
+constraint	manuscript_scenes.manuscript_scenes_title_check	CHECK ((title <> ''::text))
+constraint	manuscript_scenes.manuscript_scenes_title_not_null	NOT NULL title
+constraint	manuscripts.manuscripts_accepted_generation_job_id_key	UNIQUE (accepted_generation_job_id)
+constraint	manuscripts.manuscripts_accepted_generation_job_id_not_null	NOT NULL accepted_generation_job_id
+constraint	manuscripts.manuscripts_accepted_generation_job_id_owner_id_fkey	FOREIGN KEY (accepted_generation_job_id, owner_id) REFERENCES generation_calls(job_id, owner_id)
+constraint	manuscripts.manuscripts_created_at_not_null	NOT NULL created_at
+constraint	manuscripts.manuscripts_format_check	CHECK ((format <> ''::text))
+constraint	manuscripts.manuscripts_format_not_null	NOT NULL format
+constraint	manuscripts.manuscripts_id_not_null	NOT NULL id
+constraint	manuscripts.manuscripts_idea_id_not_null	NOT NULL idea_id
+constraint	manuscripts.manuscripts_idea_id_owner_id_fkey	FOREIGN KEY (idea_id, owner_id) REFERENCES ideas(id, owner_id)
+constraint	manuscripts.manuscripts_owner_id_not_null	NOT NULL owner_id
+constraint	manuscripts.manuscripts_pkey	PRIMARY KEY (id)
+constraint	manuscripts.manuscripts_title_check	CHECK ((title <> ''::text))
+constraint	manuscripts.manuscripts_title_not_null	NOT NULL title
+constraint	manuscripts.manuscripts_updated_at_not_null	NOT NULL updated_at
+constraint	step_values.step_values_created_at_not_null	NOT NULL created_at
+constraint	step_values.step_values_engine_version_id_fkey	FOREIGN KEY (engine_version_id) REFERENCES engine_versions(id)
+constraint	step_values.step_values_engine_version_id_not_null	NOT NULL engine_version_id
+constraint	step_values.step_values_generation_job_id_key	UNIQUE (generation_job_id)
+constraint	step_values.step_values_generation_job_id_not_null	NOT NULL generation_job_id
+constraint	step_values.step_values_generation_job_id_owner_id_fkey	FOREIGN KEY (generation_job_id, owner_id) REFERENCES generation_calls(job_id, owner_id)
+constraint	step_values.step_values_id_not_null	NOT NULL id
+constraint	step_values.step_values_idea_id_engine_version_id_step_key_key	UNIQUE (idea_id, engine_version_id, step_key)
+constraint	step_values.step_values_idea_id_not_null	NOT NULL idea_id
+constraint	step_values.step_values_idea_id_owner_id_fkey	FOREIGN KEY (idea_id, owner_id) REFERENCES ideas(id, owner_id)
+constraint	step_values.step_values_owner_id_not_null	NOT NULL owner_id
+constraint	step_values.step_values_pkey	PRIMARY KEY (id)
+constraint	step_values.step_values_step_key_check	CHECK ((step_key <> ''::text))
+constraint	step_values.step_values_step_key_not_null	NOT NULL step_key
+constraint	step_values.step_values_value_check	CHECK ((jsonb_typeof(value) = 'object'::text))
+constraint	step_values.step_values_value_not_null	NOT NULL value
+extension	plpgsql	1.0
+index	engine_versions_content_hash_key	CREATE UNIQUE INDEX engine_versions_content_hash_key ON public.engine_versions USING btree (content_hash)
+index	engine_versions_pkey	CREATE UNIQUE INDEX engine_versions_pkey ON public.engine_versions USING btree (id)
+index	engine_versions_slug_version_key	CREATE UNIQUE INDEX engine_versions_slug_version_key ON public.engine_versions USING btree (slug, version)
+index	generation_calls_idea_id_idx	CREATE INDEX generation_calls_idea_id_idx ON public.generation_calls USING btree (idea_id)
+index	generation_calls_job_id_owner_id_key	CREATE UNIQUE INDEX generation_calls_job_id_owner_id_key ON public.generation_calls USING btree (job_id, owner_id)
+index	generation_calls_owner_id_idx	CREATE INDEX generation_calls_owner_id_idx ON public.generation_calls USING btree (owner_id)
+index	generation_calls_pkey	CREATE UNIQUE INDEX generation_calls_pkey ON public.generation_calls USING btree (job_id)
+index	generation_calls_provider_call_id_idx	CREATE UNIQUE INDEX generation_calls_provider_call_id_idx ON public.generation_calls USING btree (provider_call_id) WHERE (provider_call_id IS NOT NULL)
+index	ideas_id_owner_id_key	CREATE UNIQUE INDEX ideas_id_owner_id_key ON public.ideas USING btree (id, owner_id)
+index	ideas_owner_id_idx	CREATE INDEX ideas_owner_id_idx ON public.ideas USING btree (owner_id)
+index	ideas_pkey	CREATE UNIQUE INDEX ideas_pkey ON public.ideas USING btree (id)
+index	manuscript_blocks_pkey	CREATE UNIQUE INDEX manuscript_blocks_pkey ON public.manuscript_blocks USING btree (id)
+index	manuscript_blocks_scene_id_idx	CREATE INDEX manuscript_blocks_scene_id_idx ON public.manuscript_blocks USING btree (scene_id)
+index	manuscript_blocks_scene_id_ordinal_key	CREATE UNIQUE INDEX manuscript_blocks_scene_id_ordinal_key ON public.manuscript_blocks USING btree (scene_id, ordinal)
+index	manuscript_scenes_manuscript_id_idx	CREATE INDEX manuscript_scenes_manuscript_id_idx ON public.manuscript_scenes USING btree (manuscript_id)
+index	manuscript_scenes_manuscript_id_ordinal_key	CREATE UNIQUE INDEX manuscript_scenes_manuscript_id_ordinal_key ON public.manuscript_scenes USING btree (manuscript_id, ordinal)
+index	manuscript_scenes_pkey	CREATE UNIQUE INDEX manuscript_scenes_pkey ON public.manuscript_scenes USING btree (id)
+index	manuscripts_accepted_generation_job_id_key	CREATE UNIQUE INDEX manuscripts_accepted_generation_job_id_key ON public.manuscripts USING btree (accepted_generation_job_id)
+index	manuscripts_idea_id_idx	CREATE INDEX manuscripts_idea_id_idx ON public.manuscripts USING btree (idea_id)
+index	manuscripts_owner_id_idx	CREATE INDEX manuscripts_owner_id_idx ON public.manuscripts USING btree (owner_id)
+index	manuscripts_pkey	CREATE UNIQUE INDEX manuscripts_pkey ON public.manuscripts USING btree (id)
+index	step_values_generation_job_id_key	CREATE UNIQUE INDEX step_values_generation_job_id_key ON public.step_values USING btree (generation_job_id)
+index	step_values_idea_id_engine_version_id_step_key_key	CREATE UNIQUE INDEX step_values_idea_id_engine_version_id_step_key_key ON public.step_values USING btree (idea_id, engine_version_id, step_key)
+index	step_values_owner_id_idx	CREATE INDEX step_values_owner_id_idx ON public.step_values USING btree (owner_id)
+index	step_values_pkey	CREATE UNIQUE INDEX step_values_pkey ON public.step_values USING btree (id)
+relation	engine_versions	r
+relation	generation_calls	r
+relation	ideas	r
+relation	manuscript_blocks	r
+relation	manuscript_scenes	r
+relation	manuscripts	r
+relation	step_values	r
+schema	public	pg_database_owner=UC/pg_database_owner,=U/pg_database_owner

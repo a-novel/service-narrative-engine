@@ -5,5 +5,5 @@ VALUES
   (
     '00000000-0000-0000-0000-000000000001',
     'fixture item',
-    'survives the next migration'
+    'fixture data for the original schema'
   );

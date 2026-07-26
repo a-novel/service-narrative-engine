@@ -5,9 +5,6 @@ roles:
     priority: 1
     inherits:
       - "auth:anon"
-    permissions:
-      - "narrative:item:read"
-      - "narrative:item:write"
   "auth:admin":
     priority: 2
     inherits:

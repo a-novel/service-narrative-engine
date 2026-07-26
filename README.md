@@ -1,6 +1,6 @@
 # Service Narrative Engine
 
-An A-Novel backend service. It currently ships a placeholder `item` resource — a named entity with an optional description, exposed through full CRUD — that exercises the platform's common service contracts end to end while the real narrative-engine domain is built out.
+An A-Novel backend service that owns the persistent path from a writer Idea to an auditable generation and an ordered Manuscript.
 
 [![X (formerly Twitter) Follow](https://img.shields.io/twitter/follow/agorastoryverse)](https://twitter.com/agorastoryverse)
 [![Discord](https://img.shields.io/discord/1315240114691248138?logo=discord)](https://discord.gg/rp4Qr8cA)
@@ -18,9 +18,9 @@ An A-Novel backend service. It currently ships a placeholder `item` resource —
 
 ## What it does
 
-The narrative-engine domain does not exist yet. Until it does, the service ships one placeholder resource — `item`, a named entity with an optional description — behind full CRUD, so that the surrounding machinery is wired and exercised end to end: the [layered architecture](https://github.com/a-novel/.github/blob/master/CONTRIBUTING.md) (DAO → core → handler), the published client packages, migrations, and health checks. Swapping `item` for the real domain then becomes an additive change rather than a build from scratch.
+The narrative-engine service owns the persistent boundary between the typed Idea entry contract and the typed Manuscript exit contract. Immutable Engine Versions drive generation, and Generation Calls preserve the provider audit record before a proposal becomes project content.
 
-The surface is a **public REST API**, served by `cmd/rest` and callable by any HTTP client: liveness and health endpoints alongside the `item` CRUD routes. Request and response shapes live in [`openapi.yaml`](./openapi.yaml).
+The current **public REST API** exposes liveness and dependency health through `cmd/rest`. Request and response shapes live in [`openapi.yaml`](./openapi.yaml).
 
 ## Deploying
 
@@ -30,7 +30,7 @@ The service runs as published OCI images plus a PostgreSQL database. The server 
 
 | Image                                      | Role                                                                        |
 | ------------------------------------------ | --------------------------------------------------------------------------- |
-| `service-narrative-engine/rest`            | Public item CRUD + health API.                                              |
+| `service-narrative-engine/rest`            | Public health API and Narrative Engine job worker.                          |
 | `service-narrative-engine/jobs/migrations` | One-shot schema migration job; runs to completion before the servers start. |
 | `service-narrative-engine/database`        | Pre-tuned PostgreSQL image — or bring your own Postgres.                    |
 
@@ -163,13 +163,10 @@ pnpm add @a-novel/service-narrative-engine-rest
 ```
 
 ```typescript
-import { NarrativeEngineApi, itemCreate, itemList } from "@a-novel/service-narrative-engine-rest";
+import { NarrativeEngineApi } from "@a-novel/service-narrative-engine-rest";
 
 const api = new NarrativeEngineApi("http://service-narrative-engine:8080");
-const accessToken = "<access-token>";
-
-const created = await itemCreate(api, accessToken, "My Item", "An optional description.");
-const items = await itemList(api, accessToken, 10, 0);
+const health = await api.health();
 ```
 
 API reference: [a-novel.github.io/service-narrative-engine](https://a-novel.github.io/service-narrative-engine).
