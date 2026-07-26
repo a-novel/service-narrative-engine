@@ -24,8 +24,6 @@ type IdeaInsertRequest struct {
 	OwnerID uuid.UUID
 	// Seed is the source premise supplied by the writer.
 	Seed string
-	// StoryType selects the platform story shape.
-	StoryType string
 	// Genre selects the platform genre vocabulary.
 	Genre string
 	// Title is the optional title supplied by the writer.
@@ -64,7 +62,6 @@ func (operation *PgIdeaInsert) Exec(ctx context.Context, request *IdeaInsertRequ
 		request.ID,
 		request.OwnerID,
 		request.Seed,
-		request.StoryType,
 		request.Genre,
 		request.Title,
 		request.Now,

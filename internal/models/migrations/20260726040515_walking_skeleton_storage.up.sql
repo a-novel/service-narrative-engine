@@ -4,7 +4,6 @@ CREATE TABLE ideas (
   id uuid PRIMARY KEY NOT NULL,
   owner_id uuid NOT NULL,
   seed text NOT NULL CHECK (seed <> ''),
-  story_type text NOT NULL CHECK (story_type <> ''),
   genre text NOT NULL CHECK (genre <> ''),
   title text CHECK (
     title IS NULL

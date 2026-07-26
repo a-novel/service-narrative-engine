@@ -32,20 +32,18 @@ func TestPgIdeaInsert(t *testing.T) {
 			name: "Success",
 
 			request: &dao.IdeaInsertRequest{
-				ID:        uuid.MustParse("00000000-0000-0000-0000-000000000301"),
-				OwnerID:   uuid.MustParse("00000000-0000-0000-0000-000000000042"),
-				Seed:      "A second foghorn answers from beneath the sea.",
-				StoryType: "novel",
-				Genre:     "speculative",
-				Title:     &title,
-				Now:       now,
+				ID:      uuid.MustParse("00000000-0000-0000-0000-000000000301"),
+				OwnerID: uuid.MustParse("00000000-0000-0000-0000-000000000042"),
+				Seed:    "A second foghorn answers from beneath the sea.",
+				Genre:   "speculative",
+				Title:   &title,
+				Now:     now,
 			},
 
 			expect: &dao.Idea{
 				ID:        uuid.MustParse("00000000-0000-0000-0000-000000000301"),
 				OwnerID:   uuid.MustParse("00000000-0000-0000-0000-000000000042"),
 				Seed:      "A second foghorn answers from beneath the sea.",
-				StoryType: "novel",
 				Genre:     "speculative",
 				Title:     &title,
 				CreatedAt: now,
@@ -56,19 +54,17 @@ func TestPgIdeaInsert(t *testing.T) {
 			name: "Success/WithoutTitle",
 
 			request: &dao.IdeaInsertRequest{
-				ID:        uuid.MustParse("00000000-0000-0000-0000-000000000302"),
-				OwnerID:   uuid.MustParse("00000000-0000-0000-0000-000000000042"),
-				Seed:      "A city wakes with no shadows.",
-				StoryType: "novel",
-				Genre:     "speculative",
-				Now:       now,
+				ID:      uuid.MustParse("00000000-0000-0000-0000-000000000302"),
+				OwnerID: uuid.MustParse("00000000-0000-0000-0000-000000000042"),
+				Seed:    "A city wakes with no shadows.",
+				Genre:   "speculative",
+				Now:     now,
 			},
 
 			expect: &dao.Idea{
 				ID:        uuid.MustParse("00000000-0000-0000-0000-000000000302"),
 				OwnerID:   uuid.MustParse("00000000-0000-0000-0000-000000000042"),
 				Seed:      "A city wakes with no shadows.",
-				StoryType: "novel",
 				Genre:     "speculative",
 				CreatedAt: now,
 				UpdatedAt: now,

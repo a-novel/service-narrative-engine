@@ -24,7 +24,6 @@ func TestPgGenerationCallInsert(t *testing.T) {
 		ID:        uuid.MustParse("00000000-0000-0000-0000-000000000321"),
 		OwnerID:   ownerID,
 		Seed:      "A second foghorn answers from beneath the sea.",
-		StoryType: "novel",
 		Genre:     "speculative",
 		CreatedAt: now,
 		UpdatedAt: now,

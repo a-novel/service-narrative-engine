@@ -1,4 +1,4 @@
-migration-history	sha256:a816c4785edaaaf87ff751991fa43307a37a09f05ebb82c4e6fccbd2028ac04f
+migration-history	sha256:8c18b6764541be012f2e8e0762e74590a62c897a1b6e69a4369ac3f751d29ec7
 column	engine_versions.content_hash	text NOT NULL
 column	engine_versions.created_at	timestamp(0) with time zone NOT NULL
 column	engine_versions.definition	jsonb NOT NULL
@@ -28,7 +28,6 @@ column	ideas.genre	text NOT NULL
 column	ideas.id	uuid NOT NULL
 column	ideas.owner_id	uuid NOT NULL
 column	ideas.seed	text NOT NULL
-column	ideas.story_type	text NOT NULL
 column	ideas.title	text
 column	ideas.updated_at	timestamp(0) with time zone NOT NULL
 column	manuscript_blocks.id	uuid NOT NULL
@@ -105,8 +104,6 @@ constraint	ideas.ideas_owner_id_not_null	NOT NULL owner_id
 constraint	ideas.ideas_pkey	PRIMARY KEY (id)
 constraint	ideas.ideas_seed_check	CHECK ((seed <> ''::text))
 constraint	ideas.ideas_seed_not_null	NOT NULL seed
-constraint	ideas.ideas_story_type_check	CHECK ((story_type <> ''::text))
-constraint	ideas.ideas_story_type_not_null	NOT NULL story_type
 constraint	ideas.ideas_title_check	CHECK (((title IS NULL) OR (title <> ''::text)))
 constraint	ideas.ideas_updated_at_not_null	NOT NULL updated_at
 constraint	manuscript_blocks.manuscript_blocks_id_not_null	NOT NULL id

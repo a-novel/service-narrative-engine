@@ -17,8 +17,6 @@ type Idea struct {
 	OwnerID uuid.UUID `bun:"owner_id,type:uuid"`
 	// Seed is the source premise supplied by the writer.
 	Seed string `bun:"seed"`
-	// StoryType selects the platform story shape.
-	StoryType string `bun:"story_type"`
 	// Genre selects the platform genre vocabulary.
 	Genre string `bun:"genre"`
 	// Title is the optional title supplied by the writer.
