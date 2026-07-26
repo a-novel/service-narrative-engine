@@ -80,12 +80,15 @@ func (handler *RestHealth) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (handler *RestHealth) report(ctx context.Context) map[string]any {
+	ctx, span := otel.Tracer().Start(ctx, "rest.Health(report)")
+	defer span.End()
+
 	handler.cacheMutex.Lock()
 	defer handler.cacheMutex.Unlock()
 
 	now := time.Now()
 	if handler.cachedReport != nil && now.Before(handler.cacheExpiresAt) {
-		return handler.cachedReport
+		return otel.ReportSuccess(span, handler.cachedReport)
 	}
 
 	jobsQueue, jobsErr := handler.reportJobs(ctx)
@@ -100,7 +103,7 @@ func (handler *RestHealth) report(ctx context.Context) map[string]any {
 	}
 	handler.cacheExpiresAt = now.Add(restHealthCacheTTL)
 
-	return handler.cachedReport
+	return otel.ReportSuccess(span, handler.cachedReport)
 }
 
 func (handler *RestHealth) reportPostgres(ctx context.Context) error {
