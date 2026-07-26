@@ -50,7 +50,7 @@ services:
     networks:
       - narrative-engine-integration-rest-test
   postgres-jobs:
-    image: ghcr.io/a-novel/service-jobs/database:v0.3.0
+    image: ghcr.io/a-novel/service-jobs/database:v0.4.0
     networks:
       - narrative-engine-integration-rest-test
     environment:
@@ -61,7 +61,7 @@ services:
       POSTGRES_INITDB_ARGS: --auth=scram-sha-256
 
   service-jobs-migrations:
-    image: ghcr.io/a-novel/service-jobs/jobs/migrations:v0.3.0
+    image: ghcr.io/a-novel/service-jobs/jobs/migrations:v0.4.0
     depends_on:
       postgres-jobs:
         condition: service_healthy
@@ -71,7 +71,7 @@ services:
       - narrative-engine-integration-rest-test
 
   service-jobs:
-    image: ghcr.io/a-novel/service-jobs/standalone-grpc:v0.3.0
+    image: ghcr.io/a-novel/service-jobs/standalone-grpc:v0.4.0
     depends_on:
       postgres-jobs:
         condition: service_healthy
