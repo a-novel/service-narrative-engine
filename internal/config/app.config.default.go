@@ -6,6 +6,8 @@ import (
 
 	"github.com/samber/lo"
 
+	jobworker "github.com/a-novel/service-jobs/pkg/go/worker"
+
 	"github.com/a-novel-kit/golib/grpcf"
 	"github.com/a-novel-kit/golib/logging"
 	loggingpresets "github.com/a-novel-kit/golib/logging/presets"
@@ -19,9 +21,6 @@ const (
 	// OtelFlushTimeout bounds how long the OpenTelemetry exporter waits to flush
 	// pending spans on shutdown before giving up.
 	OtelFlushTimeout = 2 * time.Second
-
-	workerLeaseSlack = 30 * time.Second
-	workerDrainSlack = 30 * time.Second
 )
 
 // LoggerDev pretty-prints logs to the console for local development.
@@ -99,11 +98,9 @@ var AppPresetDefault = App{
 		MaxIdleConns:        env.HTTPClientMaxIdleConns,
 		MaxIdleConnsPerHost: env.HTTPClientMaxIdleConnsPerHost,
 	},
-	Worker: Worker{
+	Worker: jobworker.Config{
 		Concurrency:  env.WorkerConcurrency,
 		PollInterval: env.WorkerPollInterval,
 		JobDeadline:  env.WorkerJobDeadline,
-		Lease:        env.WorkerJobDeadline + workerLeaseSlack,
-		DrainBudget:  env.WorkerJobDeadline + workerDrainSlack,
 	},
 }

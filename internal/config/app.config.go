@@ -4,6 +4,7 @@ import (
 	"time"
 
 	serviceauthentication "github.com/a-novel/service-authentication/v2/pkg/go"
+	jobworker "github.com/a-novel/service-jobs/pkg/go/worker"
 
 	"github.com/a-novel-kit/golib/grpcf"
 	"github.com/a-novel-kit/golib/logging"
@@ -65,20 +66,6 @@ type HTTPClient struct {
 	MaxIdleConnsPerHost int `json:"maxIdleConnsPerHost" yaml:"maxIdleConnsPerHost"`
 }
 
-// Worker holds the process-level controls for claiming and running narrative jobs.
-type Worker struct {
-	// Concurrency is the number of claim pollers and jobs that may run at once.
-	Concurrency int `json:"concurrency" yaml:"concurrency"`
-	// PollInterval is the delay after an empty or failed claim.
-	PollInterval time.Duration `json:"pollInterval" yaml:"pollInterval"`
-	// JobDeadline bounds one handler invocation.
-	JobDeadline time.Duration `json:"jobDeadline" yaml:"jobDeadline"`
-	// Lease is the claim lifetime derived from JobDeadline plus settlement slack.
-	Lease time.Duration `json:"lease" yaml:"lease"`
-	// DrainBudget bounds in-flight execution after the claim loop stops.
-	DrainBudget time.Duration `json:"drainBudget" yaml:"drainBudget"`
-}
-
 // App aggregates the service's dependencies, HTTP server, observability, and database settings.
 type App struct {
 	App  Main `json:"app"  yaml:"app"`
@@ -92,5 +79,5 @@ type App struct {
 	HttpLogger logging.HTTPConfig `json:"httpLogger" yaml:"httpLogger"`
 	Postgres   postgres.Config    `json:"postgres"   yaml:"postgres"`
 	HTTPClient HTTPClient         `json:"httpClient" yaml:"httpClient"`
-	Worker     Worker             `json:"worker"     yaml:"worker"`
+	Worker     jobworker.Config   `json:"worker"     yaml:"worker"`
 }

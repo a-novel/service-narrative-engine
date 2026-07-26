@@ -8,12 +8,10 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"maps"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
-	"slices"
 	"strconv"
 	"syscall"
 
@@ -105,14 +103,7 @@ func main() {
 	serviceItemDelete := core.NewItemDelete(daoItemDelete)
 
 	jobHandlers := map[string]jobworker.Handler{}
-	jobExecutor := lo.Must(jobworker.NewExecutor(jobsClient, jobHandlers))
-	jobWorker := lo.Must(core.NewWorker(
-		jobsClient,
-		jobExecutor,
-		slices.Collect(maps.Keys(jobHandlers)),
-		cfg.Worker,
-		cfg.Logger,
-	))
+	jobRunner := lo.Must(jobworker.NewRunner(jobsClient, jobHandlers, cfg.Worker, cfg.Logger))
 
 	// =================================================================================================================
 	// HANDLERS
@@ -181,14 +172,6 @@ func main() {
 	}
 
 	log.Println("Starting REST server on " + httpServer.Addr)
-	cfg.Logger.Info(ctx, fmt.Sprintf(
-		"starting job worker: concurrency=%d poll_interval=%s job_deadline=%s lease=%s drain_budget=%s",
-		cfg.Worker.Concurrency,
-		cfg.Worker.PollInterval,
-		cfg.Worker.JobDeadline,
-		cfg.Worker.Lease,
-		cfg.Worker.DrainBudget,
-	))
 
 	if cfg.HTTPClient.MaxIdleConnsPerHost < cfg.Worker.Concurrency {
 		cfg.Logger.Warn(ctx, fmt.Sprintf(
@@ -204,7 +187,7 @@ func main() {
 	go func() {
 		defer close(workerDone)
 
-		jobWorker.Run(workerCtx)
+		jobRunner.Run(workerCtx)
 	}()
 
 	go func() {
