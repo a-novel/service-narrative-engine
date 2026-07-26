@@ -22,6 +22,7 @@ import (
 
 	serviceauthentication "github.com/a-novel/service-authentication/v2/pkg/go"
 	servicejobs "github.com/a-novel/service-jobs/pkg/go"
+	jobworker "github.com/a-novel/service-jobs/pkg/go/worker"
 	servicejsonkeys "github.com/a-novel/service-json-keys/v2/pkg/go"
 
 	"github.com/a-novel-kit/golib/httpf"
@@ -54,15 +55,12 @@ func main() {
 	// CLIENTS
 	// =================================================================================================================
 
-	// Provider callers will share this client once they exist. Constructing it now keeps the pool
-	// configuration wired at boot; the value is discarded until a caller can receive it.
+	// TODO: Pass this shared client to narrative job handlers that call providers.
 	_ = httpf.NewPoolClient(httpf.PoolOptions{
 		MaxIdleConns:        cfg.HTTPClient.MaxIdleConns,
 		MaxIdleConnsPerHost: cfg.HTTPClient.MaxIdleConnsPerHost,
 	})
 
-	// The client remains unwired until a queue consumer exists. Its lazy dial keeps queue
-	// availability out of startup.
 	jobsClient := lo.Must(servicejobs.NewClient(
 		fmt.Sprintf("%s:%d", cfg.Dependencies.ServiceJobsHost, cfg.Dependencies.ServiceJobsPort),
 		lo.Must(cfg.Dependencies.ServiceJobsCredentials.Options(ctx))...,
@@ -103,6 +101,9 @@ func main() {
 	serviceItemList := core.NewItemList(daoItemList)
 	serviceItemUpdate := core.NewItemUpdate(daoItemUpdate)
 	serviceItemDelete := core.NewItemDelete(daoItemDelete)
+
+	jobHandlers := map[string]jobworker.Handler{}
+	jobRunner := lo.Must(jobworker.NewRunner(jobsClient, jobHandlers, cfg.Worker, cfg.Logger))
 
 	// =================================================================================================================
 	// HANDLERS
@@ -172,6 +173,23 @@ func main() {
 
 	log.Println("Starting REST server on " + httpServer.Addr)
 
+	if cfg.HTTPClient.MaxIdleConnsPerHost < cfg.Worker.Concurrency {
+		cfg.Logger.Warn(ctx, fmt.Sprintf(
+			"HTTP_CLIENT_MAX_IDLE_CONNS_PER_HOST=%d is below WORKER_CONCURRENCY=%d",
+			cfg.HTTPClient.MaxIdleConnsPerHost,
+			cfg.Worker.Concurrency,
+		))
+	}
+
+	workerCtx, stopWorker := context.WithCancel(ctx)
+
+	workerDone := make(chan struct{})
+	go func() {
+		defer close(workerDone)
+
+		jobRunner.Run(workerCtx)
+	}()
+
 	go func() {
 		err := httpServer.ListenAndServe()
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -182,6 +200,10 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
+
+	log.Println("Stopping job worker...")
+	stopWorker()
+	<-workerDone
 
 	log.Println("Shutting down REST server...")
 

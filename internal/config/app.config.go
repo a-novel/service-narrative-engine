@@ -4,6 +4,7 @@ import (
 	"time"
 
 	serviceauthentication "github.com/a-novel/service-authentication/v2/pkg/go"
+	jobworker "github.com/a-novel/service-jobs/pkg/go/worker"
 
 	"github.com/a-novel-kit/golib/grpcf"
 	"github.com/a-novel-kit/golib/logging"
@@ -78,4 +79,5 @@ type App struct {
 	HttpLogger logging.HTTPConfig `json:"httpLogger" yaml:"httpLogger"`
 	Postgres   postgres.Config    `json:"postgres"   yaml:"postgres"`
 	HTTPClient HTTPClient         `json:"httpClient" yaml:"httpClient"`
+	Worker     jobworker.Config   `json:"worker"     yaml:"worker"`
 }

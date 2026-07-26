@@ -50,6 +50,10 @@ const (
 	// HTTPClientMaxIdleConnsPerHostDefault tracks the default provider concurrency so each call can
 	// reuse an existing connection. The standard library keeps two idle connections per host.
 	HTTPClientMaxIdleConnsPerHostDefault = 4
+
+	WorkerConcurrencyDefault  = 4
+	WorkerPollIntervalDefault = 5 * time.Second
+	WorkerJobDeadlineDefault  = 150 * time.Second
 )
 
 // Default values for environment variables, if applicable.
@@ -83,6 +87,10 @@ var (
 
 	httpClientMaxIdleConns        = getEnv("HTTP_CLIENT_MAX_IDLE_CONNS")
 	httpClientMaxIdleConnsPerHost = getEnv("HTTP_CLIENT_MAX_IDLE_CONNS_PER_HOST")
+
+	workerConcurrency  = getEnv("WORKER_CONCURRENCY")
+	workerPollInterval = getEnv("WORKER_POLL_INTERVAL")
+	workerJobDeadline  = getEnv("WORKER_JOB_DEADLINE")
 
 	corsAllowedOrigins   = getEnv("REST_CORS_ALLOWED_ORIGINS")
 	corsAllowedHeaders   = getEnv("REST_CORS_ALLOWED_HEADERS")
@@ -144,6 +152,17 @@ var (
 	// keeps for one provider host.
 	HTTPClientMaxIdleConnsPerHost = config.LoadEnv(
 		httpClientMaxIdleConnsPerHost, HTTPClientMaxIdleConnsPerHostDefault, config.IntParser,
+	)
+
+	// WorkerConcurrency is the number of claim pollers and jobs that may run at once.
+	WorkerConcurrency = config.LoadEnv(workerConcurrency, WorkerConcurrencyDefault, config.IntParser)
+	// WorkerPollInterval is the delay after an empty or failed claim.
+	WorkerPollInterval = config.LoadEnv(
+		workerPollInterval, WorkerPollIntervalDefault, config.DurationParser,
+	)
+	// WorkerJobDeadline bounds one narrative job handler invocation.
+	WorkerJobDeadline = config.LoadEnv(
+		workerJobDeadline, WorkerJobDeadlineDefault, config.DurationParser,
 	)
 
 	// CorsAllowedOrigins lists the origins allowed to access the REST API.

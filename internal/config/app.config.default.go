@@ -6,6 +6,8 @@ import (
 
 	"github.com/samber/lo"
 
+	jobworker "github.com/a-novel/service-jobs/pkg/go/worker"
+
 	"github.com/a-novel-kit/golib/grpcf"
 	"github.com/a-novel-kit/golib/logging"
 	loggingpresets "github.com/a-novel-kit/golib/logging/presets"
@@ -95,5 +97,10 @@ var AppPresetDefault = App{
 	HTTPClient: HTTPClient{
 		MaxIdleConns:        env.HTTPClientMaxIdleConns,
 		MaxIdleConnsPerHost: env.HTTPClientMaxIdleConnsPerHost,
+	},
+	Worker: jobworker.Config{
+		Concurrency:  env.WorkerConcurrency,
+		PollInterval: env.WorkerPollInterval,
+		JobDeadline:  env.WorkerJobDeadline,
 	},
 }
