@@ -30,7 +30,7 @@ The service runs as published OCI images plus a PostgreSQL database. The server 
 
 | Image                                      | Role                                                                        |
 | ------------------------------------------ | --------------------------------------------------------------------------- |
-| `service-narrative-engine/rest`            | Public health API and Narrative Engine job worker.                          |
+| `service-narrative-engine/rest`            | Public health API.                                                          |
 | `service-narrative-engine/jobs/migrations` | One-shot schema migration job; runs to completion before the servers start. |
 | `service-narrative-engine/database`        | Pre-tuned PostgreSQL image — or bring your own Postgres.                    |
 
