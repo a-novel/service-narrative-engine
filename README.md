@@ -1,6 +1,6 @@
 # Service Narrative Engine
 
-An A-Novel backend service that owns the persistent path from a writer Idea to an auditable generation and an ordered Manuscript.
+An A-Novel backend service that turns a writer Idea into client-saved project content and an ordered Manuscript.
 
 [![X (formerly Twitter) Follow](https://img.shields.io/twitter/follow/agorastoryverse)](https://twitter.com/agorastoryverse)
 [![Discord](https://img.shields.io/discord/1315240114691248138?logo=discord)](https://discord.gg/rp4Qr8cA)
@@ -18,7 +18,7 @@ An A-Novel backend service that owns the persistent path from a writer Idea to a
 
 ## What it does
 
-The narrative-engine service owns the persistent boundary between the typed Idea entry contract and the typed Manuscript exit contract. Immutable Engine Versions drive generation, and Generation Calls preserve the provider audit record before a proposal becomes project content.
+The narrative-engine service owns the typed Idea entry contract, Engine definitions, client-saved project content, and the opaque Manuscript exit contract. Generations run through `service-jobs` and return volatile proposals; this service retains only owner-scoped provider and token usage needed for billing.
 
 The current **public REST API** exposes liveness and dependency health through `cmd/rest`. Request and response shapes live in [`openapi.yaml`](./openapi.yaml).
 

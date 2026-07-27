@@ -2,7 +2,7 @@
 
 This file covers only what is specific to this service. For service-level contribution shared across every service — the architecture, the layers, the conventions — start with the [service & architecture concepts](https://github.com/a-novel/.github/blob/master/CONTRIBUTING.md). Platform setup and day-to-day commands are in the [developer onboarding guide](https://github.com/a-novel-kit/.github/blob/master/README.md).
 
-`service-narrative-engine` stores the typed Idea and Manuscript boundaries around its data-driven generation workflow. Generation Calls remain audit records, while accepted step values are project content.
+`service-narrative-engine` stores the typed Idea and Manuscript boundaries around its data-driven generation workflow. Generation rows retain billing usage only; the client saves chosen values through the same project-content path as authored values.
 
 ---
 
