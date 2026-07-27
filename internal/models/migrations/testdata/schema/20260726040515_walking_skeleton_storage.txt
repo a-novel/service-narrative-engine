@@ -1,4 +1,4 @@
-migration-history	sha256:2b18e8410b174b2ac47847c1485f35727bce84f419af941aa79f4193acee1f3e
+migration-history	sha256:9052a0dc618a30f90e12a61ce1e7e00b45ef12883dc75eddf3f1d9cdbd85f8c7
 column	engine_versions.created_at	timestamp with time zone NOT NULL
 column	engine_versions.definition	jsonb NOT NULL
 column	engine_versions.id	uuid NOT NULL
@@ -51,7 +51,6 @@ column	step_values.value	jsonb NOT NULL
 comment	schema public	standard public schema
 constraint	engine_versions.engine_versions_created_at_not_null	NOT NULL created_at
 constraint	engine_versions.engine_versions_definition_check	CHECK ((jsonb_typeof(definition) = 'object'::text))
-constraint	engine_versions.engine_versions_definition_kind_check	CHECK (((definition ? 'kind'::text) AND ((definition ->> 'kind'::text) = kind)))
 constraint	engine_versions.engine_versions_definition_not_null	NOT NULL definition
 constraint	engine_versions.engine_versions_id_not_null	NOT NULL id
 constraint	engine_versions.engine_versions_kind_check	CHECK ((kind = ANY (ARRAY['project'::text, 'collection'::text])))

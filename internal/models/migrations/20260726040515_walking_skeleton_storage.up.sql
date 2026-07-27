@@ -23,10 +23,6 @@ CREATE TABLE engine_versions (
   version text NOT NULL CHECK (version <> ''),
   definition jsonb NOT NULL CHECK (jsonb_typeof(definition) = 'object'),
   created_at timestamp with time zone NOT NULL,
-  CONSTRAINT engine_versions_definition_kind_check CHECK (
-    definition ? 'kind'
-    AND definition ->> 'kind' = kind
-  ),
   UNIQUE (slug, version)
 );
 
