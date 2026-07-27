@@ -16,8 +16,11 @@ import (
 //go:embed pg.generationCallInsert.sql
 var generationCallInsertQuery string
 
-// ErrGenerationCallInsertAlreadyExists is returned when a job repeats an attempt or successful outcome.
-var ErrGenerationCallInsertAlreadyExists = errors.New("generation call already exists")
+// ErrGenerationCallInsertAttemptExists is returned when the job attempt is already recorded.
+var ErrGenerationCallInsertAttemptExists = errors.New("generation call attempt already exists")
+
+// ErrGenerationCallInsertJobAlreadySucceeded is returned when another attempt completed the job.
+var ErrGenerationCallInsertJobAlreadySucceeded = errors.New("job already has a successful generation call")
 
 // ErrGenerationCallInsertIdeaNotFound is returned when the Idea does not belong to the owner.
 var ErrGenerationCallInsertIdeaNotFound = errors.New("idea not found")
@@ -94,8 +97,10 @@ func (operation *PgGenerationCallInsert) Exec(
 		var pgErr pgdriver.Error
 		if errors.As(err, &pgErr) {
 			switch pgErr.Field('n') {
-			case "generation_calls_job_attempt_key", "generation_calls_job_success_idx":
-				err = errors.Join(err, ErrGenerationCallInsertAlreadyExists)
+			case "generation_calls_job_attempt_key":
+				err = errors.Join(err, ErrGenerationCallInsertAttemptExists)
+			case "generation_calls_job_success_idx":
+				err = errors.Join(err, ErrGenerationCallInsertJobAlreadySucceeded)
 			case "generation_calls_idea_owner_fk":
 				err = errors.Join(err, ErrGenerationCallInsertIdeaNotFound)
 			case "generation_calls_engine_version_fk":

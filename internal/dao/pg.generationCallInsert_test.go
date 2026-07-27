@@ -74,6 +74,9 @@ func TestPgGenerationCallInsert(t *testing.T) {
 	}
 	duplicateAttempt := *call
 	duplicateAttempt.ID = uuid.MustParse("00000000-0000-0000-0000-000000000323")
+	duplicateAttempt.Outcome = dao.GenerationOutcomeError
+	duplicateAttempt.RawOutput = nil
+	duplicateAttempt.Error = &providerError
 
 	failedAttempt := *call
 	failedAttempt.Outcome = dao.GenerationOutcomeError
@@ -136,7 +139,7 @@ func TestPgGenerationCallInsert(t *testing.T) {
 
 				insertCall(ctx, t, call)
 			},
-			expectErr: dao.ErrGenerationCallInsertAlreadyExists,
+			expectErr: dao.ErrGenerationCallInsertAttemptExists,
 		},
 		{
 			name:    "Error/DuplicateSuccessfulOutcome",
@@ -146,7 +149,7 @@ func TestPgGenerationCallInsert(t *testing.T) {
 
 				insertCall(ctx, t, call)
 			},
-			expectErr: dao.ErrGenerationCallInsertAlreadyExists,
+			expectErr: dao.ErrGenerationCallInsertJobAlreadySucceeded,
 		},
 		{
 			name:      "Error/IdeaNotFound",
