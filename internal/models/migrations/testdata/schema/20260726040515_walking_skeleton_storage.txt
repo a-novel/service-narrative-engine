@@ -1,158 +1,115 @@
-migration-history	sha256:9052a0dc618a30f90e12a61ce1e7e00b45ef12883dc75eddf3f1d9cdbd85f8c7
+migration-history	sha256:e36798fe41117078ebcd242e96d77737bb3468e695ae669be552178ece35a233
 column	engine_versions.created_at	timestamp with time zone NOT NULL
 column	engine_versions.definition	jsonb NOT NULL
+column	engine_versions.engine_id	uuid NOT NULL
 column	engine_versions.id	uuid NOT NULL
-column	engine_versions.kind	text NOT NULL
-column	engine_versions.slug	text NOT NULL
 column	engine_versions.version	text NOT NULL
+column	engines.id	uuid NOT NULL
+column	engines.kind	engine_kind NOT NULL
+column	engines.slug	text NOT NULL
 column	generation_calls.attempt	integer NOT NULL
-column	generation_calls.completed_at	timestamp with time zone NOT NULL
 column	generation_calls.created_at	timestamp with time zone NOT NULL
-column	generation_calls.engine_version_id	uuid NOT NULL
-column	generation_calls.error	text
-column	generation_calls.id	uuid NOT NULL
-column	generation_calls.idea_id	uuid NOT NULL
-column	generation_calls.input_tokens	bigint
+column	generation_calls.input_tokens	bigint NOT NULL
 column	generation_calls.job_id	uuid NOT NULL
-column	generation_calls.latency_ms	bigint NOT NULL
 column	generation_calls.model	text NOT NULL
-column	generation_calls.outcome	text NOT NULL
-column	generation_calls.output_tokens	bigint
+column	generation_calls.output_tokens	bigint NOT NULL
 column	generation_calls.owner_id	uuid NOT NULL
 column	generation_calls.provider	text NOT NULL
-column	generation_calls.provider_call_id	text
-column	generation_calls.raw_output	text
-column	generation_calls.refusal	text
-column	generation_calls.request_hash	text NOT NULL
-column	generation_calls.total_tokens	bigint
 column	ideas.created_at	timestamp with time zone NOT NULL
 column	ideas.genre	text NOT NULL
 column	ideas.id	uuid NOT NULL
 column	ideas.owner_id	uuid NOT NULL
 column	ideas.seed	text NOT NULL
 column	ideas.title	text
-column	ideas.updated_at	timestamp with time zone NOT NULL
-column	manuscripts.accepted_generation_call_id	uuid NOT NULL
+column	ideas.updated_at	timestamp with time zone
 column	manuscripts.created_at	timestamp with time zone NOT NULL
-column	manuscripts.engine_version_id	uuid NOT NULL
 column	manuscripts.id	uuid NOT NULL
 column	manuscripts.idea_id	uuid NOT NULL
-column	manuscripts.owner_id	uuid NOT NULL
-column	manuscripts.updated_at	timestamp with time zone NOT NULL
+column	manuscripts.updated_at	timestamp with time zone
 column	manuscripts.value	jsonb NOT NULL
 column	step_values.created_at	timestamp with time zone NOT NULL
 column	step_values.engine_version_id	uuid NOT NULL
-column	step_values.generation_call_id	uuid NOT NULL
 column	step_values.id	uuid NOT NULL
 column	step_values.idea_id	uuid NOT NULL
-column	step_values.owner_id	uuid NOT NULL
 column	step_values.step_key	text NOT NULL
 column	step_values.value	jsonb NOT NULL
 comment	schema public	standard public schema
 constraint	engine_versions.engine_versions_created_at_not_null	NOT NULL created_at
 constraint	engine_versions.engine_versions_definition_check	CHECK ((jsonb_typeof(definition) = 'object'::text))
 constraint	engine_versions.engine_versions_definition_not_null	NOT NULL definition
+constraint	engine_versions.engine_versions_engine_fk	FOREIGN KEY (engine_id) REFERENCES engines(id)
+constraint	engine_versions.engine_versions_engine_id_not_null	NOT NULL engine_id
+constraint	engine_versions.engine_versions_engine_id_version_key	UNIQUE (engine_id, version)
 constraint	engine_versions.engine_versions_id_not_null	NOT NULL id
-constraint	engine_versions.engine_versions_kind_check	CHECK ((kind = ANY (ARRAY['project'::text, 'collection'::text])))
-constraint	engine_versions.engine_versions_kind_not_null	NOT NULL kind
 constraint	engine_versions.engine_versions_pkey	PRIMARY KEY (id)
-constraint	engine_versions.engine_versions_slug_check	CHECK ((slug <> ''::text))
-constraint	engine_versions.engine_versions_slug_not_null	NOT NULL slug
-constraint	engine_versions.engine_versions_slug_version_key	UNIQUE (slug, version)
 constraint	engine_versions.engine_versions_version_check	CHECK ((version <> ''::text))
 constraint	engine_versions.engine_versions_version_not_null	NOT NULL version
+constraint	engines.engines_id_not_null	NOT NULL id
+constraint	engines.engines_kind_not_null	NOT NULL kind
+constraint	engines.engines_pkey	PRIMARY KEY (id)
+constraint	engines.engines_slug_check	CHECK ((slug <> ''::text))
+constraint	engines.engines_slug_key	UNIQUE (slug)
+constraint	engines.engines_slug_not_null	NOT NULL slug
 constraint	generation_calls.generation_calls_attempt_check	CHECK ((attempt >= 1))
 constraint	generation_calls.generation_calls_attempt_not_null	NOT NULL attempt
-constraint	generation_calls.generation_calls_completed_at_not_null	NOT NULL completed_at
-constraint	generation_calls.generation_calls_completion_order_check	CHECK ((completed_at >= created_at))
 constraint	generation_calls.generation_calls_created_at_not_null	NOT NULL created_at
-constraint	generation_calls.generation_calls_engine_version_fk	FOREIGN KEY (engine_version_id) REFERENCES engine_versions(id)
-constraint	generation_calls.generation_calls_engine_version_id_not_null	NOT NULL engine_version_id
-constraint	generation_calls.generation_calls_error_check	CHECK (((error IS NULL) OR (error <> ''::text)))
-constraint	generation_calls.generation_calls_id_not_null	NOT NULL id
-constraint	generation_calls.generation_calls_idea_id_not_null	NOT NULL idea_id
-constraint	generation_calls.generation_calls_idea_owner_fk	FOREIGN KEY (idea_id, owner_id) REFERENCES ideas(id, owner_id)
-constraint	generation_calls.generation_calls_identity_key	UNIQUE (id, idea_id, owner_id, engine_version_id)
-constraint	generation_calls.generation_calls_input_tokens_check	CHECK (((input_tokens IS NULL) OR (input_tokens >= 0)))
-constraint	generation_calls.generation_calls_job_attempt_key	UNIQUE (job_id, attempt)
+constraint	generation_calls.generation_calls_input_tokens_check	CHECK ((input_tokens >= 0))
+constraint	generation_calls.generation_calls_input_tokens_not_null	NOT NULL input_tokens
 constraint	generation_calls.generation_calls_job_id_not_null	NOT NULL job_id
-constraint	generation_calls.generation_calls_latency_ms_check	CHECK ((latency_ms >= 0))
-constraint	generation_calls.generation_calls_latency_ms_not_null	NOT NULL latency_ms
 constraint	generation_calls.generation_calls_model_check	CHECK ((model <> ''::text))
 constraint	generation_calls.generation_calls_model_not_null	NOT NULL model
-constraint	generation_calls.generation_calls_outcome_check	CHECK ((outcome = ANY (ARRAY['ok'::text, 'refusal'::text, 'incomplete'::text, 'error'::text])))
-constraint	generation_calls.generation_calls_outcome_details_check	CHECK ((((outcome = 'ok'::text) AND (raw_output IS NOT NULL) AND (refusal IS NULL) AND (error IS NULL)) OR ((outcome = 'refusal'::text) AND (refusal IS NOT NULL) AND (error IS NULL)) OR ((outcome = 'incomplete'::text) AND (refusal IS NULL) AND (error IS NULL)) OR ((outcome = 'error'::text) AND (refusal IS NULL) AND (error IS NOT NULL))))
-constraint	generation_calls.generation_calls_outcome_not_null	NOT NULL outcome
-constraint	generation_calls.generation_calls_output_tokens_check	CHECK (((output_tokens IS NULL) OR (output_tokens >= 0)))
+constraint	generation_calls.generation_calls_output_tokens_check	CHECK ((output_tokens >= 0))
+constraint	generation_calls.generation_calls_output_tokens_not_null	NOT NULL output_tokens
 constraint	generation_calls.generation_calls_owner_id_not_null	NOT NULL owner_id
-constraint	generation_calls.generation_calls_pkey	PRIMARY KEY (id)
-constraint	generation_calls.generation_calls_provider_call_id_check	CHECK (((provider_call_id IS NULL) OR (provider_call_id <> ''::text)))
+constraint	generation_calls.generation_calls_pkey	PRIMARY KEY (job_id, attempt)
 constraint	generation_calls.generation_calls_provider_check	CHECK ((provider <> ''::text))
 constraint	generation_calls.generation_calls_provider_not_null	NOT NULL provider
-constraint	generation_calls.generation_calls_refusal_check	CHECK (((refusal IS NULL) OR (refusal <> ''::text)))
-constraint	generation_calls.generation_calls_request_hash_check	CHECK ((request_hash ~ '^[0-9a-f]{64}$'::text))
-constraint	generation_calls.generation_calls_request_hash_not_null	NOT NULL request_hash
-constraint	generation_calls.generation_calls_total_tokens_check	CHECK (((total_tokens IS NULL) OR (total_tokens >= 0)))
 constraint	ideas.ideas_created_at_not_null	NOT NULL created_at
 constraint	ideas.ideas_genre_check	CHECK ((genre <> ''::text))
 constraint	ideas.ideas_genre_not_null	NOT NULL genre
 constraint	ideas.ideas_id_not_null	NOT NULL id
-constraint	ideas.ideas_id_owner_id_key	UNIQUE (id, owner_id)
 constraint	ideas.ideas_owner_id_not_null	NOT NULL owner_id
 constraint	ideas.ideas_pkey	PRIMARY KEY (id)
 constraint	ideas.ideas_seed_check	CHECK ((seed <> ''::text))
 constraint	ideas.ideas_seed_not_null	NOT NULL seed
 constraint	ideas.ideas_title_check	CHECK (((title IS NULL) OR (title <> ''::text)))
-constraint	ideas.ideas_updated_at_not_null	NOT NULL updated_at
-constraint	manuscripts.manuscripts_accepted_generation_call_id_idea_id_owner_id_e_fkey	FOREIGN KEY (accepted_generation_call_id, idea_id, owner_id, engine_version_id) REFERENCES generation_calls(id, idea_id, owner_id, engine_version_id)
-constraint	manuscripts.manuscripts_accepted_generation_call_id_key	UNIQUE (accepted_generation_call_id)
-constraint	manuscripts.manuscripts_accepted_generation_call_id_not_null	NOT NULL accepted_generation_call_id
 constraint	manuscripts.manuscripts_created_at_not_null	NOT NULL created_at
-constraint	manuscripts.manuscripts_engine_version_id_not_null	NOT NULL engine_version_id
 constraint	manuscripts.manuscripts_id_not_null	NOT NULL id
+constraint	manuscripts.manuscripts_idea_fk	FOREIGN KEY (idea_id) REFERENCES ideas(id)
 constraint	manuscripts.manuscripts_idea_id_not_null	NOT NULL idea_id
-constraint	manuscripts.manuscripts_owner_id_not_null	NOT NULL owner_id
 constraint	manuscripts.manuscripts_pkey	PRIMARY KEY (id)
-constraint	manuscripts.manuscripts_updated_at_not_null	NOT NULL updated_at
 constraint	manuscripts.manuscripts_value_check	CHECK ((jsonb_typeof(value) = 'object'::text))
 constraint	manuscripts.manuscripts_value_not_null	NOT NULL value
 constraint	step_values.step_values_created_at_not_null	NOT NULL created_at
+constraint	step_values.step_values_engine_version_fk	FOREIGN KEY (engine_version_id) REFERENCES engine_versions(id)
 constraint	step_values.step_values_engine_version_id_not_null	NOT NULL engine_version_id
-constraint	step_values.step_values_generation_call_id_idea_id_owner_id_engine_ver_fkey	FOREIGN KEY (generation_call_id, idea_id, owner_id, engine_version_id) REFERENCES generation_calls(id, idea_id, owner_id, engine_version_id)
-constraint	step_values.step_values_generation_call_id_key	UNIQUE (generation_call_id)
-constraint	step_values.step_values_generation_call_id_not_null	NOT NULL generation_call_id
 constraint	step_values.step_values_id_not_null	NOT NULL id
+constraint	step_values.step_values_idea_fk	FOREIGN KEY (idea_id) REFERENCES ideas(id)
 constraint	step_values.step_values_idea_id_engine_version_id_step_key_key	UNIQUE (idea_id, engine_version_id, step_key)
 constraint	step_values.step_values_idea_id_not_null	NOT NULL idea_id
-constraint	step_values.step_values_owner_id_not_null	NOT NULL owner_id
 constraint	step_values.step_values_pkey	PRIMARY KEY (id)
 constraint	step_values.step_values_step_key_check	CHECK ((step_key <> ''::text))
 constraint	step_values.step_values_step_key_not_null	NOT NULL step_key
 constraint	step_values.step_values_value_check	CHECK ((jsonb_typeof(value) = 'object'::text))
 constraint	step_values.step_values_value_not_null	NOT NULL value
 extension	plpgsql	1.0
+index	engine_versions_engine_id_version_key	CREATE UNIQUE INDEX engine_versions_engine_id_version_key ON public.engine_versions USING btree (engine_id, version)
 index	engine_versions_pkey	CREATE UNIQUE INDEX engine_versions_pkey ON public.engine_versions USING btree (id)
-index	engine_versions_slug_version_key	CREATE UNIQUE INDEX engine_versions_slug_version_key ON public.engine_versions USING btree (slug, version)
-index	generation_calls_idea_id_idx	CREATE INDEX generation_calls_idea_id_idx ON public.generation_calls USING btree (idea_id)
-index	generation_calls_identity_key	CREATE UNIQUE INDEX generation_calls_identity_key ON public.generation_calls USING btree (id, idea_id, owner_id, engine_version_id)
-index	generation_calls_job_attempt_key	CREATE UNIQUE INDEX generation_calls_job_attempt_key ON public.generation_calls USING btree (job_id, attempt)
-index	generation_calls_job_success_idx	CREATE UNIQUE INDEX generation_calls_job_success_idx ON public.generation_calls USING btree (job_id) WHERE (outcome = 'ok'::text)
-index	generation_calls_owner_id_idx	CREATE INDEX generation_calls_owner_id_idx ON public.generation_calls USING btree (owner_id)
-index	generation_calls_pkey	CREATE UNIQUE INDEX generation_calls_pkey ON public.generation_calls USING btree (id)
-index	ideas_id_owner_id_key	CREATE UNIQUE INDEX ideas_id_owner_id_key ON public.ideas USING btree (id, owner_id)
+index	engines_pkey	CREATE UNIQUE INDEX engines_pkey ON public.engines USING btree (id)
+index	engines_slug_key	CREATE UNIQUE INDEX engines_slug_key ON public.engines USING btree (slug)
+index	generation_calls_owner_id_created_at_idx	CREATE INDEX generation_calls_owner_id_created_at_idx ON public.generation_calls USING btree (owner_id, created_at DESC)
+index	generation_calls_pkey	CREATE UNIQUE INDEX generation_calls_pkey ON public.generation_calls USING btree (job_id, attempt)
 index	ideas_owner_id_created_at_idx	CREATE INDEX ideas_owner_id_created_at_idx ON public.ideas USING btree (owner_id, created_at DESC)
 index	ideas_pkey	CREATE UNIQUE INDEX ideas_pkey ON public.ideas USING btree (id)
-index	manuscripts_accepted_generation_call_id_key	CREATE UNIQUE INDEX manuscripts_accepted_generation_call_id_key ON public.manuscripts USING btree (accepted_generation_call_id)
 index	manuscripts_idea_id_idx	CREATE INDEX manuscripts_idea_id_idx ON public.manuscripts USING btree (idea_id)
-index	manuscripts_owner_id_idx	CREATE INDEX manuscripts_owner_id_idx ON public.manuscripts USING btree (owner_id)
 index	manuscripts_pkey	CREATE UNIQUE INDEX manuscripts_pkey ON public.manuscripts USING btree (id)
-index	step_values_generation_call_id_key	CREATE UNIQUE INDEX step_values_generation_call_id_key ON public.step_values USING btree (generation_call_id)
 index	step_values_idea_id_engine_version_id_step_key_key	CREATE UNIQUE INDEX step_values_idea_id_engine_version_id_step_key_key ON public.step_values USING btree (idea_id, engine_version_id, step_key)
-index	step_values_owner_id_idx	CREATE INDEX step_values_owner_id_idx ON public.step_values USING btree (owner_id)
 index	step_values_pkey	CREATE UNIQUE INDEX step_values_pkey ON public.step_values USING btree (id)
 relation	engine_versions	r
+relation	engines	r
 relation	generation_calls	r
 relation	ideas	r
 relation	manuscripts	r
 relation	step_values	r
 schema	public	pg_database_owner=UC/pg_database_owner,=U/pg_database_owner
+type	engine_kind	e project,collection
