@@ -19,22 +19,13 @@ var generationCallInsertQuery string
 // ErrGenerationCallInsertAttemptExists is returned when the job attempt is already recorded.
 var ErrGenerationCallInsertAttemptExists = errors.New("generation call attempt already exists")
 
-// ErrGenerationCallInsertJobAlreadySucceeded is returned when another attempt completed the job.
-var ErrGenerationCallInsertJobAlreadySucceeded = errors.New("job already has a successful generation call")
-
-// ErrGenerationCallInsertIdeaNotFound is returned when the Idea does not belong to the owner.
-var ErrGenerationCallInsertIdeaNotFound = errors.New("idea not found")
-
-// ErrGenerationCallInsertEngineVersionNotFound is returned when the Engine Version does not exist.
-var ErrGenerationCallInsertEngineVersionNotFound = errors.New("engine version not found")
-
-// GenerationCallInsertRequest carries a completed provider exchange into [PgGenerationCallInsert.Exec].
+// GenerationCallInsertRequest carries provider usage into [PgGenerationCallInsert.Exec].
 type GenerationCallInsertRequest struct {
-	// Call is the immutable audit row to persist.
+	// Call is the immutable usage row to persist.
 	Call *GenerationCall
 }
 
-// PgGenerationCallInsert persists a terminal provider exchange.
+// PgGenerationCallInsert persists the pricing inputs for a provider exchange.
 type PgGenerationCallInsert struct{}
 
 // NewPgGenerationCallInsert creates a Generation Call insert operation.
@@ -52,15 +43,11 @@ func (operation *PgGenerationCallInsert) Exec(
 
 	call := request.Call
 	span.SetAttributes(
-		attribute.String("generation.id", call.ID.String()),
 		attribute.String("generation.job_id", call.JobID.String()),
 		attribute.Int("generation.attempt", call.Attempt),
 		attribute.String("generation.owner_id", call.OwnerID.String()),
-		attribute.String("generation.idea_id", call.IdeaID.String()),
-		attribute.String("engine_version.id", call.EngineVersionID.String()),
 		attribute.String("generation.provider", call.Provider),
 		attribute.String("generation.model", call.Model),
-		attribute.String("generation.outcome", string(call.Outcome)),
 	)
 
 	db, err := postgres.GetContext(ctx)
@@ -72,39 +59,20 @@ func (operation *PgGenerationCallInsert) Exec(
 
 	err = db.NewRaw(
 		generationCallInsertQuery,
-		call.ID,
 		call.JobID,
 		call.Attempt,
 		call.OwnerID,
-		call.IdeaID,
-		call.EngineVersionID,
 		call.Provider,
-		call.ProviderCallID,
-		call.RequestHash,
 		call.Model,
-		call.Outcome,
-		call.RawOutput,
 		call.InputTokens,
 		call.OutputTokens,
-		call.TotalTokens,
-		call.LatencyMilliseconds,
-		call.Refusal,
-		call.Error,
 		call.CreatedAt,
-		call.CompletedAt,
 	).Scan(ctx, &generationCall)
 	if err != nil {
 		var pgErr pgdriver.Error
 		if errors.As(err, &pgErr) {
-			switch pgErr.Field('n') {
-			case "generation_calls_job_attempt_key":
+			if pgErr.Field('n') == "generation_calls_pkey" {
 				err = errors.Join(err, ErrGenerationCallInsertAttemptExists)
-			case "generation_calls_job_success_idx":
-				err = errors.Join(err, ErrGenerationCallInsertJobAlreadySucceeded)
-			case "generation_calls_idea_owner_fk":
-				err = errors.Join(err, ErrGenerationCallInsertIdeaNotFound)
-			case "generation_calls_engine_version_fk":
-				err = errors.Join(err, ErrGenerationCallInsertEngineVersionNotFound)
 			}
 		}
 

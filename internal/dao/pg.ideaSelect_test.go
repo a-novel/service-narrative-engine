@@ -18,13 +18,14 @@ import (
 func TestPgIdeaSelect(t *testing.T) {
 	t.Parallel()
 
+	updatedAt := time.Date(2026, 7, 26, 1, 2, 3, 123456000, time.UTC)
 	idea := &dao.Idea{
 		ID:        uuid.MustParse("00000000-0000-0000-0000-000000000311"),
 		OwnerID:   uuid.MustParse("00000000-0000-0000-0000-000000000042"),
 		Seed:      "A second foghorn answers from beneath the sea.",
 		Genre:     "speculative",
 		CreatedAt: time.Date(2026, 7, 26, 1, 2, 3, 0, time.UTC),
-		UpdatedAt: time.Date(2026, 7, 26, 1, 2, 3, 0, time.UTC),
+		UpdatedAt: &updatedAt,
 	}
 
 	testCases := []struct {

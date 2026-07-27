@@ -47,7 +47,6 @@ func TestPgIdeaInsert(t *testing.T) {
 				Genre:     "speculative",
 				Title:     &title,
 				CreatedAt: now,
-				UpdatedAt: now,
 			},
 		},
 		{
@@ -67,7 +66,6 @@ func TestPgIdeaInsert(t *testing.T) {
 				Seed:      "A city wakes with no shadows.",
 				Genre:     "speculative",
 				CreatedAt: now,
-				UpdatedAt: now,
 			},
 		},
 	}

@@ -2,7 +2,6 @@ package dao_test
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 	"time"
 
@@ -20,82 +19,19 @@ func TestPgGenerationCallInsert(t *testing.T) {
 	t.Parallel()
 
 	now := time.Date(2026, 7, 26, 1, 2, 3, 123456000, time.UTC)
-	ownerID := uuid.MustParse("00000000-0000-0000-0000-000000000042")
-	engineVersionID := uuid.MustParse("00000000-0000-0000-0000-000000000100")
-	engineVersion := &dao.EngineVersion{
-		ID:         engineVersionID,
-		Kind:       dao.EngineKindProject,
-		Slug:       "generation-call-test",
-		Version:    "0.0.1",
-		Definition: json.RawMessage(`{"kind":"project","steps":[]}`),
-		CreatedAt:  now,
-	}
-	idea := &dao.Idea{
-		ID:        uuid.MustParse("00000000-0000-0000-0000-000000000321"),
-		OwnerID:   ownerID,
-		Seed:      "A second foghorn answers from beneath the sea.",
-		Genre:     "speculative",
-		CreatedAt: now,
-		UpdatedAt: now,
-	}
-	providerCallID := "resp_test"
-	rawOutput := `{
-  "title": "The Answering Light",
-  "format": "prose",
-  "scenes": [{
-    "title": "The Reply",
-    "blocks": [{"kind": "prose", "text": "The buried foghorn answers."}]
-  }]
-}`
-	inputTokens := int64(10)
-	outputTokens := int64(20)
-	totalTokens := int64(30)
-	providerError := "provider response failed"
-
 	call := &dao.GenerationCall{
-		ID:                  uuid.MustParse("00000000-0000-0000-0000-000000000322"),
-		JobID:               uuid.MustParse("00000000-0000-0000-0000-000000000330"),
-		Attempt:             1,
-		OwnerID:             ownerID,
-		IdeaID:              idea.ID,
-		EngineVersionID:     engineVersionID,
-		Provider:            "openai",
-		ProviderCallID:      &providerCallID,
-		RequestHash:         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-		Model:               "fixture-model",
-		Outcome:             dao.GenerationOutcomeOK,
-		RawOutput:           &rawOutput,
-		InputTokens:         &inputTokens,
-		OutputTokens:        &outputTokens,
-		TotalTokens:         &totalTokens,
-		LatencyMilliseconds: 250,
-		CreatedAt:           now,
-		CompletedAt:         now.Add(250 * time.Millisecond),
+		JobID:        uuid.MustParse("00000000-0000-0000-0000-000000000330"),
+		Attempt:      1,
+		OwnerID:      uuid.MustParse("00000000-0000-0000-0000-000000000042"),
+		Provider:     "openai",
+		Model:        "fixture-model",
+		InputTokens:  10,
+		OutputTokens: 20,
+		CreatedAt:    now,
 	}
-	duplicateAttempt := *call
-	duplicateAttempt.ID = uuid.MustParse("00000000-0000-0000-0000-000000000323")
-	duplicateAttempt.Outcome = dao.GenerationOutcomeError
-	duplicateAttempt.RawOutput = nil
-	duplicateAttempt.Error = &providerError
-
-	failedAttempt := *call
-	failedAttempt.Outcome = dao.GenerationOutcomeError
-	failedAttempt.RawOutput = nil
-	failedAttempt.Error = &providerError
-
-	successfulRetryWithSameProviderCall := *call
-	successfulRetryWithSameProviderCall.ID = uuid.MustParse("00000000-0000-0000-0000-000000000324")
-	successfulRetryWithSameProviderCall.Attempt = 2
-
-	missingIdea := *call
-	missingIdea.ID = uuid.MustParse("00000000-0000-0000-0000-000000000325")
-	missingIdea.JobID = uuid.MustParse("00000000-0000-0000-0000-000000000331")
-	missingIdea.IdeaID = uuid.MustParse("00000000-0000-0000-0000-000000000399")
-
-	missingEngineVersion := *call
-	missingEngineVersion.ID = uuid.MustParse("00000000-0000-0000-0000-000000000326")
-	missingEngineVersion.JobID = uuid.MustParse("00000000-0000-0000-0000-000000000332")
-	missingEngineVersion.EngineVersionID = uuid.MustParse("00000000-0000-0000-0000-000000000398")
+	nextAttempt := *call
+	nextAttempt.Attempt = 2
+	nextAttempt.CreatedAt = now.Add(time.Second)
 
 	insertCall := func(ctx context.Context, t *testing.T, generationCall *dao.GenerationCall) {
 		t.Helper()
@@ -122,44 +58,24 @@ func TestPgGenerationCallInsert(t *testing.T) {
 			expect:  call,
 		},
 		{
-			name:    "Success/RetryReusesProviderCall",
-			request: &dao.GenerationCallInsertRequest{Call: &successfulRetryWithSameProviderCall},
+			name:    "Success/NextAttempt",
+			request: &dao.GenerationCallInsertRequest{Call: &nextAttempt},
 			setup: func(ctx context.Context, t *testing.T) {
 				t.Helper()
 
-				insertCall(ctx, t, &failedAttempt)
+				insertCall(ctx, t, call)
 			},
-			expect: &successfulRetryWithSameProviderCall,
+			expect: &nextAttempt,
 		},
 		{
 			name:    "Error/DuplicateAttempt",
-			request: &dao.GenerationCallInsertRequest{Call: &duplicateAttempt},
+			request: &dao.GenerationCallInsertRequest{Call: call},
 			setup: func(ctx context.Context, t *testing.T) {
 				t.Helper()
 
 				insertCall(ctx, t, call)
 			},
 			expectErr: dao.ErrGenerationCallInsertAttemptExists,
-		},
-		{
-			name:    "Error/DuplicateSuccessfulOutcome",
-			request: &dao.GenerationCallInsertRequest{Call: &successfulRetryWithSameProviderCall},
-			setup: func(ctx context.Context, t *testing.T) {
-				t.Helper()
-
-				insertCall(ctx, t, call)
-			},
-			expectErr: dao.ErrGenerationCallInsertJobAlreadySucceeded,
-		},
-		{
-			name:      "Error/IdeaNotFound",
-			request:   &dao.GenerationCallInsertRequest{Call: &missingIdea},
-			expectErr: dao.ErrGenerationCallInsertIdeaNotFound,
-		},
-		{
-			name:      "Error/EngineVersionNotFound",
-			request:   &dao.GenerationCallInsertRequest{Call: &missingEngineVersion},
-			expectErr: dao.ErrGenerationCallInsertEngineVersionNotFound,
 		},
 	}
 
@@ -175,15 +91,6 @@ func TestPgGenerationCallInsert(t *testing.T) {
 				migrations.Migrations,
 				func(ctx context.Context, t *testing.T) {
 					t.Helper()
-
-					db, err := postgres.GetContext(ctx)
-					require.NoError(t, err)
-
-					_, err = db.NewInsert().Model(engineVersion).Exec(ctx)
-					require.NoError(t, err)
-
-					_, err = db.NewInsert().Model(idea).Exec(ctx)
-					require.NoError(t, err)
 
 					if testCase.setup != nil {
 						testCase.setup(ctx, t)

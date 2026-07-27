@@ -23,6 +23,6 @@ type Idea struct {
 	Title *string `bun:"title"`
 	// CreatedAt records when the Idea was created.
 	CreatedAt time.Time `bun:"created_at"`
-	// UpdatedAt records when the Idea last changed.
-	UpdatedAt time.Time `bun:"updated_at"`
+	// UpdatedAt records when the Idea last changed, or is nil before its first update.
+	UpdatedAt *time.Time `bun:"updated_at"`
 }

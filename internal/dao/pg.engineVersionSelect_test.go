@@ -20,9 +20,9 @@ func TestPgEngineVersionSelect(t *testing.T) {
 	t.Parallel()
 
 	engineVersionID := uuid.MustParse("00000000-0000-0000-0000-000000000100")
+	engineID := uuid.MustParse("00000000-0000-0000-0000-000000000099")
 	publishedAt := time.Date(2026, 7, 26, 1, 2, 3, 123456000, time.UTC)
 	expectDefinition := `{
-  "kind": "project",
   "steps": [{
     "key": "manuscript",
     "promptTemplate": "Turn the idea into a concise prose manuscript proposal.",
@@ -63,10 +63,14 @@ func TestPgEngineVersionSelect(t *testing.T) {
     }
   }]
 }`
+	engineFixture := &dao.Engine{
+		ID:   engineID,
+		Kind: dao.EngineKindProject,
+		Slug: "walking-skeleton",
+	}
 	engineVersionFixture := &dao.EngineVersion{
 		ID:         engineVersionID,
-		Kind:       dao.EngineKindProject,
-		Slug:       "walking-skeleton",
+		EngineID:   engineID,
 		Version:    "0.0.1",
 		Definition: json.RawMessage(expectDefinition),
 		CreatedAt:  publishedAt,
@@ -110,6 +114,9 @@ func TestPgEngineVersionSelect(t *testing.T) {
 					db, err := postgres.GetContext(ctx)
 					require.NoError(t, err)
 
+					_, err = db.NewInsert().Model(engineFixture).Exec(ctx)
+					require.NoError(t, err)
+
 					_, err = db.NewInsert().Model(engineVersionFixture).Exec(ctx)
 					require.NoError(t, err)
 
@@ -123,6 +130,7 @@ func TestPgEngineVersionSelect(t *testing.T) {
 					}
 
 					require.Equal(t, engineVersionID, engineVersion.ID)
+					require.Equal(t, engineID, engineVersion.EngineID)
 					require.Equal(t, dao.EngineKindProject, engineVersion.Kind)
 					require.Equal(t, testCase.expectSlug, engineVersion.Slug)
 					require.Equal(t, "0.0.1", engineVersion.Version)

@@ -1,48 +1,15 @@
 INSERT INTO
   generation_calls (
-    id,
     job_id,
     attempt,
     owner_id,
-    idea_id,
-    engine_version_id,
     provider,
-    provider_call_id,
-    request_hash,
     model,
-    outcome,
-    raw_output,
     input_tokens,
     output_tokens,
-    total_tokens,
-    latency_ms,
-    refusal,
-    error,
-    created_at,
-    completed_at
+    created_at
   )
 VALUES
-  (
-    ?0,
-    ?1,
-    ?2,
-    ?3,
-    ?4,
-    ?5,
-    ?6,
-    ?7,
-    ?8,
-    ?9,
-    ?10,
-    ?11,
-    ?12,
-    ?13,
-    ?14,
-    ?15,
-    ?16,
-    ?17,
-    ?18,
-    ?19
-  )
+  (?0, ?1, ?2, ?3, ?4, ?5, ?6, ?7)
 RETURNING
   *;
