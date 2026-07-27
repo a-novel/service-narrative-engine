@@ -65,6 +65,7 @@ func TestPgEngineVersionSelect(t *testing.T) {
 }`
 	engineVersionFixture := &dao.EngineVersion{
 		ID:         engineVersionID,
+		Kind:       dao.EngineKindProject,
 		Slug:       "walking-skeleton",
 		Version:    "0.0.1",
 		Definition: json.RawMessage(expectDefinition),
@@ -122,6 +123,7 @@ func TestPgEngineVersionSelect(t *testing.T) {
 					}
 
 					require.Equal(t, engineVersionID, engineVersion.ID)
+					require.Equal(t, dao.EngineKindProject, engineVersion.Kind)
 					require.Equal(t, testCase.expectSlug, engineVersion.Slug)
 					require.Equal(t, "0.0.1", engineVersion.Version)
 					require.Equal(t, publishedAt, engineVersion.CreatedAt)

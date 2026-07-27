@@ -14,14 +14,19 @@ CREATE TABLE ideas (
   UNIQUE (id, owner_id)
 );
 
-CREATE INDEX ideas_owner_id_idx ON ideas (owner_id);
+CREATE INDEX ideas_owner_id_created_at_idx ON ideas (owner_id, created_at DESC);
 
 CREATE TABLE engine_versions (
   id uuid PRIMARY KEY NOT NULL,
+  kind text NOT NULL CHECK (kind IN ('project', 'collection')),
   slug text NOT NULL CHECK (slug <> ''),
   version text NOT NULL CHECK (version <> ''),
   definition jsonb NOT NULL CHECK (jsonb_typeof(definition) = 'object'),
   created_at timestamp with time zone NOT NULL,
+  CONSTRAINT engine_versions_definition_kind_check CHECK (
+    definition ? 'kind'
+    AND definition ->> 'kind' = kind
+  ),
   UNIQUE (slug, version)
 );
 
@@ -93,8 +98,14 @@ CREATE TABLE generation_calls (
   CONSTRAINT generation_calls_idea_owner_fk FOREIGN KEY (idea_id, owner_id) REFERENCES ideas (id, owner_id),
   CONSTRAINT generation_calls_engine_version_fk FOREIGN KEY (engine_version_id) REFERENCES engine_versions (id),
   CONSTRAINT generation_calls_job_attempt_key UNIQUE (job_id, attempt),
+  -- This composite target lets child rows prove their Idea, owner, and Engine Version match the call.
   CONSTRAINT generation_calls_identity_key UNIQUE (id, idea_id, owner_id, engine_version_id)
 );
+
+-- Job-scoped acceptance resolves one successful attempt.
+CREATE UNIQUE INDEX generation_calls_job_success_idx ON generation_calls (job_id)
+WHERE
+  outcome = 'ok';
 
 CREATE INDEX generation_calls_owner_id_idx ON generation_calls (owner_id);
 

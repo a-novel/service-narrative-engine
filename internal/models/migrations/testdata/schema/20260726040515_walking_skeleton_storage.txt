@@ -1,7 +1,8 @@
-migration-history	sha256:67b6be8fca0d643cfda0462ee9d2cb11ef561429c8758596196b3ff484913d51
+migration-history	sha256:2b18e8410b174b2ac47847c1485f35727bce84f419af941aa79f4193acee1f3e
 column	engine_versions.created_at	timestamp with time zone NOT NULL
 column	engine_versions.definition	jsonb NOT NULL
 column	engine_versions.id	uuid NOT NULL
+column	engine_versions.kind	text NOT NULL
 column	engine_versions.slug	text NOT NULL
 column	engine_versions.version	text NOT NULL
 column	generation_calls.attempt	integer NOT NULL
@@ -50,8 +51,11 @@ column	step_values.value	jsonb NOT NULL
 comment	schema public	standard public schema
 constraint	engine_versions.engine_versions_created_at_not_null	NOT NULL created_at
 constraint	engine_versions.engine_versions_definition_check	CHECK ((jsonb_typeof(definition) = 'object'::text))
+constraint	engine_versions.engine_versions_definition_kind_check	CHECK (((definition ? 'kind'::text) AND ((definition ->> 'kind'::text) = kind)))
 constraint	engine_versions.engine_versions_definition_not_null	NOT NULL definition
 constraint	engine_versions.engine_versions_id_not_null	NOT NULL id
+constraint	engine_versions.engine_versions_kind_check	CHECK ((kind = ANY (ARRAY['project'::text, 'collection'::text])))
+constraint	engine_versions.engine_versions_kind_not_null	NOT NULL kind
 constraint	engine_versions.engine_versions_pkey	PRIMARY KEY (id)
 constraint	engine_versions.engine_versions_slug_check	CHECK ((slug <> ''::text))
 constraint	engine_versions.engine_versions_slug_not_null	NOT NULL slug
@@ -133,10 +137,11 @@ index	engine_versions_slug_version_key	CREATE UNIQUE INDEX engine_versions_slug_
 index	generation_calls_idea_id_idx	CREATE INDEX generation_calls_idea_id_idx ON public.generation_calls USING btree (idea_id)
 index	generation_calls_identity_key	CREATE UNIQUE INDEX generation_calls_identity_key ON public.generation_calls USING btree (id, idea_id, owner_id, engine_version_id)
 index	generation_calls_job_attempt_key	CREATE UNIQUE INDEX generation_calls_job_attempt_key ON public.generation_calls USING btree (job_id, attempt)
+index	generation_calls_job_success_idx	CREATE UNIQUE INDEX generation_calls_job_success_idx ON public.generation_calls USING btree (job_id) WHERE (outcome = 'ok'::text)
 index	generation_calls_owner_id_idx	CREATE INDEX generation_calls_owner_id_idx ON public.generation_calls USING btree (owner_id)
 index	generation_calls_pkey	CREATE UNIQUE INDEX generation_calls_pkey ON public.generation_calls USING btree (id)
 index	ideas_id_owner_id_key	CREATE UNIQUE INDEX ideas_id_owner_id_key ON public.ideas USING btree (id, owner_id)
-index	ideas_owner_id_idx	CREATE INDEX ideas_owner_id_idx ON public.ideas USING btree (owner_id)
+index	ideas_owner_id_created_at_idx	CREATE INDEX ideas_owner_id_created_at_idx ON public.ideas USING btree (owner_id, created_at DESC)
 index	ideas_pkey	CREATE UNIQUE INDEX ideas_pkey ON public.ideas USING btree (id)
 index	manuscripts_accepted_generation_call_id_key	CREATE UNIQUE INDEX manuscripts_accepted_generation_call_id_key ON public.manuscripts USING btree (accepted_generation_call_id)
 index	manuscripts_idea_id_idx	CREATE INDEX manuscripts_idea_id_idx ON public.manuscripts USING btree (idea_id)

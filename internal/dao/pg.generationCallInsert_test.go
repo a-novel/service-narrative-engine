@@ -24,6 +24,7 @@ func TestPgGenerationCallInsert(t *testing.T) {
 	engineVersionID := uuid.MustParse("00000000-0000-0000-0000-000000000100")
 	engineVersion := &dao.EngineVersion{
 		ID:         engineVersionID,
+		Kind:       dao.EngineKindProject,
 		Slug:       "generation-call-test",
 		Version:    "0.0.1",
 		Definition: json.RawMessage(`{"kind":"project","steps":[]}`),
@@ -49,6 +50,7 @@ func TestPgGenerationCallInsert(t *testing.T) {
 	inputTokens := int64(10)
 	outputTokens := int64(20)
 	totalTokens := int64(30)
+	providerError := "provider response failed"
 
 	call := &dao.GenerationCall{
 		ID:                  uuid.MustParse("00000000-0000-0000-0000-000000000322"),
@@ -73,9 +75,14 @@ func TestPgGenerationCallInsert(t *testing.T) {
 	duplicateAttempt := *call
 	duplicateAttempt.ID = uuid.MustParse("00000000-0000-0000-0000-000000000323")
 
-	retryWithSameProviderCall := *call
-	retryWithSameProviderCall.ID = uuid.MustParse("00000000-0000-0000-0000-000000000324")
-	retryWithSameProviderCall.Attempt = 2
+	failedAttempt := *call
+	failedAttempt.Outcome = dao.GenerationOutcomeError
+	failedAttempt.RawOutput = nil
+	failedAttempt.Error = &providerError
+
+	successfulRetryWithSameProviderCall := *call
+	successfulRetryWithSameProviderCall.ID = uuid.MustParse("00000000-0000-0000-0000-000000000324")
+	successfulRetryWithSameProviderCall.Attempt = 2
 
 	missingIdea := *call
 	missingIdea.ID = uuid.MustParse("00000000-0000-0000-0000-000000000325")
@@ -113,17 +120,27 @@ func TestPgGenerationCallInsert(t *testing.T) {
 		},
 		{
 			name:    "Success/RetryReusesProviderCall",
-			request: &dao.GenerationCallInsertRequest{Call: &retryWithSameProviderCall},
+			request: &dao.GenerationCallInsertRequest{Call: &successfulRetryWithSameProviderCall},
+			setup: func(ctx context.Context, t *testing.T) {
+				t.Helper()
+
+				insertCall(ctx, t, &failedAttempt)
+			},
+			expect: &successfulRetryWithSameProviderCall,
+		},
+		{
+			name:    "Error/DuplicateAttempt",
+			request: &dao.GenerationCallInsertRequest{Call: &duplicateAttempt},
 			setup: func(ctx context.Context, t *testing.T) {
 				t.Helper()
 
 				insertCall(ctx, t, call)
 			},
-			expect: &retryWithSameProviderCall,
+			expectErr: dao.ErrGenerationCallInsertAlreadyExists,
 		},
 		{
-			name:    "Error/DuplicateAttempt",
-			request: &dao.GenerationCallInsertRequest{Call: &duplicateAttempt},
+			name:    "Error/DuplicateSuccessfulOutcome",
+			request: &dao.GenerationCallInsertRequest{Call: &successfulRetryWithSameProviderCall},
 			setup: func(ctx context.Context, t *testing.T) {
 				t.Helper()
 

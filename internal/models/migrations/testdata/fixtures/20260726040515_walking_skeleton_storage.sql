@@ -1,8 +1,9 @@
 INSERT INTO
-  engine_versions (id, slug, version, definition, created_at)
+  engine_versions (id, kind, slug, version, definition, created_at)
 VALUES
   (
     '00000000-0000-0000-0000-000000000100',
+    'project',
     'walking-skeleton',
     '0.0.1',
     '{
