@@ -24,7 +24,7 @@ func TestPgGenerationCallInsert(t *testing.T) {
 	engineVersionID := uuid.MustParse("00000000-0000-0000-0000-000000000100")
 	engineVersion := &dao.EngineVersion{
 		ID:         engineVersionID,
-		Slug:       "walking-skeleton",
+		Slug:       "generation-call-test",
 		Version:    "0.0.1",
 		Definition: json.RawMessage(`{"kind":"project","steps":[]}`),
 		CreatedAt:  now,
