@@ -29,7 +29,7 @@ type GenerationCall struct {
 	ID uuid.UUID `bun:"id,pk,type:uuid"`
 	// JobID identifies the owning service-jobs record.
 	JobID uuid.UUID `bun:"job_id,type:uuid"`
-	// Attempt is the one-based execution number within the job.
+	// Attempt is the service-jobs Job.Attempt value received for this execution.
 	Attempt int `bun:"attempt"`
 	// OwnerID identifies the user billed for the generation.
 	OwnerID uuid.UUID `bun:"owner_id,type:uuid"`

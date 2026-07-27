@@ -79,7 +79,8 @@ func main() {
 		servicejsonkeys.NewClaimsVerifier[serviceauthentication.Claims](jsonKeysClient),
 	)
 	withAuth := serviceauthentication.NewAuthHandler(claimsVerifier, cfg.Permissions, cfg.Logger)
-	// Protected routes receive this wrapper once their handlers carry authenticated actors.
+	// TODO: Attach authorization to the Idea and generation routes.
+	// Tracked in https://github.com/a-novel/service-narrative-engine/issues/503.
 	_ = withAuth
 
 	// =================================================================================================================
