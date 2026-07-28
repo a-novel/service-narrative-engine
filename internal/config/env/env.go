@@ -19,8 +19,8 @@ func getEnv(name string) string {
 const (
 	AppNameDefault = "service-narrative-engine"
 
-	ServiceJobsHostDefault = "localhost"
-	ServiceJobsPortDefault = 8080
+	ServiceGenAIHostDefault = "localhost"
+	ServiceGenAIPortDefault = 8080
 
 	ServiceJsonKeysHostDefault = "localhost"
 	ServiceJsonKeysPortDefault = 8080
@@ -43,17 +43,6 @@ const (
 	// PostgresMaxIdleConnsDefault matches the open limit so a burst does not close connections it is
 	// about to reopen. Idle connections are cheap here; the TCP and TLS handshake they save is not.
 	PostgresMaxIdleConnsDefault = 20
-
-	// HTTPClientMaxIdleConnsDefault matches the standard library's own transport default. It is a
-	// ceiling across every provider host, so it only binds once several hosts are in play.
-	HTTPClientMaxIdleConnsDefault = 100
-	// HTTPClientMaxIdleConnsPerHostDefault tracks the default provider concurrency so each call can
-	// reuse an existing connection. The standard library keeps two idle connections per host.
-	HTTPClientMaxIdleConnsPerHostDefault = 4
-
-	WorkerConcurrencyDefault  = 4
-	WorkerPollIntervalDefault = 5 * time.Second
-	WorkerJobDeadlineDefault  = 150 * time.Second
 )
 
 // Default values for environment variables, if applicable.
@@ -71,8 +60,8 @@ var (
 	appName = getEnv("APP_NAME")
 	otel    = getEnv("OTEL")
 
-	serviceJobsHost = getEnv("SERVICE_JOBS_HOST")
-	serviceJobsPort = getEnv("SERVICE_JOBS_PORT")
+	serviceGenAIHost = getEnv("SERVICE_GENAI_HOST")
+	serviceGenAIPort = getEnv("SERVICE_GENAI_PORT")
 
 	serviceJsonKeysHost = getEnv("SERVICE_JSON_KEYS_HOST")
 	serviceJsonKeysPort = getEnv("SERVICE_JSON_KEYS_PORT")
@@ -84,13 +73,6 @@ var (
 	restTimeoutIdle       = getEnv("REST_TIMEOUT_IDLE")
 	restTimeoutRequest    = getEnv("REST_TIMEOUT_REQUEST")
 	restMaxRequestSize    = getEnv("REST_MAX_REQUEST_SIZE")
-
-	httpClientMaxIdleConns        = getEnv("HTTP_CLIENT_MAX_IDLE_CONNS")
-	httpClientMaxIdleConnsPerHost = getEnv("HTTP_CLIENT_MAX_IDLE_CONNS_PER_HOST")
-
-	workerConcurrency  = getEnv("WORKER_CONCURRENCY")
-	workerPollInterval = getEnv("WORKER_POLL_INTERVAL")
-	workerJobDeadline  = getEnv("WORKER_JOB_DEADLINE")
 
 	corsAllowedOrigins   = getEnv("REST_CORS_ALLOWED_ORIGINS")
 	corsAllowedHeaders   = getEnv("REST_CORS_ALLOWED_HEADERS")
@@ -118,10 +100,10 @@ var (
 	// See: https://opentelemetry.io/
 	Otel = config.LoadEnv(otel, false, config.BoolParser)
 
-	// ServiceJobsHost is the hostname of the service-jobs gRPC server.
-	ServiceJobsHost = config.LoadEnv(serviceJobsHost, ServiceJobsHostDefault, config.StringParser)
-	// ServiceJobsPort is the port of the service-jobs gRPC server.
-	ServiceJobsPort = config.LoadEnv(serviceJobsPort, ServiceJobsPortDefault, config.IntParser)
+	// ServiceGenAIHost is the hostname of the service-genai gRPC server.
+	ServiceGenAIHost = config.LoadEnv(serviceGenAIHost, ServiceGenAIHostDefault, config.StringParser)
+	// ServiceGenAIPort is the port of the service-genai gRPC server.
+	ServiceGenAIPort = config.LoadEnv(serviceGenAIPort, ServiceGenAIPortDefault, config.IntParser)
 
 	// ServiceJsonKeysHost is the hostname of the JSON-keys gRPC server.
 	ServiceJsonKeysHost = config.LoadEnv(serviceJsonKeysHost, ServiceJsonKeysHostDefault, config.StringParser)
@@ -142,28 +124,6 @@ var (
 	RestTimeoutRequest = config.LoadEnv(restTimeoutRequest, RestTimeoutRequestDefault, config.DurationParser)
 	// RestMaxRequestSize is the maximum size of an incoming REST request body.
 	RestMaxRequestSize = config.LoadEnv(restMaxRequestSize, RestMaxRequestSizeDefault, config.Int64Parser)
-
-	// HTTPClientMaxIdleConns is the number of idle connections the shared outbound client keeps
-	// across every provider host.
-	HTTPClientMaxIdleConns = config.LoadEnv(
-		httpClientMaxIdleConns, HTTPClientMaxIdleConnsDefault, config.IntParser,
-	)
-	// HTTPClientMaxIdleConnsPerHost is the number of idle connections the shared outbound client
-	// keeps for one provider host.
-	HTTPClientMaxIdleConnsPerHost = config.LoadEnv(
-		httpClientMaxIdleConnsPerHost, HTTPClientMaxIdleConnsPerHostDefault, config.IntParser,
-	)
-
-	// WorkerConcurrency is the number of claim pollers and jobs that may run at once.
-	WorkerConcurrency = config.LoadEnv(workerConcurrency, WorkerConcurrencyDefault, config.IntParser)
-	// WorkerPollInterval is the delay after an empty or failed claim.
-	WorkerPollInterval = config.LoadEnv(
-		workerPollInterval, WorkerPollIntervalDefault, config.DurationParser,
-	)
-	// WorkerJobDeadline bounds one narrative job handler invocation.
-	WorkerJobDeadline = config.LoadEnv(
-		workerJobDeadline, WorkerJobDeadlineDefault, config.DurationParser,
-	)
 
 	// CorsAllowedOrigins lists the origins allowed to access the REST API.
 	CorsAllowedOrigins = config.LoadEnv(

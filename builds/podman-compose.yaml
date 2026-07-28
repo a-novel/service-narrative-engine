@@ -5,7 +5,7 @@ services:
 
   postgres-json-keys:
     profiles: ["auth"]
-    image: ghcr.io/a-novel/service-json-keys/database:v2.4.1
+    image: ghcr.io/a-novel/service-json-keys/database:v2.5.0
     networks:
       - api
     environment:
@@ -19,7 +19,7 @@ services:
 
   service-json-keys:
     profiles: ["auth"]
-    image: ghcr.io/a-novel/service-json-keys/standalone-grpc:v2.4.1
+    image: ghcr.io/a-novel/service-json-keys/standalone-grpc:v2.5.0
     depends_on:
       postgres-json-keys:
         condition: service_healthy
@@ -32,7 +32,7 @@ services:
 
   postgres-authentication:
     profiles: ["auth"]
-    image: ghcr.io/a-novel/service-authentication/database:v2.4.5
+    image: ghcr.io/a-novel/service-authentication/database:v2.5.0
     networks:
       - api
     environment:
@@ -46,7 +46,7 @@ services:
 
   service-authentication:
     profiles: ["auth"]
-    image: ghcr.io/a-novel/service-authentication/standalone-rest:v2.4.5
+    image: ghcr.io/a-novel/service-authentication/standalone-rest:v2.5.0
     ports:
       - "${SERVICE_AUTHENTICATION_PORT}:8080"
     depends_on:
@@ -62,9 +62,9 @@ services:
       SUPER_ADMIN_PASSWORD: admin
     networks:
       - api
-  postgres-jobs:
-    profiles: ["jobs"]
-    image: ghcr.io/a-novel/service-jobs/database:v0.4.0
+  postgres-genai:
+    profiles: ["genai"]
+    image: ghcr.io/a-novel/service-genai/database:v0.2.0
     networks:
       - api
     environment:
@@ -74,31 +74,32 @@ services:
       POSTGRES_HOST_AUTH_METHOD: scram-sha-256
       POSTGRES_INITDB_ARGS: --auth=scram-sha-256
     volumes:
-      - jobs-postgres-data:/var/lib/postgresql/
+      - genai-postgres-data:/var/lib/postgresql/
 
-  service-jobs-migrations:
-    profiles: ["jobs"]
-    image: ghcr.io/a-novel/service-jobs/jobs/migrations:v0.4.0
+  service-genai-migrations:
+    profiles: ["genai"]
+    image: ghcr.io/a-novel/service-genai/jobs/migrations:v0.2.0
     depends_on:
-      postgres-jobs:
+      postgres-genai:
         condition: service_healthy
     environment:
-      POSTGRES_DSN: postgres://postgres:postgres@postgres-jobs:5432/postgres?sslmode=disable
+      POSTGRES_DSN: postgres://postgres:postgres@postgres-genai:5432/postgres?sslmode=disable
     networks:
       - api
 
-  service-jobs:
-    profiles: ["jobs"]
-    image: ghcr.io/a-novel/service-jobs/standalone-grpc:v0.4.0
+  service-genai:
+    profiles: ["genai"]
+    image: ghcr.io/a-novel/service-genai/grpc:v0.2.0
     ports:
-      - "${SERVICE_JOBS_PORT}:8080"
+      - "${SERVICE_GENAI_PORT}:8080"
     depends_on:
-      postgres-jobs:
+      postgres-genai:
         condition: service_healthy
-      service-jobs-migrations:
+      service-genai-migrations:
         condition: service_completed_successfully
     environment:
-      POSTGRES_DSN: postgres://postgres:postgres@postgres-jobs:5432/postgres?sslmode=disable
+      POSTGRES_DSN: postgres://postgres:postgres@postgres-genai:5432/postgres?sslmode=disable
+      OPENAI_API_KEY: "${OPENAI_API_KEY}"
     networks:
       - api
 
@@ -158,8 +159,8 @@ services:
         condition: service_completed_successfully
     environment:
       POSTGRES_DSN: postgres://postgres:postgres@postgres-narrative-engine:5432/postgres?sslmode=disable
-      SERVICE_JOBS_HOST: service-jobs
-      SERVICE_JOBS_PORT: 8080
+      SERVICE_GENAI_HOST: service-genai
+      SERVICE_GENAI_PORT: 8080
       SERVICE_JSON_KEYS_HOST: service-json-keys
       SERVICE_JSON_KEYS_PORT: 8080
     networks:
@@ -170,6 +171,6 @@ networks:
 
 volumes:
   narrative-engine-postgres-data:
-  jobs-postgres-data:
+  genai-postgres-data:
   json-keys-postgres-data:
   authentication-postgres-data:

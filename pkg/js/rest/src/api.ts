@@ -12,14 +12,14 @@ export type HealthDependency = {
   status: "up" | "down";
 };
 
-/** Queue backlog returned when service-jobs can measure its queue. */
+/** Queue backlog returned when service-genai can measure its queue. */
 export type HealthQueue = {
   pending: number;
   oldestPendingAge?: string;
 };
 
-/** Health and queue depth reported for the service-jobs dependency. */
-export type HealthJobsDependency = HealthDependency & {
+/** Health and queue depth reported for the service-genai dependency. */
+export type HealthGenAIDependency = HealthDependency & {
   queue?: HealthQueue;
 };
 
@@ -27,7 +27,7 @@ export type HealthJobsDependency = HealthDependency & {
 export type HealthReport = {
   "client:postgres": HealthDependency;
   "client:json-keys": HealthDependency;
-  "client:jobs": HealthJobsDependency;
+  "client:genai": HealthGenAIDependency;
 };
 
 /**

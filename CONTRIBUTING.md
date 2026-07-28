@@ -2,7 +2,7 @@
 
 This file covers only what is specific to this service. For service-level contribution shared across every service — the architecture, the layers, the conventions — start with the [service & architecture concepts](https://github.com/a-novel/.github/blob/master/CONTRIBUTING.md). Platform setup and day-to-day commands are in the [developer onboarding guide](https://github.com/a-novel-kit/.github/blob/master/README.md).
 
-`service-narrative-engine` currently ships a placeholder `item` resource: a dummy entity that implements the common service contracts end to end, with no real feature of its own yet. It is the scaffold the narrative-engine domain will grow into.
+`service-narrative-engine` stores the typed Idea and Manuscript boundaries around its data-driven generation workflow. The client saves chosen proposals through the same project-content path as authored values; provider execution and usage belong to `service-genai`.
 
 ---
 
@@ -19,10 +19,10 @@ Check it is alive:
 
 ```bash
 curl http://localhost:${SERVICE_NARRATIVE_ENGINE_REST_PORT}/ping          # REST liveness
-curl http://localhost:${SERVICE_NARRATIVE_ENGINE_REST_PORT}/healthcheck   # REST: Postgres dependency
+curl http://localhost:${SERVICE_NARRATIVE_ENGINE_REST_PORT}/healthcheck   # REST dependency report
 ```
 
-The `item` CRUD routes (`/items`, `/item`) are placeholder wiring, not a feature; their request/response shapes live in [`openapi.yaml`](./openapi.yaml).
+Bringing up the generation dependency needs a provider key. `builds/podman-compose.yaml` passes `OPENAI_API_KEY` through with no fallback, so export it before starting the `genai` profile; an unset key starts the container and only surfaces on the first provider call. CI and the JavaScript integration topology substitute a dummy value, since neither reaches a provider yet.
 
 ---
 
@@ -47,19 +47,11 @@ Unit-test a service that takes a transactor with `transactiontest.NewTransactor`
 
 ---
 
-## Outbound calls
+## Generation boundary
 
-The service constructs one process-wide client with [`httpf.NewPoolClient`](https://pkg.go.dev/github.com/a-novel-kit/golib/httpf), even before provider callers exist, so its pool configuration stays wired at boot. Provider integrations take that client as a constructor dependency. The linter refuses `http.DefaultClient`, `http.DefaultTransport` and the `http.Get`/`Head`/`Post`/`PostForm` helpers, which are unsized, untraced, and take no context.
+The service calls `service-genai` through its released Go client. That service owns provider credentials, provider HTTP calls, asynchronous execution, retries, result retention, and usage records. Keep provider-specific transport code and credentials out of this repository.
 
-The golib client leaves both timeouts at zero because a non-streaming model call may send no response headers until generation finishes. Deadlines come from the caller's context. Keep `HTTP_CLIENT_MAX_IDLE_CONNS_PER_HOST` at least as large as provider concurrency so the process reuses its existing connections.
-
----
-
-## Testing outbound calls
-
-Use [`httpftest.NewServer`](https://pkg.go.dev/github.com/a-novel-kit/golib/httpf/httpftest) from golib and reach it through the injected pool client. The server replays scripted responses in order and records each request. Its `Hang` and `Drop` options cover providers that stop answering or close the connection without a response.
-
-Store response bodies in the caller's `testdata/` directory as pretty-printed JSON and load them with `httpftest.Golden`. This keeps provider fixtures beside the tests that own them while the reusable server stays in golib.
+Internal tests mock `servicegenai.Client`. The JavaScript integration suite is the only narrative-engine test lane that starts the full dependency topology.
 
 ---
 

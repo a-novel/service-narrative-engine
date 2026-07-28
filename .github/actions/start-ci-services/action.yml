@@ -15,32 +15,32 @@ inputs:
     description: Narrative standalone REST image reference.
   json_keys_database_image:
     required: false
-    default: ghcr.io/a-novel/service-json-keys/database:v2.4.1
+    default: ghcr.io/a-novel/service-json-keys/database:v2.5.0
     description: JSON keys database image reference.
   json_keys_grpc_image:
     required: false
-    default: ghcr.io/a-novel/service-json-keys/standalone-grpc:v2.4.1
+    default: ghcr.io/a-novel/service-json-keys/standalone-grpc:v2.5.0
     description: JSON keys gRPC image reference.
   authentication_database_image:
     required: false
-    default: ghcr.io/a-novel/service-authentication/database:v2.4.5
+    default: ghcr.io/a-novel/service-authentication/database:v2.5.0
     description: Authentication database image reference.
   authentication_rest_image:
     required: false
-    default: ghcr.io/a-novel/service-authentication/standalone-rest:v2.4.5
+    default: ghcr.io/a-novel/service-authentication/standalone-rest:v2.5.0
     description: Authentication REST image reference.
-  jobs_database_image:
+  genai_database_image:
     required: false
-    default: ghcr.io/a-novel/service-jobs/database:v0.2.1
-    description: Jobs database image reference.
-  jobs_migrations_image:
+    default: ghcr.io/a-novel/service-genai/database:v0.2.0
+    description: GenAI database image reference.
+  genai_migrations_image:
     required: false
-    default: ghcr.io/a-novel/service-jobs/jobs/migrations:v0.2.1
-    description: Jobs migrations image reference.
-  jobs_grpc_image:
+    default: ghcr.io/a-novel/service-genai/jobs/migrations:v0.2.0
+    description: GenAI migrations image reference.
+  genai_grpc_image:
     required: false
-    default: ghcr.io/a-novel/service-jobs/standalone-grpc:v0.2.1
-    description: Jobs gRPC image reference.
+    default: ghcr.io/a-novel/service-genai/grpc:v0.2.0
+    description: GenAI gRPC image reference.
   registry_login:
     required: false
     default: "false"
@@ -70,9 +70,9 @@ runs:
         JSON_KEYS_GRPC_IMAGE: ${{ inputs.json_keys_grpc_image }}
         AUTHENTICATION_DATABASE_IMAGE: ${{ inputs.authentication_database_image }}
         AUTHENTICATION_REST_IMAGE: ${{ inputs.authentication_rest_image }}
-        JOBS_DATABASE_IMAGE: ${{ inputs.jobs_database_image }}
-        JOBS_MIGRATIONS_IMAGE: ${{ inputs.jobs_migrations_image }}
-        JOBS_GRPC_IMAGE: ${{ inputs.jobs_grpc_image }}
+        GENAI_DATABASE_IMAGE: ${{ inputs.genai_database_image }}
+        GENAI_MIGRATIONS_IMAGE: ${{ inputs.genai_migrations_image }}
+        GENAI_GRPC_IMAGE: ${{ inputs.genai_grpc_image }}
         POSTGRES_PASSWORD: postgres
       run: |
         set -euo pipefail

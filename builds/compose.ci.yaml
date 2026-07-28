@@ -57,28 +57,29 @@ services:
       SUPER_ADMIN_EMAIL: noreply@agorastoryverse.com
       SUPER_ADMIN_PASSWORD: admin
 
-  postgres-jobs:
-    image: "${JOBS_DATABASE_IMAGE:?JOBS_DATABASE_IMAGE is required}"
+  postgres-genai:
+    image: "${GENAI_DATABASE_IMAGE:?GENAI_DATABASE_IMAGE is required}"
     environment: *external-postgres-environment
     healthcheck: *postgres-healthcheck
 
-  service-jobs-migrations:
-    image: "${JOBS_MIGRATIONS_IMAGE:?JOBS_MIGRATIONS_IMAGE is required}"
+  service-genai-migrations:
+    image: "${GENAI_MIGRATIONS_IMAGE:?GENAI_MIGRATIONS_IMAGE is required}"
     restart: on-failure:10
     depends_on:
-      postgres-jobs:
+      postgres-genai:
         condition: service_healthy
     environment:
-      POSTGRES_DSN: postgres://postgres:postgres@postgres-jobs:5432/postgres?sslmode=disable
+      POSTGRES_DSN: postgres://postgres:postgres@postgres-genai:5432/postgres?sslmode=disable
 
-  service-jobs:
-    image: "${JOBS_GRPC_IMAGE:?JOBS_GRPC_IMAGE is required}"
+  service-genai:
+    image: "${GENAI_GRPC_IMAGE:?GENAI_GRPC_IMAGE is required}"
     restart: on-failure:10
     depends_on:
-      service-jobs-migrations:
+      service-genai-migrations:
         condition: service_completed_successfully
     environment:
-      POSTGRES_DSN: postgres://postgres:postgres@postgres-jobs:5432/postgres?sslmode=disable
+      POSTGRES_DSN: postgres://postgres:postgres@postgres-genai:5432/postgres?sslmode=disable
+      OPENAI_API_KEY: "${OPENAI_API_KEY:-test}"
 
   standalone-rest:
     image: "${STANDALONE_REST_IMAGE:?STANDALONE_REST_IMAGE is required}"
@@ -89,11 +90,11 @@ services:
         condition: service_healthy
       service-json-keys:
         condition: service_healthy
-      service-jobs:
+      service-genai:
         condition: service_healthy
     environment:
       POSTGRES_DSN: postgres://postgres:postgres@postgres:5432/postgres?sslmode=disable
-      SERVICE_JOBS_HOST: service-jobs
-      SERVICE_JOBS_PORT: 8080
+      SERVICE_GENAI_HOST: service-genai
+      SERVICE_GENAI_PORT: 8080
       SERVICE_JSON_KEYS_HOST: service-json-keys
       SERVICE_JSON_KEYS_PORT: 8080

@@ -1,34 +1,58 @@
 package handlers_test
 
 import (
-	"net/http"
+	"testing"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/require"
 
 	serviceauthentication "github.com/a-novel/service-authentication/v2/pkg/go"
 
 	"github.com/a-novel/service-narrative-engine/internal/core"
+	"github.com/a-novel/service-narrative-engine/internal/handlers"
 )
 
-type testClaimsState uint8
+func TestActorFromContext(t *testing.T) {
+	t.Parallel()
 
-const (
-	testClaimsValid testClaimsState = iota
-	testClaimsAnonymous
-	testClaimsMissing
-)
+	userID := uuid.MustParse("00000000-0000-0000-0000-000000000042")
 
-var testActor = core.Actor{UserID: uuid.MustParse("00000000-0000-0000-0000-000000000042")}
+	testCases := []struct {
+		name string
 
-func withTestClaims(request *http.Request, state testClaimsState) *http.Request {
-	if state == testClaimsMissing {
-		return request
+		claims *serviceauthentication.Claims
+
+		expect    *core.Actor
+		expectErr error
+	}{
+		{
+			name:   "Success",
+			claims: &serviceauthentication.Claims{UserID: &userID},
+			expect: &core.Actor{UserID: userID},
+		},
+		{
+			name:      "Error/Anonymous",
+			claims:    &serviceauthentication.Claims{},
+			expectErr: handlers.ErrAnonymousActor,
+		},
+		{
+			name:      "Error/MissingClaims",
+			expectErr: handlers.ErrActorClaims,
+		},
 	}
 
-	claims := &serviceauthentication.Claims{}
-	if state == testClaimsValid {
-		claims.UserID = &testActor.UserID
-	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
 
-	return request.WithContext(serviceauthentication.SetClaimsContext(request.Context(), claims))
+			ctx := t.Context()
+			if testCase.claims != nil {
+				ctx = serviceauthentication.SetClaimsContext(ctx, testCase.claims)
+			}
+
+			actor, err := handlers.ActorFromContext(ctx)
+			require.ErrorIs(t, err, testCase.expectErr)
+			require.Equal(t, testCase.expect, actor)
+		})
+	}
 }

@@ -15,13 +15,20 @@ import (
 // ErrAnonymousActor means authenticated claims do not identify a user.
 var ErrAnonymousActor = errors.New("anonymous actor")
 
-func actorFromContext(ctx context.Context) (*core.Actor, error) {
+// ErrActorClaims means authenticated claims are unavailable.
+var ErrActorClaims = errors.New("actor claims unavailable")
+
+// ActorFromContext returns the authenticated user represented by the request context.
+func ActorFromContext(ctx context.Context) (*core.Actor, error) {
 	ctx, span := otel.Tracer().Start(ctx, "rest.ActorFromContext")
 	defer span.End()
 
 	claims, err := serviceauthentication.MustGetClaimsContext(ctx)
 	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("get actor claims: %w", err))
+		return nil, otel.ReportError(span, fmt.Errorf(
+			"get actor claims: %w",
+			errors.Join(err, ErrActorClaims),
+		))
 	}
 
 	if claims.UserID == nil {

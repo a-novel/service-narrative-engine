@@ -32,7 +32,7 @@ func TestBearerChallenge(t *testing.T) {
 			t.Parallel()
 
 			w := httptest.NewRecorder()
-			request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/items", nil)
+			request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/protected", nil)
 			handler := handlers.BearerChallenge(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(testCase.status)
 			}))
