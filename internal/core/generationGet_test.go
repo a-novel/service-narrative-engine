@@ -343,6 +343,24 @@ func TestGenerationGet(t *testing.T) {
 			},
 			expectErr: core.ErrGenerationRefused,
 		},
+		{
+			// A refusal outranks any text beside it, so the caller learns the
+			// generation was refused rather than that its output was malformed.
+			name:      "Error/RefusalBesideOutputText",
+			request:   validRequest,
+			callGenAI: true,
+			genaiResponse: &servicegenai.GenerationGetResponse{
+				Generation: generationFixture(
+					servicegenai.GenerationStatusSucceeded,
+					json.RawMessage(
+						`{"output_text":"{}","output":[{"content":[`+
+							`{"type":"output_text","text":"{}"},`+
+							`{"type":"refusal","refusal":"no"}]}]}`,
+					),
+				),
+			},
+			expectErr: core.ErrGenerationRefused,
+		},
 	}
 
 	for _, testCase := range testCases {

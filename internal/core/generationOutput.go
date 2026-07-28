@@ -272,10 +272,9 @@ func extractResponsesOutputText(output json.RawMessage) (string, error) {
 		return "", fmt.Errorf("decode Responses output: %w", err)
 	}
 
-	if response.OutputText != "" {
-		return response.OutputText, nil
-	}
-
+	// Scan before reading the aggregate: a response carrying both text and a
+	// refusal is a refusal, and reporting it as malformed output would name the
+	// wrong cause.
 	var text strings.Builder
 
 	for _, item := range response.Output {
@@ -287,6 +286,10 @@ func extractResponsesOutputText(output json.RawMessage) (string, error) {
 				return "", fmt.Errorf("%w: %s", ErrGenerationRefused, content.Refusal)
 			}
 		}
+	}
+
+	if response.OutputText != "" {
+		return response.OutputText, nil
 	}
 
 	if text.Len() == 0 {
