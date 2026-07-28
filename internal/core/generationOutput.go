@@ -14,6 +14,8 @@ import (
 
 	servicegenai "github.com/a-novel/service-genai/pkg/go"
 
+	"github.com/a-novel-kit/golib/otel"
+
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
@@ -42,6 +44,9 @@ func mapGeneration(
 	expectedOwner uuid.UUID,
 	expectedContext *generationOutputContext,
 ) (*Generation, error) {
+	ctx, span := otel.Tracer().Start(ctx, "core.mapGeneration")
+	defer span.End()
+
 	if source == nil {
 		return nil, fmt.Errorf("%w: missing generation", ErrGenerationResponseInvalid)
 	}
@@ -171,6 +176,9 @@ func resolveGenerationProposal(
 	output json.RawMessage,
 	expectedContext *generationOutputContext,
 ) (*ManuscriptValue, error) {
+	ctx, span := otel.Tracer().Start(ctx, "core.resolveGenerationProposal")
+	defer span.End()
+
 	text, err := extractResponsesOutputText(output)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrGenerationOutputInvalid, err)
