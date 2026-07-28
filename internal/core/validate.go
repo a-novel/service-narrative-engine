@@ -2,6 +2,7 @@ package core
 
 import (
 	"errors"
+	"strconv"
 	"strings"
 
 	"github.com/go-playground/validator/v10"
@@ -20,8 +21,24 @@ func ValidateNotBlank(fl validator.FieldLevel) bool {
 	return strings.TrimSpace(fl.Field().String()) != ""
 }
 
+// ValidateMaxBytes reports whether a string's UTF-8 representation fits within
+// the byte count carried by the "maxbytes" struct tag.
+func ValidateMaxBytes(fl validator.FieldLevel) bool {
+	maxBytes, err := strconv.Atoi(fl.Param())
+	if err != nil {
+		return false
+	}
+
+	return len(fl.Field().String()) <= maxBytes
+}
+
 func init() {
 	err := validate.RegisterValidation("notblank", ValidateNotBlank)
+	if err != nil {
+		panic(err)
+	}
+
+	err = validate.RegisterValidation("maxbytes", ValidateMaxBytes)
 	if err != nil {
 		panic(err)
 	}
