@@ -86,29 +86,6 @@ VALUES
   );
 
 INSERT INTO
-  generation_calls (
-    job_id,
-    attempt,
-    owner_id,
-    provider,
-    model,
-    input_tokens,
-    output_tokens,
-    created_at
-  )
-VALUES
-  (
-    '00000000-0000-0000-0000-000000000210',
-    1,
-    '00000000-0000-0000-0000-000000000042',
-    'openai',
-    'fixture-model',
-    10,
-    20,
-    '2026-07-26T00:00:00.373456Z'
-  );
-
-INSERT INTO
   step_values (
     id,
     idea_id,

@@ -26,8 +26,8 @@ type IdeaInsertRequest struct {
 	Seed string
 	// Genre selects the platform genre vocabulary.
 	Genre string
-	// Title is the optional title supplied by the writer.
-	Title *string
+	// Title is the writer-supplied title, or an empty string when omitted.
+	Title string
 	// Now is the logical creation time.
 	Now time.Time
 }

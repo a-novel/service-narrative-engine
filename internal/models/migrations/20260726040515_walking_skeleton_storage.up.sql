@@ -1,5 +1,3 @@
-DROP TABLE items;
-
 CREATE TYPE engine_kind AS ENUM('project', 'collection');
 
 CREATE TABLE ideas (
@@ -7,10 +5,7 @@ CREATE TABLE ideas (
   owner_id uuid NOT NULL,
   seed text NOT NULL CHECK (seed <> ''),
   genre text NOT NULL CHECK (genre <> ''),
-  title text CHECK (
-    title IS NULL
-    OR title <> ''
-  ),
+  title text NOT NULL DEFAULT '',
   created_at timestamp with time zone NOT NULL,
   updated_at timestamp with time zone
 );
@@ -33,21 +28,6 @@ CREATE TABLE engine_versions (
   CONSTRAINT engine_versions_engine_fk FOREIGN KEY (engine_id) REFERENCES engines (id),
   UNIQUE (engine_id, version)
 );
-
--- Owner-scoped usage ledger for pricing provider work; service-jobs owns execution and results.
-CREATE TABLE generation_calls (
-  job_id uuid NOT NULL,
-  attempt integer NOT NULL CHECK (attempt >= 1),
-  owner_id uuid NOT NULL,
-  provider text NOT NULL CHECK (provider <> ''),
-  model text NOT NULL CHECK (model <> ''),
-  input_tokens bigint NOT NULL CHECK (input_tokens >= 0),
-  output_tokens bigint NOT NULL CHECK (output_tokens >= 0),
-  created_at timestamp with time zone NOT NULL,
-  CONSTRAINT generation_calls_pkey PRIMARY KEY (job_id, attempt)
-);
-
-CREATE INDEX generation_calls_owner_id_created_at_idx ON generation_calls (owner_id, created_at DESC);
 
 -- Step values are client-saved project content, independent of how each value was produced.
 CREATE TABLE step_values (

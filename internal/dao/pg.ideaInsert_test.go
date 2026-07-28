@@ -19,8 +19,6 @@ func TestPgIdeaInsert(t *testing.T) {
 	t.Parallel()
 
 	now := time.Date(2026, 7, 26, 1, 2, 3, 0, time.UTC)
-	title := "The Answering Light"
-
 	testCases := []struct {
 		name string
 
@@ -36,7 +34,7 @@ func TestPgIdeaInsert(t *testing.T) {
 				OwnerID: uuid.MustParse("00000000-0000-0000-0000-000000000042"),
 				Seed:    "A second foghorn answers from beneath the sea.",
 				Genre:   "speculative",
-				Title:   &title,
+				Title:   "The Answering Light",
 				Now:     now,
 			},
 
@@ -45,7 +43,7 @@ func TestPgIdeaInsert(t *testing.T) {
 				OwnerID:   uuid.MustParse("00000000-0000-0000-0000-000000000042"),
 				Seed:      "A second foghorn answers from beneath the sea.",
 				Genre:     "speculative",
-				Title:     &title,
+				Title:     "The Answering Light",
 				CreatedAt: now,
 			},
 		},
