@@ -17,6 +17,9 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/models/migrations"
 )
 
+// TestContentSaveRollback has no production file of its own: the property it
+// proves — that a failed Manuscript insert discards the step value written
+// beside it — spans two operations and belongs to neither.
 func TestContentSaveRollback(t *testing.T) {
 	t.Parallel()
 
@@ -49,8 +52,8 @@ func TestContentSaveRollback(t *testing.T) {
 				_, err = dao.NewPgManuscriptInsert().Exec(ctx, &dao.ManuscriptInsertRequest{
 					ID:     manuscriptID,
 					IdeaID: fixtureIdeaID,
-					// A scalar violates manuscripts_value_object_check after
-					// the step-value insert has already succeeded.
+					// A scalar violates manuscripts_value_check after the
+					// step-value insert has already succeeded.
 					Value: json.RawMessage(`"not an object"`),
 					Now:   now,
 				})
