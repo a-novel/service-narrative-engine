@@ -2,7 +2,7 @@
 
 This file covers only what is specific to this service. For service-level contribution shared across every service — the architecture, the layers, the conventions — start with the [service & architecture concepts](https://github.com/a-novel/.github/blob/master/CONTRIBUTING.md). Platform setup and day-to-day commands are in the [developer onboarding guide](https://github.com/a-novel-kit/.github/blob/master/README.md).
 
-`service-narrative-engine` stores the typed Idea and Manuscript boundaries around its data-driven generation workflow. Generation rows retain billing usage only; the client saves chosen values through the same project-content path as authored values.
+`service-narrative-engine` stores the typed Idea and Manuscript boundaries around its data-driven generation workflow. The client saves chosen proposals through the same project-content path as authored values; provider execution and usage belong to `service-genai`.
 
 ---
 
@@ -45,19 +45,11 @@ Unit-test a service that takes a transactor with `transactiontest.NewTransactor`
 
 ---
 
-## Outbound calls
+## Generation boundary
 
-The service constructs one process-wide client with [`httpf.NewPoolClient`](https://pkg.go.dev/github.com/a-novel-kit/golib/httpf), even before provider callers exist, so its pool configuration stays wired at boot. Provider integrations take that client as a constructor dependency. The linter refuses `http.DefaultClient`, `http.DefaultTransport` and the `http.Get`/`Head`/`Post`/`PostForm` helpers, which are unsized, untraced, and take no context.
+The service calls `service-genai` through its released Go client. That service owns provider credentials, provider HTTP calls, asynchronous execution, retries, result retention, and usage records. Keep provider-specific transport code and credentials out of this repository.
 
-The golib client leaves both timeouts at zero because a non-streaming model call may send no response headers until generation finishes. Deadlines come from the caller's context. Keep `HTTP_CLIENT_MAX_IDLE_CONNS_PER_HOST` at least as large as provider concurrency so the process reuses its existing connections.
-
----
-
-## Testing outbound calls
-
-Use [`httpftest.NewServer`](https://pkg.go.dev/github.com/a-novel-kit/golib/httpf/httpftest) from golib and reach it through the injected pool client. The server replays scripted responses in order and records each request. Its `Hang` and `Drop` options cover providers that stop answering or close the connection without a response.
-
-Store response bodies in the caller's `testdata/` directory as pretty-printed JSON and load them with `httpftest.Golden`. This keeps provider fixtures beside the tests that own them while the reusable server stays in golib.
+Internal tests mock `servicegenai.Client`. The JavaScript integration suite is the only narrative-engine test lane that starts the full dependency topology.
 
 ---
 

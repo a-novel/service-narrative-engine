@@ -8,14 +8,12 @@ import (
 	"net/http/httptest"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/protobuf/types/known/durationpb"
 
-	servicejobs "github.com/a-novel/service-jobs/pkg/go"
-	servicejobsmocks "github.com/a-novel/service-jobs/pkg/go/mocks"
+	servicegenai "github.com/a-novel/service-genai/pkg/go"
+	servicegenaimocks "github.com/a-novel/service-genai/pkg/go/mocks"
 	servicejsonkeys "github.com/a-novel/service-json-keys/v2/pkg/go"
 	servicejsonkeysmocks "github.com/a-novel/service-json-keys/v2/pkg/go/mocks"
 
@@ -29,15 +27,15 @@ func TestRestHealth(t *testing.T) {
 	t.Parallel()
 
 	errJSONKeys := errors.New("json keys unavailable")
-	errJobs := errors.New("jobs unavailable")
+	errGenAI := errors.New("genai unavailable")
 
 	type jsonKeysMock struct {
 		response *servicejsonkeys.StatusResponse
 		err      error
 	}
 
-	type jobsMock struct {
-		response *servicejobs.StatusResponse
+	type genaiMock struct {
+		response *servicegenai.StatusResponse
 		err      error
 	}
 
@@ -45,7 +43,7 @@ func TestRestHealth(t *testing.T) {
 		name string
 
 		jsonKeysMock jsonKeysMock
-		jobsMock     jobsMock
+		genaiMock    genaiMock
 		skipPostgres bool
 		requestCount int
 
@@ -56,11 +54,11 @@ func TestRestHealth(t *testing.T) {
 			jsonKeysMock: jsonKeysMock{
 				response: &servicejsonkeys.StatusResponse{},
 			},
-			jobsMock: jobsMock{
-				response: &servicejobs.StatusResponse{
-					Queue: &servicejobs.QueueDepth{
-						Pending:          3,
-						OldestPendingAge: durationpb.New(90 * time.Second),
+			genaiMock: genaiMock{
+				response: &servicegenai.StatusResponse{
+					Queue: &servicegenai.QueueDepth{
+						Pending:                 3,
+						OldestPendingAgeSeconds: 90,
 					},
 				},
 			},
@@ -70,7 +68,7 @@ func TestRestHealth(t *testing.T) {
 				"client:json-keys": map[string]any{
 					"status": handlers.RestHealthStatusUp,
 				},
-				"client:jobs": map[string]any{
+				"client:genai": map[string]any{
 					"status": handlers.RestHealthStatusUp,
 					"queue": map[string]any{
 						"pending":          float64(3),
@@ -84,9 +82,9 @@ func TestRestHealth(t *testing.T) {
 			jsonKeysMock: jsonKeysMock{
 				response: &servicejsonkeys.StatusResponse{},
 			},
-			jobsMock: jobsMock{
-				response: &servicejobs.StatusResponse{
-					Queue: &servicejobs.QueueDepth{},
+			genaiMock: genaiMock{
+				response: &servicegenai.StatusResponse{
+					Queue: &servicegenai.QueueDepth{},
 				},
 			},
 			expectResponse: map[string]any{
@@ -94,7 +92,7 @@ func TestRestHealth(t *testing.T) {
 				"client:json-keys": map[string]any{
 					"status": handlers.RestHealthStatusUp,
 				},
-				"client:jobs": map[string]any{
+				"client:genai": map[string]any{
 					"status": handlers.RestHealthStatusUp,
 					"queue":  map[string]any{"pending": float64(0)},
 				},
@@ -105,8 +103,8 @@ func TestRestHealth(t *testing.T) {
 			jsonKeysMock: jsonKeysMock{
 				response: &servicejsonkeys.StatusResponse{},
 			},
-			jobsMock: jobsMock{
-				response: &servicejobs.StatusResponse{Queue: &servicejobs.QueueDepth{}},
+			genaiMock: genaiMock{
+				response: &servicegenai.StatusResponse{Queue: &servicegenai.QueueDepth{}},
 			},
 			skipPostgres: true,
 			expectResponse: map[string]any{
@@ -114,7 +112,7 @@ func TestRestHealth(t *testing.T) {
 				"client:json-keys": map[string]any{
 					"status": handlers.RestHealthStatusUp,
 				},
-				"client:jobs": map[string]any{
+				"client:genai": map[string]any{
 					"status": handlers.RestHealthStatusUp,
 					"queue":  map[string]any{"pending": float64(0)},
 				},
@@ -125,50 +123,50 @@ func TestRestHealth(t *testing.T) {
 			jsonKeysMock: jsonKeysMock{
 				err: errJSONKeys,
 			},
-			jobsMock: jobsMock{
-				response: &servicejobs.StatusResponse{Queue: &servicejobs.QueueDepth{}},
+			genaiMock: genaiMock{
+				response: &servicegenai.StatusResponse{Queue: &servicegenai.QueueDepth{}},
 			},
 			expectResponse: map[string]any{
 				"client:postgres": map[string]any{"status": handlers.RestHealthStatusUp},
 				"client:json-keys": map[string]any{
 					"status": handlers.RestHealthStatusDown,
 				},
-				"client:jobs": map[string]any{
+				"client:genai": map[string]any{
 					"status": handlers.RestHealthStatusUp,
 					"queue":  map[string]any{"pending": float64(0)},
 				},
 			},
 		},
 		{
-			name: "Success/JobsDegraded",
+			name: "Success/GenAIDegraded",
 			jsonKeysMock: jsonKeysMock{
 				response: &servicejsonkeys.StatusResponse{},
 			},
-			jobsMock: jobsMock{
-				err: errJobs,
+			genaiMock: genaiMock{
+				err: errGenAI,
 			},
 			expectResponse: map[string]any{
 				"client:postgres": map[string]any{"status": handlers.RestHealthStatusUp},
 				"client:json-keys": map[string]any{
 					"status": handlers.RestHealthStatusUp,
 				},
-				"client:jobs": map[string]any{"status": handlers.RestHealthStatusDown},
+				"client:genai": map[string]any{"status": handlers.RestHealthStatusDown},
 			},
 		},
 		{
-			name: "Success/JobsQueueMissing",
+			name: "Success/GenAIQueueMissing",
 			jsonKeysMock: jsonKeysMock{
 				response: &servicejsonkeys.StatusResponse{},
 			},
-			jobsMock: jobsMock{
-				response: &servicejobs.StatusResponse{},
+			genaiMock: genaiMock{
+				response: &servicegenai.StatusResponse{},
 			},
 			expectResponse: map[string]any{
 				"client:postgres": map[string]any{"status": handlers.RestHealthStatusUp},
 				"client:json-keys": map[string]any{
 					"status": handlers.RestHealthStatusUp,
 				},
-				"client:jobs": map[string]any{"status": handlers.RestHealthStatusDown},
+				"client:genai": map[string]any{"status": handlers.RestHealthStatusDown},
 			},
 		},
 	}
@@ -183,13 +181,13 @@ func TestRestHealth(t *testing.T) {
 				Return(testCase.jsonKeysMock.response, testCase.jsonKeysMock.err).
 				Once()
 
-			jobsClient := servicejobsmocks.NewMockClient(t)
-			jobsClient.EXPECT().
-				Status(mock.Anything, &servicejobs.StatusRequest{}).
-				Return(testCase.jobsMock.response, testCase.jobsMock.err).
+			genaiClient := servicegenaimocks.NewMockClient(t)
+			genaiClient.EXPECT().
+				Status(mock.Anything, &servicegenai.StatusRequest{}).
+				Return(testCase.genaiMock.response, testCase.genaiMock.err).
 				Once()
 
-			handler := handlers.NewRestHealth(jsonKeysClient, jobsClient)
+			handler := handlers.NewRestHealth(jsonKeysClient, genaiClient)
 
 			requestContext := t.Context()
 
@@ -238,7 +236,7 @@ func TestRestHealth(t *testing.T) {
 			}
 
 			jsonKeysClient.AssertExpectations(t)
-			jobsClient.AssertExpectations(t)
+			genaiClient.AssertExpectations(t)
 		})
 	}
 }

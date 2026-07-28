@@ -6,8 +6,6 @@ import (
 
 	"github.com/samber/lo"
 
-	jobworker "github.com/a-novel/service-jobs/pkg/go/worker"
-
 	"github.com/a-novel-kit/golib/grpcf"
 	"github.com/a-novel-kit/golib/logging"
 	loggingpresets "github.com/a-novel-kit/golib/logging/presets"
@@ -59,13 +57,13 @@ var AppPresetDefault = App{
 	},
 
 	Dependencies: Dependencies{
-		ServiceJobsHost: env.ServiceJobsHost,
-		ServiceJobsPort: env.ServiceJobsPort,
-		ServiceJobsCredentials: lo.Ternary[grpcf.CredentialsProvider](
+		ServiceGenAIHost: env.ServiceGenAIHost,
+		ServiceGenAIPort: env.ServiceGenAIPort,
+		ServiceGenAICredentials: lo.Ternary[grpcf.CredentialsProvider](
 			env.GcloudProjectId == "",
 			&grpcf.LocalCredentialsProvider{},
 			&grpcf.GcloudCredentialsProvider{
-				Host: env.ServiceJobsHost,
+				Host: env.ServiceGenAIHost,
 			},
 		),
 		ServiceJsonKeysHost: env.ServiceJsonKeysHost,
@@ -94,13 +92,4 @@ var AppPresetDefault = App{
 		&loggingpresets.HTTPGcloud{BaseLogger: LoggerProd},
 	),
 	Postgres: PostgresPresetDefault,
-	HTTPClient: HTTPClient{
-		MaxIdleConns:        env.HTTPClientMaxIdleConns,
-		MaxIdleConnsPerHost: env.HTTPClientMaxIdleConnsPerHost,
-	},
-	Worker: jobworker.Config{
-		Concurrency:  env.WorkerConcurrency,
-		PollInterval: env.WorkerPollInterval,
-		JobDeadline:  env.WorkerJobDeadline,
-	},
 }

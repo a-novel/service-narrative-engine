@@ -18,7 +18,7 @@ An A-Novel backend service that turns a writer Idea into client-saved project co
 
 ## What it does
 
-The narrative-engine service owns the typed Idea entry contract, Engine definitions, client-saved project content, and the opaque Manuscript exit contract. Generations run through `service-jobs` and return volatile proposals; this service retains only owner-scoped provider and token usage needed for billing.
+The narrative-engine service owns the typed Idea entry contract, Engine definitions, client-saved project content, and the opaque Manuscript exit contract. It submits generation work to `service-genai`, which owns provider execution, volatile results, retries, and usage records. This service persists only the proposals a client chooses to save.
 
 The current **public REST API** exposes liveness and dependency health through `cmd/rest`. Request and response shapes live in [`openapi.yaml`](./openapi.yaml).
 
@@ -112,27 +112,12 @@ Database connection pool (all images). The limits are **per process**, so what h
 
 Service dependencies (images `rest`, `standalone-rest`):
 
-| Name                     | Description                               | Default     |
-| ------------------------ | ----------------------------------------- | ----------- |
-| `SERVICE_JOBS_HOST`      | Hostname of the service-jobs gRPC server. | `localhost` |
-| `SERVICE_JOBS_PORT`      | Port of the service-jobs gRPC server.     | `8080`      |
-| `SERVICE_JSON_KEYS_HOST` | Hostname of the JSON-keys gRPC server.    | `localhost` |
-| `SERVICE_JSON_KEYS_PORT` | Port of the JSON-keys gRPC server.        | `8080`      |
-
-Outbound HTTP client (images `rest`, `standalone-rest`). The service sizes the pooled, traced client supplied by golib's [`httpf`](https://pkg.go.dev/github.com/a-novel-kit/golib/httpf) package. Keep `HTTP_CLIENT_MAX_IDLE_CONNS_PER_HOST` at or above provider concurrency so calls reuse existing connections.
-
-| Name                                  | Description                                       | Default |
-| ------------------------------------- | ------------------------------------------------- | ------- |
-| `HTTP_CLIENT_MAX_IDLE_CONNS`          | Idle connections kept across every provider host. | `100`   |
-| `HTTP_CLIENT_MAX_IDLE_CONNS_PER_HOST` | Idle connections kept for a single provider host. | `4`     |
-
-Narrative job worker (images `rest`, `standalone-rest`). The claim lease and execution budget are derived by service-jobs from the job deadline, so they cannot be configured shorter than a handler run.
-
-| Name                   | Description                                    | Default |
-| ---------------------- | ---------------------------------------------- | ------- |
-| `WORKER_CONCURRENCY`   | Concurrent claim pollers and job executions.   | `4`     |
-| `WORKER_POLL_INTERVAL` | Delay after an empty or failed claim.          | `5s`    |
-| `WORKER_JOB_DEADLINE`  | Maximum duration of one narrative job handler. | `150s`  |
+| Name                     | Description                                | Default     |
+| ------------------------ | ------------------------------------------ | ----------- |
+| `SERVICE_GENAI_HOST`     | Hostname of the service-genai gRPC server. | `localhost` |
+| `SERVICE_GENAI_PORT`     | Port of the service-genai gRPC server.     | `8080`      |
+| `SERVICE_JSON_KEYS_HOST` | Hostname of the JSON-keys gRPC server.     | `localhost` |
+| `SERVICE_JSON_KEYS_PORT` | Port of the JSON-keys gRPC server.         | `8080`      |
 
 Logs and tracing — OpenTelemetry supports a stdout and a Google Cloud exporter (all server images):
 

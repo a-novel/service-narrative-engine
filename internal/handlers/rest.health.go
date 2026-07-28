@@ -10,7 +10,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/uptrace/bun"
 
-	servicejobs "github.com/a-novel/service-jobs/pkg/go"
+	servicegenai "github.com/a-novel/service-genai/pkg/go"
 	servicejsonkeys "github.com/a-novel/service-json-keys/v2/pkg/go"
 
 	"github.com/a-novel-kit/golib/httpf"
@@ -20,7 +20,7 @@ import (
 
 const restHealthCacheTTL = 30 * time.Second
 
-var errRestHealthJobsQueueMissing = errors.New("service-jobs status omitted queue")
+var errRestHealthGenAIQueueMissing = errors.New("service-genai status omitted queue")
 
 const (
 	// RestHealthStatusUp marks a dependency the service can currently reach.
@@ -35,16 +35,16 @@ type RestHealthStatus struct {
 	Status string `json:"status"`
 }
 
-// RestHealthQueue describes the jobs backlog without exposing job contents.
+// RestHealthQueue describes the generation backlog without exposing request contents.
 type RestHealthQueue struct {
-	// Pending is the number of due jobs still waiting for a worker.
+	// Pending is the number of generation requests waiting to run.
 	Pending int64 `json:"pending"`
-	// OldestPendingAge is omitted when no job is pending.
+	// OldestPendingAge is omitted when no generation is pending.
 	OldestPendingAge string `json:"oldestPendingAge,omitempty"`
 }
 
-// RestHealthJobsStatus adds queue depth to the service-jobs dependency status.
-type RestHealthJobsStatus struct {
+// RestHealthGenAIStatus adds queue depth to the service-genai dependency status.
+type RestHealthGenAIStatus struct {
 	RestHealthStatus
 
 	Queue *RestHealthQueue `json:"queue,omitempty"`
@@ -60,7 +60,7 @@ func NewRestHealthStatus(err error) *RestHealthStatus {
 // RestHealth reports dependencies and caches the whole report to limit probe traffic.
 type RestHealth struct {
 	apiJSONKeys servicejsonkeys.BaseClient
-	jobs        servicejobs.Client
+	apiGenAI    servicegenai.Client
 
 	cacheMutex     sync.Mutex
 	cachedReport   map[string]any
@@ -68,8 +68,8 @@ type RestHealth struct {
 }
 
 // NewRestHealth returns a health handler backed by the service clients.
-func NewRestHealth(apiJSONKeys servicejsonkeys.BaseClient, jobs servicejobs.Client) *RestHealth {
-	return &RestHealth{apiJSONKeys: apiJSONKeys, jobs: jobs}
+func NewRestHealth(apiJSONKeys servicejsonkeys.BaseClient, apiGenAI servicegenai.Client) *RestHealth {
+	return &RestHealth{apiJSONKeys: apiJSONKeys, apiGenAI: apiGenAI}
 }
 
 func (handler *RestHealth) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -91,14 +91,14 @@ func (handler *RestHealth) report(ctx context.Context) map[string]any {
 		return otel.ReportSuccess(span, handler.cachedReport)
 	}
 
-	jobsQueue, jobsErr := handler.reportJobs(ctx)
+	genaiQueue, genaiErr := handler.reportGenAI(ctx)
 
 	handler.cachedReport = map[string]any{
 		"client:postgres":  NewRestHealthStatus(handler.reportPostgres(ctx)),
 		"client:json-keys": NewRestHealthStatus(handler.reportJSONKeys(ctx)),
-		"client:jobs": &RestHealthJobsStatus{
-			RestHealthStatus: *NewRestHealthStatus(jobsErr),
-			Queue:            jobsQueue,
+		"client:genai": &RestHealthGenAIStatus{
+			RestHealthStatus: *NewRestHealthStatus(genaiErr),
+			Queue:            genaiQueue,
 		},
 	}
 	handler.cacheExpiresAt = now.Add(restHealthCacheTTL)
@@ -146,23 +146,25 @@ func (handler *RestHealth) reportJSONKeys(ctx context.Context) error {
 	return nil
 }
 
-func (handler *RestHealth) reportJobs(ctx context.Context) (*RestHealthQueue, error) {
-	ctx, span := otel.Tracer().Start(ctx, "rest.Health(reportJobs)")
+func (handler *RestHealth) reportGenAI(ctx context.Context) (*RestHealthQueue, error) {
+	ctx, span := otel.Tracer().Start(ctx, "rest.Health(reportGenAI)")
 	defer span.End()
 
-	response, err := handler.jobs.Status(ctx, &servicejobs.StatusRequest{})
+	response, err := handler.apiGenAI.Status(ctx, &servicegenai.StatusRequest{})
 	if err != nil {
 		return nil, otel.ReportError(span, err)
 	}
 
 	queue := response.GetQueue()
 	if queue == nil {
-		return nil, otel.ReportError(span, errRestHealthJobsQueueMissing)
+		return nil, otel.ReportError(span, errRestHealthGenAIQueueMissing)
 	}
 
 	report := &RestHealthQueue{Pending: queue.GetPending()}
-	if age := queue.GetOldestPendingAge(); age != nil {
-		report.OldestPendingAge = age.AsDuration().String()
+	if queue.GetPending() > 0 {
+		report.OldestPendingAge = time.Duration(
+			queue.GetOldestPendingAgeSeconds() * float64(time.Second),
+		).String()
 	}
 
 	return otel.ReportSuccess(span, report), nil

@@ -21,11 +21,9 @@ import (
 	"github.com/samber/lo"
 
 	serviceauthentication "github.com/a-novel/service-authentication/v2/pkg/go"
-	servicejobs "github.com/a-novel/service-jobs/pkg/go"
-	jobworker "github.com/a-novel/service-jobs/pkg/go/worker"
+	servicegenai "github.com/a-novel/service-genai/pkg/go"
 	servicejsonkeys "github.com/a-novel/service-json-keys/v2/pkg/go"
 
-	"github.com/a-novel-kit/golib/httpf"
 	"github.com/a-novel-kit/golib/otel"
 	"github.com/a-novel-kit/golib/postgres"
 
@@ -53,17 +51,11 @@ func main() {
 	// CLIENTS
 	// =================================================================================================================
 
-	// TODO: Pass this shared client to narrative job handlers that call providers.
-	_ = httpf.NewPoolClient(httpf.PoolOptions{
-		MaxIdleConns:        cfg.HTTPClient.MaxIdleConns,
-		MaxIdleConnsPerHost: cfg.HTTPClient.MaxIdleConnsPerHost,
-	})
-
-	jobsClient := lo.Must(servicejobs.NewClient(
-		fmt.Sprintf("%s:%d", cfg.Dependencies.ServiceJobsHost, cfg.Dependencies.ServiceJobsPort),
-		lo.Must(cfg.Dependencies.ServiceJobsCredentials.Options(ctx))...,
+	genaiClient := lo.Must(servicegenai.NewClient(
+		fmt.Sprintf("%s:%d", cfg.Dependencies.ServiceGenAIHost, cfg.Dependencies.ServiceGenAIPort),
+		lo.Must(cfg.Dependencies.ServiceGenAICredentials.Options(ctx))...,
 	))
-	defer jobsClient.Close()
+	defer genaiClient.Close()
 
 	jsonKeysClient := lo.Must(servicejsonkeys.NewClient(
 		fmt.Sprintf(
@@ -84,18 +76,11 @@ func main() {
 	_ = withAuth
 
 	// =================================================================================================================
-	// SERVICES
-	// =================================================================================================================
-
-	jobHandlers := map[string]jobworker.Handler{}
-	jobRunner := lo.Must(jobworker.NewRunner(jobsClient, jobHandlers, cfg.Worker, cfg.Logger))
-
-	// =================================================================================================================
 	// HANDLERS
 	// =================================================================================================================
 
 	handlerPing := handlers.NewPing()
-	handlerHealth := handlers.NewRestHealth(jsonKeysClient, jobsClient)
+	handlerHealth := handlers.NewRestHealth(jsonKeysClient, genaiClient)
 
 	// =================================================================================================================
 	// ROUTER
@@ -142,23 +127,6 @@ func main() {
 
 	log.Println("Starting REST server on " + httpServer.Addr)
 
-	if cfg.HTTPClient.MaxIdleConnsPerHost < cfg.Worker.Concurrency {
-		cfg.Logger.Warn(ctx, fmt.Sprintf(
-			"HTTP_CLIENT_MAX_IDLE_CONNS_PER_HOST=%d is below WORKER_CONCURRENCY=%d",
-			cfg.HTTPClient.MaxIdleConnsPerHost,
-			cfg.Worker.Concurrency,
-		))
-	}
-
-	workerCtx, stopWorker := context.WithCancel(ctx)
-
-	workerDone := make(chan struct{})
-	go func() {
-		defer close(workerDone)
-
-		jobRunner.Run(workerCtx)
-	}()
-
 	go func() {
 		err := httpServer.ListenAndServe()
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -169,10 +137,6 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-
-	log.Println("Stopping job worker...")
-	stopWorker()
-	<-workerDone
 
 	log.Println("Shutting down REST server...")
 

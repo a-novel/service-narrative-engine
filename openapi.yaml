@@ -45,7 +45,7 @@ paths:
       summary: Health diagnosis of the server.
       description: |
         Returns a dependency report cached for about 30 seconds. It checks PostgreSQL and
-        JSON-keys reachability, and includes the service-jobs queue backlog when available.
+        JSON-keys reachability, and includes the service-genai queue backlog when available.
       tags: [health]
       security: []
       responses:
@@ -81,28 +81,28 @@ components:
         application/json:
           schema:
             type: object
-            required: ["client:postgres", "client:json-keys", "client:jobs"]
+            required: ["client:postgres", "client:json-keys", "client:genai"]
             additionalProperties: false
             properties:
               "client:postgres":
                 $ref: "#/components/schemas/healthStatus"
               "client:json-keys":
                 $ref: "#/components/schemas/healthStatus"
-              "client:jobs":
-                $ref: "#/components/schemas/healthJobsStatus"
+              "client:genai":
+                $ref: "#/components/schemas/healthGenAIStatus"
           examples:
             healthy:
               value:
                 "client:postgres": { "status": "up" }
                 "client:json-keys": { "status": "up" }
-                "client:jobs":
+                "client:genai":
                   status: up
                   queue: { "pending": 3, "oldestPendingAge": "1m30s" }
-            degraded-jobs:
+            degraded-genai:
               value:
                 "client:postgres": { "status": "up" }
                 "client:json-keys": { "status": "up" }
-                "client:jobs": { "status": "down" }
+                "client:genai": { "status": "down" }
 
     internalError:
       description: Something unexpected happened.
@@ -128,10 +128,10 @@ components:
           description: Exposes whether the server managed to connect to the dependency.
           enum: [up, down]
 
-    healthJobsStatus:
+    healthGenAIStatus:
       type: object
       description: |
-        Health of the service-jobs dependency. Queue is present only when the
+        Health of the service-genai dependency. Queue is present only when the
         service can measure its backlog.
       required: [status]
       additionalProperties: false
@@ -141,14 +141,14 @@ components:
       properties:
         status:
           type: string
-          description: Exposes whether the service-jobs queue could be measured.
+          description: Exposes whether the service-genai queue could be measured.
           enum: [up, down]
         queue:
           $ref: "#/components/schemas/healthQueue"
 
     healthQueue:
       type: object
-      description: Backlog measured by service-jobs for due and unclaimed jobs.
+      description: Backlog measured by service-genai for generation requests waiting to run.
       required: [pending]
       additionalProperties: false
       properties:
@@ -156,7 +156,7 @@ components:
           type: integer
           format: int64
           minimum: 0
-          description: Number of due jobs still waiting for a worker.
+          description: Number of generation requests waiting to run.
           examples: [3]
         oldestPendingAge:
           type: string
