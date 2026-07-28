@@ -1,6 +1,6 @@
 services:
   postgres-json-keys:
-    image: ghcr.io/a-novel/service-json-keys/database:v2.4.1
+    image: ghcr.io/a-novel/service-json-keys/database:v2.5.0
     networks:
       - narrative-engine-integration-rest-test
     environment:
@@ -11,7 +11,7 @@ services:
       POSTGRES_INITDB_ARGS: --auth=scram-sha-256
 
   service-json-keys:
-    image: ghcr.io/a-novel/service-json-keys/standalone-grpc:v2.4.1
+    image: ghcr.io/a-novel/service-json-keys/standalone-grpc:v2.5.0
     depends_on:
       postgres-json-keys:
         condition: service_healthy

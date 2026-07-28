@@ -33,6 +33,8 @@ github.com/a-novel/service-jobs v0.4.0 h1:W80pKE0LTF0rZ0lXEUacGGVoYTPWwApj9Z5Lk1
 github.com/a-novel/service-jobs v0.4.0/go.mod h1:S7Behf7A5NQGFd8lUJhUk1Gb5olf9+0/trMD+Y4jN2o=
 github.com/a-novel/service-json-keys/v2 v2.4.1 h1:sPxa36bwmskLQC+bhpjQkg6zSFY5FrAevcc5eWZ+wRI=
 github.com/a-novel/service-json-keys/v2 v2.4.1/go.mod h1:EfbACeOmjbcNXGbb89cGsjkiGz3hpjKvbd+smoMfk6Y=
+github.com/a-novel/service-json-keys/v2 v2.5.0 h1:CDQvgPZU0yKHDhshH1bYEkoRnb/Bga7e76ZTMcoCp0Y=
+github.com/a-novel/service-json-keys/v2 v2.5.0/go.mod h1:upTIdYcba18ifsZW/oumfZc8Sbo23sX0T5D3fFuz6M0=
 github.com/cenkalti/backoff/v5 v5.0.3 h1:ZN+IMa753KfX5hd8vVaMixjnqRZ3y8CuJKRKj1xcsSM=
 github.com/cenkalti/backoff/v5 v5.0.3/go.mod h1:rkhZdG3JZukswDf7f0cwqPNk4K0sa+F97BxZthm/crw=
 github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
