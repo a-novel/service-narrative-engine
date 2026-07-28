@@ -1,4 +1,4 @@
-migration-history	sha256:128f6361d7bceaaf5045e5afcf0962361cbdc29e7e579d8d2666fb7fd5f76644
+migration-history	sha256:00a44a021d60540bc541d80f5b42785131f624f6a1b3ae86158b667bfe9262c5
 column	engine_versions.created_at	timestamp with time zone NOT NULL
 column	engine_versions.definition	jsonb NOT NULL
 column	engine_versions.engine_id	uuid NOT NULL
@@ -75,7 +75,6 @@ index	engine_versions_engine_id_version_key	CREATE UNIQUE INDEX engine_versions_
 index	engine_versions_pkey	CREATE UNIQUE INDEX engine_versions_pkey ON public.engine_versions USING btree (id)
 index	engines_pkey	CREATE UNIQUE INDEX engines_pkey ON public.engines USING btree (id)
 index	engines_slug_key	CREATE UNIQUE INDEX engines_slug_key ON public.engines USING btree (slug)
-index	ideas_owner_id_created_at_idx	CREATE INDEX ideas_owner_id_created_at_idx ON public.ideas USING btree (owner_id, created_at DESC)
 index	ideas_pkey	CREATE UNIQUE INDEX ideas_pkey ON public.ideas USING btree (id)
 index	manuscripts_idea_id_idx	CREATE INDEX manuscripts_idea_id_idx ON public.manuscripts USING btree (idea_id)
 index	manuscripts_pkey	CREATE UNIQUE INDEX manuscripts_pkey ON public.manuscripts USING btree (id)

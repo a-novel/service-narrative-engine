@@ -10,8 +10,6 @@ CREATE TABLE ideas (
   updated_at timestamp with time zone
 );
 
-CREATE INDEX ideas_owner_id_created_at_idx ON ideas (owner_id, created_at DESC);
-
 CREATE TABLE engines (
   id uuid PRIMARY KEY NOT NULL,
   kind engine_kind NOT NULL,
