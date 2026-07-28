@@ -81,13 +81,20 @@ func TestPgEngineVersionSelect(t *testing.T) {
 
 		request *dao.EngineVersionSelectRequest
 
-		expectSlug string
-		expectErr  error
+		expect    *dao.EngineVersion
+		expectErr error
 	}{
 		{
-			name:       "Success",
-			request:    &dao.EngineVersionSelectRequest{ID: engineVersionID},
-			expectSlug: "walking-skeleton",
+			name:    "Success",
+			request: &dao.EngineVersionSelectRequest{ID: engineVersionID},
+			expect: &dao.EngineVersion{
+				ID:        engineVersionID,
+				EngineID:  engineID,
+				Kind:      dao.EngineKindProject,
+				Slug:      "walking-skeleton",
+				Version:   "0.0.1",
+				CreatedAt: publishedAt,
+			},
 		},
 		{
 			name: "Error/Absent",
@@ -123,19 +130,15 @@ func TestPgEngineVersionSelect(t *testing.T) {
 					engineVersion, err := operation.Exec(ctx, testCase.request)
 					require.ErrorIs(t, err, testCase.expectErr)
 
-					if testCase.expectErr != nil {
-						require.Nil(t, engineVersion)
-
-						return
+					// PostgreSQL re-serializes jsonb, so the definition is
+					// compared semantically, then cleared so the remaining
+					// columns settle in one comparison.
+					if engineVersion != nil {
+						require.JSONEq(t, expectDefinition, string(engineVersion.Definition))
+						engineVersion.Definition = nil
 					}
 
-					require.Equal(t, engineVersionID, engineVersion.ID)
-					require.Equal(t, engineID, engineVersion.EngineID)
-					require.Equal(t, dao.EngineKindProject, engineVersion.Kind)
-					require.Equal(t, testCase.expectSlug, engineVersion.Slug)
-					require.Equal(t, "0.0.1", engineVersion.Version)
-					require.Equal(t, publishedAt, engineVersion.CreatedAt)
-					require.JSONEq(t, expectDefinition, string(engineVersion.Definition))
+					require.Equal(t, testCase.expect, engineVersion)
 				},
 			)
 		})
