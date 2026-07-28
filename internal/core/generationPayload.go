@@ -14,6 +14,12 @@ import (
 
 const jsonSchemaTypeKey = "type"
 
+// providerUnsupportedSchemaKeywords are the keywords a strict Responses schema
+// rejects outright. The Engine keeps them: the resolved definition validates
+// every returned value locally, where the constraint is enforced rather than
+// merely declared.
+var providerUnsupportedSchemaKeywords = []string{"minLength", "maxLength"}
+
 type responsesRequest struct {
 	Model        string             `json:"model"`
 	Reasoning    responsesReasoning `json:"reasoning"`
@@ -145,6 +151,10 @@ func projectProviderSchema(value any) error {
 
 func projectProviderSchemaObject(object map[string]any) error {
 	delete(object, "$schema")
+
+	for _, keyword := range providerUnsupportedSchemaKeywords {
+		delete(object, keyword)
+	}
 
 	err := projectProviderSchemaConst(object)
 	if err != nil {

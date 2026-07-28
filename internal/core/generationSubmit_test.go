@@ -294,6 +294,11 @@ func assertGenerationRequest(
 	valueProperties, valuePropertiesOK := valueSchema["properties"].(map[string]any)
 	formatSchema, manuscriptFormatOK := valueProperties["format"].(map[string]any)
 
+	// The Engine schema constrains string length; a strict Responses schema
+	// rejects those keywords, so none may survive the projection at any depth.
+	projected, err := json.Marshal(schema)
+	require.NoError(t, err)
+
 	return assert.Equal(t, ownerID.String(), request.GetOwnerId()) &&
 		assert.Equal(t, core.GenerationPurposeStudio, request.GetPurpose()) &&
 		assert.Equal(
@@ -322,5 +327,8 @@ func assertGenerationRequest(
 		assert.True(t, valuePropertiesOK) &&
 		assert.True(t, manuscriptFormatOK) &&
 		assert.NotContains(t, formatSchema, "const") &&
-		assert.Equal(t, []any{"prose"}, formatSchema["enum"])
+		assert.Equal(t, []any{"prose"}, formatSchema["enum"]) &&
+		assert.NotContains(t, string(projected), "minLength") &&
+		assert.NotContains(t, string(projected), "maxLength") &&
+		assert.Contains(t, string(projected), "minItems")
 }
