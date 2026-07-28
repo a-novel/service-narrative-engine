@@ -22,6 +22,8 @@ curl http://localhost:${SERVICE_NARRATIVE_ENGINE_REST_PORT}/ping          # REST
 curl http://localhost:${SERVICE_NARRATIVE_ENGINE_REST_PORT}/healthcheck   # REST dependency report
 ```
 
+Bringing up the generation dependency needs a provider key. `builds/podman-compose.yaml` passes `OPENAI_API_KEY` through with no fallback, so export it before starting the `genai` profile; an unset key starts the container and only surfaces on the first provider call. CI and the JavaScript integration topology substitute a dummy value, since neither reaches a provider yet.
+
 ---
 
 ## Transactions
