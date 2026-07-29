@@ -40,6 +40,29 @@ func TestManuscriptCreate(t *testing.T) {
 		Value:     stepValue,
 		CreatedAt: createdAt,
 	}
+	charactersStepValue := json.RawMessage(`{"characters":["Mara"]}`)
+	charactersEngine := &dao.EngineVersion{
+		ID: engineVersionID,
+		Definition: json.RawMessage(`{
+  "steps": [{
+    "key": "characters",
+    "promptTemplate": "List the main characters.",
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["characters"],
+      "properties": {
+        "characters": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  }]
+}`),
+	}
 
 	testCases := []struct {
 		name string
@@ -67,6 +90,29 @@ func TestManuscriptCreate(t *testing.T) {
 			request:        validRequest,
 			ideaResponse:   ideaFixture(),
 			engineResponse: engineVersionFixture(),
+			callStep:       true,
+			manuscriptResp: entity,
+			callManuscript: true,
+			expect: &core.Manuscript{
+				ID:        manuscriptID,
+				IdeaID:    ideaID,
+				Value:     manuscriptValue,
+				CreatedAt: createdAt,
+			},
+			expectTransactions: 1,
+		},
+		{
+			name: "Success/IndependentManuscriptContract",
+			request: &core.ManuscriptCreateRequest{
+				Actor:           validRequest.Actor,
+				IdeaID:          ideaID,
+				EngineVersionID: engineVersionID,
+				StepKey:         "characters",
+				StepValue:       charactersStepValue,
+				Manuscript:      manuscriptValue,
+			},
+			ideaResponse:   ideaFixture(),
+			engineResponse: charactersEngine,
 			callStep:       true,
 			manuscriptResp: entity,
 			callManuscript: true,

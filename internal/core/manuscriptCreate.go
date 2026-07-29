@@ -120,11 +120,6 @@ func (service *ManuscriptCreate) Exec(
 		return nil, otel.ReportError(span, fmt.Errorf("encode Manuscript: %w", err))
 	}
 
-	err = step.validateValue(manuscriptValue)
-	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("%w: Manuscript: %w", ErrInvalidRequest, err))
-	}
-
 	var entity *dao.Manuscript
 
 	now := time.Now()
