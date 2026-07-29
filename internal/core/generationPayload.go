@@ -201,6 +201,8 @@ func projectProviderSchemaObject(object map[string]any) error {
 		delete(object, keyword)
 	}
 
+	projectProviderSchemaFreeformObject(object)
+
 	err := projectProviderSchemaConst(object)
 	if err != nil {
 		return err
@@ -214,6 +216,24 @@ func projectProviderSchemaObject(object map[string]any) error {
 	}
 
 	return nil
+}
+
+func projectProviderSchemaFreeformObject(object map[string]any) {
+	additionalProperties, isBoolean := object["additionalProperties"].(bool)
+	if object[jsonSchemaTypeKey] != "object" || !isBoolean || !additionalProperties {
+		return
+	}
+
+	properties, hasProperties := object["properties"].(map[string]any)
+	if hasProperties && len(properties) != 0 {
+		return
+	}
+
+	// Strict Responses schemas cannot generate arbitrary object keys.
+	// Canonical validation still accepts them after generation.
+	object["additionalProperties"] = false
+	object["properties"] = map[string]any{}
+	object["required"] = []string{}
 }
 
 func projectProviderSchemaConst(object map[string]any) error {

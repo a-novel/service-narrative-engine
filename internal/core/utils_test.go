@@ -74,8 +74,10 @@ var manuscriptValue = json.RawMessage(
 )
 
 var staticManuscriptValue = json.RawMessage(
-	`{"blocks":[{"type":"text","text":"The buried foghorn answers.",` +
-		`"marks":[{"type":"italic","start":4,"end":10}]}]}`,
+	`{"blocks":[{"type":"text","metadata":{"source":"draft",` +
+		`"plugin":{"name":"notes","version":1}},` +
+		`"data":{"text":"The buried foghorn answers.",` +
+		`"marks":[{"type":"italic","start":4,"end":10}]}}]}`,
 )
 
 func ideaFixture() *dao.Idea {

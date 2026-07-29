@@ -60,35 +60,46 @@ var manuscriptOutputSchema = json.RawMessage(fmt.Sprintf(`{
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["type", "text", "marks"],
+        "required": ["type", "metadata", "data"],
         "properties": {
           "type": {"const": "text"},
-          "text": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": %[1]d,
-            "pattern": "\\S"
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
           },
-          "marks": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": ["type", "start", "end"],
-              "properties": {
-                "type": {
-                  "type": "string",
-                  "enum": ["bold", "italic", "underline", "strikethrough"]
-                },
-                "start": {
-                  "type": "integer",
-                  "minimum": 0,
-                  "maximum": %[1]d
-                },
-                "end": {
-                  "type": "integer",
-                  "minimum": 1,
-                  "maximum": %[1]d
+          "data": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["text", "marks"],
+            "properties": {
+              "text": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": %[1]d,
+                "pattern": "\\S"
+              },
+              "marks": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["type", "start", "end"],
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["bold", "italic", "underline", "strikethrough"]
+                    },
+                    "start": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": %[1]d
+                    },
+                    "end": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": %[1]d
+                    }
+                  }
                 }
               }
             }

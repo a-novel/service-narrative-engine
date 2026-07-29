@@ -64,7 +64,8 @@ func TestGenerationSubmit(t *testing.T) {
 		CreatedAt:       createdAt,
 	}
 	latestManuscript := json.RawMessage(
-		`{"blocks":[{"type":"text","text":"The buried foghorn answers.","marks":[]}]}`,
+		`{"blocks":[{"type":"text","metadata":{"source":"saved"},` +
+			`"data":{"text":"The buried foghorn answers.","marks":[]}}]}`,
 	)
 	manuscript := &dao.Manuscript{
 		ID:        uuid.MustParse("00000000-0000-0000-0000-000000000502"),
@@ -83,6 +84,14 @@ func TestGenerationSubmit(t *testing.T) {
 		Target:         ideaTarget,
 		Input:          json.RawMessage(`{"title":"The Answering Light"}`),
 		IdempotencyKey: "retry-idea",
+	}
+	manuscriptTarget := core.GenerationTarget{Kind: core.GenerationTargetKindManuscript}
+	manuscriptRequest := &core.GenerationSubmitRequest{
+		Actor:          validRequest.Actor,
+		IdeaID:         ideaID,
+		Target:         manuscriptTarget,
+		Input:          json.RawMessage(`{"blocks":[{"type":"text","metadata":{},"data":{"text":"Draft"}}]}`),
+		IdempotencyKey: "retry-manuscript",
 	}
 	duplicateOverrides := *validRequest
 	duplicateOverrides.ContextOverrides = append(
@@ -185,6 +194,35 @@ func TestGenerationSubmit(t *testing.T) {
 					ideaProposal,
 					ideaTarget,
 				),
+			},
+		},
+		{
+			name:           "Success/StaticManuscriptProviderProjection",
+			request:        manuscriptRequest,
+			accessResponse: ideaFixture(),
+			callAccess:     true,
+			stepResponse:   []*dao.StepValue{},
+			callStep:       true,
+			manuscriptResp: manuscript,
+			callManuscript: true,
+			genaiResponse: &servicegenai.GenerationSubmitResponse{
+				Generation: generationFixture(servicegenai.GenerationStatusPending, nil),
+				Created:    true,
+			},
+			callGenAI: true,
+			payload: &generationPayloadExpectation{
+				target:     manuscriptTarget,
+				input:      manuscriptRequest.Input,
+				steps:      []*dao.StepValue{},
+				manuscript: latestManuscript,
+			},
+			expect: &core.GenerationSubmitResult{
+				Generation: submittedGeneration(
+					core.GenerationStatusPending,
+					nil,
+					manuscriptTarget,
+				),
+				Created: true,
 			},
 		},
 		{
@@ -456,6 +494,10 @@ func assertGenerationRequest(
 		expectedStepKey = expect.target.StepKey
 	}
 
+	if expect.target.Kind == core.GenerationTargetKindManuscript {
+		assertManuscriptProviderSchema(t, valueSchema)
+	}
+
 	projected, err := json.Marshal(schema)
 	require.NoError(t, err)
 
@@ -477,4 +519,41 @@ func assertGenerationRequest(
 		assert.NotContains(t, valueSchema, "$schema") &&
 		assert.NotContains(t, string(projected), "minLength") &&
 		assert.NotContains(t, string(projected), "maxLength")
+}
+
+func assertManuscriptProviderSchema(t *testing.T, schema map[string]any) {
+	t.Helper()
+
+	properties, propertiesOK := schema["properties"].(map[string]any)
+	require.True(t, propertiesOK)
+
+	blocks, blocksOK := properties["blocks"].(map[string]any)
+	require.True(t, blocksOK)
+
+	block, blockOK := blocks["items"].(map[string]any)
+	require.True(t, blockOK)
+
+	blockProperties, blockPropertiesOK := block["properties"].(map[string]any)
+	require.True(t, blockPropertiesOK)
+
+	metadata, metadataOK := blockProperties["metadata"].(map[string]any)
+	require.True(t, metadataOK)
+
+	data, dataOK := blockProperties["data"].(map[string]any)
+	require.True(t, dataOK)
+
+	dataProperties, dataPropertiesOK := data["properties"].(map[string]any)
+	require.True(t, dataPropertiesOK)
+
+	require.ElementsMatch(t, []any{"type", "metadata", "data"}, block["required"])
+	require.Equal(t, "object", metadata["type"])
+	require.Equal(t, false, metadata["additionalProperties"])
+	require.Contains(t, metadata, "properties")
+	require.Empty(t, metadata["properties"])
+	require.Contains(t, metadata, "required")
+	require.Empty(t, metadata["required"])
+	require.Equal(t, false, data["additionalProperties"])
+	require.ElementsMatch(t, []any{"text", "marks"}, data["required"])
+	require.Contains(t, dataProperties, "text")
+	require.Contains(t, dataProperties, "marks")
 }

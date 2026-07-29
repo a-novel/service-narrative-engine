@@ -21,11 +21,16 @@ func TestManuscriptCreate(t *testing.T) {
 	t.Parallel()
 
 	errFoo := errors.New("foo")
-	partialManuscript := json.RawMessage(`{"blocks":[{"type":"text"}]}`)
+	partialManuscript := json.RawMessage(
+		`{"blocks":[{"type":"text",` +
+			`"metadata":{"source":"draft","plugin":{"enabled":true,` +
+			`"tags":["one",2,null]}},` +
+			`"data":{"text":"Draft"}}]}`,
+	)
 	maxTextBlock := json.RawMessage(
-		`{"blocks":[{"type":"text","text":"` +
+		`{"blocks":[{"type":"text","metadata":{},"data":{"text":"` +
 			strings.Repeat("n", 32*1024) +
-			`","marks":[]}]}`,
+			`","marks":[]}}]}`,
 	)
 	validRequest := &core.ManuscriptCreateRequest{
 		Actor:      core.Actor{UserID: ownerID},
@@ -118,11 +123,22 @@ func TestManuscriptCreate(t *testing.T) {
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
-			name: "Error/Shape",
+			name: "Error/UnknownDocumentField",
 			request: &core.ManuscriptCreateRequest{
 				Actor:      validRequest.Actor,
 				IdeaID:     ideaID,
 				Manuscript: json.RawMessage(`{"unknown":true}`),
+			},
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/LegacyBlockShape",
+			request: &core.ManuscriptCreateRequest{
+				Actor:  validRequest.Actor,
+				IdeaID: ideaID,
+				Manuscript: json.RawMessage(
+					`{"blocks":[{"type":"text","text":"legacy","marks":[]}]}`,
+				),
 			},
 			expectErr: core.ErrInvalidRequest,
 		},
@@ -132,9 +148,9 @@ func TestManuscriptCreate(t *testing.T) {
 				Actor:  validRequest.Actor,
 				IdeaID: ideaID,
 				Manuscript: json.RawMessage(
-					`{"blocks":[{"type":"text","text":"` +
+					`{"blocks":[{"type":"text","metadata":{},"data":{"text":"` +
 						strings.Repeat("n", 32*1024+1) +
-						`","marks":[]}]}`,
+						`","marks":[]}}]}`,
 				),
 			},
 			expectErr: core.ErrInvalidRequest,
@@ -145,8 +161,9 @@ func TestManuscriptCreate(t *testing.T) {
 				Actor:  validRequest.Actor,
 				IdeaID: ideaID,
 				Manuscript: json.RawMessage(
-					`{"blocks":[{"type":"text","text":"linked","marks":[` +
-						`{"type":"link","start":0,"end":6}]}]}`,
+					`{"blocks":[{"type":"text","metadata":{},"data":{` +
+						`"text":"linked","marks":[` +
+						`{"type":"link","start":0,"end":6}]}}]}`,
 				),
 			},
 			expectErr: core.ErrInvalidRequest,
@@ -157,7 +174,8 @@ func TestManuscriptCreate(t *testing.T) {
 				Actor:  validRequest.Actor,
 				IdeaID: ideaID,
 				Manuscript: json.RawMessage(
-					`{"blocks":[{"type":"media","text":"image","marks":[]}]}`,
+					`{"blocks":[{"type":"media","metadata":{},` +
+						`"data":{"text":"image","marks":[]}}]}`,
 				),
 			},
 			expectErr: core.ErrInvalidRequest,
@@ -168,9 +186,9 @@ func TestManuscriptCreate(t *testing.T) {
 				Actor:  validRequest.Actor,
 				IdeaID: ideaID,
 				Manuscript: json.RawMessage(
-					`{"blocks":[{"type":"text","text":"` +
+					`{"blocks":[{"type":"text","metadata":{},"data":{"text":"` +
 						strings.Repeat("n", 5*1024*1024) +
-						`","marks":[]}]}`,
+						`","marks":[]}}]}`,
 				),
 			},
 			expectErr: core.ErrInvalidRequest,
