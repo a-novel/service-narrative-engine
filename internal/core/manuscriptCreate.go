@@ -1,6 +1,7 @@
 package core
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -26,14 +27,14 @@ type ManuscriptInsertDao interface {
 	Exec(ctx context.Context, request *dao.ManuscriptInsertRequest) (*dao.Manuscript, error)
 }
 
-// ManuscriptCreateRequest carries client-composed step content and project data.
+// ManuscriptCreateRequest carries client-composed step content and an opaque Manuscript.
 type ManuscriptCreateRequest struct {
 	Actor           Actor           `validate:"required"`
 	IdeaID          uuid.UUID       `validate:"required"`
 	EngineVersionID uuid.UUID       `validate:"required"`
 	StepKey         string          `validate:"required,notblank,max=256"`
 	StepValue       json.RawMessage `validate:"required,max=1048576"`
-	Manuscript      ManuscriptValue `validate:"required"`
+	Manuscript      json.RawMessage `validate:"required"`
 }
 
 // ManuscriptCreate validates and saves a step value plus Manuscript atomically.
@@ -73,6 +74,21 @@ func (service *ManuscriptCreate) Exec(
 	err := validate.Struct(request)
 	if err != nil {
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
+	}
+
+	manuscriptJSON := bytes.TrimSpace(request.Manuscript)
+	if !json.Valid(manuscriptJSON) {
+		return nil, otel.ReportError(
+			span,
+			fmt.Errorf("%w: manuscript must contain valid JSON", ErrInvalidRequest),
+		)
+	}
+
+	if manuscriptJSON[0] != '{' {
+		return nil, otel.ReportError(
+			span,
+			fmt.Errorf("%w: manuscript must be a JSON object", ErrInvalidRequest),
+		)
 	}
 
 	span.SetAttributes(
@@ -115,11 +131,6 @@ func (service *ManuscriptCreate) Exec(
 		return nil, otel.ReportError(span, fmt.Errorf("%w: step value: %w", ErrInvalidRequest, err))
 	}
 
-	manuscriptValue, err := json.Marshal(request.Manuscript)
-	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("encode Manuscript: %w", err))
-	}
-
 	var entity *dao.Manuscript
 
 	now := time.Now()
@@ -142,7 +153,7 @@ func (service *ManuscriptCreate) Exec(
 		entity, insertErr = service.manuscriptDao.Exec(ctx, &dao.ManuscriptInsertRequest{
 			ID:     manuscriptID,
 			IdeaID: request.IdeaID,
-			Value:  manuscriptValue,
+			Value:  request.Manuscript,
 			Now:    now,
 		})
 		if insertErr != nil {
@@ -166,19 +177,12 @@ func (service *ManuscriptCreate) Exec(
 		)
 	}
 
-	var value ManuscriptValue
-
-	err = json.Unmarshal(entity.Value, &value)
-	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("decode saved Manuscript: %w", err))
-	}
-
 	span.SetAttributes(attribute.String("manuscript.id", entity.ID.String()))
 
 	return otel.ReportSuccess(span, &Manuscript{
 		ID:        entity.ID,
 		IdeaID:    entity.IdeaID,
-		Value:     value,
+		Value:     entity.Value,
 		CreatedAt: entity.CreatedAt,
 		UpdatedAt: entity.UpdatedAt,
 	}), nil

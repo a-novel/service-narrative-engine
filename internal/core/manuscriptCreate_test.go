@@ -25,19 +25,23 @@ func TestManuscriptCreate(t *testing.T) {
 	stepValue, err := json.Marshal(manuscriptValue)
 	require.NoError(t, err)
 
+	opaqueManuscript := json.RawMessage(
+		`{"title":"Free form","extensions":{"custom":{"enabled":true}}}`,
+	)
+
 	validRequest := &core.ManuscriptCreateRequest{
 		Actor:           core.Actor{UserID: ownerID},
 		IdeaID:          ideaID,
 		EngineVersionID: engineVersionID,
 		StepKey:         "manuscript",
 		StepValue:       stepValue,
-		Manuscript:      manuscriptValue,
+		Manuscript:      opaqueManuscript,
 	}
 	manuscriptID := uuid.MustParse("00000000-0000-0000-0000-000000000701")
 	entity := &dao.Manuscript{
 		ID:        manuscriptID,
 		IdeaID:    ideaID,
-		Value:     stepValue,
+		Value:     opaqueManuscript,
 		CreatedAt: createdAt,
 	}
 	charactersStepValue := json.RawMessage(`{"characters":["Mara"]}`)
@@ -96,7 +100,7 @@ func TestManuscriptCreate(t *testing.T) {
 			expect: &core.Manuscript{
 				ID:        manuscriptID,
 				IdeaID:    ideaID,
-				Value:     manuscriptValue,
+				Value:     opaqueManuscript,
 				CreatedAt: createdAt,
 			},
 			expectTransactions: 1,
@@ -109,7 +113,7 @@ func TestManuscriptCreate(t *testing.T) {
 				EngineVersionID: engineVersionID,
 				StepKey:         "characters",
 				StepValue:       charactersStepValue,
-				Manuscript:      manuscriptValue,
+				Manuscript:      opaqueManuscript,
 			},
 			ideaResponse:   ideaFixture(),
 			engineResponse: charactersEngine,
@@ -119,7 +123,7 @@ func TestManuscriptCreate(t *testing.T) {
 			expect: &core.Manuscript{
 				ID:        manuscriptID,
 				IdeaID:    ideaID,
-				Value:     manuscriptValue,
+				Value:     opaqueManuscript,
 				CreatedAt: createdAt,
 			},
 			expectTransactions: 1,
@@ -130,14 +134,26 @@ func TestManuscriptCreate(t *testing.T) {
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
-			name: "Error/InvalidTypedManuscript",
+			name: "Error/InvalidManuscriptJSON",
 			request: &core.ManuscriptCreateRequest{
 				Actor:           validRequest.Actor,
 				IdeaID:          ideaID,
 				EngineVersionID: engineVersionID,
 				StepKey:         "manuscript",
 				StepValue:       stepValue,
-				Manuscript:      core.ManuscriptValue{},
+				Manuscript:      json.RawMessage(`{`),
+			},
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/NonObjectManuscript",
+			request: &core.ManuscriptCreateRequest{
+				Actor:           validRequest.Actor,
+				IdeaID:          ideaID,
+				EngineVersionID: engineVersionID,
+				StepKey:         "manuscript",
+				StepValue:       stepValue,
+				Manuscript:      json.RawMessage(`[]`),
 			},
 			expectErr: core.ErrInvalidRequest,
 		},
@@ -168,8 +184,11 @@ func TestManuscriptCreate(t *testing.T) {
 			expectErr:    errFoo,
 		},
 		{
-			name:           "Error/InvalidStepValue",
-			request:        manuscriptRequestWithStepValue(json.RawMessage(`{"title":""}`)),
+			name: "Error/InvalidStepValue",
+			request: manuscriptRequestWithStepValue(
+				json.RawMessage(`{"title":""}`),
+				opaqueManuscript,
+			),
 			ideaResponse:   ideaFixture(),
 			engineResponse: engineVersionFixture(),
 			expectErr:      core.ErrInvalidRequest,
@@ -224,21 +243,6 @@ func TestManuscriptCreate(t *testing.T) {
 			expectErrContains:  "save project content",
 			expectTransactions: 1,
 		},
-		{
-			name:           "Error/InvalidStoredManuscript",
-			request:        validRequest,
-			ideaResponse:   ideaFixture(),
-			engineResponse: engineVersionFixture(),
-			callStep:       true,
-			manuscriptResp: &dao.Manuscript{
-				ID:     manuscriptID,
-				IdeaID: ideaID,
-				Value:  json.RawMessage(`{`),
-			},
-			callManuscript:     true,
-			expectErrContains:  "decode saved Manuscript",
-			expectTransactions: 1,
-		},
 	}
 
 	for _, testCase := range testCases {
@@ -290,7 +294,7 @@ func TestManuscriptCreate(t *testing.T) {
 						return assert.NotEqual(t, uuid.Nil, request.ID) &&
 							assert.Equal(t, testCase.request.IdeaID, request.IdeaID) &&
 							assert.Equal(t, saveTime, request.Now) &&
-							assert.JSONEq(t, string(stepValue), string(request.Value))
+							assert.JSONEq(t, string(testCase.request.Manuscript), string(request.Value))
 					})).
 					Return(testCase.manuscriptResp, testCase.manuscriptErr)
 			}
@@ -322,13 +326,16 @@ func TestManuscriptCreate(t *testing.T) {
 	}
 }
 
-func manuscriptRequestWithStepValue(value json.RawMessage) *core.ManuscriptCreateRequest {
+func manuscriptRequestWithStepValue(
+	value json.RawMessage,
+	manuscript json.RawMessage,
+) *core.ManuscriptCreateRequest {
 	return &core.ManuscriptCreateRequest{
 		Actor:           core.Actor{UserID: ownerID},
 		IdeaID:          ideaID,
 		EngineVersionID: engineVersionID,
 		StepKey:         "manuscript",
 		StepValue:       value,
-		Manuscript:      manuscriptValue,
+		Manuscript:      manuscript,
 	}
 }

@@ -1,6 +1,7 @@
 package core
 
 import (
+	"encoding/json"
 	"errors"
 	"time"
 
@@ -39,18 +40,18 @@ type ManuscriptScene struct {
 	Blocks []ManuscriptBlock `json:"blocks" validate:"required,min=1,dive"`
 }
 
-// ManuscriptValue is the typed, self-contained Stage 2 project document.
+// ManuscriptValue is the typed proposal produced by the fixture Engine step.
 type ManuscriptValue struct {
 	Title  string            `json:"title"  validate:"required,notblank"`
 	Format ManuscriptFormat  `json:"format" validate:"required,oneof=prose"`
 	Scenes []ManuscriptScene `json:"scenes" validate:"required,min=1,dive"`
 }
 
-// Manuscript is a persisted, self-contained project document.
+// Manuscript is a persisted project document whose JSON value is opaque to Narrative Engine.
 type Manuscript struct {
 	ID        uuid.UUID       `json:"id"`
 	IdeaID    uuid.UUID       `json:"ideaID"`
-	Value     ManuscriptValue `json:"value"`
+	Value     json.RawMessage `json:"value"`
 	CreatedAt time.Time       `json:"createdAt"`
 	UpdatedAt *time.Time      `json:"updatedAt"`
 }
