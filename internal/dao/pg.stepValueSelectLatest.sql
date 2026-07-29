@@ -8,7 +8,7 @@ FROM
       step_values
     WHERE
       idea_id = ?0
-      AND NOT (step_key = ANY(?1::text[]))
+      AND NOT (step_key = ANY (?1::text[]))
     ORDER BY
       step_key,
       created_at DESC,
