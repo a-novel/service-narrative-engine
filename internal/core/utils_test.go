@@ -74,9 +74,8 @@ var manuscriptValue = json.RawMessage(
 )
 
 var staticManuscriptValue = json.RawMessage(
-	`{"format":"novel","scenes":[{"sceneID":"scene-1","title":"The Reply",` +
-		`"slugline":"EXT. LIGHTHOUSE - NIGHT","blocks":[{"type":"prose",` +
-		`"text":["The buried foghorn answers."]}]}]}`,
+	`{"blocks":[{"type":"text","text":"The buried foghorn answers.",` +
+		`"marks":[{"type":"italic","start":4,"end":10}]}]}`,
 )
 
 func ideaFixture() *dao.Idea {

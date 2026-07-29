@@ -63,7 +63,9 @@ func TestGenerationSubmit(t *testing.T) {
 		Value:           json.RawMessage(`{"names":["Mara"]}`),
 		CreatedAt:       createdAt,
 	}
-	latestManuscript := json.RawMessage(`{"format":"novel","scenes":[]}`)
+	latestManuscript := json.RawMessage(
+		`{"blocks":[{"type":"text","text":"The buried foghorn answers.","marks":[]}]}`,
+	)
 	manuscript := &dao.Manuscript{
 		ID:        uuid.MustParse("00000000-0000-0000-0000-000000000502"),
 		IdeaID:    ideaID,

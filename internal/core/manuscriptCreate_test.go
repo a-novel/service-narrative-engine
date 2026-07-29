@@ -21,7 +21,12 @@ func TestManuscriptCreate(t *testing.T) {
 	t.Parallel()
 
 	errFoo := errors.New("foo")
-	partialManuscript := json.RawMessage(`{"format":"novel"}`)
+	partialManuscript := json.RawMessage(`{"blocks":[{"type":"text"}]}`)
+	maxTextBlock := json.RawMessage(
+		`{"blocks":[{"type":"text","text":"` +
+			strings.Repeat("n", 32*1024) +
+			`","marks":[]}]}`,
+	)
 	validRequest := &core.ManuscriptCreateRequest{
 		Actor:      core.Actor{UserID: ownerID},
 		IdeaID:     ideaID,
@@ -56,6 +61,22 @@ func TestManuscriptCreate(t *testing.T) {
 			manuscriptResp: entity,
 			callManuscript: true,
 			expect:         partialManuscript,
+		},
+		{
+			name: "Success/TextBlockAtLimit",
+			request: &core.ManuscriptCreateRequest{
+				Actor:      validRequest.Actor,
+				IdeaID:     ideaID,
+				Manuscript: maxTextBlock,
+			},
+			callAccess: true,
+			manuscriptResp: &dao.Manuscript{
+				ID:     manuscriptID,
+				IdeaID: ideaID,
+				Value:  maxTextBlock,
+			},
+			callManuscript: true,
+			expect:         maxTextBlock,
 		},
 		{
 			name: "Success/EmptyPartialDocument",
@@ -106,12 +127,50 @@ func TestManuscriptCreate(t *testing.T) {
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
+			name: "Error/TextBlockTooLong",
+			request: &core.ManuscriptCreateRequest{
+				Actor:  validRequest.Actor,
+				IdeaID: ideaID,
+				Manuscript: json.RawMessage(
+					`{"blocks":[{"type":"text","text":"` +
+						strings.Repeat("n", 32*1024+1) +
+						`","marks":[]}]}`,
+				),
+			},
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/LinkMark",
+			request: &core.ManuscriptCreateRequest{
+				Actor:  validRequest.Actor,
+				IdeaID: ideaID,
+				Manuscript: json.RawMessage(
+					`{"blocks":[{"type":"text","text":"linked","marks":[` +
+						`{"type":"link","start":0,"end":6}]}]}`,
+				),
+			},
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/MediaBlock",
+			request: &core.ManuscriptCreateRequest{
+				Actor:  validRequest.Actor,
+				IdeaID: ideaID,
+				Manuscript: json.RawMessage(
+					`{"blocks":[{"type":"media","text":"image","marks":[]}]}`,
+				),
+			},
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
 			name: "Error/DocumentTooLarge",
 			request: &core.ManuscriptCreateRequest{
 				Actor:  validRequest.Actor,
 				IdeaID: ideaID,
 				Manuscript: json.RawMessage(
-					`{"format":"` + strings.Repeat("n", 5*1024*1024) + `"}`,
+					`{"blocks":[{"type":"text","text":"` +
+						strings.Repeat("n", 5*1024*1024) +
+						`","marks":[]}]}`,
 				),
 			},
 			expectErr: core.ErrInvalidRequest,

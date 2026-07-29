@@ -52,111 +52,52 @@ var manuscriptOutputSchema = json.RawMessage(fmt.Sprintf(`{
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "additionalProperties": false,
-  "required": ["format", "scenes"],
+  "required": ["blocks"],
   "properties": {
-    "format": {
-      "type": "string",
-      "enum": ["screenplay", "novel", "light_novel", "dialogue_only"]
-    },
-    "scenes": {
+    "blocks": {
       "type": "array",
       "minItems": 1,
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["sceneID", "title", "slugline", "blocks"],
+        "required": ["type", "text", "marks"],
         "properties": {
-          "sceneID": {
+          "type": {"const": "text"},
+          "text": {
             "type": "string",
             "minLength": 1,
-            "maxLength": %[1]d
+            "maxLength": %[1]d,
+            "pattern": "\\S"
           },
-          "title": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": %[1]d
-          },
-          "slugline": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": %[1]d
-          },
-          "blocks": {
+          "marks": {
             "type": "array",
-            "minItems": 1,
             "items": {
-              "anyOf": [
-                {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "required": ["type", "text"],
-                  "properties": {
-                    "type": {"const": "prose"},
-                    "text": {
-                      "type": "array",
-                      "minItems": 1,
-                      "items": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": %[2]d
-                      }
-                    }
-                  }
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["type", "start", "end"],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": ["bold", "italic", "underline", "strikethrough"]
                 },
-                {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "required": ["type", "lines"],
-                  "properties": {
-                    "type": {"const": "dialogue"},
-                    "lines": {
-                      "type": "array",
-                      "minItems": 1,
-                      "items": {
-                        "type": "object",
-                        "additionalProperties": false,
-                        "required": ["character", "line"],
-                        "properties": {
-                          "character": {
-                            "type": "string",
-                            "minLength": 1,
-                            "maxLength": %[1]d
-                          },
-                          "line": {
-                            "type": "string",
-                            "minLength": 1,
-                            "maxLength": %[2]d
-                          }
-                        }
-                      }
-                    }
-                  }
+                "start": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": %[1]d
                 },
-                {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "required": ["type", "text"],
-                  "properties": {
-                    "type": {"const": "cue"},
-                    "text": {
-                      "type": "array",
-                      "minItems": 1,
-                      "items": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": %[2]d
-                      }
-                    }
-                  }
+                "end": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": %[1]d
                 }
-              ]
+              }
             }
           }
         }
       }
     }
   }
-}`, contentShortMaxCharacters, contentRegularMaxCharacters))
+}`, contentRegularMaxCharacters))
 
 type contentSchemaDefinition struct {
 	OutputSchema          json.RawMessage
