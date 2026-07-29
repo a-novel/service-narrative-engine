@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-
-	"github.com/google/jsonschema-go/jsonschema"
 )
 
 var (
@@ -22,10 +20,11 @@ type engineDefinition struct {
 }
 
 type engineStepDefinition struct {
+	contentSchemaDefinition
+
 	Key            string          `json:"key"`
 	PromptTemplate string          `json:"promptTemplate"`
 	OutputSchema   json.RawMessage `json:"outputSchema"`
-	resolvedSchema *jsonschema.Resolved
 }
 
 func selectEngineStep(definition json.RawMessage, key string) (*engineStepDefinition, error) {
@@ -59,33 +58,16 @@ func selectEngineStep(definition json.RawMessage, key string) (*engineStepDefini
 		return nil, fmt.Errorf("%w: step %q is incomplete", ErrEngineDefinitionInvalid, key)
 	}
 
-	var schema jsonschema.Schema
-
-	err = json.Unmarshal(match.OutputSchema, &schema)
+	schemaDefinition, err := loadContentSchema(match.OutputSchema)
 	if err != nil {
-		return nil, fmt.Errorf("%w: decode output schema for step %q: %w", ErrEngineDefinitionInvalid, key, err)
+		return nil, fmt.Errorf("%w: load output schema for step %q: %w", ErrEngineDefinitionInvalid, key, err)
 	}
 
-	match.resolvedSchema, err = schema.Resolve(nil)
-	if err != nil {
-		return nil, fmt.Errorf("%w: resolve output schema for step %q: %w", ErrEngineDefinitionInvalid, key, err)
-	}
+	match.contentSchemaDefinition = *schemaDefinition
 
 	return match, nil
 }
 
-func (step *engineStepDefinition) validateValue(value json.RawMessage) error {
-	var instance any
-
-	err := json.Unmarshal(value, &instance)
-	if err != nil {
-		return fmt.Errorf("decode JSON value: %w", err)
-	}
-
-	err = step.resolvedSchema.Validate(instance)
-	if err != nil {
-		return fmt.Errorf("validate JSON value: %w", err)
-	}
-
-	return nil
+func (step *engineStepDefinition) validatePartialValue(value json.RawMessage) error {
+	return step.validatePartial(value)
 }

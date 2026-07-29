@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -19,12 +20,12 @@ type IdeaCreateDao interface {
 	Exec(ctx context.Context, request *dao.IdeaInsertRequest) (*dao.Idea, error)
 }
 
-// IdeaCreateRequest carries the authenticated owner and typed Idea fields.
+// IdeaCreateRequest carries the authenticated owner and partial typed Idea content.
 type IdeaCreateRequest struct {
-	Actor Actor  `validate:"required"`
-	Seed  string `validate:"required,notblank,maxbytes=65536"`
-	Genre string `validate:"required,notblank,max=256"`
-	Title string `validate:"max=256"`
+	Actor Actor `validate:"required"`
+	Seed  string
+	Genre string
+	Title string
 }
 
 // IdeaCreate validates and persists a new Idea.
@@ -45,6 +46,34 @@ func (service *IdeaCreate) Exec(ctx context.Context, request *IdeaCreateRequest)
 	err := validate.Struct(request)
 	if err != nil {
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
+	}
+
+	content := make(map[string]string)
+	if request.Title != "" {
+		content["title"] = request.Title
+	}
+
+	if request.Genre != "" {
+		content["genre"] = request.Genre
+	}
+
+	if request.Seed != "" {
+		content["seed"] = request.Seed
+	}
+
+	value, err := json.Marshal(content)
+	if err != nil {
+		return nil, otel.ReportError(span, fmt.Errorf("encode Idea content: %w", err))
+	}
+
+	schema, err := loadContentSchema(ideaOutputSchema)
+	if err != nil {
+		return nil, otel.ReportError(span, fmt.Errorf("load Idea schema: %w", err))
+	}
+
+	err = schema.validatePartial(value)
+	if err != nil {
+		return nil, otel.ReportError(span, fmt.Errorf("%w: Idea: %w", ErrInvalidRequest, err))
 	}
 
 	span.SetAttributes(attribute.String("idea.owner_id", request.Actor.UserID.String()))

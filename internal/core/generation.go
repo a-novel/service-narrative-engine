@@ -46,6 +46,32 @@ const (
 	GenerationStatusCancelled GenerationStatus = "cancelled"
 )
 
+// GenerationTargetKind identifies one of the three project content contracts.
+type GenerationTargetKind string
+
+const (
+	// GenerationTargetKindIdea uses the static Idea schema.
+	GenerationTargetKindIdea GenerationTargetKind = "idea"
+	// GenerationTargetKindStep uses one immutable Engine Version step schema.
+	GenerationTargetKindStep GenerationTargetKind = "step"
+	// GenerationTargetKindManuscript uses the static Manuscript schema.
+	GenerationTargetKindManuscript GenerationTargetKind = "manuscript"
+)
+
+// GenerationTarget identifies the content contract a proposal must complete.
+type GenerationTarget struct {
+	Kind            GenerationTargetKind `json:"kind"`
+	EngineVersionID uuid.UUID            `json:"engineVersionID"`
+	StepKey         string               `json:"stepKey"`
+}
+
+// GenerationContextOverride replaces one saved step in automatic project context.
+type GenerationContextOverride struct {
+	EngineVersionID uuid.UUID       `json:"engineVersionID" validate:"required"`
+	StepKey         string          `json:"stepKey"         validate:"required,notblank,max=256"`
+	Value           json.RawMessage `json:"value"           validate:"required"`
+}
+
 // Terminal reports whether no further generation state can follow.
 func (status GenerationStatus) Terminal() bool {
 	switch status {
@@ -63,16 +89,17 @@ func (status GenerationStatus) Terminal() bool {
 
 // Generation is the owner-scoped lifecycle and volatile schema-validated JSON proposal.
 type Generation struct {
-	ID          uuid.UUID        `json:"id"`
-	Status      GenerationStatus `json:"status"`
-	Attempt     int32            `json:"attempt"`
-	MaxAttempts int32            `json:"maxAttempts"`
-	Proposal    json.RawMessage  `json:"proposal"`
-	Failure     string           `json:"failure"`
-	CreatedAt   time.Time        `json:"createdAt"`
-	UpdatedAt   time.Time        `json:"updatedAt"`
-	SettledAt   *time.Time       `json:"settledAt"`
-	ExpiresAt   *time.Time       `json:"expiresAt"`
+	ID          uuid.UUID         `json:"id"`
+	Status      GenerationStatus  `json:"status"`
+	Target      *GenerationTarget `json:"target,omitempty"`
+	Attempt     int32             `json:"attempt"`
+	MaxAttempts int32             `json:"maxAttempts"`
+	Proposal    json.RawMessage   `json:"proposal"`
+	Failure     string            `json:"failure"`
+	CreatedAt   time.Time         `json:"createdAt"`
+	UpdatedAt   time.Time         `json:"updatedAt"`
+	SettledAt   *time.Time        `json:"settledAt"`
+	ExpiresAt   *time.Time        `json:"expiresAt"`
 }
 
 // GenerationSubmitResult reports whether submission created work or replayed it.

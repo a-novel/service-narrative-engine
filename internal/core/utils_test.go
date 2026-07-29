@@ -73,6 +73,12 @@ var manuscriptValue = json.RawMessage(
 		`{"kind":"prose","text":"The buried foghorn answers."}]}]}`,
 )
 
+var staticManuscriptValue = json.RawMessage(
+	`{"format":"novel","scenes":[{"sceneID":"scene-1","title":"The Reply",` +
+		`"slugline":"EXT. LIGHTHOUSE - NIGHT","blocks":[{"type":"prose",` +
+		`"text":["The buried foghorn answers."]}]}]}`,
+)
+
 func ideaFixture() *dao.Idea {
 	return &dao.Idea{
 		ID:        ideaID,
@@ -130,6 +136,11 @@ func expectedGeneration(
 		UpdatedAt:   updatedAt,
 	}
 
+	if proposal != nil {
+		target := generationTargetFixture()
+		generation.Target = &target
+	}
+
 	if status.Terminal() {
 		generation.SettledAt = &settledAt
 		generation.ExpiresAt = &expiresAt
@@ -173,12 +184,39 @@ func responsesOutputText(t *testing.T, text string) []byte {
 func generationEnvelope(t *testing.T, value any) string {
 	t.Helper()
 
+	return generationEnvelopeForTarget(t, generationTargetFixture(), value)
+}
+
+func generationEnvelopeForTarget(
+	t *testing.T,
+	target core.GenerationTarget,
+	value any,
+) string {
+	t.Helper()
+
+	engineVersionID := ""
+	stepKey := ""
+
+	if target.Kind == core.GenerationTargetKindStep {
+		engineVersionID = target.EngineVersionID.String()
+		stepKey = target.StepKey
+	}
+
 	envelope, err := json.Marshal(map[string]any{
-		"engineVersionID": engineVersionID.String(),
-		"stepKey":         "manuscript",
+		"targetKind":      target.Kind,
+		"engineVersionID": engineVersionID,
+		"stepKey":         stepKey,
 		"value":           value,
 	})
 	require.NoError(t, err)
 
 	return string(envelope)
+}
+
+func generationTargetFixture() core.GenerationTarget {
+	return core.GenerationTarget{
+		Kind:            core.GenerationTargetKindStep,
+		EngineVersionID: engineVersionID,
+		StepKey:         "manuscript",
+	}
 }

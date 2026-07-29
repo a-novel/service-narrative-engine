@@ -29,6 +29,18 @@ func TestIdeaCreate(t *testing.T) {
 	entity := ideaFixture()
 	entityWithoutTitle := ideaFixture()
 	entityWithoutTitle.Title = ""
+	emptyEntity := ideaFixture()
+	emptyEntity.Seed = ""
+	emptyEntity.Genre = ""
+	emptyEntity.Title = ""
+	titleJustBelowLimitEntity := ideaFixture()
+	titleJustBelowLimitEntity.Title = strings.Repeat("é", 127)
+	titleAtLimitEntity := ideaFixture()
+	titleAtLimitEntity.Title = strings.Repeat("é", 128)
+	seedJustBelowLimitEntity := ideaFixture()
+	seedJustBelowLimitEntity.Seed = strings.Repeat("é", 32767)
+	seedAtLimitEntity := ideaFixture()
+	seedAtLimitEntity.Seed = strings.Repeat("é", 32768)
 
 	testCases := []struct {
 		name string
@@ -72,6 +84,65 @@ func TestIdeaCreate(t *testing.T) {
 			},
 		},
 		{
+			name: "Success/EmptyPartialIdea",
+			request: &core.IdeaCreateRequest{
+				Actor: validRequest.Actor,
+			},
+			daoResult: emptyEntity,
+			callDao:   true,
+			expect: &core.Idea{
+				ID:        emptyEntity.ID,
+				OwnerID:   emptyEntity.OwnerID,
+				CreatedAt: emptyEntity.CreatedAt,
+			},
+		},
+		{
+			name: "Success/TitleJustBelowLimit",
+			request: &core.IdeaCreateRequest{
+				Actor: validRequest.Actor,
+				Seed:  validRequest.Seed,
+				Genre: validRequest.Genre,
+				Title: titleJustBelowLimitEntity.Title,
+			},
+			daoResult: titleJustBelowLimitEntity,
+			callDao:   true,
+			expect:    ideaFromEntity(titleJustBelowLimitEntity),
+		},
+		{
+			name: "Success/TitleAtLimit",
+			request: &core.IdeaCreateRequest{
+				Actor: validRequest.Actor,
+				Seed:  validRequest.Seed,
+				Genre: validRequest.Genre,
+				Title: titleAtLimitEntity.Title,
+			},
+			daoResult: titleAtLimitEntity,
+			callDao:   true,
+			expect:    ideaFromEntity(titleAtLimitEntity),
+		},
+		{
+			name: "Success/SeedJustBelowLimit",
+			request: &core.IdeaCreateRequest{
+				Actor: validRequest.Actor,
+				Seed:  seedJustBelowLimitEntity.Seed,
+				Genre: validRequest.Genre,
+			},
+			daoResult: seedJustBelowLimitEntity,
+			callDao:   true,
+			expect:    ideaFromEntity(seedJustBelowLimitEntity),
+		},
+		{
+			name: "Success/SeedAtLimit",
+			request: &core.IdeaCreateRequest{
+				Actor: validRequest.Actor,
+				Seed:  seedAtLimitEntity.Seed,
+				Genre: validRequest.Genre,
+			},
+			daoResult: seedAtLimitEntity,
+			callDao:   true,
+			expect:    ideaFromEntity(seedAtLimitEntity),
+		},
+		{
 			name:      "Error/Actor",
 			request:   &core.IdeaCreateRequest{Seed: validRequest.Seed, Genre: validRequest.Genre},
 			expectErr: core.ErrInvalidRequest,
@@ -108,7 +179,7 @@ func TestIdeaCreate(t *testing.T) {
 			request: &core.IdeaCreateRequest{
 				Actor: validRequest.Actor,
 				Seed:  validRequest.Seed,
-				Genre: strings.Repeat("g", 257),
+				Genre: strings.Repeat("g", 129),
 			},
 			expectErr: core.ErrInvalidRequest,
 		},
@@ -118,7 +189,7 @@ func TestIdeaCreate(t *testing.T) {
 				Actor: validRequest.Actor,
 				Seed:  validRequest.Seed,
 				Genre: validRequest.Genre,
-				Title: strings.Repeat("t", 257),
+				Title: strings.Repeat("t", 129),
 			},
 			expectErr: core.ErrInvalidRequest,
 		},
@@ -159,5 +230,17 @@ func TestIdeaCreate(t *testing.T) {
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
 		})
+	}
+}
+
+func ideaFromEntity(entity *dao.Idea) *core.Idea {
+	return &core.Idea{
+		ID:        entity.ID,
+		OwnerID:   entity.OwnerID,
+		Seed:      entity.Seed,
+		Genre:     entity.Genre,
+		Title:     entity.Title,
+		CreatedAt: entity.CreatedAt,
+		UpdatedAt: entity.UpdatedAt,
 	}
 }

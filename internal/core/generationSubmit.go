@@ -2,8 +2,10 @@ package core
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel/attribute"
@@ -17,36 +19,59 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// IdeaSelectDao retrieves owner-scoped Ideas for generation and content saves.
-type IdeaSelectDao interface {
-	Exec(ctx context.Context, request *dao.IdeaSelectRequest) (*dao.Idea, error)
+var (
+	errGenerationSavedStepMissing  = errors.New("latest step selection returned a nil value")
+	errGenerationManuscriptMissing = errors.New("latest Manuscript selection returned a nil value")
+)
+
+// StepValueSelectLatestDao retrieves the current saved value for every logical step key.
+type StepValueSelectLatestDao interface {
+	Exec(
+		ctx context.Context,
+		request *dao.StepValueSelectLatestRequest,
+	) ([]*dao.StepValue, error)
 }
 
-// GenerationSubmitRequest identifies the Idea, immutable step, and caller retry.
+// ManuscriptSelectLatestDao retrieves the current saved Manuscript when one exists.
+type ManuscriptSelectLatestDao interface {
+	Exec(
+		ctx context.Context,
+		request *dao.ManuscriptSelectLatestRequest,
+	) (*dao.Manuscript, error)
+}
+
+// GenerationSubmitRequest carries one partial target input and optional step-context replacements.
 type GenerationSubmitRequest struct {
-	Actor           Actor     `validate:"required"`
-	IdeaID          uuid.UUID `validate:"required"`
-	EngineVersionID uuid.UUID `validate:"required"`
-	StepKey         string    `validate:"required,notblank,max=256"`
-	IdempotencyKey  string    `validate:"required,notblank,max=256"`
+	Actor            Actor     `validate:"required"`
+	IdeaID           uuid.UUID `validate:"required"`
+	Target           GenerationTarget
+	Input            json.RawMessage             `validate:"required"`
+	ContextOverrides []GenerationContextOverride `validate:"dive"`
+	IdempotencyKey   string                      `validate:"required,notblank,max=256"`
 }
 
-// GenerationSubmit assembles and submits one self-contained fixture-engine request.
+// GenerationSubmit assembles and submits one self-contained project generation request.
 type GenerationSubmit struct {
-	ideaDao          IdeaSelectDao
+	projectAccess    ProjectAccessService
 	engineVersionDao EngineVersionSelectDao
+	stepValueDao     StepValueSelectLatestDao
+	manuscriptDao    ManuscriptSelectLatestDao
 	genai            servicegenai.Client
 }
 
 // NewGenerationSubmit creates the narrative generation submit service.
 func NewGenerationSubmit(
-	ideaDao IdeaSelectDao,
+	projectAccess ProjectAccessService,
 	engineVersionDao EngineVersionSelectDao,
+	stepValueDao StepValueSelectLatestDao,
+	manuscriptDao ManuscriptSelectLatestDao,
 	genai servicegenai.Client,
 ) *GenerationSubmit {
 	return &GenerationSubmit{
-		ideaDao:          ideaDao,
+		projectAccess:    projectAccess,
 		engineVersionDao: engineVersionDao,
+		stepValueDao:     stepValueDao,
+		manuscriptDao:    manuscriptDao,
 		genai:            genai,
 	}
 }
@@ -60,46 +85,105 @@ func (service *GenerationSubmit) Exec(
 	defer span.End()
 
 	err := validate.Struct(request)
+	if err == nil {
+		err = validateGenerationTarget(request.Target)
+	}
+
 	if err != nil {
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
 	span.SetAttributes(
 		attribute.String("idea.id", request.IdeaID.String()),
-		attribute.String("engine_version.id", request.EngineVersionID.String()),
-		attribute.String("engine.step_key", request.StepKey),
+		attribute.String("generation.target_kind", string(request.Target.Kind)),
 		attribute.String("generation.owner_id", request.Actor.UserID.String()),
 	)
 
-	idea, err := service.ideaDao.Exec(ctx, &dao.IdeaSelectRequest{
-		ID:      request.IdeaID,
-		OwnerID: request.Actor.UserID,
-	})
-	if err != nil {
-		if errors.Is(err, dao.ErrIdeaSelectNotFound) {
-			err = errors.Join(err, ErrIdeaNotFound)
-		}
-
-		return nil, otel.ReportError(span, fmt.Errorf("select Idea: %w", err))
+	if request.Target.Kind == GenerationTargetKindStep {
+		span.SetAttributes(
+			attribute.String("engine_version.id", request.Target.EngineVersionID.String()),
+			attribute.String("engine.step_key", request.Target.StepKey),
+		)
 	}
 
-	engineVersion, err := service.engineVersionDao.Exec(ctx, &dao.EngineVersionSelectRequest{
-		ID: request.EngineVersionID,
+	idea, err := service.projectAccess.Exec(ctx, &ProjectAccessRequest{
+		Actor:  request.Actor,
+		IdeaID: request.IdeaID,
 	})
 	if err != nil {
-		if errors.Is(err, dao.ErrEngineVersionSelectNotFound) {
-			err = errors.Join(err, ErrEngineVersionNotFound)
-		}
-
-		return nil, otel.ReportError(span, fmt.Errorf("select Engine Version: %w", err))
+		return nil, otel.ReportError(span, fmt.Errorf("access project: %w", err))
 	}
 
-	step, err := selectEngineStep(engineVersion.Definition, request.StepKey)
+	definition, err := loadGenerationTarget(ctx, service.engineVersionDao, request.Target)
 	if err != nil {
 		return nil, otel.ReportError(span, err)
 	}
 
-	payload, err := buildGenerationPayload(idea, engineVersion.ID, step)
+	err = definition.validatePartial(request.Input)
+	if err != nil {
+		return nil, otel.ReportError(span, fmt.Errorf("%w: target input: %w", ErrInvalidRequest, err))
+	}
+
+	overrides, excludedStepKeys, err := service.loadContextOverrides(
+		ctx,
+		request.ContextOverrides,
+	)
+	if err != nil {
+		return nil, otel.ReportError(span, err)
+	}
+
+	savedSteps, err := service.stepValueDao.Exec(ctx, &dao.StepValueSelectLatestRequest{
+		IdeaID:          request.IdeaID,
+		ExcludeStepKeys: excludedStepKeys,
+	})
+	if err != nil {
+		return nil, otel.ReportError(span, fmt.Errorf("select latest step values: %w", err))
+	}
+
+	contextSteps := make([]generationContextStep, 0, len(savedSteps)+len(overrides))
+	for _, savedStep := range savedSteps {
+		if savedStep == nil {
+			return nil, otel.ReportError(span, fmt.Errorf("select latest step values: %w", errGenerationSavedStepMissing))
+		}
+
+		contextSteps = append(contextSteps, generationContextStep{
+			EngineVersionID: savedStep.EngineVersionID,
+			StepKey:         savedStep.StepKey,
+			Value:           savedStep.Value,
+		})
+	}
+
+	contextSteps = append(contextSteps, overrides...)
+	sort.Slice(contextSteps, func(left int, right int) bool {
+		return contextSteps[left].StepKey < contextSteps[right].StepKey
+	})
+
+	var manuscriptValue json.RawMessage
+
+	manuscript, err := service.manuscriptDao.Exec(ctx, &dao.ManuscriptSelectLatestRequest{
+		IdeaID: request.IdeaID,
+	})
+	if errors.Is(err, dao.ErrManuscriptSelectLatestNotFound) {
+		err = nil
+	} else if err == nil {
+		if manuscript == nil {
+			return nil, otel.ReportError(span, fmt.Errorf("select latest Manuscript: %w", errGenerationManuscriptMissing))
+		}
+
+		manuscriptValue = manuscript.Value
+	}
+
+	if err != nil {
+		return nil, otel.ReportError(span, fmt.Errorf("select latest Manuscript: %w", err))
+	}
+
+	payload, err := buildGenerationPayload(
+		definition,
+		request.Input,
+		idea,
+		contextSteps,
+		manuscriptValue,
+	)
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("build generation payload: %w", err))
 	}
@@ -107,8 +191,7 @@ func (service *GenerationSubmit) Exec(
 	idempotencyKey, err := deriveGenerationIdempotencyKey(
 		request.IdempotencyKey,
 		request.IdeaID,
-		request.EngineVersionID,
-		request.StepKey,
+		request.Target,
 	)
 	if err != nil {
 		return nil, otel.ReportError(span, err)
@@ -139,10 +222,7 @@ func (service *GenerationSubmit) Exec(
 		response.GetGeneration(),
 		nil,
 		request.Actor.UserID,
-		&generationOutputContext{
-			engineVersionID: engineVersion.ID,
-			step:            step,
-		},
+		&generationOutputContext{definition: definition},
 	)
 	if err != nil {
 		return nil, otel.ReportError(span, err)
@@ -157,4 +237,54 @@ func (service *GenerationSubmit) Exec(
 		Generation: generation,
 		Created:    response.GetCreated(),
 	}), nil
+}
+
+func (service *GenerationSubmit) loadContextOverrides(
+	ctx context.Context,
+	overrides []GenerationContextOverride,
+) ([]generationContextStep, []string, error) {
+	contextSteps := make([]generationContextStep, 0, len(overrides))
+	excludedStepKeys := make([]string, 0, len(overrides))
+	seen := make(map[string]struct{}, len(overrides))
+
+	for index := range overrides {
+		override := &overrides[index]
+		if _, duplicate := seen[override.StepKey]; duplicate {
+			return nil, nil, fmt.Errorf(
+				"%w: duplicate context override for step %q",
+				ErrInvalidRequest,
+				override.StepKey,
+			)
+		}
+
+		seen[override.StepKey] = struct{}{}
+
+		definition, err := loadGenerationTarget(ctx, service.engineVersionDao, GenerationTarget{
+			Kind:            GenerationTargetKindStep,
+			EngineVersionID: override.EngineVersionID,
+			StepKey:         override.StepKey,
+		})
+		if err != nil {
+			return nil, nil, fmt.Errorf("context override %d: %w", index, err)
+		}
+
+		err = definition.validatePartial(override.Value)
+		if err != nil {
+			return nil, nil, fmt.Errorf(
+				"%w: context override %d: %w",
+				ErrInvalidRequest,
+				index,
+				err,
+			)
+		}
+
+		contextSteps = append(contextSteps, generationContextStep{
+			EngineVersionID: override.EngineVersionID,
+			StepKey:         override.StepKey,
+			Value:           override.Value,
+		})
+		excludedStepKeys = append(excludedStepKeys, override.StepKey)
+	}
+
+	return contextSteps, excludedStepKeys, nil
 }

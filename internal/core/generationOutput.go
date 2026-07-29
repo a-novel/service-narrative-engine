@@ -19,6 +19,11 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
+var (
+	errGenerationStaticTargetStep  = errors.New("static target identifies an Engine step")
+	errGenerationTargetKindUnknown = errors.New("unknown target kind")
+)
+
 // EngineVersionSelectDao retrieves immutable definitions used to validate
 // retained generation output.
 type EngineVersionSelectDao interface {
@@ -26,14 +31,14 @@ type EngineVersionSelectDao interface {
 }
 
 type generationOutputContext struct {
-	engineVersionID uuid.UUID
-	step            *engineStepDefinition
+	definition *generationTargetDefinition
 }
 
 type generationOutputEnvelope struct {
-	EngineVersionID string          `json:"engineVersionID"`
-	StepKey         string          `json:"stepKey"`
-	Value           json.RawMessage `json:"value"`
+	TargetKind      GenerationTargetKind `json:"targetKind"`
+	EngineVersionID string               `json:"engineVersionID"`
+	StepKey         string               `json:"stepKey"`
+	Value           json.RawMessage      `json:"value"`
 }
 
 func mapGeneration(
@@ -110,8 +115,19 @@ func mapGeneration(
 		ExpiresAt:   expiresAt,
 	}
 
+	if expectedContext != nil {
+		if expectedContext.definition == nil {
+			return nil, fmt.Errorf("%w: missing expected target", ErrGenerationResponseInvalid)
+		}
+
+		target := expectedContext.definition.Target
+		generation.Target = &target
+	}
+
 	if status == GenerationStatusSucceeded {
-		generation.Proposal, err = resolveGenerationProposal(
+		var target GenerationTarget
+
+		generation.Proposal, target, err = resolveGenerationProposal(
 			ctx,
 			engineVersionDao,
 			source.GetOutput(),
@@ -120,6 +136,8 @@ func mapGeneration(
 		if err != nil {
 			return nil, err
 		}
+
+		generation.Target = &target
 	}
 
 	return generation, nil
@@ -175,13 +193,15 @@ func resolveGenerationProposal(
 	engineVersionDao EngineVersionSelectDao,
 	output json.RawMessage,
 	expectedContext *generationOutputContext,
-) (json.RawMessage, error) {
+) (json.RawMessage, GenerationTarget, error) {
 	ctx, span := otel.Tracer().Start(ctx, "core.resolveGenerationProposal")
 	defer span.End()
 
+	var noTarget GenerationTarget
+
 	text, err := extractResponsesOutputText(output)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrGenerationOutputInvalid, err)
+		return nil, noTarget, fmt.Errorf("%w: %w", ErrGenerationOutputInvalid, err)
 	}
 
 	var envelope generationOutputEnvelope
@@ -191,55 +211,74 @@ func resolveGenerationProposal(
 
 	err = decoder.Decode(&envelope)
 	if err != nil {
-		return nil, fmt.Errorf("%w: decode envelope: %w", ErrGenerationOutputInvalid, err)
+		return nil, noTarget, fmt.Errorf("%w: decode envelope: %w", ErrGenerationOutputInvalid, err)
 	}
 
 	err = ensureJSONEOF(decoder)
 	if err != nil {
-		return nil, fmt.Errorf("%w: decode envelope: %w", ErrGenerationOutputInvalid, err)
+		return nil, noTarget, fmt.Errorf("%w: decode envelope: %w", ErrGenerationOutputInvalid, err)
 	}
 
-	engineVersionID, err := uuid.Parse(envelope.EngineVersionID)
+	if len(envelope.Value) == 0 {
+		return nil, noTarget, fmt.Errorf("%w: incomplete envelope", ErrGenerationOutputInvalid)
+	}
+
+	target, err := generationTargetFromEnvelope(&envelope)
 	if err != nil {
-		return nil, fmt.Errorf("%w: parse engine version id: %w", ErrGenerationOutputInvalid, err)
+		return nil, noTarget, fmt.Errorf("%w: %w", ErrGenerationOutputInvalid, err)
 	}
 
-	if strings.TrimSpace(envelope.StepKey) == "" || len(envelope.Value) == 0 {
-		return nil, fmt.Errorf("%w: incomplete envelope", ErrGenerationOutputInvalid)
-	}
-
-	var step *engineStepDefinition
+	var definition *generationTargetDefinition
 
 	if expectedContext != nil {
-		if engineVersionID != expectedContext.engineVersionID || envelope.StepKey != expectedContext.step.Key {
-			return nil, fmt.Errorf("%w: envelope context mismatch", ErrGenerationOutputInvalid)
+		if expectedContext.definition == nil || target != expectedContext.definition.Target {
+			return nil, noTarget, fmt.Errorf("%w: envelope context mismatch", ErrGenerationOutputInvalid)
 		}
 
-		step = expectedContext.step
+		definition = expectedContext.definition
 	} else {
-		engineVersion, selectErr := engineVersionDao.Exec(ctx, &dao.EngineVersionSelectRequest{
-			ID: engineVersionID,
-		})
-		if selectErr != nil {
-			if errors.Is(selectErr, dao.ErrEngineVersionSelectNotFound) {
-				selectErr = errors.Join(selectErr, ErrEngineVersionNotFound)
-			}
-
-			return nil, fmt.Errorf("%w: select engine version: %w", ErrGenerationOutputInvalid, selectErr)
-		}
-
-		step, err = selectEngineStep(engineVersion.Definition, envelope.StepKey)
+		definition, err = loadGenerationTarget(ctx, engineVersionDao, target)
 		if err != nil {
-			return nil, fmt.Errorf("%w: %w", ErrGenerationOutputInvalid, err)
+			return nil, noTarget, fmt.Errorf("%w: load target: %w", ErrGenerationOutputInvalid, err)
 		}
 	}
 
-	err = step.validateValue(envelope.Value)
+	err = definition.validateComplete(envelope.Value)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrGenerationOutputInvalid, err)
+		return nil, noTarget, fmt.Errorf("%w: %w", ErrGenerationOutputInvalid, err)
 	}
 
-	return envelope.Value, nil
+	return envelope.Value, target, nil
+}
+
+func generationTargetFromEnvelope(envelope *generationOutputEnvelope) (GenerationTarget, error) {
+	target := GenerationTarget{
+		Kind:    envelope.TargetKind,
+		StepKey: envelope.StepKey,
+	}
+
+	switch target.Kind {
+	case GenerationTargetKindStep:
+		engineVersionID, err := uuid.Parse(envelope.EngineVersionID)
+		if err != nil {
+			return GenerationTarget{}, fmt.Errorf("parse engine version id: %w", err)
+		}
+
+		target.EngineVersionID = engineVersionID
+	case GenerationTargetKindIdea, GenerationTargetKindManuscript:
+		if envelope.EngineVersionID != "" || envelope.StepKey != "" {
+			return GenerationTarget{}, errGenerationStaticTargetStep
+		}
+	default:
+		return GenerationTarget{}, fmt.Errorf("%w: %q", errGenerationTargetKindUnknown, target.Kind)
+	}
+
+	err := validateGenerationTarget(target)
+	if err != nil {
+		return GenerationTarget{}, err
+	}
+
+	return target, nil
 }
 
 func extractResponsesOutputText(output json.RawMessage) (string, error) {

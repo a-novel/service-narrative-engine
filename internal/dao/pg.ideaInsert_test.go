@@ -66,6 +66,21 @@ func TestPgIdeaInsert(t *testing.T) {
 				CreatedAt: now,
 			},
 		},
+		{
+			name: "Success/EmptyPartialIdea",
+
+			request: &dao.IdeaInsertRequest{
+				ID:      uuid.MustParse("00000000-0000-0000-0000-000000000303"),
+				OwnerID: uuid.MustParse("00000000-0000-0000-0000-000000000042"),
+				Now:     now,
+			},
+
+			expect: &dao.Idea{
+				ID:        uuid.MustParse("00000000-0000-0000-0000-000000000303"),
+				OwnerID:   uuid.MustParse("00000000-0000-0000-0000-000000000042"),
+				CreatedAt: now,
+			},
+		},
 	}
 
 	operation := dao.NewPgIdeaInsert()

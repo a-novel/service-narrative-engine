@@ -1,0 +1,310 @@
+package core_test
+
+import (
+	"encoding/json"
+	"errors"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+
+	"github.com/a-novel/service-narrative-engine/internal/core"
+	coremocks "github.com/a-novel/service-narrative-engine/internal/core/mocks"
+	"github.com/a-novel/service-narrative-engine/internal/dao"
+)
+
+func TestStepValueCreate(t *testing.T) {
+	t.Parallel()
+
+	const (
+		contentDocumentLimit    = 5 * 1024 * 1024
+		contentDocumentOverhead = len(`{"payload":""}`)
+	)
+
+	errFoo := errors.New("foo")
+	partialValue := json.RawMessage(`{"title":"A partial proposal"}`)
+	validRequest := &core.StepValueCreateRequest{
+		Actor:           core.Actor{UserID: ownerID},
+		IdeaID:          ideaID,
+		EngineVersionID: engineVersionID,
+		StepKey:         "manuscript",
+		Value:           partialValue,
+	}
+	entity := &dao.StepValue{
+		ID:              uuid.MustParse("00000000-0000-0000-0000-000000000801"),
+		IdeaID:          ideaID,
+		EngineVersionID: engineVersionID,
+		StepKey:         "manuscript",
+		Value:           partialValue,
+		CreatedAt:       createdAt,
+	}
+	documentEngineVersion := engineVersionFixture()
+	documentEngineVersion.Definition = json.RawMessage(`{
+  "steps": [{
+    "key": "document",
+    "promptTemplate": "Complete the document.",
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "payload": {"type": "string"}
+      }
+    }
+  }]
+}`)
+	documentJustBelowLimit := json.RawMessage(
+		`{"payload":"` +
+			strings.Repeat("x", contentDocumentLimit-contentDocumentOverhead-1) +
+			`"}`,
+	)
+	documentAtLimit := json.RawMessage(
+		`{"payload":"` +
+			strings.Repeat("x", contentDocumentLimit-contentDocumentOverhead) +
+			`"}`,
+	)
+	documentOverLimit := json.RawMessage(
+		`{"payload":"` +
+			strings.Repeat("x", contentDocumentLimit-contentDocumentOverhead+1) +
+			`"}`,
+	)
+	require.Len(t, documentJustBelowLimit, contentDocumentLimit-1)
+	require.Len(t, documentAtLimit, contentDocumentLimit)
+	require.Len(t, documentOverLimit, contentDocumentLimit+1)
+
+	testCases := []struct {
+		name string
+
+		request *core.StepValueCreateRequest
+
+		accessErr      error
+		callAccess     bool
+		engineResponse *dao.EngineVersion
+		engineErr      error
+		callEngine     bool
+		daoResponse    *dao.StepValue
+		daoErr         error
+		callDao        bool
+
+		expect           json.RawMessage
+		expectErr        error
+		expectErrMessage string
+	}{
+		{
+			name:           "Success/DeepPartial",
+			request:        validRequest,
+			callAccess:     true,
+			engineResponse: engineVersionFixture(),
+			callEngine:     true,
+			daoResponse:    entity,
+			callDao:        true,
+			expect:         partialValue,
+		},
+		{
+			name: "Success/EmptyPartial",
+			request: &core.StepValueCreateRequest{
+				Actor:           validRequest.Actor,
+				IdeaID:          ideaID,
+				EngineVersionID: engineVersionID,
+				StepKey:         "manuscript",
+				Value:           json.RawMessage(`{}`),
+			},
+			callAccess:     true,
+			engineResponse: engineVersionFixture(),
+			callEngine:     true,
+			daoResponse: &dao.StepValue{
+				ID:              entity.ID,
+				IdeaID:          ideaID,
+				EngineVersionID: engineVersionID,
+				StepKey:         "manuscript",
+				Value:           json.RawMessage(`{}`),
+			},
+			callDao: true,
+			expect:  json.RawMessage(`{}`),
+		},
+		{
+			name: "Success/DocumentJustBelowLimit",
+			request: &core.StepValueCreateRequest{
+				Actor:           validRequest.Actor,
+				IdeaID:          ideaID,
+				EngineVersionID: engineVersionID,
+				StepKey:         "document",
+				Value:           documentJustBelowLimit,
+			},
+			callAccess:     true,
+			engineResponse: documentEngineVersion,
+			callEngine:     true,
+			daoResponse: &dao.StepValue{
+				ID:              entity.ID,
+				IdeaID:          ideaID,
+				EngineVersionID: engineVersionID,
+				StepKey:         "document",
+				Value:           documentJustBelowLimit,
+			},
+			callDao: true,
+			expect:  documentJustBelowLimit,
+		},
+		{
+			name: "Success/DocumentAtLimit",
+			request: &core.StepValueCreateRequest{
+				Actor:           validRequest.Actor,
+				IdeaID:          ideaID,
+				EngineVersionID: engineVersionID,
+				StepKey:         "document",
+				Value:           documentAtLimit,
+			},
+			callAccess:     true,
+			engineResponse: documentEngineVersion,
+			callEngine:     true,
+			daoResponse: &dao.StepValue{
+				ID:              entity.ID,
+				IdeaID:          ideaID,
+				EngineVersionID: engineVersionID,
+				StepKey:         "document",
+				Value:           documentAtLimit,
+			},
+			callDao: true,
+			expect:  documentAtLimit,
+		},
+		{
+			name:      "Error/InvalidRequest",
+			request:   &core.StepValueCreateRequest{},
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name:       "Error/ProjectAccess",
+			request:    validRequest,
+			accessErr:  core.ErrIdeaNotFound,
+			callAccess: true,
+			expectErr:  core.ErrIdeaNotFound,
+		},
+		{
+			name:       "Error/EngineVersionNotFound",
+			request:    validRequest,
+			callAccess: true,
+			engineErr:  dao.ErrEngineVersionSelectNotFound,
+			callEngine: true,
+			expectErr:  core.ErrEngineVersionNotFound,
+		},
+		{
+			name: "Error/Shape",
+			request: &core.StepValueCreateRequest{
+				Actor:           validRequest.Actor,
+				IdeaID:          ideaID,
+				EngineVersionID: engineVersionID,
+				StepKey:         "manuscript",
+				Value:           json.RawMessage(`{"unknown":true}`),
+			},
+			callAccess:     true,
+			engineResponse: engineVersionFixture(),
+			callEngine:     true,
+			expectErr:      core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/DocumentOverLimit",
+			request: &core.StepValueCreateRequest{
+				Actor:           validRequest.Actor,
+				IdeaID:          ideaID,
+				EngineVersionID: engineVersionID,
+				StepKey:         "document",
+				Value:           documentOverLimit,
+			},
+			callAccess:     true,
+			engineResponse: documentEngineVersion,
+			callEngine:     true,
+			expectErr:      core.ErrInvalidRequest,
+		},
+		{
+			name:           "Error/Conflict",
+			request:        validRequest,
+			callAccess:     true,
+			engineResponse: engineVersionFixture(),
+			callEngine:     true,
+			daoErr:         dao.ErrStepValueInsertConflict,
+			callDao:        true,
+			expectErr:      core.ErrStepValueConflict,
+		},
+		{
+			name:           "Error/Insert",
+			request:        validRequest,
+			callAccess:     true,
+			engineResponse: engineVersionFixture(),
+			callEngine:     true,
+			daoErr:         errFoo,
+			callDao:        true,
+			expectErr:      errFoo,
+		},
+		{
+			name:             "Error/MissingEntity",
+			request:          validRequest,
+			callAccess:       true,
+			engineResponse:   engineVersionFixture(),
+			callEngine:       true,
+			callDao:          true,
+			expectErrMessage: "insert step value",
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			projectAccess := coremocks.NewMockProjectAccessService(t)
+			engineVersionDao := coremocks.NewMockEngineVersionSelectDao(t)
+			stepValueDao := coremocks.NewMockStepValueInsertDao(t)
+
+			if testCase.callAccess {
+				projectAccess.EXPECT().
+					Exec(mock.Anything, &core.ProjectAccessRequest{
+						Actor:  testCase.request.Actor,
+						IdeaID: testCase.request.IdeaID,
+					}).
+					Return(ideaFixture(), testCase.accessErr)
+			}
+
+			if testCase.callEngine {
+				engineVersionDao.EXPECT().
+					Exec(mock.Anything, &dao.EngineVersionSelectRequest{
+						ID: testCase.request.EngineVersionID,
+					}).
+					Return(testCase.engineResponse, testCase.engineErr)
+			}
+
+			if testCase.callDao {
+				stepValueDao.EXPECT().
+					Exec(mock.Anything, mock.MatchedBy(func(request *dao.StepValueInsertRequest) bool {
+						return assert.NotEqual(t, uuid.Nil, request.ID) &&
+							assert.Equal(t, testCase.request.IdeaID, request.IdeaID) &&
+							assert.Equal(t, testCase.request.EngineVersionID, request.EngineVersionID) &&
+							assert.Equal(t, testCase.request.StepKey, request.StepKey) &&
+							assert.JSONEq(t, string(testCase.request.Value), string(request.Value)) &&
+							assert.WithinDuration(t, time.Now(), request.Now, time.Minute)
+					})).
+					Return(testCase.daoResponse, testCase.daoErr)
+			}
+
+			result, err := core.NewStepValueCreate(
+				projectAccess,
+				engineVersionDao,
+				stepValueDao,
+			).Exec(t.Context(), testCase.request)
+
+			if testCase.expectErr != nil {
+				require.ErrorIs(t, err, testCase.expectErr)
+			} else if testCase.expectErrMessage != "" {
+				require.ErrorContains(t, err, testCase.expectErrMessage)
+			} else {
+				require.NoError(t, err)
+			}
+
+			if testCase.expect == nil {
+				require.Nil(t, result)
+			} else {
+				require.JSONEq(t, string(testCase.expect), string(result))
+			}
+		})
+	}
+}

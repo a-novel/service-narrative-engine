@@ -3,6 +3,7 @@ package core_test
 import (
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -10,8 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-
-	"github.com/a-novel-kit/golib/transaction/transactiontest"
 
 	"github.com/a-novel/service-narrative-engine/internal/core"
 	coremocks "github.com/a-novel/service-narrative-engine/internal/core/mocks"
@@ -22,49 +21,18 @@ func TestManuscriptCreate(t *testing.T) {
 	t.Parallel()
 
 	errFoo := errors.New("foo")
-	stepValue := manuscriptValue
-
-	opaqueManuscript := json.RawMessage(
-		`{"title":"Free form","extensions":{"custom":{"enabled":true}}}`,
-	)
-
+	partialManuscript := json.RawMessage(`{"format":"novel"}`)
 	validRequest := &core.ManuscriptCreateRequest{
-		Actor:           core.Actor{UserID: ownerID},
-		IdeaID:          ideaID,
-		EngineVersionID: engineVersionID,
-		StepKey:         "manuscript",
-		StepValue:       stepValue,
-		Manuscript:      opaqueManuscript,
+		Actor:      core.Actor{UserID: ownerID},
+		IdeaID:     ideaID,
+		Manuscript: partialManuscript,
 	}
 	manuscriptID := uuid.MustParse("00000000-0000-0000-0000-000000000701")
 	entity := &dao.Manuscript{
 		ID:        manuscriptID,
 		IdeaID:    ideaID,
-		Value:     opaqueManuscript,
+		Value:     partialManuscript,
 		CreatedAt: createdAt,
-	}
-	charactersStepValue := json.RawMessage(`{"characters":["Mara"]}`)
-	charactersEngine := &dao.EngineVersion{
-		ID: engineVersionID,
-		Definition: json.RawMessage(`{
-  "steps": [{
-    "key": "characters",
-    "promptTemplate": "List the main characters.",
-    "outputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["characters"],
-      "properties": {
-        "characters": {
-          "type": "array",
-          "minItems": 1,
-          "items": {"type": "string", "minLength": 1}
-        }
-      }
-    }
-  }]
-}`),
 	}
 
 	testCases := []struct {
@@ -72,50 +40,38 @@ func TestManuscriptCreate(t *testing.T) {
 
 		request *core.ManuscriptCreateRequest
 
-		ideaResponse   *dao.Idea
-		ideaErr        error
-		engineResponse *dao.EngineVersion
-		engineErr      error
-		stepErr        error
-		callStep       bool
-		manuscriptResp *dao.Manuscript
-		manuscriptErr  error
-		callManuscript bool
-		transactionErr error
-
-		expect             json.RawMessage
-		expectErr          error
-		expectErrContains  string
-		expectTransactions int
+		accessErr        error
+		callAccess       bool
+		manuscriptResp   *dao.Manuscript
+		manuscriptErr    error
+		callManuscript   bool
+		expect           json.RawMessage
+		expectErr        error
+		expectErrMessage string
 	}{
 		{
-			name:               "Success/WithoutGeneration",
-			request:            validRequest,
-			ideaResponse:       ideaFixture(),
-			engineResponse:     engineVersionFixture(),
-			callStep:           true,
-			manuscriptResp:     entity,
-			callManuscript:     true,
-			expect:             opaqueManuscript,
-			expectTransactions: 1,
+			name:           "Success/PartialOpaqueDocument",
+			request:        validRequest,
+			callAccess:     true,
+			manuscriptResp: entity,
+			callManuscript: true,
+			expect:         partialManuscript,
 		},
 		{
-			name: "Success/IndependentManuscriptContract",
+			name: "Success/EmptyPartialDocument",
 			request: &core.ManuscriptCreateRequest{
-				Actor:           validRequest.Actor,
-				IdeaID:          ideaID,
-				EngineVersionID: engineVersionID,
-				StepKey:         "characters",
-				StepValue:       charactersStepValue,
-				Manuscript:      opaqueManuscript,
+				Actor:      validRequest.Actor,
+				IdeaID:     ideaID,
+				Manuscript: json.RawMessage(`{}`),
 			},
-			ideaResponse:       ideaFixture(),
-			engineResponse:     charactersEngine,
-			callStep:           true,
-			manuscriptResp:     entity,
-			callManuscript:     true,
-			expect:             opaqueManuscript,
-			expectTransactions: 1,
+			callAccess: true,
+			manuscriptResp: &dao.Manuscript{
+				ID:     manuscriptID,
+				IdeaID: ideaID,
+				Value:  json.RawMessage(`{}`),
+			},
+			callManuscript: true,
+			expect:         json.RawMessage(`{}`),
 		},
 		{
 			name:      "Error/InvalidRequest",
@@ -123,114 +79,64 @@ func TestManuscriptCreate(t *testing.T) {
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
-			name: "Error/InvalidManuscriptJSON",
+			name: "Error/InvalidJSON",
 			request: &core.ManuscriptCreateRequest{
-				Actor:           validRequest.Actor,
-				IdeaID:          ideaID,
-				EngineVersionID: engineVersionID,
-				StepKey:         "manuscript",
-				StepValue:       stepValue,
-				Manuscript:      json.RawMessage(`{`),
+				Actor:      validRequest.Actor,
+				IdeaID:     ideaID,
+				Manuscript: json.RawMessage(`{`),
 			},
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
-			name: "Error/NonObjectManuscript",
+			name: "Error/NonObject",
 			request: &core.ManuscriptCreateRequest{
-				Actor:           validRequest.Actor,
-				IdeaID:          ideaID,
-				EngineVersionID: engineVersionID,
-				StepKey:         "manuscript",
-				StepValue:       stepValue,
-				Manuscript:      json.RawMessage(`[]`),
+				Actor:      validRequest.Actor,
+				IdeaID:     ideaID,
+				Manuscript: json.RawMessage(`[]`),
 			},
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
-			name:      "Error/IdeaNotFound",
-			request:   validRequest,
-			ideaErr:   dao.ErrIdeaSelectNotFound,
-			expectErr: core.ErrIdeaNotFound,
+			name: "Error/Shape",
+			request: &core.ManuscriptCreateRequest{
+				Actor:      validRequest.Actor,
+				IdeaID:     ideaID,
+				Manuscript: json.RawMessage(`{"unknown":true}`),
+			},
+			expectErr: core.ErrInvalidRequest,
 		},
 		{
-			name:      "Error/IdeaDao",
-			request:   validRequest,
-			ideaErr:   errFoo,
-			expectErr: errFoo,
+			name: "Error/DocumentTooLarge",
+			request: &core.ManuscriptCreateRequest{
+				Actor:  validRequest.Actor,
+				IdeaID: ideaID,
+				Manuscript: json.RawMessage(
+					`{"format":"` + strings.Repeat("n", 5*1024*1024) + `"}`,
+				),
+			},
+			expectErr: core.ErrInvalidRequest,
 		},
 		{
-			name:         "Error/EngineVersionNotFound",
-			request:      validRequest,
-			ideaResponse: ideaFixture(),
-			engineErr:    dao.ErrEngineVersionSelectNotFound,
-			expectErr:    core.ErrEngineVersionNotFound,
+			name:       "Error/ProjectAccess",
+			request:    validRequest,
+			accessErr:  core.ErrIdeaNotFound,
+			callAccess: true,
+			expectErr:  core.ErrIdeaNotFound,
 		},
 		{
-			name:         "Error/EngineVersionDao",
-			request:      validRequest,
-			ideaResponse: ideaFixture(),
-			engineErr:    errFoo,
-			expectErr:    errFoo,
+			name:           "Error/Insert",
+			request:        validRequest,
+			callAccess:     true,
+			manuscriptErr:  errFoo,
+			callManuscript: true,
+			expectErr:      errFoo,
 		},
 		{
-			name: "Error/InvalidStepValue",
-			request: manuscriptRequestWithStepValue(
-				json.RawMessage(`{"title":""}`),
-				opaqueManuscript,
-			),
-			ideaResponse:   ideaFixture(),
-			engineResponse: engineVersionFixture(),
-			expectErr:      core.ErrInvalidRequest,
-		},
-		{
-			name:               "Error/StepConflict",
-			request:            validRequest,
-			ideaResponse:       ideaFixture(),
-			engineResponse:     engineVersionFixture(),
-			stepErr:            dao.ErrStepValueInsertConflict,
-			callStep:           true,
-			expectErr:          core.ErrStepValueConflict,
-			expectTransactions: 1,
-		},
-		{
-			name:               "Error/StepInsert",
-			request:            validRequest,
-			ideaResponse:       ideaFixture(),
-			engineResponse:     engineVersionFixture(),
-			stepErr:            errFoo,
-			callStep:           true,
-			expectErr:          errFoo,
-			expectTransactions: 1,
-		},
-		{
-			name:               "Error/ManuscriptInsert",
-			request:            validRequest,
-			ideaResponse:       ideaFixture(),
-			engineResponse:     engineVersionFixture(),
-			callStep:           true,
-			manuscriptErr:      errFoo,
-			callManuscript:     true,
-			expectErr:          errFoo,
-			expectTransactions: 1,
-		},
-		{
-			name:               "Error/Transaction",
-			request:            validRequest,
-			ideaResponse:       ideaFixture(),
-			engineResponse:     engineVersionFixture(),
-			transactionErr:     errFoo,
-			expectErr:          errFoo,
-			expectTransactions: 1,
-		},
-		{
-			name:               "Error/MissingManuscript",
-			request:            validRequest,
-			ideaResponse:       ideaFixture(),
-			engineResponse:     engineVersionFixture(),
-			callStep:           true,
-			callManuscript:     true,
-			expectErrContains:  "save project content",
-			expectTransactions: 1,
+			name:             "Error/MissingEntity",
+			request:          validRequest,
+			callAccess:       true,
+			callManuscript:   true,
+			expectErrMessage: "insert Manuscript",
 		},
 	}
 
@@ -238,43 +144,16 @@ func TestManuscriptCreate(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			ideaDao := coremocks.NewMockIdeaSelectDao(t)
-			engineVersionDao := coremocks.NewMockEngineVersionSelectDao(t)
-			stepValueDao := coremocks.NewMockStepValueInsertDao(t)
+			projectAccess := coremocks.NewMockProjectAccessService(t)
 			manuscriptDao := coremocks.NewMockManuscriptInsertDao(t)
 
-			if testCase.ideaResponse != nil || testCase.ideaErr != nil {
-				ideaDao.EXPECT().
-					Exec(mock.Anything, &dao.IdeaSelectRequest{
-						ID:      testCase.request.IdeaID,
-						OwnerID: testCase.request.Actor.UserID,
+			if testCase.callAccess {
+				projectAccess.EXPECT().
+					Exec(mock.Anything, &core.ProjectAccessRequest{
+						Actor:  testCase.request.Actor,
+						IdeaID: testCase.request.IdeaID,
 					}).
-					Return(testCase.ideaResponse, testCase.ideaErr)
-			}
-
-			if testCase.engineResponse != nil || testCase.engineErr != nil {
-				engineVersionDao.EXPECT().
-					Exec(mock.Anything, &dao.EngineVersionSelectRequest{
-						ID: testCase.request.EngineVersionID,
-					}).
-					Return(testCase.engineResponse, testCase.engineErr)
-			}
-
-			var saveTime time.Time
-
-			if testCase.callStep {
-				stepValueDao.EXPECT().
-					Exec(mock.Anything, mock.MatchedBy(func(request *dao.StepValueInsertRequest) bool {
-						saveTime = request.Now
-
-						return assert.NotEqual(t, uuid.Nil, request.ID) &&
-							assert.Equal(t, testCase.request.IdeaID, request.IdeaID) &&
-							assert.Equal(t, testCase.request.EngineVersionID, request.EngineVersionID) &&
-							assert.Equal(t, testCase.request.StepKey, request.StepKey) &&
-							assert.JSONEq(t, string(testCase.request.StepValue), string(request.Value)) &&
-							assert.WithinDuration(t, time.Now(), request.Now, time.Minute)
-					})).
-					Return(nil, testCase.stepErr)
+					Return(ideaFixture(), testCase.accessErr)
 			}
 
 			if testCase.callManuscript {
@@ -282,31 +161,21 @@ func TestManuscriptCreate(t *testing.T) {
 					Exec(mock.Anything, mock.MatchedBy(func(request *dao.ManuscriptInsertRequest) bool {
 						return assert.NotEqual(t, uuid.Nil, request.ID) &&
 							assert.Equal(t, testCase.request.IdeaID, request.IdeaID) &&
-							assert.Equal(t, saveTime, request.Now) &&
-							assert.JSONEq(t, string(testCase.request.Manuscript), string(request.Value))
+							assert.JSONEq(t, string(testCase.request.Manuscript), string(request.Value)) &&
+							assert.WithinDuration(t, time.Now(), request.Now, time.Minute)
 					})).
 					Return(testCase.manuscriptResp, testCase.manuscriptErr)
 			}
 
-			transactor := transactiontest.NewTransactor()
-			if testCase.transactionErr != nil {
-				transactor = transactiontest.NewFailingTransactor(testCase.transactionErr)
-			}
-
-			result, execErr := core.NewManuscriptCreate(
-				ideaDao,
-				engineVersionDao,
-				stepValueDao,
-				manuscriptDao,
-				transactor,
-			).Exec(t.Context(), testCase.request)
+			result, err := core.NewManuscriptCreate(projectAccess, manuscriptDao).
+				Exec(t.Context(), testCase.request)
 
 			if testCase.expectErr != nil {
-				require.ErrorIs(t, execErr, testCase.expectErr)
-			} else if testCase.expectErrContains == "" {
-				require.NoError(t, execErr)
+				require.ErrorIs(t, err, testCase.expectErr)
+			} else if testCase.expectErrMessage != "" {
+				require.ErrorContains(t, err, testCase.expectErrMessage)
 			} else {
-				require.ErrorContains(t, execErr, testCase.expectErrContains)
+				require.NoError(t, err)
 			}
 
 			if testCase.expect == nil {
@@ -314,22 +183,6 @@ func TestManuscriptCreate(t *testing.T) {
 			} else {
 				require.JSONEq(t, string(testCase.expect), string(result))
 			}
-
-			require.Equal(t, testCase.expectTransactions, transactor.Calls())
 		})
-	}
-}
-
-func manuscriptRequestWithStepValue(
-	value json.RawMessage,
-	manuscript json.RawMessage,
-) *core.ManuscriptCreateRequest {
-	return &core.ManuscriptCreateRequest{
-		Actor:           core.Actor{UserID: ownerID},
-		IdeaID:          ideaID,
-		EngineVersionID: engineVersionID,
-		StepKey:         "manuscript",
-		StepValue:       value,
-		Manuscript:      manuscript,
 	}
 }

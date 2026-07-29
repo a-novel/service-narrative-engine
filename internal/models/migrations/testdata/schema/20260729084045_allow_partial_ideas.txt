@@ -1,0 +1,87 @@
+migration-history	sha256:53dc0a93b84310907586aa4d34abd64373b9c99a79a2054b17776a8824383813
+column	engine_versions.created_at	timestamp with time zone NOT NULL
+column	engine_versions.definition	jsonb NOT NULL
+column	engine_versions.engine_id	uuid NOT NULL
+column	engine_versions.id	uuid NOT NULL
+column	engine_versions.version	text NOT NULL
+column	engines.id	uuid NOT NULL
+column	engines.kind	engine_kind NOT NULL
+column	engines.slug	text NOT NULL
+column	ideas.created_at	timestamp with time zone NOT NULL
+column	ideas.genre	text NOT NULL
+column	ideas.id	uuid NOT NULL
+column	ideas.owner_id	uuid NOT NULL
+column	ideas.seed	text NOT NULL
+column	ideas.title	text NOT NULL DEFAULT ''::text
+column	ideas.updated_at	timestamp with time zone
+column	manuscripts.created_at	timestamp with time zone NOT NULL
+column	manuscripts.id	uuid NOT NULL
+column	manuscripts.idea_id	uuid NOT NULL
+column	manuscripts.updated_at	timestamp with time zone
+column	manuscripts.value	jsonb NOT NULL
+column	step_values.created_at	timestamp with time zone NOT NULL
+column	step_values.engine_version_id	uuid NOT NULL
+column	step_values.id	uuid NOT NULL
+column	step_values.idea_id	uuid NOT NULL
+column	step_values.step_key	text NOT NULL
+column	step_values.value	jsonb NOT NULL
+comment	schema public	standard public schema
+constraint	engine_versions.engine_versions_created_at_not_null	NOT NULL created_at
+constraint	engine_versions.engine_versions_definition_check	CHECK ((jsonb_typeof(definition) = 'object'::text))
+constraint	engine_versions.engine_versions_definition_not_null	NOT NULL definition
+constraint	engine_versions.engine_versions_engine_fk	FOREIGN KEY (engine_id) REFERENCES engines(id)
+constraint	engine_versions.engine_versions_engine_id_not_null	NOT NULL engine_id
+constraint	engine_versions.engine_versions_engine_id_version_key	UNIQUE (engine_id, version)
+constraint	engine_versions.engine_versions_id_not_null	NOT NULL id
+constraint	engine_versions.engine_versions_pkey	PRIMARY KEY (id)
+constraint	engine_versions.engine_versions_version_check	CHECK ((version <> ''::text))
+constraint	engine_versions.engine_versions_version_not_null	NOT NULL version
+constraint	engines.engines_id_not_null	NOT NULL id
+constraint	engines.engines_kind_not_null	NOT NULL kind
+constraint	engines.engines_pkey	PRIMARY KEY (id)
+constraint	engines.engines_slug_check	CHECK ((slug <> ''::text))
+constraint	engines.engines_slug_key	UNIQUE (slug)
+constraint	engines.engines_slug_not_null	NOT NULL slug
+constraint	ideas.ideas_created_at_not_null	NOT NULL created_at
+constraint	ideas.ideas_genre_not_null	NOT NULL genre
+constraint	ideas.ideas_id_not_null	NOT NULL id
+constraint	ideas.ideas_owner_id_not_null	NOT NULL owner_id
+constraint	ideas.ideas_pkey	PRIMARY KEY (id)
+constraint	ideas.ideas_seed_not_null	NOT NULL seed
+constraint	ideas.ideas_title_not_null	NOT NULL title
+constraint	manuscripts.manuscripts_created_at_not_null	NOT NULL created_at
+constraint	manuscripts.manuscripts_id_not_null	NOT NULL id
+constraint	manuscripts.manuscripts_idea_fk	FOREIGN KEY (idea_id) REFERENCES ideas(id)
+constraint	manuscripts.manuscripts_idea_id_not_null	NOT NULL idea_id
+constraint	manuscripts.manuscripts_pkey	PRIMARY KEY (id)
+constraint	manuscripts.manuscripts_value_check	CHECK ((jsonb_typeof(value) = 'object'::text))
+constraint	manuscripts.manuscripts_value_not_null	NOT NULL value
+constraint	step_values.step_values_created_at_not_null	NOT NULL created_at
+constraint	step_values.step_values_engine_version_fk	FOREIGN KEY (engine_version_id) REFERENCES engine_versions(id)
+constraint	step_values.step_values_engine_version_id_not_null	NOT NULL engine_version_id
+constraint	step_values.step_values_id_not_null	NOT NULL id
+constraint	step_values.step_values_idea_fk	FOREIGN KEY (idea_id) REFERENCES ideas(id)
+constraint	step_values.step_values_idea_id_engine_version_id_step_key_key	UNIQUE (idea_id, engine_version_id, step_key)
+constraint	step_values.step_values_idea_id_not_null	NOT NULL idea_id
+constraint	step_values.step_values_pkey	PRIMARY KEY (id)
+constraint	step_values.step_values_step_key_check	CHECK ((step_key <> ''::text))
+constraint	step_values.step_values_step_key_not_null	NOT NULL step_key
+constraint	step_values.step_values_value_check	CHECK ((jsonb_typeof(value) = 'object'::text))
+constraint	step_values.step_values_value_not_null	NOT NULL value
+extension	plpgsql	1.0
+index	engine_versions_engine_id_version_key	CREATE UNIQUE INDEX engine_versions_engine_id_version_key ON public.engine_versions USING btree (engine_id, version)
+index	engine_versions_pkey	CREATE UNIQUE INDEX engine_versions_pkey ON public.engine_versions USING btree (id)
+index	engines_pkey	CREATE UNIQUE INDEX engines_pkey ON public.engines USING btree (id)
+index	engines_slug_key	CREATE UNIQUE INDEX engines_slug_key ON public.engines USING btree (slug)
+index	ideas_pkey	CREATE UNIQUE INDEX ideas_pkey ON public.ideas USING btree (id)
+index	manuscripts_idea_id_idx	CREATE INDEX manuscripts_idea_id_idx ON public.manuscripts USING btree (idea_id)
+index	manuscripts_pkey	CREATE UNIQUE INDEX manuscripts_pkey ON public.manuscripts USING btree (id)
+index	step_values_idea_id_engine_version_id_step_key_key	CREATE UNIQUE INDEX step_values_idea_id_engine_version_id_step_key_key ON public.step_values USING btree (idea_id, engine_version_id, step_key)
+index	step_values_pkey	CREATE UNIQUE INDEX step_values_pkey ON public.step_values USING btree (id)
+relation	engine_versions	r
+relation	engines	r
+relation	ideas	r
+relation	manuscripts	r
+relation	step_values	r
+schema	public	pg_database_owner=UC/pg_database_owner,=U/pg_database_owner
+type	engine_kind	e project,collection

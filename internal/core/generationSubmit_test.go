@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -20,209 +21,254 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
+type engineSelectCall struct {
+	id       uuid.UUID
+	response *dao.EngineVersion
+	err      error
+}
+
+type generationPayloadExpectation struct {
+	target     core.GenerationTarget
+	input      json.RawMessage
+	steps      []*dao.StepValue
+	manuscript json.RawMessage
+}
+
 func TestGenerationSubmit(t *testing.T) {
 	t.Parallel()
 
 	errFoo := errors.New("foo")
+	target := generationTargetFixture()
 	validRequest := &core.GenerationSubmitRequest{
-		Actor:           core.Actor{UserID: ownerID},
-		IdeaID:          ideaID,
-		EngineVersionID: engineVersionID,
-		StepKey:         "manuscript",
-		IdempotencyKey:  "retry-1",
+		Actor:  core.Actor{UserID: ownerID},
+		IdeaID: ideaID,
+		Target: target,
+		Input:  json.RawMessage(`{"title":"A partial proposal"}`),
+		ContextOverrides: []core.GenerationContextOverride{
+			{
+				EngineVersionID: engineVersionID,
+				StepKey:         "manuscript",
+				Value:           json.RawMessage(`{}`),
+			},
+		},
+		IdempotencyKey: "retry-1",
 	}
 	pending := generationFixture(servicegenai.GenerationStatusPending, nil)
-	succeeded := generationFixture(
-		servicegenai.GenerationStatusSucceeded,
-		responsesOutput(t, manuscriptValue),
+	historicalEngineVersionID := uuid.MustParse("00000000-0000-0000-0000-000000000099")
+	savedStep := &dao.StepValue{
+		ID:              uuid.MustParse("00000000-0000-0000-0000-000000000501"),
+		IdeaID:          ideaID,
+		EngineVersionID: historicalEngineVersionID,
+		StepKey:         "characters",
+		Value:           json.RawMessage(`{"names":["Mara"]}`),
+		CreatedAt:       createdAt,
+	}
+	latestManuscript := json.RawMessage(`{"format":"novel","scenes":[]}`)
+	manuscript := &dao.Manuscript{
+		ID:        uuid.MustParse("00000000-0000-0000-0000-000000000502"),
+		IdeaID:    ideaID,
+		Value:     latestManuscript,
+		CreatedAt: createdAt,
+	}
+	ideaTarget := core.GenerationTarget{Kind: core.GenerationTargetKindIdea}
+	ideaProposal := json.RawMessage(
+		`{"title":"The Answering Light","genre":"speculative",` +
+			`"seed":"A second foghorn answers from below."}`,
 	)
-	constEnumEngine := engineVersionFixture()
-	constEnumEngine.Definition = json.RawMessage(strings.Replace(
-		string(engineDefinition),
-		`"format": {"const": "prose"}`,
-		`"format": {"const": "prose", "enum": ["prose", "dialogue"]}`,
-		1,
-	))
-	conflictingEnumEngine := engineVersionFixture()
-	conflictingEnumEngine.Definition = json.RawMessage(strings.Replace(
-		string(engineDefinition),
-		`"format": {"const": "prose"}`,
-		`"format": {"const": "prose", "enum": ["dialogue"]}`,
-		1,
-	))
+	ideaRequest := &core.GenerationSubmitRequest{
+		Actor:          validRequest.Actor,
+		IdeaID:         ideaID,
+		Target:         ideaTarget,
+		Input:          json.RawMessage(`{"title":"The Answering Light"}`),
+		IdempotencyKey: "retry-idea",
+	}
+	duplicateOverrides := *validRequest
+	duplicateOverrides.ContextOverrides = append(
+		append([]core.GenerationContextOverride{}, validRequest.ContextOverrides...),
+		validRequest.ContextOverrides[0],
+	)
+	invalidInput := *validRequest
+	invalidInput.Input = json.RawMessage(`{"unknown":true}`)
+	stepSelectFailure := *validRequest
+	stepSelectFailure.ContextOverrides = nil
+	manuscriptSelectFailure := stepSelectFailure
+	genaiFailure := stepSelectFailure
 
 	testCases := []struct {
 		name string
 
 		request *core.GenerationSubmitRequest
 
-		ideaResponse   *dao.Idea
-		ideaErr        error
-		engineResponse *dao.EngineVersion
-		engineErr      error
+		accessResponse *dao.Idea
+		accessErr      error
+		callAccess     bool
+		engineCalls    []engineSelectCall
+		stepResponse   []*dao.StepValue
+		stepErr        error
+		callStep       bool
+		manuscriptResp *dao.Manuscript
+		manuscriptErr  error
+		callManuscript bool
 		genaiResponse  *servicegenai.GenerationSubmitResponse
 		genaiErr       error
+		callGenAI      bool
 
-		expect    *core.GenerationSubmitResult
-		expectErr error
+		payload *generationPayloadExpectation
+		expect  *core.GenerationSubmitResult
+		err     error
 	}{
 		{
-			name:           "Success/Created",
+			name:           "Success/LatestContextAndOverride",
 			request:        validRequest,
-			ideaResponse:   ideaFixture(),
-			engineResponse: engineVersionFixture(),
+			accessResponse: ideaFixture(),
+			callAccess:     true,
+			engineCalls: []engineSelectCall{
+				{id: engineVersionID, response: engineVersionFixture()},
+				{id: engineVersionID, response: engineVersionFixture()},
+			},
+			stepResponse:   []*dao.StepValue{savedStep},
+			callStep:       true,
+			manuscriptResp: manuscript,
+			callManuscript: true,
 			genaiResponse: &servicegenai.GenerationSubmitResponse{
 				Generation: pending,
 				Created:    true,
 			},
+			callGenAI: true,
+			payload: &generationPayloadExpectation{
+				target: target,
+				input:  validRequest.Input,
+				steps: []*dao.StepValue{
+					savedStep,
+					{
+						EngineVersionID: engineVersionID,
+						StepKey:         "manuscript",
+						Value:           json.RawMessage(`{}`),
+					},
+				},
+				manuscript: latestManuscript,
+			},
 			expect: &core.GenerationSubmitResult{
-				Generation: expectedGeneration(core.GenerationStatusPending, nil),
+				Generation: submittedGeneration(core.GenerationStatusPending, nil, target),
 				Created:    true,
 			},
 		},
 		{
-			name:           "Success/ReplaySucceeded",
-			request:        validRequest,
-			ideaResponse:   ideaFixture(),
-			engineResponse: engineVersionFixture(),
+			name:           "Success/StaticIdeaWithoutPreIdeaGeneration",
+			request:        ideaRequest,
+			accessResponse: ideaFixture(),
+			callAccess:     true,
+			stepResponse:   []*dao.StepValue{},
+			callStep:       true,
+			manuscriptErr:  dao.ErrManuscriptSelectLatestNotFound,
+			callManuscript: true,
 			genaiResponse: &servicegenai.GenerationSubmitResponse{
-				Generation: succeeded,
-			},
-			expect: &core.GenerationSubmitResult{
-				Generation: expectedGeneration(core.GenerationStatusSucceeded, manuscriptValue),
-			},
-		},
-		{
-			name:           "Success/ConstAndEnumProjection",
-			request:        validRequest,
-			ideaResponse:   ideaFixture(),
-			engineResponse: constEnumEngine,
-			genaiResponse: &servicegenai.GenerationSubmitResponse{
-				Generation: pending,
-				Created:    true,
-			},
-			expect: &core.GenerationSubmitResult{
-				Generation: expectedGeneration(core.GenerationStatusPending, nil),
-				Created:    true,
-			},
-		},
-		{
-			name:           "Error/ConstEnumConflict",
-			request:        validRequest,
-			ideaResponse:   ideaFixture(),
-			engineResponse: conflictingEnumEngine,
-			expectErr:      core.ErrEngineDefinitionInvalid,
-		},
-		{
-			name:      "Error/InvalidRequest",
-			request:   &core.GenerationSubmitRequest{},
-			expectErr: core.ErrInvalidRequest,
-		},
-		{
-			name:      "Error/IdeaNotFound",
-			request:   validRequest,
-			ideaErr:   dao.ErrIdeaSelectNotFound,
-			expectErr: core.ErrIdeaNotFound,
-		},
-		{
-			name:      "Error/IdeaDao",
-			request:   validRequest,
-			ideaErr:   errFoo,
-			expectErr: errFoo,
-		},
-		{
-			name:         "Error/EngineVersionNotFound",
-			request:      validRequest,
-			ideaResponse: ideaFixture(),
-			engineErr:    dao.ErrEngineVersionSelectNotFound,
-			expectErr:    core.ErrEngineVersionNotFound,
-		},
-		{
-			name:         "Error/EngineVersionDao",
-			request:      validRequest,
-			ideaResponse: ideaFixture(),
-			engineErr:    errFoo,
-			expectErr:    errFoo,
-		},
-		{
-			name:         "Error/StepNotFound",
-			request:      validRequest,
-			ideaResponse: ideaFixture(),
-			engineResponse: &dao.EngineVersion{
-				ID:         engineVersionID,
-				Definition: json.RawMessage(`{"steps":[]}`),
-			},
-			expectErr: core.ErrEngineStepNotFound,
-		},
-		{
-			name:         "Error/DefinitionMalformed",
-			request:      validRequest,
-			ideaResponse: ideaFixture(),
-			engineResponse: &dao.EngineVersion{
-				ID:         engineVersionID,
-				Definition: json.RawMessage(`{`),
-			},
-			expectErr: core.ErrEngineDefinitionInvalid,
-		},
-		{
-			name:         "Error/DuplicateStep",
-			request:      validRequest,
-			ideaResponse: ideaFixture(),
-			engineResponse: &dao.EngineVersion{
-				ID: engineVersionID,
-				Definition: json.RawMessage(`{"steps":[
-					{"key":"manuscript","promptTemplate":"one","outputSchema":{"type":"object"}},
-					{"key":"manuscript","promptTemplate":"two","outputSchema":{"type":"object"}}
-				]}`),
-			},
-			expectErr: core.ErrEngineDefinitionInvalid,
-		},
-		{
-			name:         "Error/IncompleteStep",
-			request:      validRequest,
-			ideaResponse: ideaFixture(),
-			engineResponse: &dao.EngineVersion{
-				ID: engineVersionID,
-				Definition: json.RawMessage(
-					`{"steps":[{"key":"manuscript","promptTemplate":" ","outputSchema":{"type":"object"}}]}`,
+				Generation: generationFixture(
+					servicegenai.GenerationStatusSucceeded,
+					responsesOutputText(
+						t,
+						generationEnvelopeForTarget(t, ideaTarget, ideaProposal),
+					),
 				),
 			},
-			expectErr: core.ErrEngineDefinitionInvalid,
-		},
-		{
-			name:         "Error/NullProviderSchema",
-			request:      validRequest,
-			ideaResponse: ideaFixture(),
-			engineResponse: &dao.EngineVersion{
-				ID: engineVersionID,
-				Definition: json.RawMessage(
-					`{"steps":[{"key":"manuscript","promptTemplate":"write","outputSchema":null}]}`,
+			callGenAI: true,
+			payload: &generationPayloadExpectation{
+				target: ideaTarget,
+				input:  ideaRequest.Input,
+				steps:  []*dao.StepValue{},
+			},
+			expect: &core.GenerationSubmitResult{
+				Generation: submittedGeneration(
+					core.GenerationStatusSucceeded,
+					ideaProposal,
+					ideaTarget,
 				),
 			},
-			expectErr: core.ErrEngineDefinitionInvalid,
 		},
 		{
-			name:           "Error/IdempotencyConflict",
+			name:    "Error/InvalidRequest",
+			request: &core.GenerationSubmitRequest{},
+			err:     core.ErrInvalidRequest,
+		},
+		{
+			name:       "Error/ProjectAccess",
+			request:    validRequest,
+			accessErr:  core.ErrIdeaNotFound,
+			callAccess: true,
+			err:        core.ErrIdeaNotFound,
+		},
+		{
+			name:           "Error/EngineVersionNotFound",
 			request:        validRequest,
-			ideaResponse:   ideaFixture(),
-			engineResponse: engineVersionFixture(),
-			genaiErr:       status.Error(codes.AlreadyExists, "conflict"),
-			expectErr:      core.ErrGenerationConflict,
+			accessResponse: ideaFixture(),
+			callAccess:     true,
+			engineCalls: []engineSelectCall{
+				{id: engineVersionID, err: dao.ErrEngineVersionSelectNotFound},
+			},
+			err: core.ErrEngineVersionNotFound,
+		},
+		{
+			name:           "Error/PartialInputShape",
+			request:        &invalidInput,
+			accessResponse: ideaFixture(),
+			callAccess:     true,
+			engineCalls: []engineSelectCall{
+				{id: engineVersionID, response: engineVersionFixture()},
+			},
+			err: core.ErrInvalidRequest,
+		},
+		{
+			name:           "Error/DuplicateOverride",
+			request:        &duplicateOverrides,
+			accessResponse: ideaFixture(),
+			callAccess:     true,
+			engineCalls: []engineSelectCall{
+				{id: engineVersionID, response: engineVersionFixture()},
+				{id: engineVersionID, response: engineVersionFixture()},
+			},
+			err: core.ErrInvalidRequest,
+		},
+		{
+			name:           "Error/StepContextDao",
+			request:        &stepSelectFailure,
+			accessResponse: ideaFixture(),
+			callAccess:     true,
+			engineCalls: []engineSelectCall{
+				{id: engineVersionID, response: engineVersionFixture()},
+			},
+			stepErr:  errFoo,
+			callStep: true,
+			err:      errFoo,
+		},
+		{
+			name:           "Error/ManuscriptContextDao",
+			request:        &manuscriptSelectFailure,
+			accessResponse: ideaFixture(),
+			callAccess:     true,
+			engineCalls: []engineSelectCall{
+				{id: engineVersionID, response: engineVersionFixture()},
+			},
+			stepResponse:   []*dao.StepValue{},
+			callStep:       true,
+			manuscriptErr:  errFoo,
+			callManuscript: true,
+			err:            errFoo,
 		},
 		{
 			name:           "Error/GenAI",
-			request:        validRequest,
-			ideaResponse:   ideaFixture(),
-			engineResponse: engineVersionFixture(),
-			genaiErr:       errFoo,
-			expectErr:      errFoo,
-		},
-		{
-			name:           "Error/MissingResponse",
-			request:        validRequest,
-			ideaResponse:   ideaFixture(),
-			engineResponse: engineVersionFixture(),
-			expectErr:      core.ErrGenerationResponseInvalid,
+			request:        &genaiFailure,
+			accessResponse: ideaFixture(),
+			callAccess:     true,
+			engineCalls: []engineSelectCall{
+				{id: engineVersionID, response: engineVersionFixture()},
+			},
+			stepResponse:   []*dao.StepValue{},
+			callStep:       true,
+			manuscriptErr:  dao.ErrManuscriptSelectLatestNotFound,
+			callManuscript: true,
+			genaiErr:       status.Error(codes.AlreadyExists, "conflict"),
+			callGenAI:      true,
+			err:            core.ErrGenerationConflict,
 		},
 	}
 
@@ -230,105 +276,203 @@ func TestGenerationSubmit(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			ideaDao := coremocks.NewMockIdeaSelectDao(t)
+			projectAccess := coremocks.NewMockProjectAccessService(t)
 			engineVersionDao := coremocks.NewMockEngineVersionSelectDao(t)
+			stepValueDao := coremocks.NewMockStepValueSelectLatestDao(t)
+			manuscriptDao := coremocks.NewMockManuscriptSelectLatestDao(t)
 			genai := servicegenaimocks.NewMockClient(t)
 
-			if testCase.ideaResponse != nil || testCase.ideaErr != nil {
-				ideaDao.EXPECT().
-					Exec(mock.Anything, &dao.IdeaSelectRequest{
-						ID:      testCase.request.IdeaID,
-						OwnerID: testCase.request.Actor.UserID,
+			if testCase.callAccess {
+				projectAccess.EXPECT().
+					Exec(mock.Anything, &core.ProjectAccessRequest{
+						Actor:  testCase.request.Actor,
+						IdeaID: testCase.request.IdeaID,
 					}).
-					Return(testCase.ideaResponse, testCase.ideaErr)
+					Return(testCase.accessResponse, testCase.accessErr)
 			}
 
-			if testCase.engineResponse != nil || testCase.engineErr != nil {
+			for _, call := range testCase.engineCalls {
 				engineVersionDao.EXPECT().
-					Exec(mock.Anything, &dao.EngineVersionSelectRequest{
-						ID: testCase.request.EngineVersionID,
-					}).
-					Return(testCase.engineResponse, testCase.engineErr)
+					Exec(mock.Anything, &dao.EngineVersionSelectRequest{ID: call.id}).
+					Return(call.response, call.err).
+					Once()
 			}
 
-			if testCase.genaiResponse != nil || testCase.genaiErr != nil ||
-				testCase.name == "Error/MissingResponse" {
+			if testCase.callStep {
+				excludedStepKeys := make([]string, 0, len(testCase.request.ContextOverrides))
+				for _, override := range testCase.request.ContextOverrides {
+					excludedStepKeys = append(excludedStepKeys, override.StepKey)
+				}
+
+				stepValueDao.EXPECT().
+					Exec(mock.Anything, &dao.StepValueSelectLatestRequest{
+						IdeaID:          testCase.request.IdeaID,
+						ExcludeStepKeys: excludedStepKeys,
+					}).
+					Return(testCase.stepResponse, testCase.stepErr)
+			}
+
+			if testCase.callManuscript {
+				manuscriptDao.EXPECT().
+					Exec(mock.Anything, &dao.ManuscriptSelectLatestRequest{
+						IdeaID: testCase.request.IdeaID,
+					}).
+					Return(testCase.manuscriptResp, testCase.manuscriptErr)
+			}
+
+			if testCase.callGenAI {
 				genai.EXPECT().
 					GenerationSubmit(mock.Anything, mock.MatchedBy(func(
 						request *servicegenai.GenerationSubmitRequest,
 					) bool {
-						return assertGenerationRequest(t, request)
+						if testCase.payload == nil {
+							return true
+						}
+
+						return assertGenerationRequest(t, request, testCase.payload)
 					})).
 					Return(testCase.genaiResponse, testCase.genaiErr)
 			}
 
 			result, err := core.NewGenerationSubmit(
-				ideaDao,
+				projectAccess,
 				engineVersionDao,
+				stepValueDao,
+				manuscriptDao,
 				genai,
 			).Exec(t.Context(), testCase.request)
 
-			require.ErrorIs(t, err, testCase.expectErr)
+			require.ErrorIs(t, err, testCase.err)
 			require.Equal(t, testCase.expect, result)
 		})
 	}
 }
 
+func submittedGeneration(
+	status core.GenerationStatus,
+	proposal json.RawMessage,
+	target core.GenerationTarget,
+) *core.Generation {
+	generation := expectedGeneration(status, proposal)
+	generation.Target = &target
+
+	return generation
+}
+
 func assertGenerationRequest(
 	t *testing.T,
 	request *servicegenai.GenerationSubmitRequest,
+	expect *generationPayloadExpectation,
 ) bool {
 	t.Helper()
 
-	var payload map[string]any
+	var payload struct {
+		Model     string `json:"model"`
+		Reasoning struct {
+			Effort string `json:"effort"`
+		} `json:"reasoning"`
+		Instructions string `json:"instructions"`
+		Input        string `json:"input"`
+		Text         struct {
+			Format struct {
+				Type   string         `json:"type"`
+				Name   string         `json:"name"`
+				Schema map[string]any `json:"schema"`
+				Strict bool           `json:"strict"`
+			} `json:"format"`
+		} `json:"text"`
+	}
 
 	err := json.Unmarshal(request.GetRequest(), &payload)
 	require.NoError(t, err)
 
-	reasoning, reasoningOK := payload["reasoning"].(map[string]any)
-	text, textOK := payload["text"].(map[string]any)
-	format, formatOK := text["format"].(map[string]any)
-	schema, schemaOK := format["schema"].(map[string]any)
-	properties, propertiesOK := schema["properties"].(map[string]any)
-	valueSchema, valueSchemaOK := properties["value"].(map[string]any)
-	valueProperties, valuePropertiesOK := valueSchema["properties"].(map[string]any)
-	formatSchema, manuscriptFormatOK := valueProperties["format"].(map[string]any)
+	separator := strings.IndexByte(payload.Input, '\n')
+	require.NotEqual(t, -1, separator)
 
-	// The Engine schema constrains string length; a strict Responses schema
-	// rejects those keywords, so none may survive the projection at any depth.
+	var inputDocument struct {
+		Target         core.GenerationTarget `json:"target"`
+		TargetInput    json.RawMessage       `json:"targetInput"`
+		ProjectContext struct {
+			Idea struct {
+				ID    uuid.UUID `json:"id"`
+				Seed  string    `json:"seed"`
+				Genre string    `json:"genre"`
+				Title string    `json:"title"`
+			} `json:"idea"`
+			Steps []struct {
+				EngineVersionID uuid.UUID       `json:"engineVersionID"`
+				StepKey         string          `json:"stepKey"`
+				Value           json.RawMessage `json:"value"`
+			} `json:"steps"`
+			Manuscript json.RawMessage `json:"manuscript"`
+		} `json:"projectContext"`
+	}
+
+	err = json.Unmarshal([]byte(payload.Input[separator+1:]), &inputDocument)
+	require.NoError(t, err)
+
+	require.Equal(t, expect.target, inputDocument.Target)
+	require.JSONEq(t, string(expect.input), string(inputDocument.TargetInput))
+	require.Equal(t, ideaFixture().ID, inputDocument.ProjectContext.Idea.ID)
+	require.Equal(t, ideaFixture().Seed, inputDocument.ProjectContext.Idea.Seed)
+	require.Equal(t, ideaFixture().Genre, inputDocument.ProjectContext.Idea.Genre)
+	require.Equal(t, ideaFixture().Title, inputDocument.ProjectContext.Idea.Title)
+	require.Len(t, inputDocument.ProjectContext.Steps, len(expect.steps))
+
+	for index, expectedStep := range expect.steps {
+		actualStep := inputDocument.ProjectContext.Steps[index]
+		require.Equal(t, expectedStep.EngineVersionID, actualStep.EngineVersionID)
+		require.Equal(t, expectedStep.StepKey, actualStep.StepKey)
+		require.JSONEq(t, string(expectedStep.Value), string(actualStep.Value))
+	}
+
+	if expect.manuscript == nil {
+		require.Empty(t, inputDocument.ProjectContext.Manuscript)
+	} else {
+		require.JSONEq(t, string(expect.manuscript), string(inputDocument.ProjectContext.Manuscript))
+	}
+
+	schema := payload.Text.Format.Schema
+	properties, propertiesOK := schema["properties"].(map[string]any)
+	require.True(t, propertiesOK)
+
+	targetKind, targetKindOK := properties["targetKind"].(map[string]any)
+	engineVersion, engineVersionOK := properties["engineVersionID"].(map[string]any)
+	stepKey, stepKeyOK := properties["stepKey"].(map[string]any)
+	valueSchema, valueSchemaOK := properties["value"].(map[string]any)
+
+	require.True(t, targetKindOK)
+	require.True(t, engineVersionOK)
+	require.True(t, stepKeyOK)
+	require.True(t, valueSchemaOK)
+
+	expectedEngineVersionID := ""
+	expectedStepKey := ""
+
+	if expect.target.Kind == core.GenerationTargetKindStep {
+		expectedEngineVersionID = expect.target.EngineVersionID.String()
+		expectedStepKey = expect.target.StepKey
+	}
+
 	projected, err := json.Marshal(schema)
 	require.NoError(t, err)
 
 	return assert.Equal(t, ownerID.String(), request.GetOwnerId()) &&
 		assert.Equal(t, core.GenerationPurposeStudio, request.GetPurpose()) &&
-		assert.Equal(
-			t,
-			"213f384149d055b91505270aa05fce43951672897fe8987ee15ecec335fba707",
-			request.GetIdempotencyKey(),
-		) &&
+		assert.Len(t, request.GetIdempotencyKey(), 64) &&
+		assert.NotEqual(t, "retry-1", request.GetIdempotencyKey()) &&
 		assert.Equal(t, int32(2), request.GetMaxAttempts()) &&
-		assert.Equal(t, core.GenerationModelDefault, payload["model"]) &&
-		assert.NotContains(t, payload, "background") &&
-		assert.NotContains(t, payload, "store") &&
-		assert.NotContains(t, payload, "metadata") &&
-		assert.NotContains(t, payload, "previous_response_id") &&
-		assert.Contains(t, payload["input"], ideaFixture().Seed) &&
-		assert.True(t, reasoningOK) &&
-		assert.Equal(t, "low", reasoning["effort"]) &&
-		assert.True(t, textOK) &&
-		assert.True(t, formatOK) &&
-		assert.True(t, schemaOK) &&
-		assert.Equal(t, "json_schema", format["type"]) &&
-		assert.Equal(t, true, format["strict"]) &&
+		assert.Equal(t, core.GenerationModelDefault, payload.Model) &&
+		assert.Equal(t, core.GenerationReasoningEffortDefault, payload.Reasoning.Effort) &&
+		assert.NotEmpty(t, payload.Instructions) &&
+		assert.Equal(t, "json_schema", payload.Text.Format.Type) &&
+		assert.Equal(t, "project_content_output", payload.Text.Format.Name) &&
+		assert.True(t, payload.Text.Format.Strict) &&
 		assert.Equal(t, false, schema["additionalProperties"]) &&
-		assert.True(t, propertiesOK) &&
-		assert.True(t, valueSchemaOK) &&
+		assert.Equal(t, []any{string(expect.target.Kind)}, targetKind["enum"]) &&
+		assert.Equal(t, []any{expectedEngineVersionID}, engineVersion["enum"]) &&
+		assert.Equal(t, []any{expectedStepKey}, stepKey["enum"]) &&
 		assert.NotContains(t, valueSchema, "$schema") &&
-		assert.True(t, valuePropertiesOK) &&
-		assert.True(t, manuscriptFormatOK) &&
-		assert.NotContains(t, formatSchema, "const") &&
-		assert.Equal(t, []any{"prose"}, formatSchema["enum"]) &&
 		assert.NotContains(t, string(projected), "minLength") &&
-		assert.NotContains(t, string(projected), "maxLength") &&
-		assert.Contains(t, string(projected), "minItems")
+		assert.NotContains(t, string(projected), "maxLength")
 }

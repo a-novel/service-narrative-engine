@@ -77,6 +77,7 @@ func TestGenerationGet(t *testing.T) {
   }]
 }`),
 	}
+	manuscriptTarget := core.GenerationTarget{Kind: core.GenerationTargetKindManuscript}
 
 	testCases := []struct {
 		name string
@@ -147,6 +148,29 @@ func TestGenerationGet(t *testing.T) {
 			},
 			engineResponse: schemaDefinedEngine,
 			expect:         expectedGeneration(core.GenerationStatusSucceeded, schemaDefinedValue),
+		},
+		{
+			name:      "Success/Succeeded/StaticManuscript",
+			request:   validRequest,
+			callGenAI: true,
+			genaiResponse: &servicegenai.GenerationGetResponse{
+				Generation: generationFixture(
+					servicegenai.GenerationStatusSucceeded,
+					responsesOutputText(
+						t,
+						generationEnvelopeForTarget(
+							t,
+							manuscriptTarget,
+							staticManuscriptValue,
+						),
+					),
+				),
+			},
+			expect: submittedGeneration(
+				core.GenerationStatusSucceeded,
+				staticManuscriptValue,
+				manuscriptTarget,
+			),
 		},
 		{
 			name:          "Success/Failed",
