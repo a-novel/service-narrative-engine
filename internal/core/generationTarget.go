@@ -8,6 +8,8 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/a-novel-kit/golib/otel"
+
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
@@ -30,6 +32,9 @@ func loadGenerationTarget(
 	engineVersionDao EngineVersionSelectDao,
 	target GenerationTarget,
 ) (*generationTargetDefinition, error) {
+	ctx, span := otel.Tracer().Start(ctx, "core.loadGenerationTarget")
+	defer span.End()
+
 	err := validateGenerationTarget(target)
 	if err != nil {
 		return nil, err

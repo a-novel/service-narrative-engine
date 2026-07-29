@@ -243,6 +243,9 @@ func (service *GenerationSubmit) loadContextOverrides(
 	ctx context.Context,
 	overrides []GenerationContextOverride,
 ) ([]generationContextStep, []string, error) {
+	ctx, span := otel.Tracer().Start(ctx, "core.GenerationSubmit.loadContextOverrides")
+	defer span.End()
+
 	contextSteps := make([]generationContextStep, 0, len(overrides))
 	excludedStepKeys := make([]string, 0, len(overrides))
 	seen := make(map[string]struct{}, len(overrides))
