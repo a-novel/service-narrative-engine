@@ -67,17 +67,11 @@ var engineDefinition = json.RawMessage(`{
   }]
 }`)
 
-var manuscriptValue = core.ManuscriptValue{
-	Title:  "The Answering Light",
-	Format: core.ManuscriptFormatProse,
-	Scenes: []core.ManuscriptScene{{
-		Title: "The Reply",
-		Blocks: []core.ManuscriptBlock{{
-			Kind: core.ManuscriptBlockKindProse,
-			Text: "The buried foghorn answers.",
-		}},
-	}},
-}
+var manuscriptValue = json.RawMessage(
+	`{"title":"The Answering Light","format":"prose",` +
+		`"scenes":[{"title":"The Reply","blocks":[` +
+		`{"kind":"prose","text":"The buried foghorn answers."}]}]}`,
+)
 
 func ideaFixture() *dao.Idea {
 	return &dao.Idea{
@@ -124,7 +118,7 @@ func generationFixture(status servicegenai.GenerationStatus, output []byte) *ser
 
 func expectedGeneration(
 	status core.GenerationStatus,
-	proposal *core.ManuscriptValue,
+	proposal json.RawMessage,
 ) *core.Generation {
 	generation := &core.Generation{
 		ID:          generationID,

@@ -17,6 +17,11 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
+// ErrStepValueConflict reports content already saved for the same immutable step.
+var ErrStepValueConflict = errors.New("step value already exists")
+
+var errManuscriptInsertMissing = errors.New("manuscript insert returned no entity")
+
 // StepValueInsertDao persists source-agnostic content for one Engine step.
 type StepValueInsertDao interface {
 	Exec(ctx context.Context, request *dao.StepValueInsertRequest) (*dao.StepValue, error)
@@ -67,7 +72,7 @@ func NewManuscriptCreate(
 func (service *ManuscriptCreate) Exec(
 	ctx context.Context,
 	request *ManuscriptCreateRequest,
-) (*Manuscript, error) {
+) (json.RawMessage, error) {
 	ctx, span := otel.Tracer().Start(ctx, "core.ManuscriptCreate")
 	defer span.End()
 
@@ -179,11 +184,5 @@ func (service *ManuscriptCreate) Exec(
 
 	span.SetAttributes(attribute.String("manuscript.id", entity.ID.String()))
 
-	return otel.ReportSuccess(span, &Manuscript{
-		ID:        entity.ID,
-		IdeaID:    entity.IdeaID,
-		Value:     entity.Value,
-		CreatedAt: entity.CreatedAt,
-		UpdatedAt: entity.UpdatedAt,
-	}), nil
+	return otel.ReportSuccess(span, entity.Value), nil
 }

@@ -175,7 +175,7 @@ func resolveGenerationProposal(
 	engineVersionDao EngineVersionSelectDao,
 	output json.RawMessage,
 	expectedContext *generationOutputContext,
-) (*ManuscriptValue, error) {
+) (json.RawMessage, error) {
 	ctx, span := otel.Tracer().Start(ctx, "core.resolveGenerationProposal")
 	defer span.End()
 
@@ -239,14 +239,7 @@ func resolveGenerationProposal(
 		return nil, fmt.Errorf("%w: %w", ErrGenerationOutputInvalid, err)
 	}
 
-	var proposal ManuscriptValue
-
-	err = json.Unmarshal(envelope.Value, &proposal)
-	if err != nil {
-		return nil, fmt.Errorf("%w: decode Manuscript: %w", ErrGenerationOutputInvalid, err)
-	}
-
-	return &proposal, nil
+	return envelope.Value, nil
 }
 
 func extractResponsesOutputText(output json.RawMessage) (string, error) {

@@ -22,8 +22,7 @@ func TestManuscriptCreate(t *testing.T) {
 	t.Parallel()
 
 	errFoo := errors.New("foo")
-	stepValue, err := json.Marshal(manuscriptValue)
-	require.NoError(t, err)
+	stepValue := manuscriptValue
 
 	opaqueManuscript := json.RawMessage(
 		`{"title":"Free form","extensions":{"custom":{"enabled":true}}}`,
@@ -84,25 +83,20 @@ func TestManuscriptCreate(t *testing.T) {
 		callManuscript bool
 		transactionErr error
 
-		expect             *core.Manuscript
+		expect             json.RawMessage
 		expectErr          error
 		expectErrContains  string
 		expectTransactions int
 	}{
 		{
-			name:           "Success/WithoutGeneration",
-			request:        validRequest,
-			ideaResponse:   ideaFixture(),
-			engineResponse: engineVersionFixture(),
-			callStep:       true,
-			manuscriptResp: entity,
-			callManuscript: true,
-			expect: &core.Manuscript{
-				ID:        manuscriptID,
-				IdeaID:    ideaID,
-				Value:     opaqueManuscript,
-				CreatedAt: createdAt,
-			},
+			name:               "Success/WithoutGeneration",
+			request:            validRequest,
+			ideaResponse:       ideaFixture(),
+			engineResponse:     engineVersionFixture(),
+			callStep:           true,
+			manuscriptResp:     entity,
+			callManuscript:     true,
+			expect:             opaqueManuscript,
 			expectTransactions: 1,
 		},
 		{
@@ -115,17 +109,12 @@ func TestManuscriptCreate(t *testing.T) {
 				StepValue:       charactersStepValue,
 				Manuscript:      opaqueManuscript,
 			},
-			ideaResponse:   ideaFixture(),
-			engineResponse: charactersEngine,
-			callStep:       true,
-			manuscriptResp: entity,
-			callManuscript: true,
-			expect: &core.Manuscript{
-				ID:        manuscriptID,
-				IdeaID:    ideaID,
-				Value:     opaqueManuscript,
-				CreatedAt: createdAt,
-			},
+			ideaResponse:       ideaFixture(),
+			engineResponse:     charactersEngine,
+			callStep:           true,
+			manuscriptResp:     entity,
+			callManuscript:     true,
+			expect:             opaqueManuscript,
 			expectTransactions: 1,
 		},
 		{
@@ -320,7 +309,12 @@ func TestManuscriptCreate(t *testing.T) {
 				require.ErrorContains(t, execErr, testCase.expectErrContains)
 			}
 
-			require.Equal(t, testCase.expect, result)
+			if testCase.expect == nil {
+				require.Nil(t, result)
+			} else {
+				require.JSONEq(t, string(testCase.expect), string(result))
+			}
+
 			require.Equal(t, testCase.expectTransactions, transactor.Calls())
 		})
 	}

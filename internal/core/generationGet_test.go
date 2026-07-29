@@ -54,6 +54,29 @@ func TestGenerationGet(t *testing.T) {
 	invalidSettledAt.SettledAt = "not-a-time"
 	missingStepEngine := engineVersionFixture()
 	missingStepEngine.Definition = json.RawMessage(`{"steps":[]}`)
+	schemaDefinedValue := json.RawMessage(`{"characters":["Mara"]}`)
+	schemaDefinedEngine := &dao.EngineVersion{
+		ID: engineVersionID,
+		Definition: json.RawMessage(`{
+  "steps": [{
+    "key": "manuscript",
+    "promptTemplate": "List the main characters.",
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["characters"],
+      "properties": {
+        "characters": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  }]
+}`),
+	}
 
 	testCases := []struct {
 		name string
@@ -97,7 +120,7 @@ func TestGenerationGet(t *testing.T) {
 				),
 			},
 			engineResponse: engineVersionFixture(),
-			expect:         expectedGeneration(core.GenerationStatusSucceeded, &manuscriptValue),
+			expect:         expectedGeneration(core.GenerationStatusSucceeded, manuscriptValue),
 		},
 		{
 			name:      "Success/Succeeded/TopLevelOutput",
@@ -110,7 +133,20 @@ func TestGenerationGet(t *testing.T) {
 				),
 			},
 			engineResponse: engineVersionFixture(),
-			expect:         expectedGeneration(core.GenerationStatusSucceeded, &manuscriptValue),
+			expect:         expectedGeneration(core.GenerationStatusSucceeded, manuscriptValue),
+		},
+		{
+			name:      "Success/Succeeded/SchemaDefinedProposal",
+			request:   validRequest,
+			callGenAI: true,
+			genaiResponse: &servicegenai.GenerationGetResponse{
+				Generation: generationFixture(
+					servicegenai.GenerationStatusSucceeded,
+					responsesOutput(t, schemaDefinedValue),
+				),
+			},
+			engineResponse: schemaDefinedEngine,
+			expect:         expectedGeneration(core.GenerationStatusSucceeded, schemaDefinedValue),
 		},
 		{
 			name:          "Success/Failed",

@@ -1,6 +1,7 @@
 package core
 
 import (
+	"encoding/json"
 	"errors"
 	"time"
 
@@ -31,7 +32,6 @@ var (
 	errGenerationOutputTextMissing = errors.New("generation response contains no output text")
 	errGenerationOutputMultiple    = errors.New("generation response contains multiple JSON values")
 	errProviderSchemaConflict      = errors.New("schema const is excluded by enum")
-	errManuscriptInsertMissing     = errors.New("Manuscript insert returned no entity")
 )
 
 // GenerationStatus is narrative-engine's stable generation lifecycle vocabulary.
@@ -61,13 +61,13 @@ func (status GenerationStatus) Terminal() bool {
 	}
 }
 
-// Generation is the owner-scoped lifecycle and volatile typed proposal.
+// Generation is the owner-scoped lifecycle and volatile schema-validated JSON proposal.
 type Generation struct {
 	ID          uuid.UUID        `json:"id"`
 	Status      GenerationStatus `json:"status"`
 	Attempt     int32            `json:"attempt"`
 	MaxAttempts int32            `json:"maxAttempts"`
-	Proposal    *ManuscriptValue `json:"proposal"`
+	Proposal    json.RawMessage  `json:"proposal"`
 	Failure     string           `json:"failure"`
 	CreatedAt   time.Time        `json:"createdAt"`
 	UpdatedAt   time.Time        `json:"updatedAt"`

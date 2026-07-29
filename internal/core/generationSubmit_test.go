@@ -89,7 +89,7 @@ func TestGenerationSubmit(t *testing.T) {
 				Generation: succeeded,
 			},
 			expect: &core.GenerationSubmitResult{
-				Generation: expectedGeneration(core.GenerationStatusSucceeded, &manuscriptValue),
+				Generation: expectedGeneration(core.GenerationStatusSucceeded, manuscriptValue),
 			},
 		},
 		{

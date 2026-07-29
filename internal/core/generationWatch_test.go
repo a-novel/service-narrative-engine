@@ -80,7 +80,7 @@ func TestGenerationWatch(t *testing.T) {
 				)},
 			},
 			engineResult: engineVersionFixture(),
-			expect:       expectedGeneration(core.GenerationStatusSucceeded, &manuscriptValue),
+			expect:       expectedGeneration(core.GenerationStatusSucceeded, manuscriptValue),
 		},
 		{
 			name:      "Success/Failed",
