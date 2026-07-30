@@ -52,6 +52,31 @@ func mapGeneration(
 	ctx, span := otel.Tracer().Start(ctx, "core.mapGeneration")
 	defer span.End()
 
+	generation, err := mapGenerationValue(
+		ctx,
+		engineVersionDao,
+		source,
+		expectedID,
+		expectedOwner,
+		expectedContext,
+	)
+	if err != nil {
+		return nil, otel.ReportError(span, err)
+	}
+
+	otel.ReportSuccessNoContent(span)
+
+	return generation, nil
+}
+
+func mapGenerationValue(
+	ctx context.Context,
+	engineVersionDao EngineVersionSelectDao,
+	source *servicegenai.Generation,
+	expectedID *uuid.UUID,
+	expectedOwner uuid.UUID,
+	expectedContext *generationOutputContext,
+) (*Generation, error) {
 	if source == nil {
 		return nil, fmt.Errorf("%w: missing generation", ErrGenerationResponseInvalid)
 	}
@@ -197,6 +222,27 @@ func resolveGenerationProposal(
 	ctx, span := otel.Tracer().Start(ctx, "core.resolveGenerationProposal")
 	defer span.End()
 
+	proposal, target, err := resolveGenerationProposalValue(
+		ctx,
+		engineVersionDao,
+		output,
+		expectedContext,
+	)
+	if err != nil {
+		return nil, GenerationTarget{}, otel.ReportError(span, err)
+	}
+
+	otel.ReportSuccessNoContent(span)
+
+	return proposal, target, nil
+}
+
+func resolveGenerationProposalValue(
+	ctx context.Context,
+	engineVersionDao EngineVersionSelectDao,
+	output json.RawMessage,
+	expectedContext *generationOutputContext,
+) (json.RawMessage, GenerationTarget, error) {
 	var noTarget GenerationTarget
 
 	text, err := extractResponsesOutputText(output)
@@ -211,12 +257,12 @@ func resolveGenerationProposal(
 
 	err = decoder.Decode(&envelope)
 	if err != nil {
-		return nil, noTarget, fmt.Errorf("%w: decode envelope: %w", ErrGenerationOutputInvalid, err)
+		return nil, noTarget, ErrGenerationOutputInvalid
 	}
 
 	err = ensureJSONEOF(decoder)
 	if err != nil {
-		return nil, noTarget, fmt.Errorf("%w: decode envelope: %w", ErrGenerationOutputInvalid, err)
+		return nil, noTarget, ErrGenerationOutputInvalid
 	}
 
 	if len(envelope.Value) == 0 {
@@ -225,7 +271,7 @@ func resolveGenerationProposal(
 
 	target, err := generationTargetFromEnvelope(&envelope)
 	if err != nil {
-		return nil, noTarget, fmt.Errorf("%w: %w", ErrGenerationOutputInvalid, err)
+		return nil, noTarget, ErrGenerationOutputInvalid
 	}
 
 	var definition *generationTargetDefinition
@@ -239,7 +285,16 @@ func resolveGenerationProposal(
 	} else {
 		definition, err = loadGenerationTarget(ctx, engineVersionDao, target)
 		if err != nil {
-			return nil, noTarget, fmt.Errorf("%w: load target: %w", ErrGenerationOutputInvalid, err)
+			switch {
+			case errors.Is(err, ErrEngineVersionNotFound):
+				err = errors.Join(ErrGenerationOutputInvalid, ErrEngineVersionNotFound)
+			case errors.Is(err, ErrEngineStepNotFound), errors.Is(err, ErrInvalidRequest):
+				err = ErrGenerationOutputInvalid
+			default:
+				err = fmt.Errorf("%w: load target: %w", ErrGenerationOutputInvalid, err)
+			}
+
+			return nil, noTarget, err
 		}
 	}
 
@@ -301,7 +356,7 @@ func extractResponsesOutputText(output json.RawMessage) (string, error) {
 
 	err := json.Unmarshal(output, &response)
 	if err != nil {
-		return "", fmt.Errorf("decode Responses output: %w", err)
+		return "", errGenerationOutputMalformed
 	}
 
 	// Scan before reading the aggregate: a response carrying both text and a
@@ -315,7 +370,7 @@ func extractResponsesOutputText(output json.RawMessage) (string, error) {
 			case "output_text":
 				text.WriteString(content.Text)
 			case "refusal":
-				return "", fmt.Errorf("%w: %s", ErrGenerationRefused, content.Refusal)
+				return "", ErrGenerationRefused
 			}
 		}
 	}

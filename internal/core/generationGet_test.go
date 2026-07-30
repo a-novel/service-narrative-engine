@@ -22,6 +22,8 @@ import (
 func TestGenerationGet(t *testing.T) {
 	t.Parallel()
 
+	const privateGenerationOutput = "do-not-trace-generation-output"
+
 	errFoo := errors.New("foo")
 	validRequest := &core.GenerationGetRequest{
 		Actor: core.Actor{UserID: ownerID},
@@ -32,9 +34,15 @@ func TestGenerationGet(t *testing.T) {
 	expectFailed := expectedGeneration(core.GenerationStatusFailed, nil)
 	expectFailed.Failure = "provider failed"
 	invalidValue := map[string]any{
-		"title":  "",
-		"format": "prose",
-		"scenes": []any{},
+		"title":  "The Answering Light",
+		"format": privateGenerationOutput,
+		"scenes": []any{map[string]any{
+			"title": "The Reply",
+			"blocks": []any{map[string]any{
+				"kind": "prose",
+				"text": "The buried foghorn answers.",
+			}},
+		}},
 	}
 	mismatchedOwner := generationFixture(servicegenai.GenerationStatusPending, nil)
 	mismatchedOwner.OwnerId = uuid.MustParse("00000000-0000-0000-0000-000000000043").String()
@@ -55,28 +63,7 @@ func TestGenerationGet(t *testing.T) {
 	missingStepEngine := engineVersionFixture()
 	missingStepEngine.Definition = json.RawMessage(`{"steps":[]}`)
 	schemaDefinedValue := json.RawMessage(`{"characters":["Mara"]}`)
-	schemaDefinedEngine := &dao.EngineVersion{
-		ID: engineVersionID,
-		Definition: json.RawMessage(`{
-  "steps": [{
-    "key": "manuscript",
-    "promptTemplate": "List the main characters.",
-    "outputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["characters"],
-      "properties": {
-        "characters": {
-          "type": "array",
-          "minItems": 1,
-          "items": {"type": "string", "minLength": 1}
-        }
-      }
-    }
-  }]
-}`),
-	}
+	schemaDefinedEngine := validationEngineVersionFixture()
 	manuscriptTarget := core.GenerationTarget{Kind: core.GenerationTargetKindManuscript}
 
 	testCases := []struct {
@@ -89,8 +76,9 @@ func TestGenerationGet(t *testing.T) {
 		engineResponse *dao.EngineVersion
 		engineErr      error
 
-		expect    *core.Generation
-		expectErr error
+		expect            *core.Generation
+		expectErr         error
+		expectErrExcludes string
 	}{
 		{
 			name:      "Success/Pending",
@@ -239,8 +227,9 @@ func TestGenerationGet(t *testing.T) {
 					responsesOutput(t, invalidValue),
 				),
 			},
-			engineResponse: engineVersionFixture(),
-			expectErr:      core.ErrGenerationOutputInvalid,
+			engineResponse:    engineVersionFixture(),
+			expectErr:         core.ErrGenerationOutputInvalid,
+			expectErrExcludes: privateGenerationOutput,
 		},
 		{
 			name:      "Error/EngineVersionNotFound",
@@ -301,6 +290,19 @@ func TestGenerationGet(t *testing.T) {
 				),
 			},
 			expectErr: core.ErrGenerationOutputInvalid,
+		},
+		{
+			name:      "Error/EnvelopeFieldPrivacy",
+			request:   validRequest,
+			callGenAI: true,
+			genaiResponse: &servicegenai.GenerationGetResponse{
+				Generation: generationFixture(
+					servicegenai.GenerationStatusSucceeded,
+					responsesOutputText(t, `{"`+privateGenerationOutput+`":true}`),
+				),
+			},
+			expectErr:         core.ErrGenerationOutputInvalid,
+			expectErrExcludes: privateGenerationOutput,
 		},
 		{
 			name:      "Error/NoOutputText",
@@ -398,10 +400,14 @@ func TestGenerationGet(t *testing.T) {
 			genaiResponse: &servicegenai.GenerationGetResponse{
 				Generation: generationFixture(
 					servicegenai.GenerationStatusSucceeded,
-					json.RawMessage(`{"output":[{"content":[{"type":"refusal","refusal":"no"}]}]}`),
+					json.RawMessage(
+						`{"output":[{"content":[{"type":"refusal","refusal":"`+
+							privateGenerationOutput+`"}]}]}`,
+					),
 				),
 			},
-			expectErr: core.ErrGenerationRefused,
+			expectErr:         core.ErrGenerationRefused,
+			expectErrExcludes: privateGenerationOutput,
 		},
 		{
 			// A refusal outranks any text beside it, so the caller learns the
@@ -415,11 +421,12 @@ func TestGenerationGet(t *testing.T) {
 					json.RawMessage(
 						`{"output_text":"{}","output":[{"content":[`+
 							`{"type":"output_text","text":"{}"},`+
-							`{"type":"refusal","refusal":"no"}]}]}`,
+							`{"type":"refusal","refusal":"`+privateGenerationOutput+`"}]}]}`,
 					),
 				),
 			},
-			expectErr: core.ErrGenerationRefused,
+			expectErr:         core.ErrGenerationRefused,
+			expectErrExcludes: privateGenerationOutput,
 		},
 	}
 
@@ -449,6 +456,11 @@ func TestGenerationGet(t *testing.T) {
 				Exec(t.Context(), testCase.request)
 
 			require.ErrorIs(t, err, testCase.expectErr)
+
+			if testCase.expectErrExcludes != "" {
+				require.NotContains(t, err.Error(), testCase.expectErrExcludes)
+			}
+
 			require.Equal(t, testCase.expect, result)
 		})
 	}

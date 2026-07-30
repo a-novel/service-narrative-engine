@@ -14,9 +14,11 @@ import (
 const contentDocumentMaxBytes = 5 * 1024 * 1024
 
 var (
-	errContentDocumentEmpty     = errors.New("JSON document is empty")
-	errContentDocumentNotObject = errors.New("JSON value must be an object")
-	errContentDocumentTooLarge  = errors.New("JSON document exceeds the size limit")
+	errContentDocumentEmpty         = errors.New("json document is empty")
+	errContentDocumentInvalid       = errors.New("json document is invalid")
+	errContentDocumentNotObject     = errors.New("json value must be an object")
+	errContentDocumentSchemaInvalid = errors.New("json document does not match its schema")
+	errContentDocumentTooLarge      = errors.New("json document exceeds the size limit")
 
 	ideaOutputSchema       = schemas.Idea
 	manuscriptOutputSchema = schemas.Manuscript
@@ -75,7 +77,10 @@ func buildPartialContentSchema(schemaJSON json.RawMessage) (json.RawMessage, err
 		return nil, fmt.Errorf("decode partial JSON Schema: %w", err)
 	}
 
-	makeSchemaPropertiesOptional(schema)
+	err = makeSchemaPropertiesOptional(schema)
+	if err != nil {
+		return nil, fmt.Errorf("derive partial JSON Schema: %w", err)
+	}
 
 	partialSchema, err := json.Marshal(schema)
 	if err != nil {
@@ -85,9 +90,10 @@ func buildPartialContentSchema(schemaJSON json.RawMessage) (json.RawMessage, err
 	return partialSchema, nil
 }
 
-func makeSchemaPropertiesOptional(value any) {
-	switch value := value.(type) {
-	case map[string]any:
+func makeSchemaPropertiesOptional(value any) error {
+	return walkJSONSchema(value, false, func(value map[string]any) error {
+		relaxPartialOneOf(value)
+
 		delete(value, "required")
 		delete(value, "dependentRequired")
 		delete(value, "minProperties")
@@ -104,14 +110,82 @@ func makeSchemaPropertiesOptional(value any) {
 			}
 		}
 
-		for _, child := range value {
-			makeSchemaPropertiesOptional(child)
+		return nil
+	})
+}
+
+func relaxPartialOneOf(schema map[string]any) {
+	oneOf, hasOneOf := schema["oneOf"].([]any)
+	if !hasOneOf || !partialSchemaHasPresenceConstraints(oneOf) {
+		return
+	}
+
+	delete(schema, "oneOf")
+
+	existingAnyOf, hasAnyOf := schema[jsonSchemaKeywordAnyOf]
+	if !hasAnyOf {
+		schema[jsonSchemaKeywordAnyOf] = oneOf
+
+		return
+	}
+
+	delete(schema, jsonSchemaKeywordAnyOf)
+
+	constraints := []any{
+		map[string]any{jsonSchemaKeywordAnyOf: existingAnyOf},
+		map[string]any{jsonSchemaKeywordAnyOf: oneOf},
+	}
+
+	allOf, hasAllOf := schema["allOf"].([]any)
+	if hasAllOf {
+		schema["allOf"] = append(allOf, constraints...)
+
+		return
+	}
+
+	schema["allOf"] = constraints
+}
+
+func partialSchemaHasPresenceConstraints(value any) bool {
+	found := false
+
+	_ = walkJSONSchemaValue(value, false, func(schema map[string]any) error {
+		if partialSchemaObjectHasPresenceConstraints(schema) {
+			found = true
 		}
-	case []any:
-		for _, child := range value {
-			makeSchemaPropertiesOptional(child)
+
+		return nil
+	})
+
+	return found
+}
+
+func partialSchemaObjectHasPresenceConstraints(schema map[string]any) bool {
+	if required, ok := schema["required"].([]any); ok && len(required) != 0 {
+		return true
+	}
+
+	if minProperties, ok := schema["minProperties"].(float64); ok && minProperties > 0 {
+		return true
+	}
+
+	if dependentRequired, ok := schema["dependentRequired"].(map[string]any); ok {
+		for _, dependency := range dependentRequired {
+			if properties, propertiesOK := dependency.([]any); propertiesOK && len(properties) != 0 {
+				return true
+			}
 		}
 	}
+
+	if dependencies, ok := schema["dependencies"].(map[string]any); ok {
+		for _, dependency := range dependencies {
+			if properties, propertiesOK := dependency.([]any); propertiesOK && len(properties) != 0 {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 func (definition *contentSchemaDefinition) validateComplete(value json.RawMessage) error {
@@ -133,7 +207,9 @@ func (definition *contentSchemaDefinition) validate(
 
 	err = schema.Validate(instance)
 	if err != nil {
-		return fmt.Errorf("validate JSON value: %w", err)
+		// jsonschema-go includes rejected instance values in its errors. Keep
+		// project content out of returned errors and trace exception messages.
+		return errContentDocumentSchemaInvalid
 	}
 
 	return nil
@@ -158,7 +234,7 @@ func decodeContentDocument(value json.RawMessage) (map[string]any, error) {
 
 	err := json.Unmarshal(value, &instance)
 	if err != nil {
-		return nil, fmt.Errorf("decode JSON value: %w", err)
+		return nil, errContentDocumentInvalid
 	}
 
 	if instance == nil {

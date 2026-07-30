@@ -29,6 +29,7 @@ var (
 	ErrGenerationWatchClosed     = errors.New("generation watch closed before a terminal status")
 
 	errGenerationOutputEmpty       = errors.New("generation response output is empty")
+	errGenerationOutputMalformed   = errors.New("generation response output is malformed")
 	errGenerationOutputTextMissing = errors.New("generation response contains no output text")
 	errGenerationOutputMultiple    = errors.New("generation response contains multiple JSON values")
 	errProviderSchemaConflict      = errors.New("schema const is excluded by enum")

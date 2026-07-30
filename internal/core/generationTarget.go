@@ -35,6 +35,21 @@ func loadGenerationTarget(
 	ctx, span := otel.Tracer().Start(ctx, "core.loadGenerationTarget")
 	defer span.End()
 
+	definition, err := loadGenerationTargetValue(ctx, engineVersionDao, target)
+	if err != nil {
+		return nil, otel.ReportError(span, err)
+	}
+
+	otel.ReportSuccessNoContent(span)
+
+	return definition, nil
+}
+
+func loadGenerationTargetValue(
+	ctx context.Context,
+	engineVersionDao EngineVersionSelectDao,
+	target GenerationTarget,
+) (*generationTargetDefinition, error) {
 	err := validateGenerationTarget(target)
 	if err != nil {
 		return nil, err

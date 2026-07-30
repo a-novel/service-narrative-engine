@@ -1,6 +1,7 @@
 package core_test
 
 import (
+	_ "embed"
 	"encoding/json"
 	"testing"
 	"time"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/a-novel/service-narrative-engine/internal/core"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
+	"github.com/a-novel/service-narrative-engine/internal/models/modelstest"
 )
 
 var (
@@ -25,47 +27,10 @@ var (
 	expiresAt       = settledAt.Add(30 * 24 * time.Hour)
 )
 
-var engineDefinition = json.RawMessage(`{
-  "steps": [{
-    "key": "manuscript",
-    "promptTemplate": "Turn the idea into a concise prose manuscript proposal.",
-    "outputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["title", "format", "scenes"],
-      "properties": {
-        "title": {"type": "string", "minLength": 1},
-        "format": {"const": "prose"},
-        "scenes": {
-          "type": "array",
-          "minItems": 1,
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["title", "blocks"],
-            "properties": {
-              "title": {"type": "string", "minLength": 1},
-              "blocks": {
-                "type": "array",
-                "minItems": 1,
-                "items": {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "required": ["kind", "text"],
-                  "properties": {
-                    "kind": {"enum": ["prose", "dialogue", "cue"]},
-                    "text": {"type": "string", "minLength": 1}
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }]
-}`)
+//go:embed testdata/validation.engine.json
+var validationEngineDefinition []byte
+
+var engineDefinition = json.RawMessage(modelstest.WalkingSkeletonEngineDefinition)
 
 var manuscriptValue = json.RawMessage(
 	`{"title":"The Answering Light","format":"prose",` +
@@ -96,6 +61,13 @@ func engineVersionFixture() *dao.EngineVersion {
 	return &dao.EngineVersion{
 		ID:         engineVersionID,
 		Definition: engineDefinition,
+	}
+}
+
+func validationEngineVersionFixture() *dao.EngineVersion {
+	return &dao.EngineVersion{
+		ID:         engineVersionID,
+		Definition: json.RawMessage(validationEngineDefinition),
 	}
 }
 

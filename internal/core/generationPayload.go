@@ -176,22 +176,7 @@ func buildProviderOutputSchema(
 }
 
 func projectProviderSchema(value any) error {
-	object, isObject := value.(map[string]any)
-	if isObject {
-		return projectProviderSchemaObject(object)
-	}
-
-	array, isArray := value.([]any)
-	if isArray {
-		for _, child := range array {
-			err := projectProviderSchema(child)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
+	return walkJSONSchema(value, true, projectProviderSchemaObject)
 }
 
 func projectProviderSchemaObject(object map[string]any) error {
@@ -206,13 +191,6 @@ func projectProviderSchemaObject(object map[string]any) error {
 	err := projectProviderSchemaConst(object)
 	if err != nil {
 		return err
-	}
-
-	for _, child := range object {
-		err = projectProviderSchema(child)
-		if err != nil {
-			return err
-		}
 	}
 
 	return nil

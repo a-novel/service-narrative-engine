@@ -25,6 +25,7 @@ func TestStepValueCreate(t *testing.T) {
 	const (
 		contentDocumentLimit    = 5 * 1024 * 1024
 		contentDocumentOverhead = len(`{"payload":""}`)
+		privateSchemaValue      = "do-not-trace-schema-value"
 	)
 
 	errFoo := errors.New("foo")
@@ -44,20 +45,7 @@ func TestStepValueCreate(t *testing.T) {
 		Value:           partialValue,
 		CreatedAt:       createdAt,
 	}
-	documentEngineVersion := engineVersionFixture()
-	documentEngineVersion.Definition = json.RawMessage(`{
-  "steps": [{
-    "key": "document",
-    "promptTemplate": "Complete the document.",
-    "outputSchema": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "payload": {"type": "string"}
-      }
-    }
-  }]
-}`)
+	validationEngineVersion := validationEngineVersionFixture()
 	documentJustBelowLimit := json.RawMessage(
 		`{"payload":"` +
 			strings.Repeat("x", contentDocumentLimit-contentDocumentOverhead-1) +
@@ -92,9 +80,10 @@ func TestStepValueCreate(t *testing.T) {
 		callDao        bool
 		transactorErr  error
 
-		expect           json.RawMessage
-		expectErr        error
-		expectErrMessage string
+		expect            json.RawMessage
+		expectErr         error
+		expectErrMessage  string
+		expectErrExcludes string
 	}{
 		{
 			name:           "Success/DeepPartial",
@@ -138,7 +127,7 @@ func TestStepValueCreate(t *testing.T) {
 				Value:           documentJustBelowLimit,
 			},
 			callAccess:     true,
-			engineResponse: documentEngineVersion,
+			engineResponse: validationEngineVersion,
 			callEngine:     true,
 			daoResponse: &dao.StepValue{
 				ID:              entity.ID,
@@ -160,7 +149,7 @@ func TestStepValueCreate(t *testing.T) {
 				Value:           documentAtLimit,
 			},
 			callAccess:     true,
-			engineResponse: documentEngineVersion,
+			engineResponse: validationEngineVersion,
 			callEngine:     true,
 			daoResponse: &dao.StepValue{
 				ID:              entity.ID,
@@ -171,6 +160,141 @@ func TestStepValueCreate(t *testing.T) {
 			},
 			callDao: true,
 			expect:  documentAtLimit,
+		},
+		{
+			name: "Success/SchemaKeywordPropertyAndNegativeRule",
+			request: &core.StepValueCreateRequest{
+				Actor:           validRequest.Actor,
+				IdeaID:          ideaID,
+				EngineVersionID: engineVersionID,
+				StepKey:         "schema-walker",
+				Value:           json.RawMessage(`{"required":"kept"}`),
+			},
+			callAccess:     true,
+			engineResponse: validationEngineVersion,
+			callEngine:     true,
+			daoResponse: &dao.StepValue{
+				ID:              entity.ID,
+				IdeaID:          ideaID,
+				EngineVersionID: engineVersionID,
+				StepKey:         "schema-walker",
+				Value:           json.RawMessage(`{"required":"kept"}`),
+			},
+			callDao: true,
+			expect:  json.RawMessage(`{"required":"kept"}`),
+		},
+		{
+			name: "Success/DependentRequiredOptional",
+			request: &core.StepValueCreateRequest{
+				Actor:           validRequest.Actor,
+				IdeaID:          ideaID,
+				EngineVersionID: engineVersionID,
+				StepKey:         "schema-walker",
+				Value:           json.RawMessage(`{"trigger":"set"}`),
+			},
+			callAccess:     true,
+			engineResponse: validationEngineVersion,
+			callEngine:     true,
+			daoResponse: &dao.StepValue{
+				ID:              entity.ID,
+				IdeaID:          ideaID,
+				EngineVersionID: engineVersionID,
+				StepKey:         "schema-walker",
+				Value:           json.RawMessage(`{"trigger":"set"}`),
+			},
+			callDao: true,
+			expect:  json.RawMessage(`{"trigger":"set"}`),
+		},
+		{
+			name: "Success/ArrayDependencyOptional",
+			request: &core.StepValueCreateRequest{
+				Actor:           validRequest.Actor,
+				IdeaID:          ideaID,
+				EngineVersionID: engineVersionID,
+				StepKey:         "schema-walker",
+				Value:           json.RawMessage(`{"legacy":"set"}`),
+			},
+			callAccess:     true,
+			engineResponse: validationEngineVersion,
+			callEngine:     true,
+			daoResponse: &dao.StepValue{
+				ID:              entity.ID,
+				IdeaID:          ideaID,
+				EngineVersionID: engineVersionID,
+				StepKey:         "schema-walker",
+				Value:           json.RawMessage(`{"legacy":"set"}`),
+			},
+			callDao: true,
+			expect:  json.RawMessage(`{"legacy":"set"}`),
+		},
+		{
+			name: "Success/PartialOneOfMayMatchMultipleCompleteBranches",
+			request: &core.StepValueCreateRequest{
+				Actor:           validRequest.Actor,
+				IdeaID:          ideaID,
+				EngineVersionID: engineVersionID,
+				StepKey:         "schema-one-of",
+				Value:           json.RawMessage(`{"selection":{}}`),
+			},
+			callAccess:     true,
+			engineResponse: validationEngineVersion,
+			callEngine:     true,
+			daoResponse: &dao.StepValue{
+				ID:              entity.ID,
+				IdeaID:          ideaID,
+				EngineVersionID: engineVersionID,
+				StepKey:         "schema-one-of",
+				Value:           json.RawMessage(`{"selection":{}}`),
+			},
+			callDao: true,
+			expect:  json.RawMessage(`{"selection":{}}`),
+		},
+		{
+			name: "Error/ScalarOneOfRemainsExclusive",
+			request: &core.StepValueCreateRequest{
+				Actor:           validRequest.Actor,
+				IdeaID:          ideaID,
+				EngineVersionID: engineVersionID,
+				StepKey:         "schema-one-of",
+				Value:           json.RawMessage(`{"numeric":1}`),
+			},
+			callAccess:     true,
+			engineResponse: validationEngineVersion,
+			callEngine:     true,
+			expectErr:      core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/SchemaDependencyStillValidatesShape",
+			request: &core.StepValueCreateRequest{
+				Actor:           validRequest.Actor,
+				IdeaID:          ideaID,
+				EngineVersionID: engineVersionID,
+				StepKey:         "schema-walker",
+				Value: json.RawMessage(
+					`{"schemaTrigger":"set","secondary":42}`,
+				),
+			},
+			callAccess:     true,
+			engineResponse: validationEngineVersion,
+			callEngine:     true,
+			expectErr:      core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/SchemaValuePrivacy",
+			request: &core.StepValueCreateRequest{
+				Actor:           validRequest.Actor,
+				IdeaID:          ideaID,
+				EngineVersionID: engineVersionID,
+				StepKey:         "manuscript",
+				Value: json.RawMessage(
+					`{"format":"` + privateSchemaValue + `"}`,
+				),
+			},
+			callAccess:        true,
+			engineResponse:    engineVersionFixture(),
+			callEngine:        true,
+			expectErr:         core.ErrInvalidRequest,
+			expectErrExcludes: privateSchemaValue,
 		},
 		{
 			name:      "Error/InvalidRequest",
@@ -216,7 +340,7 @@ func TestStepValueCreate(t *testing.T) {
 				Value:           documentOverLimit,
 			},
 			callAccess:     true,
-			engineResponse: documentEngineVersion,
+			engineResponse: validationEngineVersion,
 			callEngine:     true,
 			expectErr:      core.ErrInvalidRequest,
 		},
@@ -317,6 +441,10 @@ func TestStepValueCreate(t *testing.T) {
 				require.ErrorContains(t, err, testCase.expectErrMessage)
 			} else {
 				require.NoError(t, err)
+			}
+
+			if testCase.expectErrExcludes != "" {
+				require.NotContains(t, err.Error(), testCase.expectErrExcludes)
 			}
 
 			if testCase.expect == nil {

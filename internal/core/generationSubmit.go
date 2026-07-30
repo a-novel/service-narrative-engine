@@ -246,6 +246,20 @@ func (service *GenerationSubmit) loadContextOverrides(
 	ctx, span := otel.Tracer().Start(ctx, "core.GenerationSubmit.loadContextOverrides")
 	defer span.End()
 
+	contextSteps, excludedStepKeys, err := service.loadContextOverridesValue(ctx, overrides)
+	if err != nil {
+		return nil, nil, otel.ReportError(span, err)
+	}
+
+	otel.ReportSuccessNoContent(span)
+
+	return contextSteps, excludedStepKeys, nil
+}
+
+func (service *GenerationSubmit) loadContextOverridesValue(
+	ctx context.Context,
+	overrides []GenerationContextOverride,
+) ([]generationContextStep, []string, error) {
 	contextSteps := make([]generationContextStep, 0, len(overrides))
 	excludedStepKeys := make([]string, 0, len(overrides))
 	seen := make(map[string]struct{}, len(overrides))

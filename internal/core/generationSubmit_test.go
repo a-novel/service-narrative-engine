@@ -28,10 +28,11 @@ type engineSelectCall struct {
 }
 
 type generationPayloadExpectation struct {
-	target     core.GenerationTarget
-	input      json.RawMessage
-	steps      []*dao.StepValue
-	manuscript json.RawMessage
+	target                       core.GenerationTarget
+	input                        json.RawMessage
+	steps                        []*dao.StepValue
+	manuscript                   json.RawMessage
+	preservesApplicationKeywords bool
 }
 
 func TestGenerationSubmit(t *testing.T) {
@@ -92,6 +93,18 @@ func TestGenerationSubmit(t *testing.T) {
 		Target:         manuscriptTarget,
 		Input:          json.RawMessage(`{"blocks":[{"type":"text","metadata":{},"data":{"text":"Draft"}}]}`),
 		IdempotencyKey: "retry-manuscript",
+	}
+	providerProjectionTarget := core.GenerationTarget{
+		Kind:            core.GenerationTargetKindStep,
+		EngineVersionID: engineVersionID,
+		StepKey:         "provider-projection",
+	}
+	providerProjectionRequest := &core.GenerationSubmitRequest{
+		Actor:          validRequest.Actor,
+		IdeaID:         ideaID,
+		Target:         providerProjectionTarget,
+		Input:          json.RawMessage(`{"minLength":"draft"}`),
+		IdempotencyKey: "retry-provider-projection",
 	}
 	duplicateOverrides := *validRequest
 	duplicateOverrides.ContextOverrides = append(
@@ -221,6 +234,38 @@ func TestGenerationSubmit(t *testing.T) {
 					core.GenerationStatusPending,
 					nil,
 					manuscriptTarget,
+				),
+				Created: true,
+			},
+		},
+		{
+			name:           "Success/ProviderProjectionPreservesApplicationKeywords",
+			request:        providerProjectionRequest,
+			accessResponse: ideaFixture(),
+			callAccess:     true,
+			engineCalls: []engineSelectCall{
+				{id: engineVersionID, response: validationEngineVersionFixture()},
+			},
+			stepResponse:   []*dao.StepValue{},
+			callStep:       true,
+			manuscriptErr:  dao.ErrManuscriptSelectLatestNotFound,
+			callManuscript: true,
+			genaiResponse: &servicegenai.GenerationSubmitResponse{
+				Generation: generationFixture(servicegenai.GenerationStatusPending, nil),
+				Created:    true,
+			},
+			callGenAI: true,
+			payload: &generationPayloadExpectation{
+				target:                       providerProjectionTarget,
+				input:                        providerProjectionRequest.Input,
+				steps:                        []*dao.StepValue{},
+				preservesApplicationKeywords: true,
+			},
+			expect: &core.GenerationSubmitResult{
+				Generation: submittedGeneration(
+					core.GenerationStatusPending,
+					nil,
+					providerProjectionTarget,
 				),
 				Created: true,
 			},
@@ -498,8 +543,18 @@ func assertGenerationRequest(
 		assertManuscriptProviderSchema(t, valueSchema)
 	}
 
-	projected, err := json.Marshal(schema)
-	require.NoError(t, err)
+	projectionValid := true
+
+	if expect.preservesApplicationKeywords {
+		assertProviderProjectionPreservesApplicationKeywords(t, valueSchema)
+	} else {
+		projected, marshalErr := json.Marshal(schema)
+		require.NoError(t, marshalErr)
+
+		projectionValid = assert.NotContains(t, valueSchema, "$schema") &&
+			assert.NotContains(t, string(projected), "minLength") &&
+			assert.NotContains(t, string(projected), "maxLength")
+	}
 
 	return assert.Equal(t, ownerID.String(), request.GetOwnerId()) &&
 		assert.Equal(t, core.GenerationPurposeStudio, request.GetPurpose()) &&
@@ -516,9 +571,36 @@ func assertGenerationRequest(
 		assert.Equal(t, []any{string(expect.target.Kind)}, targetKind["enum"]) &&
 		assert.Equal(t, []any{expectedEngineVersionID}, engineVersion["enum"]) &&
 		assert.Equal(t, []any{expectedStepKey}, stepKey["enum"]) &&
-		assert.NotContains(t, valueSchema, "$schema") &&
-		assert.NotContains(t, string(projected), "minLength") &&
-		assert.NotContains(t, string(projected), "maxLength")
+		projectionValid
+}
+
+func assertProviderProjectionPreservesApplicationKeywords(t *testing.T, schema map[string]any) {
+	t.Helper()
+
+	require.NotContains(t, schema, "$schema")
+
+	properties, propertiesOK := schema["properties"].(map[string]any)
+	require.True(t, propertiesOK)
+	require.Contains(t, properties, "minLength")
+	require.Contains(t, properties, "$schema")
+
+	minLengthProperty, minLengthPropertyOK := properties["minLength"].(map[string]any)
+	require.True(t, minLengthPropertyOK)
+	require.NotContains(t, minLengthProperty, "minLength")
+
+	settings, settingsOK := properties["settings"].(map[string]any)
+	require.True(t, settingsOK)
+	require.NotContains(t, settings, "const")
+
+	enum, enumOK := settings["enum"].([]any)
+	require.True(t, enumOK)
+	require.Len(t, enum, 1)
+	require.Equal(t, map[string]any{
+		"minLength": "kept",
+		"maxLength": "kept",
+		"$schema":   "kept",
+		"const":     "kept",
+	}, enum[0])
 }
 
 func assertManuscriptProviderSchema(t *testing.T, schema map[string]any) {
