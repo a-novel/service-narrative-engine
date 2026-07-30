@@ -20,6 +20,4 @@ type Manuscript struct {
 	Value json.RawMessage `bun:"value,type:jsonb"`
 	// CreatedAt records when the Manuscript was saved.
 	CreatedAt time.Time `bun:"created_at"`
-	// UpdatedAt records when the Manuscript last changed, or is nil before its first update.
-	UpdatedAt *time.Time `bun:"updated_at"`
 }

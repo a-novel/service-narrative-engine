@@ -11,15 +11,12 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/a-novel-kit/golib/otel"
+	"github.com/a-novel-kit/golib/transaction"
 
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-var (
-	// ErrStepValueConflict reports content already saved for the same immutable step.
-	ErrStepValueConflict = errors.New("step value already exists")
-	errStepValueMissing  = errors.New("step value insert returned no entity")
-)
+var errStepValueMissing = errors.New("step value insert returned no entity")
 
 // StepValueInsertDao persists source-agnostic content for one Engine step.
 type StepValueInsertDao interface {
@@ -40,6 +37,7 @@ type StepValueCreate struct {
 	projectAccess    ProjectAccessService
 	engineVersionDao EngineVersionSelectDao
 	dao              StepValueInsertDao
+	transactor       transaction.Transactor
 }
 
 // NewStepValueCreate creates an independent step-value save service.
@@ -47,11 +45,13 @@ func NewStepValueCreate(
 	projectAccess ProjectAccessService,
 	engineVersionDao EngineVersionSelectDao,
 	stepValueDao StepValueInsertDao,
+	transactor transaction.Transactor,
 ) *StepValueCreate {
 	return &StepValueCreate{
 		projectAccess:    projectAccess,
 		engineVersionDao: engineVersionDao,
 		dao:              stepValueDao,
+		transactor:       transactor,
 	}
 }
 
@@ -104,24 +104,34 @@ func (service *StepValueCreate) Exec(
 		return nil, otel.ReportError(span, fmt.Errorf("%w: step value: %w", ErrInvalidRequest, err))
 	}
 
-	entity, err := service.dao.Exec(ctx, &dao.StepValueInsertRequest{
-		ID:              uuid.Must(uuid.NewV7()),
-		IdeaID:          request.IdeaID,
-		EngineVersionID: request.EngineVersionID,
-		StepKey:         request.StepKey,
-		Value:           request.Value,
-		Now:             time.Now(),
+	var entity *dao.StepValue
+
+	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
+		entity, err = service.dao.Exec(ctx, &dao.StepValueInsertRequest{
+			ID:              uuid.Must(uuid.NewV7()),
+			IdeaID:          request.IdeaID,
+			OwnerID:         request.Actor.UserID,
+			EngineVersionID: request.EngineVersionID,
+			StepKey:         request.StepKey,
+			Value:           request.Value,
+			Now:             time.Now(),
+		})
+		if errors.Is(err, dao.ErrIdeaLockNotFound) {
+			err = errors.Join(err, ErrIdeaNotFound)
+		}
+
+		if err != nil {
+			return fmt.Errorf("insert step value: %w", err)
+		}
+
+		if entity == nil {
+			return fmt.Errorf("insert step value: %w", errStepValueMissing)
+		}
+
+		return nil
 	})
-	if errors.Is(err, dao.ErrStepValueInsertConflict) {
-		err = errors.Join(err, ErrStepValueConflict)
-	}
-
 	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("insert step value: %w", err))
-	}
-
-	if entity == nil {
-		return nil, otel.ReportError(span, fmt.Errorf("insert step value: %w", errStepValueMissing))
+		return nil, otel.ReportError(span, fmt.Errorf("save step value: %w", err))
 	}
 
 	span.SetAttributes(attribute.String("step_value.id", entity.ID.String()))

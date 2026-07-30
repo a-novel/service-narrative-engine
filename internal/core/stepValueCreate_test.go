@@ -12,6 +12,8 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/a-novel-kit/golib/transaction/transactiontest"
+
 	"github.com/a-novel/service-narrative-engine/internal/core"
 	coremocks "github.com/a-novel/service-narrative-engine/internal/core/mocks"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
@@ -88,6 +90,7 @@ func TestStepValueCreate(t *testing.T) {
 		daoResponse    *dao.StepValue
 		daoErr         error
 		callDao        bool
+		transactorErr  error
 
 		expect           json.RawMessage
 		expectErr        error
@@ -218,14 +221,14 @@ func TestStepValueCreate(t *testing.T) {
 			expectErr:      core.ErrInvalidRequest,
 		},
 		{
-			name:           "Error/Conflict",
+			name:           "Error/OwnerRelock",
 			request:        validRequest,
 			callAccess:     true,
 			engineResponse: engineVersionFixture(),
 			callEngine:     true,
-			daoErr:         dao.ErrStepValueInsertConflict,
+			daoErr:         dao.ErrIdeaLockNotFound,
 			callDao:        true,
-			expectErr:      core.ErrStepValueConflict,
+			expectErr:      core.ErrIdeaNotFound,
 		},
 		{
 			name:           "Error/Insert",
@@ -235,6 +238,15 @@ func TestStepValueCreate(t *testing.T) {
 			callEngine:     true,
 			daoErr:         errFoo,
 			callDao:        true,
+			expectErr:      errFoo,
+		},
+		{
+			name:           "Error/Transaction",
+			request:        validRequest,
+			callAccess:     true,
+			engineResponse: engineVersionFixture(),
+			callEngine:     true,
+			transactorErr:  errFoo,
 			expectErr:      errFoo,
 		},
 		{
@@ -278,6 +290,7 @@ func TestStepValueCreate(t *testing.T) {
 					Exec(mock.Anything, mock.MatchedBy(func(request *dao.StepValueInsertRequest) bool {
 						return assert.NotEqual(t, uuid.Nil, request.ID) &&
 							assert.Equal(t, testCase.request.IdeaID, request.IdeaID) &&
+							assert.Equal(t, testCase.request.Actor.UserID, request.OwnerID) &&
 							assert.Equal(t, testCase.request.EngineVersionID, request.EngineVersionID) &&
 							assert.Equal(t, testCase.request.StepKey, request.StepKey) &&
 							assert.JSONEq(t, string(testCase.request.Value), string(request.Value)) &&
@@ -286,10 +299,16 @@ func TestStepValueCreate(t *testing.T) {
 					Return(testCase.daoResponse, testCase.daoErr)
 			}
 
+			transactor := transactiontest.NewTransactor()
+			if testCase.transactorErr != nil {
+				transactor = transactiontest.NewFailingTransactor(testCase.transactorErr)
+			}
+
 			result, err := core.NewStepValueCreate(
 				projectAccess,
 				engineVersionDao,
 				stepValueDao,
+				transactor,
 			).Exec(t.Context(), testCase.request)
 
 			if testCase.expectErr != nil {
@@ -305,6 +324,10 @@ func TestStepValueCreate(t *testing.T) {
 			} else {
 				require.JSONEq(t, string(testCase.expect), string(result))
 			}
+
+			projectAccess.AssertExpectations(t)
+			engineVersionDao.AssertExpectations(t)
+			stepValueDao.AssertExpectations(t)
 		})
 	}
 }

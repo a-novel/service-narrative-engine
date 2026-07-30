@@ -18,13 +18,16 @@ import (
 func TestPgIdeaSelect(t *testing.T) {
 	t.Parallel()
 
-	updatedAt := time.Date(2026, 7, 26, 1, 2, 3, 123456000, time.UTC)
+	createdAt := time.Date(2026, 7, 26, 1, 2, 3, 0, time.UTC)
+	updatedAt := createdAt.Add(time.Second)
 	idea := &dao.Idea{
 		ID:        uuid.MustParse("00000000-0000-0000-0000-000000000311"),
+		VersionID: uuid.MustParse("00000000-0000-0000-0000-000000000312"),
 		OwnerID:   uuid.MustParse("00000000-0000-0000-0000-000000000042"),
-		Seed:      "A second foghorn answers from beneath the sea.",
+		Seed:      "The answering foghorn moves closer.",
 		Genre:     "speculative",
-		CreatedAt: time.Date(2026, 7, 26, 1, 2, 3, 0, time.UTC),
+		Title:     "The Nearer Light",
+		CreatedAt: createdAt,
 		UpdatedAt: &updatedAt,
 	}
 
@@ -75,10 +78,29 @@ func TestPgIdeaSelect(t *testing.T) {
 				func(ctx context.Context, t *testing.T) {
 					t.Helper()
 
-					db, err := postgres.GetContext(ctx)
+					_, err := dao.NewPgIdeaInsert().Exec(ctx, &dao.IdeaInsertRequest{
+						ID:      idea.ID,
+						OwnerID: idea.OwnerID,
+						Seed:    "A second foghorn answers from beneath the sea.",
+						Genre:   idea.Genre,
+						Title:   "The Answering Light",
+						Now:     createdAt,
+					})
 					require.NoError(t, err)
 
-					_, err = db.NewInsert().Model(idea).Exec(ctx)
+					err = postgres.WithinTx(ctx, nil, func(ctx context.Context) error {
+						_, err := dao.NewPgIdeaVersionInsert().Exec(ctx, &dao.IdeaVersionInsertRequest{
+							ID:      idea.VersionID,
+							IdeaID:  idea.ID,
+							OwnerID: idea.OwnerID,
+							Seed:    idea.Seed,
+							Genre:   idea.Genre,
+							Title:   idea.Title,
+							Now:     updatedAt,
+						})
+
+						return err
+					})
 					require.NoError(t, err)
 
 					result, err := operation.Exec(ctx, testCase.request)

@@ -3,6 +3,7 @@ package dao_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 
@@ -19,50 +20,18 @@ import (
 func TestPgStepValueInsert(t *testing.T) {
 	t.Parallel()
 
-	now := time.Date(2026, 7, 28, 1, 2, 3, 123456000, time.UTC)
 	testCases := []struct {
 		name string
 
-		request   *dao.StepValueInsertRequest
-		insertOne bool
-
-		expect    *dao.StepValue
-		expectErr error
+		versions int
 	}{
 		{
-			name: "Success",
-
-			request: &dao.StepValueInsertRequest{
-				ID:              uuid.MustParse("00000000-0000-0000-0000-000000000301"),
-				IdeaID:          fixtureIdeaID,
-				EngineVersionID: fixtureEngineVersionID,
-				StepKey:         "manuscript",
-				Value:           fixtureManuscriptValue,
-				Now:             now,
-			},
-
-			expect: &dao.StepValue{
-				ID:              uuid.MustParse("00000000-0000-0000-0000-000000000301"),
-				IdeaID:          fixtureIdeaID,
-				EngineVersionID: fixtureEngineVersionID,
-				StepKey:         "manuscript",
-				CreatedAt:       now,
-			},
+			name:     "Success",
+			versions: 1,
 		},
 		{
-			name: "Error/Conflict",
-
-			request: &dao.StepValueInsertRequest{
-				ID:              uuid.MustParse("00000000-0000-0000-0000-000000000302"),
-				IdeaID:          fixtureIdeaID,
-				EngineVersionID: fixtureEngineVersionID,
-				StepKey:         "manuscript",
-				Value:           fixtureManuscriptValue,
-				Now:             now,
-			},
-			insertOne: true,
-
-			expectErr: dao.ErrStepValueInsertConflict,
+			name:     "RepeatedSaveRetainsNewest25",
+			versions: 26,
 		},
 	}
 
@@ -81,27 +50,69 @@ func TestPgStepValueInsert(t *testing.T) {
 
 					insertWalkingSkeletonFixtures(t, ctx)
 
-					if testCase.insertOne {
+					err := postgres.WithinTx(ctx, nil, func(ctx context.Context) error {
 						_, err := operation.Exec(ctx, &dao.StepValueInsertRequest{
 							ID:              uuid.MustParse("00000000-0000-0000-0000-000000000399"),
-							IdeaID:          testCase.request.IdeaID,
-							EngineVersionID: testCase.request.EngineVersionID,
-							StepKey:         testCase.request.StepKey,
-							Value:           json.RawMessage(`{"title":"First"}`),
-							Now:             now.Add(-time.Second),
+							IdeaID:          fixtureIdeaID,
+							OwnerID:         fixtureOwnerID,
+							EngineVersionID: fixtureEngineVersionID,
+							StepKey:         "outline",
+							Value:           json.RawMessage(`{"beats":[]}`),
+							Now:             fixtureCreatedAt,
 						})
 						require.NoError(t, err)
-					}
 
-					stepValue, err := operation.Exec(ctx, testCase.request)
-					require.ErrorIs(t, err, testCase.expectErr)
+						var latest *dao.StepValue
 
-					if stepValue != nil {
-						require.JSONEq(t, string(testCase.request.Value), string(stepValue.Value))
-						stepValue.Value = nil
-					}
+						for index := 1; index <= testCase.versions; index++ {
+							value := json.RawMessage(fmt.Sprintf(`{"revision":%d}`, index))
+							latest, err = operation.Exec(ctx, &dao.StepValueInsertRequest{
+								ID: uuid.MustParse(fmt.Sprintf(
+									"00000000-0000-0000-0000-%012d",
+									300+index,
+								)),
+								IdeaID:          fixtureIdeaID,
+								OwnerID:         fixtureOwnerID,
+								EngineVersionID: fixtureEngineVersionID,
+								StepKey:         "manuscript",
+								Value:           value,
+								Now:             fixtureCreatedAt.Add(time.Duration(index) * time.Second),
+							})
+							require.NoError(t, err)
+						}
 
-					require.Equal(t, testCase.expect, stepValue)
+						db, err := postgres.GetContext(ctx)
+						require.NoError(t, err)
+
+						var stepValues []*dao.StepValue
+
+						err = db.NewSelect().
+							Model(&stepValues).
+							Where("idea_id = ?", fixtureIdeaID).
+							Where("step_key = ?", "manuscript").
+							OrderExpr("created_at DESC, id DESC").
+							Scan(ctx)
+						require.NoError(t, err)
+						require.Len(t, stepValues, min(testCase.versions, 25))
+
+						latestWithoutValue := *latest
+						selectedWithoutValue := *stepValues[0]
+						latestWithoutValue.Value = nil
+						selectedWithoutValue.Value = nil
+						require.Equal(t, latestWithoutValue, selectedWithoutValue)
+						require.JSONEq(t, string(latest.Value), string(stepValues[0].Value))
+
+						count, err := db.NewSelect().
+							Model((*dao.StepValue)(nil)).
+							Where("idea_id = ?", fixtureIdeaID).
+							Where("step_key = ?", "outline").
+							Count(ctx)
+						require.NoError(t, err)
+						require.Equal(t, 1, count)
+
+						return nil
+					})
+					require.NoError(t, err)
 				},
 			)
 		})

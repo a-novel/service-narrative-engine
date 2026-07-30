@@ -12,6 +12,8 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/a-novel-kit/golib/transaction/transactiontest"
+
 	"github.com/a-novel/service-narrative-engine/internal/core"
 	coremocks "github.com/a-novel/service-narrative-engine/internal/core/mocks"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
@@ -55,6 +57,7 @@ func TestManuscriptCreate(t *testing.T) {
 		manuscriptResp   *dao.Manuscript
 		manuscriptErr    error
 		callManuscript   bool
+		transactorErr    error
 		expect           json.RawMessage
 		expectErr        error
 		expectErrMessage string
@@ -213,12 +216,27 @@ func TestManuscriptCreate(t *testing.T) {
 			expectErr:  core.ErrIdeaNotFound,
 		},
 		{
+			name:           "Error/OwnerRelock",
+			request:        validRequest,
+			callAccess:     true,
+			manuscriptErr:  dao.ErrIdeaLockNotFound,
+			callManuscript: true,
+			expectErr:      core.ErrIdeaNotFound,
+		},
+		{
 			name:           "Error/Insert",
 			request:        validRequest,
 			callAccess:     true,
 			manuscriptErr:  errFoo,
 			callManuscript: true,
 			expectErr:      errFoo,
+		},
+		{
+			name:          "Error/Transaction",
+			request:       validRequest,
+			callAccess:    true,
+			transactorErr: errFoo,
+			expectErr:     errFoo,
 		},
 		{
 			name:             "Error/MissingEntity",
@@ -250,13 +268,19 @@ func TestManuscriptCreate(t *testing.T) {
 					Exec(mock.Anything, mock.MatchedBy(func(request *dao.ManuscriptInsertRequest) bool {
 						return assert.NotEqual(t, uuid.Nil, request.ID) &&
 							assert.Equal(t, testCase.request.IdeaID, request.IdeaID) &&
+							assert.Equal(t, testCase.request.Actor.UserID, request.OwnerID) &&
 							assert.JSONEq(t, string(testCase.request.Manuscript), string(request.Value)) &&
 							assert.WithinDuration(t, time.Now(), request.Now, time.Minute)
 					})).
 					Return(testCase.manuscriptResp, testCase.manuscriptErr)
 			}
 
-			result, err := core.NewManuscriptCreate(projectAccess, manuscriptDao).
+			transactor := transactiontest.NewTransactor()
+			if testCase.transactorErr != nil {
+				transactor = transactiontest.NewFailingTransactor(testCase.transactorErr)
+			}
+
+			result, err := core.NewManuscriptCreate(projectAccess, manuscriptDao, transactor).
 				Exec(t.Context(), testCase.request)
 
 			if testCase.expectErr != nil {
@@ -272,6 +296,9 @@ func TestManuscriptCreate(t *testing.T) {
 			} else {
 				require.JSONEq(t, string(testCase.expect), string(result))
 			}
+
+			projectAccess.AssertExpectations(t)
+			manuscriptDao.AssertExpectations(t)
 		})
 	}
 }

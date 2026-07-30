@@ -2,6 +2,8 @@ package dao_test
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 
@@ -18,34 +20,84 @@ import (
 func TestPgManuscriptInsert(t *testing.T) {
 	t.Parallel()
 
-	now := time.Date(2026, 7, 28, 1, 2, 3, 123456000, time.UTC)
-	request := &dao.ManuscriptInsertRequest{
-		ID:     uuid.MustParse("00000000-0000-0000-0000-000000000401"),
-		IdeaID: fixtureIdeaID,
-		Value:  fixtureManuscriptValue,
-		Now:    now,
-	}
-	expect := &dao.Manuscript{
-		ID:        request.ID,
-		IdeaID:    request.IdeaID,
-		CreatedAt: now,
-	}
+	testCases := []struct {
+		name string
 
-	postgres.RunIsolatedTransactionalTest(
-		t,
-		configtest.PostgresPreset,
-		migrations.Migrations,
-		func(ctx context.Context, t *testing.T) {
-			t.Helper()
-
-			insertWalkingSkeletonFixtures(t, ctx)
-
-			manuscript, err := dao.NewPgManuscriptInsert().Exec(ctx, request)
-			require.NoError(t, err)
-
-			require.JSONEq(t, string(request.Value), string(manuscript.Value))
-			manuscript.Value = nil
-			require.Equal(t, expect, manuscript)
+		versions int
+	}{
+		{
+			name:     "Success",
+			versions: 1,
 		},
-	)
+		{
+			name:     "RepeatedSaveRetainsNewest25",
+			versions: 26,
+		},
+	}
+
+	operation := dao.NewPgManuscriptInsert()
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			postgres.RunIsolatedTransactionalTest(
+				t,
+				configtest.PostgresPreset,
+				migrations.Migrations,
+				func(ctx context.Context, t *testing.T) {
+					t.Helper()
+
+					insertWalkingSkeletonFixtures(t, ctx)
+
+					err := postgres.WithinTx(ctx, nil, func(ctx context.Context) error {
+						var latest *dao.Manuscript
+
+						for index := 1; index <= testCase.versions; index++ {
+							value := json.RawMessage(fmt.Sprintf(`{"revision":%d}`, index))
+
+							var err error
+
+							latest, err = operation.Exec(ctx, &dao.ManuscriptInsertRequest{
+								ID: uuid.MustParse(fmt.Sprintf(
+									"00000000-0000-0000-0000-%012d",
+									400+index,
+								)),
+								IdeaID:  fixtureIdeaID,
+								OwnerID: fixtureOwnerID,
+								Value:   value,
+								Now: fixtureCreatedAt.Add(
+									time.Duration(index) * time.Second,
+								),
+							})
+							require.NoError(t, err)
+						}
+
+						db, err := postgres.GetContext(ctx)
+						require.NoError(t, err)
+
+						var manuscripts []*dao.Manuscript
+
+						err = db.NewSelect().
+							Model(&manuscripts).
+							Where("idea_id = ?", fixtureIdeaID).
+							OrderExpr("created_at DESC, id DESC").
+							Scan(ctx)
+						require.NoError(t, err)
+						require.Len(t, manuscripts, min(testCase.versions, 25))
+
+						latestWithoutValue := *latest
+						selectedWithoutValue := *manuscripts[0]
+						latestWithoutValue.Value = nil
+						selectedWithoutValue.Value = nil
+						require.Equal(t, latestWithoutValue, selectedWithoutValue)
+						require.JSONEq(t, string(latest.Value), string(manuscripts[0].Value))
+
+						return nil
+					})
+					require.NoError(t, err)
+				},
+			)
+		})
+	}
 }

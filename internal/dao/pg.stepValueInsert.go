@@ -4,12 +4,10 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/uptrace/bun/driver/pgdriver"
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/a-novel-kit/golib/otel"
@@ -19,9 +17,8 @@ import (
 //go:embed pg.stepValueInsert.sql
 var stepValueInsertQuery string
 
-// ErrStepValueInsertConflict is returned when content already exists for the
-// same Idea, Engine Version, and step.
-var ErrStepValueInsertConflict = errors.New("step value already exists")
+//go:embed pg.stepValuePrune.sql
+var stepValuePruneQuery string
 
 // StepValueInsertRequest carries validated step content into [PgStepValueInsert.Exec].
 type StepValueInsertRequest struct {
@@ -29,6 +26,8 @@ type StepValueInsertRequest struct {
 	ID uuid.UUID
 	// IdeaID identifies the Idea whose content is being saved.
 	IdeaID uuid.UUID
+	// OwnerID identifies the user who owns the Idea.
+	OwnerID uuid.UUID
 	// EngineVersionID identifies the immutable definition that owns the step.
 	EngineVersionID uuid.UUID
 	// StepKey identifies the step inside the Engine Version definition.
@@ -67,6 +66,16 @@ func (operation *PgStepValueInsert) Exec(
 		return nil, otel.ReportError(span, fmt.Errorf("get postgres context: %w", err))
 	}
 
+	err = requireVersionedWriteTransaction(ctx)
+	if err != nil {
+		return nil, otel.ReportError(span, err)
+	}
+
+	err = lockIdea(ctx, db, request.IdeaID, request.OwnerID)
+	if err != nil {
+		return nil, otel.ReportError(span, fmt.Errorf("lock Idea: %w", err))
+	}
+
 	var stepValue StepValue
 
 	err = db.NewRaw(
@@ -79,12 +88,17 @@ func (operation *PgStepValueInsert) Exec(
 		request.Now,
 	).Scan(ctx, &stepValue)
 	if err != nil {
-		var pgErr pgdriver.Error
-		if errors.As(err, &pgErr) && pgErr.Field('C') == "23505" {
-			err = errors.Join(err, ErrStepValueInsertConflict)
-		}
+		return nil, otel.ReportError(span, fmt.Errorf("execute insert query: %w", err))
+	}
 
-		return nil, otel.ReportError(span, fmt.Errorf("execute query: %w", err))
+	_, err = db.NewRaw(
+		stepValuePruneQuery,
+		request.IdeaID,
+		request.StepKey,
+		contentVersionLimit,
+	).Exec(ctx)
+	if err != nil {
+		return nil, otel.ReportError(span, fmt.Errorf("execute prune query: %w", err))
 	}
 
 	return otel.ReportSuccess(span, &stepValue), nil

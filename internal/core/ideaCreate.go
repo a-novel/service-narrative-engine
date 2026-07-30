@@ -2,7 +2,6 @@ package core
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -48,32 +47,9 @@ func (service *IdeaCreate) Exec(ctx context.Context, request *IdeaCreateRequest)
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	content := make(map[string]string)
-	if request.Title != "" {
-		content["title"] = request.Title
-	}
-
-	if request.Genre != "" {
-		content["genre"] = request.Genre
-	}
-
-	if request.Seed != "" {
-		content["seed"] = request.Seed
-	}
-
-	value, err := json.Marshal(content)
+	err = validateIdeaContent(request.Seed, request.Genre, request.Title)
 	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("encode Idea content: %w", err))
-	}
-
-	schema, err := loadContentSchema(ideaOutputSchema)
-	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("load Idea schema: %w", err))
-	}
-
-	err = schema.validatePartial(value)
-	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("%w: Idea: %w", ErrInvalidRequest, err))
+		return nil, otel.ReportError(span, err)
 	}
 
 	span.SetAttributes(attribute.String("idea.owner_id", request.Actor.UserID.String()))

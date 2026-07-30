@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/a-novel-kit/golib/otel"
+	"github.com/a-novel-kit/golib/transaction"
 
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
@@ -33,16 +34,19 @@ type ManuscriptCreateRequest struct {
 type ManuscriptCreate struct {
 	projectAccess ProjectAccessService
 	dao           ManuscriptInsertDao
+	transactor    transaction.Transactor
 }
 
 // NewManuscriptCreate creates an independent Manuscript save service.
 func NewManuscriptCreate(
 	projectAccess ProjectAccessService,
 	manuscriptDao ManuscriptInsertDao,
+	transactor transaction.Transactor,
 ) *ManuscriptCreate {
 	return &ManuscriptCreate{
 		projectAccess: projectAccess,
 		dao:           manuscriptDao,
+		transactor:    transactor,
 	}
 }
 
@@ -82,18 +86,32 @@ func (service *ManuscriptCreate) Exec(
 		return nil, otel.ReportError(span, fmt.Errorf("%w: Manuscript: %w", ErrInvalidRequest, err))
 	}
 
-	entity, err := service.dao.Exec(ctx, &dao.ManuscriptInsertRequest{
-		ID:     uuid.Must(uuid.NewV7()),
-		IdeaID: request.IdeaID,
-		Value:  request.Manuscript,
-		Now:    time.Now(),
+	var entity *dao.Manuscript
+
+	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
+		entity, err = service.dao.Exec(ctx, &dao.ManuscriptInsertRequest{
+			ID:      uuid.Must(uuid.NewV7()),
+			IdeaID:  request.IdeaID,
+			OwnerID: request.Actor.UserID,
+			Value:   request.Manuscript,
+			Now:     time.Now(),
+		})
+		if errors.Is(err, dao.ErrIdeaLockNotFound) {
+			err = errors.Join(err, ErrIdeaNotFound)
+		}
+
+		if err != nil {
+			return fmt.Errorf("insert Manuscript: %w", err)
+		}
+
+		if entity == nil {
+			return fmt.Errorf("insert Manuscript: %w", errManuscriptInsertMissing)
+		}
+
+		return nil
 	})
 	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("insert Manuscript: %w", err))
-	}
-
-	if entity == nil {
-		return nil, otel.ReportError(span, fmt.Errorf("insert Manuscript: %w", errManuscriptInsertMissing))
+		return nil, otel.ReportError(span, fmt.Errorf("save Manuscript: %w", err))
 	}
 
 	span.SetAttributes(attribute.String("manuscript.id", entity.ID.String()))

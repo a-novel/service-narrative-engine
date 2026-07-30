@@ -64,18 +64,6 @@ var fixtureEngineDefinition = json.RawMessage(`{
   }]
 }`)
 
-var fixtureManuscriptValue = json.RawMessage(`{
-  "title": "The Answering Light",
-  "format": "prose",
-  "scenes": [{
-    "title": "The Reply",
-    "blocks": [{
-      "kind": "prose",
-      "text": "The buried foghorn answers."
-    }]
-  }]
-}`)
-
 func insertWalkingSkeletonFixtures(t *testing.T, ctx context.Context) {
 	t.Helper()
 
@@ -98,13 +86,13 @@ func insertWalkingSkeletonFixtures(t *testing.T, ctx context.Context) {
 	}).Exec(ctx)
 	require.NoError(t, err)
 
-	_, err = db.NewInsert().Model(&dao.Idea{
-		ID:        fixtureIdeaID,
-		OwnerID:   fixtureOwnerID,
-		Seed:      "A lighthouse keeper hears a second foghorn answer from beneath the sea.",
-		Genre:     "speculative",
-		Title:     "The Answering Light",
-		CreatedAt: fixtureCreatedAt,
-	}).Exec(ctx)
+	_, err = dao.NewPgIdeaInsert().Exec(ctx, &dao.IdeaInsertRequest{
+		ID:      fixtureIdeaID,
+		OwnerID: fixtureOwnerID,
+		Seed:    "A lighthouse keeper hears a second foghorn answer from beneath the sea.",
+		Genre:   "speculative",
+		Title:   "The Answering Light",
+		Now:     fixtureCreatedAt,
+	})
 	require.NoError(t, err)
 }

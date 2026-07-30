@@ -26,7 +26,7 @@ type ManuscriptSelectLatestRequest struct {
 	IdeaID uuid.UUID
 }
 
-// PgManuscriptSelectLatest selects the project's most recently saved or updated Manuscript.
+// PgManuscriptSelectLatest selects the project's most recently saved Manuscript.
 type PgManuscriptSelectLatest struct{}
 
 // NewPgManuscriptSelectLatest creates a latest-Manuscript select operation.

@@ -17,12 +17,17 @@ import (
 //go:embed pg.manuscriptInsert.sql
 var manuscriptInsertQuery string
 
+//go:embed pg.manuscriptPrune.sql
+var manuscriptPruneQuery string
+
 // ManuscriptInsertRequest carries a validated Manuscript into [PgManuscriptInsert.Exec].
 type ManuscriptInsertRequest struct {
 	// ID identifies the Manuscript.
 	ID uuid.UUID
 	// IdeaID identifies the Idea from which this project content is being saved.
 	IdeaID uuid.UUID
+	// OwnerID identifies the user who owns the Idea.
+	OwnerID uuid.UUID
 	// Value is the opaque, self-contained Manuscript document.
 	Value json.RawMessage
 	// Now is the logical creation time.
@@ -55,6 +60,16 @@ func (operation *PgManuscriptInsert) Exec(
 		return nil, otel.ReportError(span, fmt.Errorf("get postgres context: %w", err))
 	}
 
+	err = requireVersionedWriteTransaction(ctx)
+	if err != nil {
+		return nil, otel.ReportError(span, err)
+	}
+
+	err = lockIdea(ctx, db, request.IdeaID, request.OwnerID)
+	if err != nil {
+		return nil, otel.ReportError(span, fmt.Errorf("lock Idea: %w", err))
+	}
+
 	var manuscript Manuscript
 
 	err = db.NewRaw(
@@ -65,7 +80,12 @@ func (operation *PgManuscriptInsert) Exec(
 		request.Now,
 	).Scan(ctx, &manuscript)
 	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("execute query: %w", err))
+		return nil, otel.ReportError(span, fmt.Errorf("execute insert query: %w", err))
+	}
+
+	_, err = db.NewRaw(manuscriptPruneQuery, request.IdeaID, contentVersionLimit).Exec(ctx)
+	if err != nil {
+		return nil, otel.ReportError(span, fmt.Errorf("execute prune query: %w", err))
 	}
 
 	return otel.ReportSuccess(span, &manuscript), nil

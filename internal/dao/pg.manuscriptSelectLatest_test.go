@@ -20,13 +20,11 @@ func TestPgManuscriptSelectLatest(t *testing.T) {
 	t.Parallel()
 
 	now := time.Date(2026, 7, 29, 1, 2, 3, 123456000, time.UTC)
-	updatedAt := now.Add(3 * time.Second)
 	latest := &dao.Manuscript{
 		ID:        uuid.MustParse("00000000-0000-0000-0000-000000000701"),
 		IdeaID:    fixtureIdeaID,
 		Value:     json.RawMessage(`{"format":"novel","scenes":[]}`),
-		CreatedAt: now,
-		UpdatedAt: &updatedAt,
+		CreatedAt: now.Add(3 * time.Second),
 	}
 
 	testCases := []struct {
@@ -38,7 +36,7 @@ func TestPgManuscriptSelectLatest(t *testing.T) {
 		expectErr error
 	}{
 		{
-			name:   "LatestSaveOrUpdate",
+			name:   "LatestSave",
 			insert: true,
 			expect: latest,
 		},
