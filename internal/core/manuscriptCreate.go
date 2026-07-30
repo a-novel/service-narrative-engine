@@ -59,16 +59,6 @@ func (service *ManuscriptCreate) Exec(
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	schema, err := loadContentSchema(manuscriptOutputSchema)
-	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("load Manuscript schema: %w", err))
-	}
-
-	err = schema.validatePartial(request.Manuscript)
-	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("%w: Manuscript: %w", ErrInvalidRequest, err))
-	}
-
 	span.SetAttributes(
 		attribute.String("idea.id", request.IdeaID.String()),
 		attribute.String("manuscript.owner_id", request.Actor.UserID.String()),
@@ -80,6 +70,16 @@ func (service *ManuscriptCreate) Exec(
 	})
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("access project: %w", err))
+	}
+
+	schema, err := loadContentSchema(manuscriptOutputSchema)
+	if err != nil {
+		return nil, otel.ReportError(span, fmt.Errorf("load Manuscript schema: %w", err))
+	}
+
+	err = schema.validatePartial(request.Manuscript)
+	if err != nil {
+		return nil, otel.ReportError(span, fmt.Errorf("%w: Manuscript: %w", ErrInvalidRequest, err))
 	}
 
 	entity, err := service.dao.Exec(ctx, &dao.ManuscriptInsertRequest{
