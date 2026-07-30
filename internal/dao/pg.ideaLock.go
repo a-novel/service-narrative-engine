@@ -8,6 +8,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/uptrace/bun"
+	"go.opentelemetry.io/otel/attribute"
+
+	"github.com/a-novel-kit/golib/otel"
 )
 
 //go:embed pg.ideaLock.sql
@@ -19,6 +22,14 @@ func lockIdea(
 	ideaID uuid.UUID,
 	ownerID uuid.UUID,
 ) error {
+	ctx, span := otel.Tracer().Start(ctx, "dao.lockIdea")
+	defer span.End()
+
+	span.SetAttributes(
+		attribute.String("idea.id", ideaID.String()),
+		attribute.String("idea.owner_id", ownerID.String()),
+	)
+
 	var id uuid.UUID
 
 	err := db.NewRaw(ideaLockQuery, ideaID, ownerID).Scan(ctx, &id)
@@ -26,5 +37,11 @@ func lockIdea(
 		err = errors.Join(err, ErrIdeaLockNotFound)
 	}
 
-	return err
+	if err != nil {
+		return otel.ReportError(span, err)
+	}
+
+	otel.ReportSuccessNoContent(span)
+
+	return nil
 }

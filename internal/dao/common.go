@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/a-novel-kit/golib/otel"
 	"github.com/a-novel-kit/golib/postgres"
 )
 
@@ -15,9 +16,14 @@ var ErrIdeaLockNotFound = errors.New("idea not found")
 var errVersionedWriteRequiresTransaction = errors.New("versioned write requires a transaction")
 
 func requireVersionedWriteTransaction(ctx context.Context) error {
+	ctx, span := otel.Tracer().Start(ctx, "dao.requireVersionedWriteTransaction")
+	defer span.End()
+
 	if !postgres.InTx(ctx) {
-		return errVersionedWriteRequiresTransaction
+		return otel.ReportError(span, errVersionedWriteRequiresTransaction)
 	}
+
+	otel.ReportSuccessNoContent(span)
 
 	return nil
 }
