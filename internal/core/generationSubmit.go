@@ -246,20 +246,6 @@ func (service *GenerationSubmit) loadContextOverrides(
 	ctx, span := otel.Tracer().Start(ctx, "core.GenerationSubmit.loadContextOverrides")
 	defer span.End()
 
-	contextSteps, excludedStepKeys, err := service.loadContextOverridesValue(ctx, overrides)
-	if err != nil {
-		return nil, nil, otel.ReportError(span, err)
-	}
-
-	otel.ReportSuccessNoContent(span)
-
-	return contextSteps, excludedStepKeys, nil
-}
-
-func (service *GenerationSubmit) loadContextOverridesValue(
-	ctx context.Context,
-	overrides []GenerationContextOverride,
-) ([]generationContextStep, []string, error) {
 	contextSteps := make([]generationContextStep, 0, len(overrides))
 	excludedStepKeys := make([]string, 0, len(overrides))
 	seen := make(map[string]struct{}, len(overrides))
@@ -267,10 +253,13 @@ func (service *GenerationSubmit) loadContextOverridesValue(
 	for index := range overrides {
 		override := &overrides[index]
 		if _, duplicate := seen[override.StepKey]; duplicate {
-			return nil, nil, fmt.Errorf(
-				"%w: duplicate context override for step %q",
-				ErrInvalidRequest,
-				override.StepKey,
+			return nil, nil, otel.ReportError(
+				span,
+				fmt.Errorf(
+					"%w: duplicate context override for step %q",
+					ErrInvalidRequest,
+					override.StepKey,
+				),
 			)
 		}
 
@@ -282,16 +271,22 @@ func (service *GenerationSubmit) loadContextOverridesValue(
 			StepKey:         override.StepKey,
 		})
 		if err != nil {
-			return nil, nil, fmt.Errorf("context override %d: %w", index, err)
+			return nil, nil, otel.ReportError(
+				span,
+				fmt.Errorf("context override %d: %w", index, err),
+			)
 		}
 
 		err = definition.validatePartial(override.Value)
 		if err != nil {
-			return nil, nil, fmt.Errorf(
-				"%w: context override %d: %w",
-				ErrInvalidRequest,
-				index,
-				err,
+			return nil, nil, otel.ReportError(
+				span,
+				fmt.Errorf(
+					"%w: context override %d: %w",
+					ErrInvalidRequest,
+					index,
+					err,
+				),
 			)
 		}
 
@@ -302,6 +297,8 @@ func (service *GenerationSubmit) loadContextOverridesValue(
 		})
 		excludedStepKeys = append(excludedStepKeys, override.StepKey)
 	}
+
+	otel.ReportSuccessNoContent(span)
 
 	return contextSteps, excludedStepKeys, nil
 }

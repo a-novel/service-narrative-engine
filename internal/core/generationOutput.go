@@ -52,80 +52,75 @@ func mapGeneration(
 	ctx, span := otel.Tracer().Start(ctx, "core.mapGeneration")
 	defer span.End()
 
-	generation, err := mapGenerationValue(
-		ctx,
-		engineVersionDao,
-		source,
-		expectedID,
-		expectedOwner,
-		expectedContext,
-	)
-	if err != nil {
-		return nil, otel.ReportError(span, err)
-	}
-
-	otel.ReportSuccessNoContent(span)
-
-	return generation, nil
-}
-
-func mapGenerationValue(
-	ctx context.Context,
-	engineVersionDao EngineVersionSelectDao,
-	source *servicegenai.Generation,
-	expectedID *uuid.UUID,
-	expectedOwner uuid.UUID,
-	expectedContext *generationOutputContext,
-) (*Generation, error) {
 	if source == nil {
-		return nil, fmt.Errorf("%w: missing generation", ErrGenerationResponseInvalid)
+		return nil, otel.ReportError(
+			span,
+			fmt.Errorf("%w: missing generation", ErrGenerationResponseInvalid),
+		)
 	}
 
 	id, err := uuid.Parse(source.GetId())
 	if err != nil {
-		return nil, fmt.Errorf("%w: parse id: %w", ErrGenerationResponseInvalid, err)
+		return nil, otel.ReportError(
+			span,
+			fmt.Errorf("%w: parse id: %w", ErrGenerationResponseInvalid, err),
+		)
 	}
 
 	if expectedID != nil && id != *expectedID {
-		return nil, fmt.Errorf("%w: expected id %s, got %s", ErrGenerationResponseInvalid, expectedID, id)
+		return nil, otel.ReportError(span, fmt.Errorf(
+			"%w: expected id %s, got %s",
+			ErrGenerationResponseInvalid,
+			expectedID,
+			id,
+		))
 	}
 
 	ownerID, err := uuid.Parse(source.GetOwnerId())
 	if err != nil {
-		return nil, fmt.Errorf("%w: parse owner id: %w", ErrGenerationResponseInvalid, err)
+		return nil, otel.ReportError(
+			span,
+			fmt.Errorf("%w: parse owner id: %w", ErrGenerationResponseInvalid, err),
+		)
 	}
 
 	if ownerID != expectedOwner {
-		return nil, fmt.Errorf("%w: owner mismatch", ErrGenerationResponseInvalid)
+		return nil, otel.ReportError(
+			span,
+			fmt.Errorf("%w: owner mismatch", ErrGenerationResponseInvalid),
+		)
 	}
 
 	if source.GetPurpose() != GenerationPurposeStudio {
-		return nil, fmt.Errorf("%w: purpose mismatch", ErrGenerationResponseInvalid)
+		return nil, otel.ReportError(
+			span,
+			fmt.Errorf("%w: purpose mismatch", ErrGenerationResponseInvalid),
+		)
 	}
 
 	status, err := mapGenerationStatus(source.GetStatus())
 	if err != nil {
-		return nil, err
+		return nil, otel.ReportError(span, err)
 	}
 
 	createdAt, err := parseRequiredGenerationTime("created_at", source.GetCreatedAt())
 	if err != nil {
-		return nil, err
+		return nil, otel.ReportError(span, err)
 	}
 
 	updatedAt, err := parseRequiredGenerationTime("updated_at", source.GetUpdatedAt())
 	if err != nil {
-		return nil, err
+		return nil, otel.ReportError(span, err)
 	}
 
 	settledAt, err := parseOptionalGenerationTime("settled_at", source.GetSettledAt())
 	if err != nil {
-		return nil, err
+		return nil, otel.ReportError(span, err)
 	}
 
 	expiresAt, err := parseOptionalGenerationTime("expires_at", source.GetExpiresAt())
 	if err != nil {
-		return nil, err
+		return nil, otel.ReportError(span, err)
 	}
 
 	generation := &Generation{
@@ -142,7 +137,10 @@ func mapGenerationValue(
 
 	if expectedContext != nil {
 		if expectedContext.definition == nil {
-			return nil, fmt.Errorf("%w: missing expected target", ErrGenerationResponseInvalid)
+			return nil, otel.ReportError(
+				span,
+				fmt.Errorf("%w: missing expected target", ErrGenerationResponseInvalid),
+			)
 		}
 
 		target := expectedContext.definition.Target
@@ -159,13 +157,13 @@ func mapGenerationValue(
 			expectedContext,
 		)
 		if err != nil {
-			return nil, err
+			return nil, otel.ReportError(span, err)
 		}
 
 		generation.Target = &target
 	}
 
-	return generation, nil
+	return otel.ReportSuccess(span, generation), nil
 }
 
 func mapGenerationStatus(status servicegenai.GenerationStatus) (GenerationStatus, error) {
@@ -222,32 +220,14 @@ func resolveGenerationProposal(
 	ctx, span := otel.Tracer().Start(ctx, "core.resolveGenerationProposal")
 	defer span.End()
 
-	proposal, target, err := resolveGenerationProposalValue(
-		ctx,
-		engineVersionDao,
-		output,
-		expectedContext,
-	)
-	if err != nil {
-		return nil, GenerationTarget{}, otel.ReportError(span, err)
-	}
-
-	otel.ReportSuccessNoContent(span)
-
-	return proposal, target, nil
-}
-
-func resolveGenerationProposalValue(
-	ctx context.Context,
-	engineVersionDao EngineVersionSelectDao,
-	output json.RawMessage,
-	expectedContext *generationOutputContext,
-) (json.RawMessage, GenerationTarget, error) {
 	var noTarget GenerationTarget
 
 	text, err := extractResponsesOutputText(output)
 	if err != nil {
-		return nil, noTarget, fmt.Errorf("%w: %w", ErrGenerationOutputInvalid, err)
+		return nil, noTarget, otel.ReportError(
+			span,
+			fmt.Errorf("%w: %w", ErrGenerationOutputInvalid, err),
+		)
 	}
 
 	var envelope generationOutputEnvelope
@@ -257,28 +237,34 @@ func resolveGenerationProposalValue(
 
 	err = decoder.Decode(&envelope)
 	if err != nil {
-		return nil, noTarget, ErrGenerationOutputInvalid
+		return nil, noTarget, otel.ReportError(span, ErrGenerationOutputInvalid)
 	}
 
 	err = ensureJSONEOF(decoder)
 	if err != nil {
-		return nil, noTarget, ErrGenerationOutputInvalid
+		return nil, noTarget, otel.ReportError(span, ErrGenerationOutputInvalid)
 	}
 
 	if len(envelope.Value) == 0 {
-		return nil, noTarget, fmt.Errorf("%w: incomplete envelope", ErrGenerationOutputInvalid)
+		return nil, noTarget, otel.ReportError(
+			span,
+			fmt.Errorf("%w: incomplete envelope", ErrGenerationOutputInvalid),
+		)
 	}
 
 	target, err := generationTargetFromEnvelope(&envelope)
 	if err != nil {
-		return nil, noTarget, ErrGenerationOutputInvalid
+		return nil, noTarget, otel.ReportError(span, ErrGenerationOutputInvalid)
 	}
 
 	var definition *generationTargetDefinition
 
 	if expectedContext != nil {
 		if expectedContext.definition == nil || target != expectedContext.definition.Target {
-			return nil, noTarget, fmt.Errorf("%w: envelope context mismatch", ErrGenerationOutputInvalid)
+			return nil, noTarget, otel.ReportError(
+				span,
+				fmt.Errorf("%w: envelope context mismatch", ErrGenerationOutputInvalid),
+			)
 		}
 
 		definition = expectedContext.definition
@@ -294,14 +280,19 @@ func resolveGenerationProposalValue(
 				err = fmt.Errorf("%w: load target: %w", ErrGenerationOutputInvalid, err)
 			}
 
-			return nil, noTarget, err
+			return nil, noTarget, otel.ReportError(span, err)
 		}
 	}
 
 	err = definition.validateComplete(envelope.Value)
 	if err != nil {
-		return nil, noTarget, fmt.Errorf("%w: %w", ErrGenerationOutputInvalid, err)
+		return nil, noTarget, otel.ReportError(
+			span,
+			fmt.Errorf("%w: %w", ErrGenerationOutputInvalid, err),
+		)
 	}
+
+	otel.ReportSuccessNoContent(span)
 
 	return envelope.Value, target, nil
 }

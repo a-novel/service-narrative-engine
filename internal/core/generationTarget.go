@@ -35,31 +35,34 @@ func loadGenerationTarget(
 	ctx, span := otel.Tracer().Start(ctx, "core.loadGenerationTarget")
 	defer span.End()
 
-	definition, err := loadGenerationTargetValue(ctx, engineVersionDao, target)
+	err := validateGenerationTarget(target)
 	if err != nil {
 		return nil, otel.ReportError(span, err)
 	}
 
-	otel.ReportSuccessNoContent(span)
-
-	return definition, nil
-}
-
-func loadGenerationTargetValue(
-	ctx context.Context,
-	engineVersionDao EngineVersionSelectDao,
-	target GenerationTarget,
-) (*generationTargetDefinition, error) {
-	err := validateGenerationTarget(target)
-	if err != nil {
-		return nil, err
-	}
-
 	switch target.Kind {
 	case GenerationTargetKindIdea:
-		return loadStaticGenerationTarget(target, ideaGenerationPrompt, ideaOutputSchema)
+		definition, loadErr := loadStaticGenerationTarget(
+			target,
+			ideaGenerationPrompt,
+			ideaOutputSchema,
+		)
+		if loadErr != nil {
+			return nil, otel.ReportError(span, loadErr)
+		}
+
+		return otel.ReportSuccess(span, definition), nil
 	case GenerationTargetKindManuscript:
-		return loadStaticGenerationTarget(target, manuscriptGenerationPrompt, manuscriptOutputSchema)
+		definition, loadErr := loadStaticGenerationTarget(
+			target,
+			manuscriptGenerationPrompt,
+			manuscriptOutputSchema,
+		)
+		if loadErr != nil {
+			return nil, otel.ReportError(span, loadErr)
+		}
+
+		return otel.ReportSuccess(span, definition), nil
 	case GenerationTargetKindStep:
 		engineVersion, selectErr := engineVersionDao.Exec(ctx, &dao.EngineVersionSelectRequest{
 			ID: target.EngineVersionID,
@@ -69,21 +72,24 @@ func loadGenerationTargetValue(
 		}
 
 		if selectErr != nil {
-			return nil, fmt.Errorf("select Engine Version: %w", selectErr)
+			return nil, otel.ReportError(span, fmt.Errorf("select Engine Version: %w", selectErr))
 		}
 
 		step, selectErr := selectEngineStep(engineVersion.Definition, target.StepKey)
 		if selectErr != nil {
-			return nil, selectErr
+			return nil, otel.ReportError(span, selectErr)
 		}
 
-		return &generationTargetDefinition{
+		return otel.ReportSuccess(span, &generationTargetDefinition{
 			Target:                  target,
 			PromptTemplate:          step.PromptTemplate,
 			contentSchemaDefinition: step.contentSchemaDefinition,
-		}, nil
+		}), nil
 	default:
-		return nil, fmt.Errorf("%w: unknown generation target %q", ErrInvalidRequest, target.Kind)
+		return nil, otel.ReportError(
+			span,
+			fmt.Errorf("%w: unknown generation target %q", ErrInvalidRequest, target.Kind),
+		)
 	}
 }
 
