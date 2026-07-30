@@ -1,4 +1,4 @@
-migration-history	sha256:53dc0a93b84310907586aa4d34abd64373b9c99a79a2054b17776a8824383813
+migration-history	sha256:bc2784c7a377d5001b1fb219e69d4514247872b1dce3237490fa9958f1bda968
 column	engine_versions.created_at	timestamp with time zone NOT NULL
 column	engine_versions.definition	jsonb NOT NULL
 column	engine_versions.engine_id	uuid NOT NULL
