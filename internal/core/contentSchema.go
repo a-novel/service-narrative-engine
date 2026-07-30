@@ -7,108 +7,20 @@ import (
 	"fmt"
 
 	"github.com/google/jsonschema-go/jsonschema"
+
+	"github.com/a-novel/service-narrative-engine/internal/models/schemas"
 )
 
-const (
-	contentShortMaxCharacters   = 128
-	contentRegularMaxCharacters = 32 * 1024
-	contentDocumentMaxBytes     = 5 * 1024 * 1024
-)
+const contentDocumentMaxBytes = 5 * 1024 * 1024
 
 var (
 	errContentDocumentEmpty     = errors.New("JSON document is empty")
 	errContentDocumentNotObject = errors.New("JSON value must be an object")
 	errContentDocumentTooLarge  = errors.New("JSON document exceeds the size limit")
+
+	ideaOutputSchema       = schemas.Idea
+	manuscriptOutputSchema = schemas.Manuscript
 )
-
-var ideaOutputSchema = json.RawMessage(fmt.Sprintf(`{
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "type": "object",
-  "additionalProperties": false,
-  "required": ["title", "genre", "seed"],
-  "properties": {
-    "title": {
-      "type": "string",
-      "minLength": 1,
-      "maxLength": %[1]d,
-      "pattern": "\\S"
-    },
-    "genre": {
-      "type": "string",
-      "minLength": 1,
-      "maxLength": %[1]d,
-      "pattern": "\\S"
-    },
-    "seed": {
-      "type": "string",
-      "minLength": 1,
-      "maxLength": %[2]d,
-      "pattern": "\\S"
-    }
-  }
-}`, contentShortMaxCharacters, contentRegularMaxCharacters))
-
-var manuscriptOutputSchema = json.RawMessage(fmt.Sprintf(`{
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "type": "object",
-  "additionalProperties": false,
-  "required": ["blocks"],
-  "properties": {
-    "blocks": {
-      "type": "array",
-      "minItems": 1,
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["type", "metadata", "data"],
-        "properties": {
-          "type": {"const": "text"},
-          "metadata": {
-            "type": "object",
-            "additionalProperties": true
-          },
-          "data": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["text", "marks"],
-            "properties": {
-              "text": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": %[1]d,
-                "pattern": "\\S"
-              },
-              "marks": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "required": ["type", "start", "end"],
-                  "properties": {
-                    "type": {
-                      "type": "string",
-                      "enum": ["bold", "italic", "underline", "strikethrough"]
-                    },
-                    "start": {
-                      "type": "integer",
-                      "minimum": 0,
-                      "maximum": %[1]d
-                    },
-                    "end": {
-                      "type": "integer",
-                      "minimum": 1,
-                      "maximum": %[1]d
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-}`, contentRegularMaxCharacters))
 
 type contentSchemaDefinition struct {
 	OutputSchema          json.RawMessage
