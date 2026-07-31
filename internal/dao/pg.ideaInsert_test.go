@@ -40,7 +40,6 @@ func TestPgIdeaInsert(t *testing.T) {
 
 			expect: &dao.Idea{
 				ID:        uuid.MustParse("00000000-0000-0000-0000-000000000301"),
-				VersionID: uuid.MustParse("00000000-0000-0000-0000-000000000301"),
 				OwnerID:   uuid.MustParse("00000000-0000-0000-0000-000000000042"),
 				Seed:      "A second foghorn answers from beneath the sea.",
 				Genre:     "speculative",
@@ -61,7 +60,6 @@ func TestPgIdeaInsert(t *testing.T) {
 
 			expect: &dao.Idea{
 				ID:        uuid.MustParse("00000000-0000-0000-0000-000000000302"),
-				VersionID: uuid.MustParse("00000000-0000-0000-0000-000000000302"),
 				OwnerID:   uuid.MustParse("00000000-0000-0000-0000-000000000042"),
 				Seed:      "A city wakes with no shadows.",
 				Genre:     "speculative",
@@ -79,7 +77,6 @@ func TestPgIdeaInsert(t *testing.T) {
 
 			expect: &dao.Idea{
 				ID:        uuid.MustParse("00000000-0000-0000-0000-000000000303"),
-				VersionID: uuid.MustParse("00000000-0000-0000-0000-000000000303"),
 				OwnerID:   uuid.MustParse("00000000-0000-0000-0000-000000000042"),
 				CreatedAt: now,
 			},

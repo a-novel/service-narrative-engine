@@ -1,6 +1,5 @@
 SELECT
   idea.id,
-  idea_version.id AS version_id,
   idea.owner_id,
   idea_version.seed,
   idea_version.genre,

@@ -48,7 +48,6 @@ var staticManuscriptValue = json.RawMessage(
 func ideaFixture() *dao.Idea {
 	return &dao.Idea{
 		ID:        ideaID,
-		VersionID: ideaID,
 		OwnerID:   ownerID,
 		Seed:      "A lighthouse keeper hears a second foghorn answer from beneath the sea.",
 		Genre:     "speculative",

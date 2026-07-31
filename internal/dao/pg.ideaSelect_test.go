@@ -20,9 +20,9 @@ func TestPgIdeaSelect(t *testing.T) {
 
 	createdAt := time.Date(2026, 7, 26, 1, 2, 3, 0, time.UTC)
 	updatedAt := createdAt.Add(time.Second)
+	ideaVersionID := uuid.MustParse("00000000-0000-0000-0000-000000000312")
 	idea := &dao.Idea{
 		ID:        uuid.MustParse("00000000-0000-0000-0000-000000000311"),
-		VersionID: uuid.MustParse("00000000-0000-0000-0000-000000000312"),
 		OwnerID:   uuid.MustParse("00000000-0000-0000-0000-000000000042"),
 		Seed:      "The answering foghorn moves closer.",
 		Genre:     "speculative",
@@ -90,7 +90,7 @@ func TestPgIdeaSelect(t *testing.T) {
 
 					err = postgres.WithinTx(ctx, nil, func(ctx context.Context) error {
 						_, err := dao.NewPgIdeaVersionInsert().Exec(ctx, &dao.IdeaVersionInsertRequest{
-							ID:      idea.VersionID,
+							ID:      ideaVersionID,
 							IdeaID:  idea.ID,
 							OwnerID: idea.OwnerID,
 							Seed:    idea.Seed,

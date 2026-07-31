@@ -10,8 +10,6 @@ import (
 type Idea struct {
 	// ID identifies the stable Idea root.
 	ID uuid.UUID `bun:"id,pk,type:uuid"`
-	// VersionID identifies the selected immutable content version.
-	VersionID uuid.UUID `bun:"version_id,type:uuid"`
 	// OwnerID identifies the user who owns the Idea.
 	OwnerID uuid.UUID `bun:"owner_id,type:uuid"`
 	// Seed is the source premise supplied by the writer.

@@ -22,14 +22,12 @@ WITH
     FROM
       inserted_idea
     RETURNING
-      id,
       seed,
       genre,
       title
   )
 SELECT
   inserted_idea.id,
-  inserted_version.id AS version_id,
   inserted_idea.owner_id,
   inserted_version.seed,
   inserted_version.genre,
