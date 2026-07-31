@@ -3,7 +3,6 @@ package core_test
 import (
 	"encoding/json"
 	"errors"
-	"strings"
 	"testing"
 	"time"
 
@@ -17,16 +16,13 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/core"
 	coremocks "github.com/a-novel/service-narrative-engine/internal/core/mocks"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
+	"github.com/a-novel/service-narrative-engine/internal/models/schemas"
 )
 
 func TestStepValueCreate(t *testing.T) {
 	t.Parallel()
 
-	const (
-		contentDocumentLimit    = 5 * 1024 * 1024
-		contentDocumentOverhead = len(`{"payload":""}`)
-		privateSchemaValue      = "do-not-trace-schema-value"
-	)
+	const privateSchemaValue = "do-not-trace-schema-value"
 
 	errFoo := errors.New("foo")
 	partialValue := json.RawMessage(`{"title":"A partial proposal"}`)
@@ -46,24 +42,12 @@ func TestStepValueCreate(t *testing.T) {
 		CreatedAt:       createdAt,
 	}
 	validationEngineVersion := validationEngineVersionFixture()
-	documentJustBelowLimit := json.RawMessage(
-		`{"payload":"` +
-			strings.Repeat("x", contentDocumentLimit-contentDocumentOverhead-1) +
-			`"}`,
-	)
-	documentAtLimit := json.RawMessage(
-		`{"payload":"` +
-			strings.Repeat("x", contentDocumentLimit-contentDocumentOverhead) +
-			`"}`,
-	)
-	documentOverLimit := json.RawMessage(
-		`{"payload":"` +
-			strings.Repeat("x", contentDocumentLimit-contentDocumentOverhead+1) +
-			`"}`,
-	)
-	require.Len(t, documentJustBelowLimit, contentDocumentLimit-1)
-	require.Len(t, documentAtLimit, contentDocumentLimit)
-	require.Len(t, documentOverLimit, contentDocumentLimit+1)
+	documentJustBelowLimit := contentDocumentOfSize(schemas.ContentDocumentMaxBytes - 1)
+	documentAtLimit := contentDocumentOfSize(schemas.ContentDocumentMaxBytes)
+	documentOverLimit := contentDocumentOfSize(schemas.ContentDocumentMaxBytes + 1)
+	require.Len(t, documentJustBelowLimit, schemas.ContentDocumentMaxBytes-1)
+	require.Len(t, documentAtLimit, schemas.ContentDocumentMaxBytes)
+	require.Len(t, documentOverLimit, schemas.ContentDocumentMaxBytes+1)
 
 	testCases := []struct {
 		name string

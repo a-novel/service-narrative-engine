@@ -76,7 +76,7 @@ func (service *ManuscriptCreate) Exec(
 		return nil, otel.ReportError(span, fmt.Errorf("access project: %w", err))
 	}
 
-	schema, err := loadContentSchema(manuscriptOutputSchema)
+	schema, err := loadManuscriptContentSchema()
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("load Manuscript schema: %w", err))
 	}

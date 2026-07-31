@@ -17,6 +17,7 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/core"
 	coremocks "github.com/a-novel/service-narrative-engine/internal/core/mocks"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
+	"github.com/a-novel/service-narrative-engine/internal/models/schemas"
 )
 
 func TestManuscriptCreate(t *testing.T) {
@@ -34,6 +35,13 @@ func TestManuscriptCreate(t *testing.T) {
 			strings.Repeat("n", 32*1024) +
 			`","marks":[]}}]}`,
 	)
+	unicodeMarkedManuscript := json.RawMessage(
+		`{"blocks":[{"type":"text","metadata":{},"data":{` +
+			`"text":"é🙂界","marks":[` +
+			`{"type":"bold","start":0,"end":3},` +
+			`{"type":"italic","start":1,"end":2}]}}]}`,
+	)
+	invalidUTF8Manuscript := json.RawMessage{0xff}
 	validRequest := &core.ManuscriptCreateRequest{
 		Actor:      core.Actor{UserID: ownerID},
 		IdeaID:     ideaID,
@@ -69,6 +77,22 @@ func TestManuscriptCreate(t *testing.T) {
 			manuscriptResp: entity,
 			callManuscript: true,
 			expect:         partialManuscript,
+		},
+		{
+			name: "Success/UnicodeAndOverlappingMarks",
+			request: &core.ManuscriptCreateRequest{
+				Actor:      validRequest.Actor,
+				IdeaID:     ideaID,
+				Manuscript: unicodeMarkedManuscript,
+			},
+			callAccess: true,
+			manuscriptResp: &dao.Manuscript{
+				ID:     manuscriptID,
+				IdeaID: ideaID,
+				Value:  unicodeMarkedManuscript,
+			},
+			callManuscript: true,
+			expect:         unicodeMarkedManuscript,
 		},
 		{
 			name: "Success/TextBlockAtLimit",
@@ -113,6 +137,16 @@ func TestManuscriptCreate(t *testing.T) {
 				Actor:      validRequest.Actor,
 				IdeaID:     ideaID,
 				Manuscript: json.RawMessage(`{`),
+			},
+			callAccess: true,
+			expectErr:  core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/InvalidUTF8",
+			request: &core.ManuscriptCreateRequest{
+				Actor:      validRequest.Actor,
+				IdeaID:     ideaID,
+				Manuscript: invalidUTF8Manuscript,
 			},
 			callAccess: true,
 			expectErr:  core.ErrInvalidRequest,
@@ -164,6 +198,48 @@ func TestManuscriptCreate(t *testing.T) {
 			expectErr:  core.ErrInvalidRequest,
 		},
 		{
+			name: "Error/EmptyMarkRange",
+			request: &core.ManuscriptCreateRequest{
+				Actor:  validRequest.Actor,
+				IdeaID: ideaID,
+				Manuscript: json.RawMessage(
+					`{"blocks":[{"type":"text","metadata":{},"data":{` +
+						`"text":"word","marks":[` +
+						`{"type":"bold","start":1,"end":1}]}}]}`,
+				),
+			},
+			callAccess: true,
+			expectErr:  core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/ReversedMarkRange",
+			request: &core.ManuscriptCreateRequest{
+				Actor:  validRequest.Actor,
+				IdeaID: ideaID,
+				Manuscript: json.RawMessage(
+					`{"blocks":[{"type":"text","metadata":{},"data":{` +
+						`"text":"word","marks":[` +
+						`{"type":"bold","start":3,"end":2}]}}]}`,
+				),
+			},
+			callAccess: true,
+			expectErr:  core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/MarkPastUnicodeText",
+			request: &core.ManuscriptCreateRequest{
+				Actor:  validRequest.Actor,
+				IdeaID: ideaID,
+				Manuscript: json.RawMessage(
+					`{"blocks":[{"type":"text","metadata":{},"data":{` +
+						`"text":"é🙂界","marks":[` +
+						`{"type":"bold","start":0,"end":4}]}}]}`,
+				),
+			},
+			callAccess: true,
+			expectErr:  core.ErrInvalidRequest,
+		},
+		{
 			name: "Error/LinkMark",
 			request: &core.ManuscriptCreateRequest{
 				Actor:  validRequest.Actor,
@@ -197,7 +273,7 @@ func TestManuscriptCreate(t *testing.T) {
 				IdeaID: ideaID,
 				Manuscript: json.RawMessage(
 					`{"blocks":[{"type":"text","metadata":{},"data":{"text":"` +
-						strings.Repeat("n", 5*1024*1024) +
+						strings.Repeat("n", schemas.ContentDocumentMaxBytes) +
 						`","marks":[]}}]}`,
 				),
 			},

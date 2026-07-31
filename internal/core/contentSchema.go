@@ -6,13 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"unicode/utf8"
 
 	"github.com/google/jsonschema-go/jsonschema"
 
 	"github.com/a-novel/service-narrative-engine/internal/models/schemas"
 )
-
-const contentDocumentMaxBytes = 5 * 1024 * 1024
 
 var (
 	errContentDocumentEmpty         = errors.New("json document is empty")
@@ -29,6 +28,7 @@ type contentSchemaDefinition struct {
 	OutputSchema          json.RawMessage
 	resolvedSchema        *jsonschema.Resolved
 	resolvedPartialSchema *jsonschema.Resolved
+	validateSemantics     func(map[string]any) error
 }
 
 func loadContentSchema(outputSchema json.RawMessage) (*contentSchemaDefinition, error) {
@@ -369,17 +369,25 @@ func (definition *contentSchemaDefinition) validate(
 		return errContentDocumentSchemaInvalid
 	}
 
-	return nil
+	if definition.validateSemantics == nil {
+		return nil
+	}
+
+	return definition.validateSemantics(instance)
 }
 
 func decodeContentDocument(value json.RawMessage) (map[string]any, error) {
-	if len(value) > contentDocumentMaxBytes {
+	if len(value) > schemas.ContentDocumentMaxBytes {
 		return nil, fmt.Errorf(
 			"%w: contains %d bytes, limit is %d",
 			errContentDocumentTooLarge,
 			len(value),
-			contentDocumentMaxBytes,
+			schemas.ContentDocumentMaxBytes,
 		)
+	}
+
+	if !utf8.Valid(value) {
+		return nil, errContentDocumentInvalid
 	}
 
 	value = bytes.TrimSpace(value)

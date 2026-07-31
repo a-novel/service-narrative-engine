@@ -3,6 +3,7 @@ package core_test
 import (
 	_ "embed"
 	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
@@ -44,6 +45,15 @@ var staticManuscriptValue = json.RawMessage(
 		`"data":{"text":"The buried foghorn answers.",` +
 		`"marks":[{"type":"italic","start":4,"end":10}]}}]}`,
 )
+
+func contentDocumentOfSize(size int) json.RawMessage {
+	const (
+		prefix = "{\"payload\":\""
+		suffix = "\"}"
+	)
+
+	return json.RawMessage(prefix + strings.Repeat("x", size-len(prefix)-len(suffix)) + suffix)
+}
 
 func ideaFixture() *dao.Idea {
 	return &dao.Idea{

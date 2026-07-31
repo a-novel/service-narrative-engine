@@ -19,6 +19,7 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/core"
 	coremocks "github.com/a-novel/service-narrative-engine/internal/core/mocks"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
+	"github.com/a-novel/service-narrative-engine/internal/models/schemas"
 )
 
 type engineSelectCall struct {
@@ -113,6 +114,18 @@ func TestGenerationSubmit(t *testing.T) {
 	)
 	invalidInput := *validRequest
 	invalidInput.Input = json.RawMessage(`{"unknown":true}`)
+	overrideAtLimit := *validRequest
+	overrideAtLimit.ContextOverrides = []core.GenerationContextOverride{{
+		EngineVersionID: engineVersionID,
+		StepKey:         "document",
+		Value:           contentDocumentOfSize(schemas.ContentDocumentMaxBytes),
+	}}
+	overrideOverLimit := overrideAtLimit
+	overrideOverLimit.ContextOverrides = []core.GenerationContextOverride{{
+		EngineVersionID: engineVersionID,
+		StepKey:         "document",
+		Value:           contentDocumentOfSize(schemas.ContentDocumentMaxBytes + 1),
+	}}
 	stepSelectFailure := *validRequest
 	stepSelectFailure.ContextOverrides = nil
 	manuscriptSelectFailure := stepSelectFailure
@@ -176,6 +189,49 @@ func TestGenerationSubmit(t *testing.T) {
 				Generation: submittedGeneration(core.GenerationStatusPending, nil, target),
 				Created:    true,
 			},
+		},
+		{
+			name:           "Success/ContextOverrideAtDocumentLimit",
+			request:        &overrideAtLimit,
+			accessResponse: ideaFixture(),
+			callAccess:     true,
+			engineCalls: []engineSelectCall{
+				{id: engineVersionID, response: engineVersionFixture()},
+				{id: engineVersionID, response: validationEngineVersionFixture()},
+			},
+			stepResponse:   []*dao.StepValue{},
+			callStep:       true,
+			manuscriptErr:  dao.ErrManuscriptSelectLatestNotFound,
+			callManuscript: true,
+			genaiResponse: &servicegenai.GenerationSubmitResponse{
+				Generation: pending,
+				Created:    true,
+			},
+			callGenAI: true,
+			payload: &generationPayloadExpectation{
+				target: target,
+				input:  overrideAtLimit.Input,
+				steps: []*dao.StepValue{{
+					EngineVersionID: engineVersionID,
+					StepKey:         "document",
+					Value:           overrideAtLimit.ContextOverrides[0].Value,
+				}},
+			},
+			expect: &core.GenerationSubmitResult{
+				Generation: submittedGeneration(core.GenerationStatusPending, nil, target),
+				Created:    true,
+			},
+		},
+		{
+			name:           "Error/ContextOverrideOverDocumentLimit",
+			request:        &overrideOverLimit,
+			accessResponse: ideaFixture(),
+			callAccess:     true,
+			engineCalls: []engineSelectCall{
+				{id: engineVersionID, response: engineVersionFixture()},
+				{id: engineVersionID, response: validationEngineVersionFixture()},
+			},
+			err: core.ErrInvalidRequest,
 		},
 		{
 			name:           "Success/StaticIdeaWithoutPreIdeaGeneration",

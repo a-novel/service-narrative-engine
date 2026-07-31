@@ -65,6 +65,11 @@ func TestGenerationGet(t *testing.T) {
 	schemaDefinedValue := json.RawMessage(`{"characters":["Mara"]}`)
 	schemaDefinedEngine := validationEngineVersionFixture()
 	manuscriptTarget := core.GenerationTarget{Kind: core.GenerationTargetKindManuscript}
+	invalidManuscriptMarks := json.RawMessage(
+		`{"blocks":[{"type":"text","metadata":{},"data":{"text":"` +
+			privateGenerationOutput +
+			`","marks":[{"type":"bold","start":0,"end":999}]}}]}`,
+	)
 
 	testCases := []struct {
 		name string
@@ -159,6 +164,26 @@ func TestGenerationGet(t *testing.T) {
 				staticManuscriptValue,
 				manuscriptTarget,
 			),
+		},
+		{
+			name:      "Error/Succeeded/StaticManuscriptMarkRange",
+			request:   validRequest,
+			callGenAI: true,
+			genaiResponse: &servicegenai.GenerationGetResponse{
+				Generation: generationFixture(
+					servicegenai.GenerationStatusSucceeded,
+					responsesOutputText(
+						t,
+						generationEnvelopeForTarget(
+							t,
+							manuscriptTarget,
+							invalidManuscriptMarks,
+						),
+					),
+				),
+			},
+			expectErr:         core.ErrGenerationOutputInvalid,
+			expectErrExcludes: privateGenerationOutput,
 		},
 		{
 			name:          "Success/Failed",

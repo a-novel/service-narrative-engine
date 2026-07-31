@@ -98,7 +98,17 @@ func loadStaticGenerationTarget(
 	prompt string,
 	outputSchema []byte,
 ) (*generationTargetDefinition, error) {
-	schema, err := loadContentSchema(outputSchema)
+	var (
+		schema *contentSchemaDefinition
+		err    error
+	)
+
+	if target.Kind == GenerationTargetKindManuscript {
+		schema, err = loadManuscriptContentSchema()
+	} else {
+		schema, err = loadContentSchema(outputSchema)
+	}
+
 	if err != nil {
 		return nil, fmt.Errorf("load %s schema: %w", target.Kind, err)
 	}
