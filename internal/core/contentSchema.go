@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/google/jsonschema-go/jsonschema"
 
@@ -91,9 +92,19 @@ func buildPartialContentSchema(schemaJSON json.RawMessage) (json.RawMessage, err
 }
 
 func makeSchemaPropertiesOptional(value any) error {
-	return walkJSONSchema(value, false, func(value map[string]any) error {
-		relaxPartialOneOf(value)
+	resolver, err := newPartialSchemaReferenceResolver(value)
+	if err != nil {
+		return err
+	}
 
+	for _, location := range resolver.partializableSchemas {
+		err = relaxPartialOneOf(resolver, location)
+		if err != nil {
+			return err
+		}
+	}
+
+	return walkJSONSchema(value, false, func(value map[string]any) error {
 		delete(value, "required")
 		delete(value, "dependentRequired")
 		delete(value, "minProperties")
@@ -114,10 +125,27 @@ func makeSchemaPropertiesOptional(value any) error {
 	})
 }
 
-func relaxPartialOneOf(schema map[string]any) {
+func relaxPartialOneOf(
+	resolver partialSchemaReferenceResolver,
+	location partialSchemaLocation,
+) error {
+	schema, objectSchema := location.value.(map[string]any)
+	if !objectSchema {
+		return nil
+	}
+
 	oneOf, hasOneOf := schema["oneOf"].([]any)
-	if !hasOneOf || !partialSchemaHasPresenceConstraints(oneOf) {
-		return
+	if !hasOneOf {
+		return nil
+	}
+
+	hasPresenceConstraints, err := partialSchemaHasPresenceConstraints(resolver, location, len(oneOf))
+	if err != nil {
+		return fmt.Errorf("inspect oneOf presence constraints: %w", err)
+	}
+
+	if !hasPresenceConstraints {
+		return nil
 	}
 
 	delete(schema, "oneOf")
@@ -126,7 +154,7 @@ func relaxPartialOneOf(schema map[string]any) {
 	if !hasAnyOf {
 		schema[jsonSchemaKeywordAnyOf] = oneOf
 
-		return
+		return nil
 	}
 
 	delete(schema, jsonSchemaKeywordAnyOf)
@@ -140,24 +168,153 @@ func relaxPartialOneOf(schema map[string]any) {
 	if hasAllOf {
 		schema["allOf"] = append(allOf, constraints...)
 
-		return
+		return nil
 	}
 
 	schema["allOf"] = constraints
+
+	return nil
 }
 
-func partialSchemaHasPresenceConstraints(value any) bool {
-	found := false
+func partialSchemaHasPresenceConstraints(
+	resolver partialSchemaReferenceResolver,
+	location partialSchemaLocation,
+	branchCount int,
+) (bool, error) {
+	visitedReferences := make(map[string]struct{})
 
-	_ = walkJSONSchemaValue(value, false, func(schema map[string]any) error {
-		if partialSchemaObjectHasPresenceConstraints(schema) {
-			found = true
+	for index := range branchCount {
+		branchPointer := appendJSONSchemaPointer(location.pointer, "oneOf", strconv.Itoa(index))
+
+		branch, exists := resolver.locations[branchPointer]
+		if !exists {
+			return false, fmt.Errorf(
+				"%w: oneOf branch %q is not a schema",
+				errJSONSchemaReferenceInvalid,
+				branchPointer,
+			)
 		}
 
-		return nil
-	})
+		hasPresenceConstraints, err := partialSchemaLocationHasPresenceConstraints(
+			resolver,
+			branch,
+			visitedReferences,
+		)
+		if err != nil {
+			return false, err
+		}
 
-	return found
+		if hasPresenceConstraints {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+func partialSchemaLocationHasPresenceConstraints(
+	resolver partialSchemaReferenceResolver,
+	location partialSchemaLocation,
+	visitedReferences map[string]struct{},
+) (bool, error) {
+	schema, objectSchema := location.value.(map[string]any)
+	if !objectSchema {
+		return false, nil
+	}
+
+	if resolver.draft7 {
+		if reference, hasReference := schema["$ref"].(string); hasReference && reference != "" {
+			return partialSchemaReferenceHasPresenceConstraints(
+				resolver,
+				location,
+				"$ref",
+				reference,
+				visitedReferences,
+			)
+		}
+	}
+
+	if partialSchemaObjectHasPresenceConstraints(schema) {
+		return true, nil
+	}
+
+	for _, keyword := range jsonSchemaReferenceKeywords {
+		reference, hasReference := schema[keyword].(string)
+		if !hasReference || reference == "" {
+			continue
+		}
+
+		hasPresenceConstraints, err := partialSchemaReferenceHasPresenceConstraints(
+			resolver,
+			location,
+			keyword,
+			reference,
+			visitedReferences,
+		)
+		if err != nil {
+			return false, err
+		}
+
+		if hasPresenceConstraints {
+			return true, nil
+		}
+	}
+
+	hasPresenceConstraints := false
+
+	err := forEachPartialSchemaChildAt(
+		schema,
+		location.pointer,
+		false,
+		false,
+		func(_ any, childPointer string, _ bool) error {
+			if hasPresenceConstraints {
+				return nil
+			}
+
+			child, exists := resolver.locations[childPointer]
+			if !exists {
+				return fmt.Errorf(
+					"%w: child %q is not a schema",
+					errJSONSchemaReferenceInvalid,
+					childPointer,
+				)
+			}
+
+			var childErr error
+
+			hasPresenceConstraints, childErr = partialSchemaLocationHasPresenceConstraints(
+				resolver,
+				child,
+				visitedReferences,
+			)
+
+			return childErr
+		},
+	)
+
+	return hasPresenceConstraints, err
+}
+
+func partialSchemaReferenceHasPresenceConstraints(
+	resolver partialSchemaReferenceResolver,
+	source partialSchemaLocation,
+	keyword string,
+	reference string,
+	visitedReferences map[string]struct{},
+) (bool, error) {
+	target, err := resolver.resolve(source, reference)
+	if err != nil {
+		return false, fmt.Errorf("resolve %s: %w", keyword, err)
+	}
+
+	if _, visited := visitedReferences[target.pointer]; visited {
+		return false, nil
+	}
+
+	visitedReferences[target.pointer] = struct{}{}
+
+	return partialSchemaLocationHasPresenceConstraints(resolver, target, visitedReferences)
 }
 
 func partialSchemaObjectHasPresenceConstraints(schema map[string]any) bool {
