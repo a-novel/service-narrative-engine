@@ -56,10 +56,14 @@ func newPartialSchemaReferenceResolver(root any) (partialSchemaReferenceResolver
 		locations: make(map[string]partialSchemaLocation),
 	}
 
-	err := resolver.indexSchema(root, "", rootResource, true, true)
+	partializableSchemas := make([]partialSchemaLocation, 0)
+
+	err := resolver.indexSchema(root, "", rootResource, true, true, &partializableSchemas)
 	if err != nil {
 		return partialSchemaReferenceResolver{}, err
 	}
+
+	resolver.partializableSchemas = partializableSchemas
 
 	return resolver, nil
 }
@@ -81,6 +85,7 @@ func (resolver *partialSchemaReferenceResolver) indexSchema(
 	parentResource *partialSchemaResource,
 	root bool,
 	partializable bool,
+	partializableSchemas *[]partialSchemaLocation,
 ) error {
 	schema, objectSchema := value.(map[string]any)
 	if !objectSchema {
@@ -108,7 +113,7 @@ func (resolver *partialSchemaReferenceResolver) indexSchema(
 	resolver.locations[pointer] = location
 
 	if partializable {
-		resolver.partializableSchemas = append(resolver.partializableSchemas, location)
+		*partializableSchemas = append(*partializableSchemas, location)
 	}
 
 	if !resolver.draft7 {
@@ -139,6 +144,7 @@ func (resolver *partialSchemaReferenceResolver) indexSchema(
 				resource,
 				false,
 				partializable && !predicate,
+				partializableSchemas,
 			)
 		},
 	)
