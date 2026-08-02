@@ -28,8 +28,13 @@ var (
 	expiresAt       = settledAt.Add(30 * 24 * time.Hour)
 )
 
-//go:embed testdata/validation.engine.json
-var validationEngineDefinition []byte
+//go:embed testdata/validation.engine.yaml
+var validationEngineDefinitionYAML []byte
+
+var validationEngineDefinition = modelstest.MustJSONFromYAML(
+	"validation engine definition",
+	validationEngineDefinitionYAML,
+)
 
 var engineDefinition = json.RawMessage(modelstest.WalkingSkeletonEngineDefinition)
 

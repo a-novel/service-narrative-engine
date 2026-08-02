@@ -1,0 +1,184 @@
+steps:
+  - key: manuscript
+    promptTemplate: List the main characters.
+    outputSchema:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      type: object
+      additionalProperties: false
+      required:
+        - characters
+      properties:
+        characters:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            minLength: 1
+  - key: document
+    promptTemplate: Complete the document.
+    outputSchema:
+      type: object
+      additionalProperties: false
+      properties:
+        payload:
+          type: string
+  - key: schema-walker
+    promptTemplate: Complete the schema traversal fixture.
+    outputSchema:
+      type: object
+      additionalProperties: false
+      required:
+        - required
+        - trigger
+      dependentRequired:
+        trigger:
+          - companion
+      minProperties: 2
+      dependencies:
+        legacy:
+          - legacyCompanion
+        schemaTrigger:
+          properties:
+            secondary:
+              type: string
+      properties:
+        required:
+          type: string
+          minLength: 3
+        trigger:
+          type: string
+        companion:
+          type: string
+        legacy:
+          type: string
+        legacyCompanion:
+          type: string
+        schemaTrigger:
+          type: string
+        secondary:
+          type: string
+        forbidden:
+          type: string
+      not:
+        required:
+          - forbidden
+  - key: schema-one-of
+    promptTemplate: Complete the oneOf fixture.
+    outputSchema:
+      $id: https://schemas.a-novel.test/validation/one-of
+      $defs:
+        referencedAlpha:
+          $anchor: referencedAlpha
+          type: object
+          additionalProperties: false
+          required:
+            - alpha
+          properties:
+            alpha:
+              type: string
+        referencedBeta:
+          $anchor: referencedBeta
+          type: object
+          additionalProperties: false
+          required:
+            - beta
+          properties:
+            beta:
+              type: number
+        referencedNumber:
+          type: number
+        referencedInteger:
+          type: integer
+        cyclicObjectA:
+          type: object
+          properties:
+            child:
+              $ref: "#/$defs/cyclicObjectB"
+        cyclicObjectB:
+          type: object
+          properties:
+            child:
+              $ref: "#/$defs/cyclicObjectA"
+        unrelatedNestedResource:
+          $id: https://schemas.a-novel.test/unrelated
+          type: string
+        nestedAlphaResource:
+          $id: nested-alpha
+          $ref: "https://schemas.a-novel.test/validation/one-of#/$defs/referencedAlpha"
+        nestedBetaResource:
+          $id: nested-beta
+          $ref: "https://schemas.a-novel.test/validation/one-of#/$defs/referencedBeta"
+      type: object
+      additionalProperties: false
+      properties:
+        selection:
+          oneOf:
+            - type: object
+              additionalProperties: false
+              required:
+                - alpha
+              properties:
+                alpha:
+                  type: string
+            - type: object
+              additionalProperties: false
+              required:
+                - beta
+              properties:
+                beta:
+                  type: number
+        referencedSelection:
+          oneOf:
+            - $ref: "#/$defs/referencedAlpha"
+            - $ref: "#/$defs/referencedBeta"
+        anchoredSelection:
+          oneOf:
+            - $ref: "#referencedAlpha"
+            - $ref: "#referencedBeta"
+        nestedResourceSelection:
+          oneOf:
+            - $ref: nested-alpha
+            - $ref: nested-beta
+        referencedNumeric:
+          oneOf:
+            - $ref: "#/$defs/referencedNumber"
+            - $ref: "#/$defs/referencedInteger"
+        declaredNumeric:
+          oneOf:
+            - type: number
+              $defs:
+                unused:
+                  type: object
+                  required:
+                    - unused
+            - type: integer
+        cyclicSelection:
+          oneOf:
+            - $ref: "#/$defs/cyclicObjectA"
+            - $ref: "#/$defs/cyclicObjectB"
+        numeric:
+          oneOf:
+            - type: number
+            - type: integer
+  - key: provider-projection
+    promptTemplate: Complete the provider projection fixture.
+    outputSchema:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      type: object
+      additionalProperties: false
+      required:
+        - minLength
+        - $schema
+        - settings
+      properties:
+        minLength:
+          type: string
+          minLength: 1
+        $schema:
+          type: string
+        settings:
+          const:
+            minLength: kept
+            maxLength: kept
+            $schema: kept
+            const: kept
