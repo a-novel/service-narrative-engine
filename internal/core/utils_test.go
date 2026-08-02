@@ -3,10 +3,12 @@ package core_test
 import (
 	_ "embed"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/goccy/go-yaml"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
@@ -31,10 +33,14 @@ var (
 //go:embed testdata/validation.engine.yaml
 var validationEngineDefinitionYAML []byte
 
-var validationEngineDefinition = modelstest.MustJSONFromYAML(
-	"validation engine definition",
-	validationEngineDefinitionYAML,
-)
+var validationEngineDefinition = func() []byte {
+	jsonDefinition, err := yaml.YAMLToJSON(validationEngineDefinitionYAML)
+	if err != nil {
+		panic(fmt.Errorf("convert validation engine definition to json: %w", err))
+	}
+
+	return jsonDefinition
+}()
 
 var engineDefinition = json.RawMessage(modelstest.WalkingSkeletonEngineDefinition)
 

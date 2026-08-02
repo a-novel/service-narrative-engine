@@ -13,17 +13,11 @@ import (
 //go:embed testdata/walking-skeleton.engine.yaml
 var walkingSkeletonEngineDefinitionYAML []byte
 
-var WalkingSkeletonEngineDefinition = MustJSONFromYAML(
-	"walking-skeleton engine definition",
-	walkingSkeletonEngineDefinitionYAML,
-)
-
-// MustJSONFromYAML converts static YAML test data to JSON and panics when the fixture is invalid.
-func MustJSONFromYAML(name string, definition []byte) []byte {
-	jsonDefinition, err := yaml.YAMLToJSON(definition)
+var WalkingSkeletonEngineDefinition = func() []byte {
+	jsonDefinition, err := yaml.YAMLToJSON(walkingSkeletonEngineDefinitionYAML)
 	if err != nil {
-		panic(fmt.Errorf("convert %s to json: %w", name, err))
+		panic(fmt.Errorf("convert walking-skeleton engine definition to json: %w", err))
 	}
 
 	return jsonDefinition
-}
+}()
