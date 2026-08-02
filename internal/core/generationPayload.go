@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"slices"
 
 	"github.com/google/uuid"
 
@@ -17,11 +18,8 @@ const (
 	jsonSchemaEnumKey            = "enum"
 	jsonSchemaString             = "string"
 	jsonSchemaTypeKey            = "type"
+	jsonSchemaTypeObject         = "object"
 )
-
-// providerUnsupportedSchemaKeywords are the keywords a strict Responses schema
-// rejects outright. The local schema keeps them and validates every output.
-var providerUnsupportedSchemaKeywords = []string{"minLength", "maxLength"}
 
 type responsesRequest struct {
 	Model        string             `json:"model"`
@@ -149,10 +147,10 @@ func buildProviderOutputSchema(
 	}
 
 	schema, err := json.Marshal(map[string]any{
-		jsonSchemaTypeKey:      "object",
-		"additionalProperties": false,
-		"required":             []string{"targetKind", "engineVersionID", "stepKey", "value"},
-		"properties": map[string]any{
+		jsonSchemaTypeKey:                     jsonSchemaTypeObject,
+		jsonSchemaKeywordAdditionalProperties: false,
+		jsonSchemaKeywordRequired:             []string{"targetKind", "engineVersionID", "stepKey", "value"},
+		jsonSchemaKeywordProperties: map[string]any{
 			"targetKind": map[string]any{
 				jsonSchemaTypeKey: jsonSchemaString,
 				jsonSchemaEnumKey: []string{string(definition.Target.Kind)},
@@ -180,38 +178,125 @@ func projectProviderSchema(value any) error {
 }
 
 func projectProviderSchemaObject(object map[string]any) error {
-	delete(object, "$schema")
-
-	for _, keyword := range providerUnsupportedSchemaKeywords {
-		delete(object, keyword)
+	for keyword := range object {
+		switch keyword {
+		case "$comment",
+			"$schema",
+			"default",
+			"deprecated",
+			"examples",
+			"maxLength",
+			"minLength",
+			"readOnly",
+			"title",
+			"writeOnly":
+			delete(object, keyword)
+		}
 	}
-
-	projectProviderSchemaFreeformObject(object)
 
 	err := projectProviderSchemaConst(object)
 	if err != nil {
 		return err
 	}
 
+	err = validateProviderSchemaKeywords(object)
+	if err != nil {
+		return err
+	}
+
+	projectProviderSchemaStrictObject(object)
+
 	return nil
 }
 
-func projectProviderSchemaFreeformObject(object map[string]any) {
-	additionalProperties, isBoolean := object["additionalProperties"].(bool)
-	if object[jsonSchemaTypeKey] != "object" || !isBoolean || !additionalProperties {
+func validateProviderSchemaKeywords(object map[string]any) error {
+	unsupported := make([]string, 0)
+
+	for keyword := range object {
+		if !providerSchemaKeywordSupported(keyword) {
+			unsupported = append(unsupported, keyword)
+		}
+	}
+
+	if len(unsupported) == 0 {
+		return nil
+	}
+
+	slices.Sort(unsupported)
+
+	return fmt.Errorf(
+		"%w: JSON Schema keyword %q",
+		errProviderSchemaUnsupported,
+		unsupported[0],
+	)
+}
+
+func providerSchemaKeywordSupported(keyword string) bool {
+	switch keyword {
+	case jsonSchemaKeywordDefs,
+		"$ref",
+		jsonSchemaKeywordAdditionalProperties,
+		jsonSchemaKeywordAnyOf,
+		"description",
+		jsonSchemaEnumKey,
+		"exclusiveMaximum",
+		"exclusiveMinimum",
+		"format",
+		"items",
+		"maxItems",
+		"maximum",
+		"minItems",
+		"minimum",
+		"multipleOf",
+		"pattern",
+		jsonSchemaKeywordProperties,
+		jsonSchemaKeywordRequired,
+		jsonSchemaTypeKey:
+		return true
+	default:
+		return false
+	}
+}
+
+func projectProviderSchemaStrictObject(object map[string]any) {
+	if !schemaTypeIncludesObject(object[jsonSchemaTypeKey]) {
 		return
 	}
 
-	properties, hasProperties := object["properties"].(map[string]any)
-	if hasProperties && len(properties) != 0 {
-		return
+	properties, _ := object[jsonSchemaKeywordProperties].(map[string]any)
+	if properties == nil {
+		properties = make(map[string]any)
 	}
 
-	// Strict Responses schemas cannot generate arbitrary object keys.
-	// Canonical validation still accepts them after generation.
-	object["additionalProperties"] = false
-	object["properties"] = map[string]any{}
-	object["required"] = []string{}
+	required := make([]string, 0, len(properties))
+	for property := range properties {
+		required = append(required, property)
+	}
+
+	slices.Sort(required)
+
+	object[jsonSchemaKeywordAdditionalProperties] = false
+	object[jsonSchemaKeywordProperties] = properties
+	object[jsonSchemaKeywordRequired] = required
+}
+
+func schemaTypeIncludesObject(value any) bool {
+	if value == jsonSchemaTypeObject {
+		return true
+	}
+
+	types, typesOK := value.([]any)
+	if !typesOK {
+		return false
+	}
+
+	for _, schemaType := range types {
+		if schemaType == jsonSchemaTypeObject {
+			return true
+		}
+	}
+
+	return false
 }
 
 func projectProviderSchemaConst(object map[string]any) error {

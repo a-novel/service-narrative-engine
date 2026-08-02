@@ -1,10 +1,16 @@
 package core
 
-const jsonSchemaKeywordAnyOf = "anyOf"
+const (
+	jsonSchemaKeywordAdditionalProperties = "additionalProperties"
+	jsonSchemaKeywordAnyOf                = "anyOf"
+	jsonSchemaKeywordDefs                 = "$defs"
+	jsonSchemaKeywordProperties           = "properties"
+	jsonSchemaKeywordRequired             = "required"
+)
 
 var jsonSchemaSingleSubschemaKeywords = [...]string{
 	"additionalItems",
-	"additionalProperties",
+	jsonSchemaKeywordAdditionalProperties,
 	"contains",
 	"contentSchema",
 	"else",
@@ -28,12 +34,12 @@ var jsonSchemaSubschemaArrayKeywords = [...]string{
 }
 
 var jsonSchemaSubschemaMapKeywords = [...]string{
-	"$defs",
+	jsonSchemaKeywordDefs,
 	"definitions",
 	"dependencies",
 	"dependentSchemas",
 	"patternProperties",
-	"properties",
+	jsonSchemaKeywordProperties,
 }
 
 // walkJSONSchema visits only schema-bearing keyword values. includePredicates

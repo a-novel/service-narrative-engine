@@ -33,6 +33,7 @@ var (
 	errGenerationOutputTextMissing = errors.New("generation response contains no output text")
 	errGenerationOutputMultiple    = errors.New("generation response contains multiple JSON values")
 	errProviderSchemaConflict      = errors.New("schema const is excluded by enum")
+	errProviderSchemaUnsupported   = errors.New("provider schema is unsupported")
 )
 
 // GenerationStatus is narrative-engine's stable generation lifecycle vocabulary.

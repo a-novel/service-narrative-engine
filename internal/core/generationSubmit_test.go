@@ -107,6 +107,17 @@ func TestGenerationSubmit(t *testing.T) {
 		Input:          json.RawMessage(`{"minLength":"draft"}`),
 		IdempotencyKey: "retry-provider-projection",
 	}
+	unsupportedProviderRequest := &core.GenerationSubmitRequest{
+		Actor:  validRequest.Actor,
+		IdeaID: ideaID,
+		Target: core.GenerationTarget{
+			Kind:            core.GenerationTargetKindStep,
+			EngineVersionID: engineVersionID,
+			StepKey:         "provider-unsupported",
+		},
+		Input:          json.RawMessage(`{}`),
+		IdempotencyKey: "retry-provider-unsupported",
+	}
 	duplicateOverrides := *validRequest
 	duplicateOverrides.ContextOverrides = append(
 		append([]core.GenerationContextOverride{}, validRequest.ContextOverrides...),
@@ -325,6 +336,20 @@ func TestGenerationSubmit(t *testing.T) {
 				),
 				Created: true,
 			},
+		},
+		{
+			name:           "Error/ProviderSchemaKeywordUnsupported",
+			request:        unsupportedProviderRequest,
+			accessResponse: ideaFixture(),
+			callAccess:     true,
+			engineCalls: []engineSelectCall{
+				{id: engineVersionID, response: validationEngineVersionFixture()},
+			},
+			stepResponse:   []*dao.StepValue{},
+			callStep:       true,
+			manuscriptErr:  dao.ErrManuscriptSelectLatestNotFound,
+			callManuscript: true,
+			err:            core.ErrEngineDefinitionInvalid,
 		},
 		{
 			name:    "Error/InvalidRequest",
@@ -637,6 +662,8 @@ func assertProviderProjectionPreservesApplicationKeywords(t *testing.T, schema m
 
 	properties, propertiesOK := schema["properties"].(map[string]any)
 	require.True(t, propertiesOK)
+	require.Equal(t, false, schema["additionalProperties"])
+	require.ElementsMatch(t, []any{"$schema", "minLength", "settings"}, schema["required"])
 	require.Contains(t, properties, "minLength")
 	require.Contains(t, properties, "$schema")
 

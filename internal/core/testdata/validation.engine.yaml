@@ -168,7 +168,6 @@ steps:
       additionalProperties: false
       required:
         - minLength
-        - $schema
         - settings
       properties:
         minLength:
@@ -182,3 +181,10 @@ steps:
             maxLength: kept
             $schema: kept
             const: kept
+  - key: provider-unsupported
+    promptTemplate: Complete the provider incompatibility fixture.
+    outputSchema:
+      type: object
+      additionalProperties: false
+      allOf:
+        - type: object
