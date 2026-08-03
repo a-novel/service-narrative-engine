@@ -43,11 +43,30 @@ FROM
 WHERE
   latest_idea_versions.idea_id = ideas.id;
 
+-- The versioned schema accepts partial Ideas, while the schema being restored does not.
+UPDATE ideas
+SET
+  seed = 'unspecified'
+WHERE
+  seed = '';
+
+UPDATE ideas
+SET
+  genre = 'unspecified'
+WHERE
+  genre = '';
+
 ALTER TABLE ideas
 ALTER COLUMN seed
 SET NOT NULL,
 ALTER COLUMN genre
 SET NOT NULL;
+
+ALTER TABLE ideas
+ADD CONSTRAINT ideas_seed_check CHECK (seed <> '');
+
+ALTER TABLE ideas
+ADD CONSTRAINT ideas_genre_check CHECK (genre <> '');
 
 DROP TABLE IF EXISTS idea_versions;
 
