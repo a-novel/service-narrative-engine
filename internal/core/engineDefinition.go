@@ -21,8 +21,6 @@ type engineDefinition struct {
 }
 
 type engineStepDefinition struct {
-	contentSchemaDefinition
-
 	Key            string          `json:"key"`
 	PromptTemplate string          `json:"promptTemplate"`
 	OutputSchema   json.RawMessage `json:"outputSchema"`
@@ -46,10 +44,10 @@ func selectEngineStep(definition json.RawMessage, key string) (*engineStepDefini
 	return &match, nil
 }
 
-func (step *engineStepDefinition) loadOutputSchema() error {
+func (step engineStepDefinition) loadOutputSchema() (*contentSchemaDefinition, error) {
 	schemaDefinition, err := loadContentSchema(step.OutputSchema)
 	if err != nil {
-		return fmt.Errorf(
+		return nil, fmt.Errorf(
 			"%w: load output schema for step %q: %w",
 			ErrEngineDefinitionInvalid,
 			step.Key,
@@ -57,11 +55,5 @@ func (step *engineStepDefinition) loadOutputSchema() error {
 		)
 	}
 
-	step.contentSchemaDefinition = *schemaDefinition
-
-	return nil
-}
-
-func (step *engineStepDefinition) validatePartialValue(value json.RawMessage) error {
-	return step.validatePartial(value)
+	return schemaDefinition, nil
 }

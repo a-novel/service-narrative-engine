@@ -99,12 +99,12 @@ func (service *StepValueCreate) Exec(
 		return nil, otel.ReportError(span, err)
 	}
 
-	err = step.loadOutputSchema()
+	schema, err := step.loadOutputSchema()
 	if err != nil {
 		return nil, otel.ReportError(span, err)
 	}
 
-	err = step.validatePartialValue(request.Value)
+	err = schema.validatePartial(request.Value)
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("%w: step value: %w", ErrInvalidRequest, err))
 	}

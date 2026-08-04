@@ -77,7 +77,7 @@ func loadGenerationTarget(
 			return nil, otel.ReportError(span, selectErr)
 		}
 
-		selectErr = step.loadOutputSchema()
+		schema, selectErr := step.loadOutputSchema()
 		if selectErr != nil {
 			return nil, otel.ReportError(span, selectErr)
 		}
@@ -85,7 +85,7 @@ func loadGenerationTarget(
 		return otel.ReportSuccess(span, &generationTargetDefinition{
 			Target:                  target,
 			PromptTemplate:          step.PromptTemplate,
-			contentSchemaDefinition: step.contentSchemaDefinition,
+			contentSchemaDefinition: *schema,
 		}), nil
 	default:
 		return nil, otel.ReportError(
