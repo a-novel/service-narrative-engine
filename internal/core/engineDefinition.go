@@ -43,14 +43,23 @@ func selectEngineStep(definition json.RawMessage, key string) (*engineStepDefini
 		return nil, fmt.Errorf("%w: %q", ErrEngineStepNotFound, key)
 	}
 
-	schemaDefinition, err := loadContentSchema(match.OutputSchema)
+	return &match, nil
+}
+
+func (step *engineStepDefinition) loadOutputSchema() error {
+	schemaDefinition, err := loadContentSchema(step.OutputSchema)
 	if err != nil {
-		return nil, fmt.Errorf("%w: load output schema for step %q: %w", ErrEngineDefinitionInvalid, key, err)
+		return fmt.Errorf(
+			"%w: load output schema for step %q: %w",
+			ErrEngineDefinitionInvalid,
+			step.Key,
+			err,
+		)
 	}
 
-	match.contentSchemaDefinition = *schemaDefinition
+	step.contentSchemaDefinition = *schemaDefinition
 
-	return &match, nil
+	return nil
 }
 
 func (step *engineStepDefinition) validatePartialValue(value json.RawMessage) error {

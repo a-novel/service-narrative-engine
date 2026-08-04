@@ -77,6 +77,11 @@ func loadGenerationTarget(
 			return nil, otel.ReportError(span, selectErr)
 		}
 
+		selectErr = step.loadOutputSchema()
+		if selectErr != nil {
+			return nil, otel.ReportError(span, selectErr)
+		}
+
 		return otel.ReportSuccess(span, &generationTargetDefinition{
 			Target:                  target,
 			PromptTemplate:          step.PromptTemplate,
