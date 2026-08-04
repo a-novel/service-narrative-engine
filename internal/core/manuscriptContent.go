@@ -3,20 +3,17 @@ package core
 import (
 	"errors"
 	"unicode/utf8"
+
+	"github.com/a-novel/service-narrative-engine/internal/lib"
+	"github.com/a-novel/service-narrative-engine/internal/models/schemas"
 )
 
 var errManuscriptMarkRangeInvalid = errors.New("manuscript mark range is invalid")
 
-func loadManuscriptContentSchema() (*contentSchemaDefinition, error) {
-	definition, err := loadContentSchema(manuscriptOutputSchema)
-	if err != nil {
-		return nil, err
-	}
-
-	definition.validateSemantics = validateManuscriptContent
-
-	return definition, nil
-}
+var manuscriptContentSchema = lib.NewContentSchema(
+	schemas.Manuscript,
+	schemas.ContentDocumentMaxBytes,
+)
 
 // validateManuscriptContent enforces relationships JSON Schema cannot express. It deliberately
 // works on the decoded JSON tree so Manuscript remains an opaque document in Go.

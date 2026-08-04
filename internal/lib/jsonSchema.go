@@ -1,4 +1,4 @@
-package core
+package lib
 
 const (
 	jsonSchemaKeywordAdditionalProperties = "additionalProperties"
@@ -42,10 +42,10 @@ var jsonSchemaSubschemaMapKeywords = [...]string{
 	jsonSchemaKeywordProperties,
 }
 
-// walkJSONSchema visits only schema-bearing keyword values. includePredicates
+// WalkJSONSchema visits only schema-bearing keyword values. includePredicates
 // controls traversal into schemas whose required fields define a condition or
 // prohibition rather than content presence.
-func walkJSONSchema(
+func WalkJSONSchema(
 	value any,
 	includePredicates bool,
 	visit func(map[string]any) error,
@@ -114,10 +114,10 @@ func walkJSONSchemaValue(
 ) error {
 	switch value := value.(type) {
 	case map[string]any:
-		return walkJSONSchema(value, includePredicates, visit)
+		return WalkJSONSchema(value, includePredicates, visit)
 	case []any:
 		for _, child := range value {
-			err := walkJSONSchema(child, includePredicates, visit)
+			err := WalkJSONSchema(child, includePredicates, visit)
 			if err != nil {
 				return err
 			}

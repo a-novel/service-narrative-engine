@@ -83,30 +83,18 @@ func (service *StepValueCreate) Exec(
 		return nil, otel.ReportError(span, fmt.Errorf("access project: %w", err))
 	}
 
-	engineVersion, err := service.engineVersionDao.Exec(ctx, &dao.EngineVersionSelectRequest{
-		ID: request.EngineVersionID,
+	definition, err := loadGenerationTarget(ctx, service.engineVersionDao, GenerationTarget{
+		Kind:            GenerationTargetKindStep,
+		EngineVersionID: request.EngineVersionID,
+		StepKey:         request.StepKey,
 	})
-	if errors.Is(err, dao.ErrEngineVersionSelectNotFound) {
-		err = errors.Join(err, ErrEngineVersionNotFound)
-	}
-
-	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("select Engine Version: %w", err))
-	}
-
-	step, err := selectEngineStep(engineVersion.Definition, request.StepKey)
 	if err != nil {
 		return nil, otel.ReportError(span, err)
 	}
 
-	schema, err := step.loadOutputSchema()
+	err = definition.validatePartial(request.Value)
 	if err != nil {
-		return nil, otel.ReportError(span, err)
-	}
-
-	err = schema.validatePartial(request.Value)
-	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("%w: step value: %w", ErrInvalidRequest, err))
+		return nil, otel.ReportError(span, fmt.Errorf("step value: %w", err))
 	}
 
 	var entity *dao.StepValue

@@ -11,14 +11,20 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/a-novel/service-narrative-engine/internal/dao"
+	"github.com/a-novel/service-narrative-engine/internal/lib"
 )
 
 const (
-	generationIdempotencyVersion = 2
-	jsonSchemaEnumKey            = "enum"
-	jsonSchemaString             = "string"
-	jsonSchemaTypeKey            = "type"
-	jsonSchemaTypeObject         = "object"
+	generationIdempotencyVersion          = 2
+	jsonSchemaKeywordAdditionalProperties = "additionalProperties"
+	jsonSchemaKeywordAnyOf                = "anyOf"
+	jsonSchemaKeywordDefs                 = "$defs"
+	jsonSchemaKeywordProperties           = "properties"
+	jsonSchemaKeywordRequired             = "required"
+	jsonSchemaEnumKey                     = "enum"
+	jsonSchemaString                      = "string"
+	jsonSchemaTypeKey                     = "type"
+	jsonSchemaTypeObject                  = "object"
 )
 
 type responsesRequest struct {
@@ -124,7 +130,7 @@ func buildProviderOutputSchema(
 ) (json.RawMessage, error) {
 	var valueSchema map[string]any
 
-	err := json.Unmarshal(definition.OutputSchema, &valueSchema)
+	err := json.Unmarshal(definition.schema.JSON(), &valueSchema)
 	if err != nil {
 		return nil, fmt.Errorf("%w: decode provider output schema: %w", ErrEngineDefinitionInvalid, err)
 	}
@@ -174,7 +180,7 @@ func buildProviderOutputSchema(
 }
 
 func projectProviderSchema(value any) error {
-	return walkJSONSchema(value, true, projectProviderSchemaObject)
+	return lib.WalkJSONSchema(value, true, projectProviderSchemaObject)
 }
 
 func projectProviderSchemaObject(object map[string]any) error {

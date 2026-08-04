@@ -3,7 +3,12 @@ package core
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/a-novel/service-narrative-engine/internal/lib"
+	"github.com/a-novel/service-narrative-engine/internal/models/schemas"
 )
+
+var ideaContentSchema = lib.NewContentSchema(schemas.Idea, schemas.ContentDocumentMaxBytes)
 
 func validateIdeaContent(seed string, genre string, title string) error {
 	content := make(map[string]string)
@@ -24,14 +29,9 @@ func validateIdeaContent(seed string, genre string, title string) error {
 		return fmt.Errorf("encode Idea content: %w", err)
 	}
 
-	schema, err := loadContentSchema(ideaOutputSchema)
+	err = validatePartialContent(ideaContentSchema, value, nil)
 	if err != nil {
-		return fmt.Errorf("load Idea schema: %w", err)
-	}
-
-	err = schema.validatePartial(value)
-	if err != nil {
-		return fmt.Errorf("%w: Idea: %w", ErrInvalidRequest, err)
+		return fmt.Errorf("Idea: %w", err)
 	}
 
 	return nil

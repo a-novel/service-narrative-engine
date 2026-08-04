@@ -2,12 +2,15 @@ package core
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
 	"github.com/a-novel-kit/golib/otel"
 
 	"github.com/a-novel/service-narrative-engine/internal/dao"
+	"github.com/a-novel/service-narrative-engine/internal/lib"
+	"github.com/a-novel/service-narrative-engine/internal/models/schemas"
 )
 
 const (
@@ -18,10 +21,18 @@ const (
 )
 
 type generationTargetDefinition struct {
-	contentSchemaDefinition
+	Target            GenerationTarget
+	PromptTemplate    string
+	schema            *lib.ContentSchema
+	validateSemantics func(map[string]any) error
+}
 
-	Target         GenerationTarget
-	PromptTemplate string
+func (definition *generationTargetDefinition) validatePartial(value json.RawMessage) error {
+	return validatePartialContent(definition.schema, value, definition.validateSemantics)
+}
+
+func (definition *generationTargetDefinition) validateComplete(value json.RawMessage) error {
+	return validateCompleteContent(definition.schema, value, definition.validateSemantics)
 }
 
 func loadGenerationTarget(
@@ -39,27 +50,18 @@ func loadGenerationTarget(
 
 	switch target.Kind {
 	case GenerationTargetKindIdea:
-		definition, loadErr := loadStaticGenerationTarget(
-			target,
-			ideaGenerationPrompt,
-			ideaOutputSchema,
-		)
-		if loadErr != nil {
-			return nil, otel.ReportError(span, loadErr)
-		}
-
-		return otel.ReportSuccess(span, definition), nil
+		return otel.ReportSuccess(span, &generationTargetDefinition{
+			Target:         target,
+			PromptTemplate: ideaGenerationPrompt,
+			schema:         ideaContentSchema,
+		}), nil
 	case GenerationTargetKindManuscript:
-		definition, loadErr := loadStaticGenerationTarget(
-			target,
-			manuscriptGenerationPrompt,
-			manuscriptOutputSchema,
-		)
-		if loadErr != nil {
-			return nil, otel.ReportError(span, loadErr)
-		}
-
-		return otel.ReportSuccess(span, definition), nil
+		return otel.ReportSuccess(span, &generationTargetDefinition{
+			Target:            target,
+			PromptTemplate:    manuscriptGenerationPrompt,
+			schema:            manuscriptContentSchema,
+			validateSemantics: validateManuscriptContent,
+		}), nil
 	case GenerationTargetKindStep:
 		engineVersion, selectErr := engineVersionDao.Exec(ctx, &dao.EngineVersionSelectRequest{
 			ID: target.EngineVersionID,
@@ -72,20 +74,18 @@ func loadGenerationTarget(
 			return nil, otel.ReportError(span, fmt.Errorf("select Engine Version: %w", selectErr))
 		}
 
-		step, selectErr := selectEngineStep(engineVersion.Definition, target.StepKey)
-		if selectErr != nil {
-			return nil, otel.ReportError(span, selectErr)
-		}
-
-		schema, selectErr := step.loadOutputSchema()
+		step, selectErr := lib.SelectEngineStep(engineVersion.Definition, target.StepKey)
 		if selectErr != nil {
 			return nil, otel.ReportError(span, selectErr)
 		}
 
 		return otel.ReportSuccess(span, &generationTargetDefinition{
-			Target:                  target,
-			PromptTemplate:          step.PromptTemplate,
-			contentSchemaDefinition: *schema,
+			Target:         target,
+			PromptTemplate: step.PromptTemplate,
+			schema: lib.NewContentSchema(
+				step.OutputSchema,
+				schemas.ContentDocumentMaxBytes,
+			),
 		}), nil
 	default:
 		return nil, otel.ReportError(
@@ -93,31 +93,4 @@ func loadGenerationTarget(
 			fmt.Errorf("%w: unknown generation target %q", ErrInvalidRequest, target.Kind),
 		)
 	}
-}
-
-func loadStaticGenerationTarget(
-	target GenerationTarget,
-	prompt string,
-	outputSchema []byte,
-) (*generationTargetDefinition, error) {
-	var (
-		schema *contentSchemaDefinition
-		err    error
-	)
-
-	if target.Kind == GenerationTargetKindManuscript {
-		schema, err = loadManuscriptContentSchema()
-	} else {
-		schema, err = loadContentSchema(outputSchema)
-	}
-
-	if err != nil {
-		return nil, fmt.Errorf("load %s schema: %w", target.Kind, err)
-	}
-
-	return &generationTargetDefinition{
-		Target:                  target,
-		PromptTemplate:          prompt,
-		contentSchemaDefinition: *schema,
-	}, nil
 }

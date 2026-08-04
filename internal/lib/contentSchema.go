@@ -1,4 +1,4 @@
-package core
+package lib
 
 import (
 	"bytes"
@@ -6,52 +6,60 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"sync"
 	"unicode/utf8"
 
 	"github.com/google/jsonschema-go/jsonschema"
-
-	"github.com/a-novel/service-narrative-engine/internal/models/schemas"
 )
 
 var (
+	// ErrContentSchemaInvalid reports a schema that cannot be prepared for validation.
+	ErrContentSchemaInvalid = errors.New("invalid content schema")
+
 	errContentDocumentEmpty         = errors.New("json document is empty")
 	errContentDocumentInvalid       = errors.New("json document is invalid")
 	errContentDocumentNotObject     = errors.New("json value must be an object")
 	errContentDocumentSchemaInvalid = errors.New("json document does not match its schema")
 	errContentDocumentTooLarge      = errors.New("json document exceeds the size limit")
-
-	ideaOutputSchema       = schemas.Idea
-	manuscriptOutputSchema = schemas.Manuscript
 )
 
-type contentSchemaDefinition struct {
-	OutputSchema          json.RawMessage
-	resolvedSchema        *jsonschema.Resolved
-	resolvedPartialSchema *jsonschema.Resolved
-	validateSemantics     func(map[string]any) error
+// ContentSchema validates complete or partial object documents against one JSON Schema.
+// Each form is prepared once, on its first use.
+type ContentSchema struct {
+	outputSchema    json.RawMessage
+	maxBytes        int
+	resolveComplete func() (*jsonschema.Resolved, error)
+	resolvePartial  func() (*jsonschema.Resolved, error)
 }
 
-func loadContentSchema(outputSchema json.RawMessage) (*contentSchemaDefinition, error) {
-	resolvedSchema, err := resolveContentSchema(outputSchema)
-	if err != nil {
-		return nil, err
-	}
+// NewContentSchema creates a lazy validator. A non-positive maxBytes disables
+// the document-size limit.
+func NewContentSchema(outputSchema json.RawMessage, maxBytes int) *ContentSchema {
+	outputSchema = bytes.Clone(outputSchema)
 
-	partialSchema, err := buildPartialContentSchema(outputSchema)
-	if err != nil {
-		return nil, err
-	}
+	resolveComplete := sync.OnceValues(func() (*jsonschema.Resolved, error) {
+		return resolveContentSchema(outputSchema)
+	})
+	resolvePartial := sync.OnceValues(func() (*jsonschema.Resolved, error) {
+		partialSchema, err := buildPartialContentSchema(outputSchema)
+		if err != nil {
+			return nil, err
+		}
 
-	resolvedPartialSchema, err := resolveContentSchema(partialSchema)
-	if err != nil {
-		return nil, err
-	}
+		return resolveContentSchema(partialSchema)
+	})
 
-	return &contentSchemaDefinition{
-		OutputSchema:          outputSchema,
-		resolvedSchema:        resolvedSchema,
-		resolvedPartialSchema: resolvedPartialSchema,
-	}, nil
+	return &ContentSchema{
+		outputSchema:    outputSchema,
+		maxBytes:        maxBytes,
+		resolveComplete: resolveComplete,
+		resolvePartial:  resolvePartial,
+	}
+}
+
+// JSON returns an independent copy of the source schema.
+func (schema *ContentSchema) JSON() json.RawMessage {
+	return bytes.Clone(schema.outputSchema)
 }
 
 func resolveContentSchema(schemaJSON json.RawMessage) (*jsonschema.Resolved, error) {
@@ -62,6 +70,8 @@ func resolveContentSchema(schemaJSON json.RawMessage) (*jsonschema.Resolved, err
 		return nil, fmt.Errorf("decode JSON Schema: %w", err)
 	}
 
+	// Unmarshal only decodes keywords. Resolve validates the schema, follows
+	// references, and prepares the immutable validation state.
 	resolved, err := schema.Resolve(nil)
 	if err != nil {
 		return nil, fmt.Errorf("resolve JSON Schema: %w", err)
@@ -104,7 +114,7 @@ func makeSchemaPropertiesOptional(value any) error {
 		}
 	}
 
-	return walkJSONSchema(value, false, func(value map[string]any) error {
+	return WalkJSONSchema(value, false, func(value map[string]any) error {
 		delete(value, "required")
 		delete(value, "dependentRequired")
 		delete(value, "minProperties")
@@ -345,44 +355,51 @@ func partialSchemaObjectHasPresenceConstraints(schema map[string]any) bool {
 	return false
 }
 
-func (definition *contentSchemaDefinition) validateComplete(value json.RawMessage) error {
-	return definition.validate(value, definition.resolvedSchema)
+// ValidateComplete validates a complete content object and returns its decoded tree.
+func (schema *ContentSchema) ValidateComplete(value json.RawMessage) (map[string]any, error) {
+	resolved, err := schema.resolveComplete()
+	if err != nil {
+		return nil, fmt.Errorf("%w: prepare complete form: %w", ErrContentSchemaInvalid, err)
+	}
+
+	return schema.validate(value, resolved)
 }
 
-func (definition *contentSchemaDefinition) validatePartial(value json.RawMessage) error {
-	return definition.validate(value, definition.resolvedPartialSchema)
+// ValidatePartial validates a content object after making presence constraints optional.
+func (schema *ContentSchema) ValidatePartial(value json.RawMessage) (map[string]any, error) {
+	resolved, err := schema.resolvePartial()
+	if err != nil {
+		return nil, fmt.Errorf("%w: prepare partial form: %w", ErrContentSchemaInvalid, err)
+	}
+
+	return schema.validate(value, resolved)
 }
 
-func (definition *contentSchemaDefinition) validate(
+func (schema *ContentSchema) validate(
 	value json.RawMessage,
-	schema *jsonschema.Resolved,
-) error {
-	instance, err := decodeContentDocument(value)
+	resolved *jsonschema.Resolved,
+) (map[string]any, error) {
+	instance, err := decodeContentDocument(value, schema.maxBytes)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	err = schema.Validate(instance)
+	err = resolved.Validate(instance)
 	if err != nil {
-		// jsonschema-go includes rejected instance values in its errors. Keep
-		// project content out of returned errors and trace exception messages.
-		return errContentDocumentSchemaInvalid
+		// jsonschema-go includes rejected values in errors; expose an opaque error.
+		return nil, errContentDocumentSchemaInvalid
 	}
 
-	if definition.validateSemantics == nil {
-		return nil
-	}
-
-	return definition.validateSemantics(instance)
+	return instance, nil
 }
 
-func decodeContentDocument(value json.RawMessage) (map[string]any, error) {
-	if len(value) > schemas.ContentDocumentMaxBytes {
+func decodeContentDocument(value json.RawMessage, maxBytes int) (map[string]any, error) {
+	if maxBytes > 0 && len(value) > maxBytes {
 		return nil, fmt.Errorf(
 			"%w: contains %d bytes, limit is %d",
 			errContentDocumentTooLarge,
 			len(value),
-			schemas.ContentDocumentMaxBytes,
+			maxBytes,
 		)
 	}
 

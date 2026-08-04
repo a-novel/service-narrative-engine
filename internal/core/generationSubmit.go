@@ -118,7 +118,7 @@ func (service *GenerationSubmit) Exec(
 
 	err = definition.validatePartial(request.Input)
 	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("%w: target input: %w", ErrInvalidRequest, err))
+		return nil, otel.ReportError(span, fmt.Errorf("target input: %w", err))
 	}
 
 	overrides, excludedStepKeys, err := service.loadContextOverrides(
@@ -282,12 +282,7 @@ func (service *GenerationSubmit) loadContextOverrides(
 		if err != nil {
 			return nil, nil, otel.ReportError(
 				span,
-				fmt.Errorf(
-					"%w: context override %d: %w",
-					ErrInvalidRequest,
-					index,
-					err,
-				),
+				fmt.Errorf("context override %d: %w", index, err),
 			)
 		}
 

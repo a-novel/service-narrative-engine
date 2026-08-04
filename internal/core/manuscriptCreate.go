@@ -76,14 +76,13 @@ func (service *ManuscriptCreate) Exec(
 		return nil, otel.ReportError(span, fmt.Errorf("access project: %w", err))
 	}
 
-	schema, err := loadManuscriptContentSchema()
+	err = validatePartialContent(
+		manuscriptContentSchema,
+		request.Manuscript,
+		validateManuscriptContent,
+	)
 	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("load Manuscript schema: %w", err))
-	}
-
-	err = schema.validatePartial(request.Manuscript)
-	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("%w: Manuscript: %w", ErrInvalidRequest, err))
+		return nil, otel.ReportError(span, fmt.Errorf("manuscript: %w", err))
 	}
 
 	var entity *dao.Manuscript
