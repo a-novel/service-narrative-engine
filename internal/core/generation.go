@@ -101,6 +101,6 @@ type Generation struct {
 
 // GenerationSubmitResult reports whether submission created work or replayed it.
 type GenerationSubmitResult struct {
-	Generation *Generation
-	Created    bool
+	Generation *Generation `json:"generation"`
+	Created    bool        `json:"created"`
 }
