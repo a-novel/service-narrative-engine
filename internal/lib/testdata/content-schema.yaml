@@ -27,12 +27,12 @@ $defs:
     type: object
     properties:
       child:
-        $ref: '#/$defs/cycleB'
+        $ref: "#/$defs/cycleB"
   cycleB:
     type: object
     properties:
       child:
-        $ref: '#/$defs/cycleA'
+        $ref: "#/$defs/cycleA"
   nestedAlpha:
     $id: nested-alpha
     $ref: https://schemas.a-novel.test/lib/content#alpha
@@ -85,24 +85,24 @@ properties:
             type: number
   referencedSelection:
     oneOf:
-      - $ref: '#/$defs/alpha'
-      - $ref: '#/$defs/beta'
+      - $ref: "#/$defs/alpha"
+      - $ref: "#/$defs/beta"
   anchoredSelection:
     oneOf:
-      - $ref: '#alpha'
-      - $ref: '#beta'
+      - $ref: "#alpha"
+      - $ref: "#beta"
   nestedResourceSelection:
     oneOf:
       - $ref: nested-alpha
       - $ref: nested-beta
   numericSelection:
     oneOf:
-      - $ref: '#/$defs/number'
-      - $ref: '#/$defs/integer'
+      - $ref: "#/$defs/number"
+      - $ref: "#/$defs/integer"
   cyclicSelection:
     oneOf:
-      - $ref: '#/$defs/cycleA'
-      - $ref: '#/$defs/cycleB'
+      - $ref: "#/$defs/cycleA"
+      - $ref: "#/$defs/cycleB"
   trigger:
     type: string
   companion:
