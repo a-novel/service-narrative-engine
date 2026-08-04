@@ -20,21 +20,67 @@ const (
 		"with all project context while preserving explicit input."
 )
 
+// generationTargetDefinition is the trusted prompt and content contract
+// selected for one Narrative generation target.
 type generationTargetDefinition struct {
-	Target            GenerationTarget
-	PromptTemplate    string
+	contentDefinition
+
+	Target         GenerationTarget
+	PromptTemplate string
+}
+
+// contentDefinition binds a JSON Schema to the semantic checks shared by saved
+// content and generated proposals.
+type contentDefinition struct {
 	schema            *lib.ContentSchema
 	validateSemantics func(map[string]any) error
 }
 
-func (definition *generationTargetDefinition) validatePartial(value json.RawMessage) error {
-	return validatePartialContent(definition.schema, value, definition.validateSemantics)
+// validatePartial classifies malformed definitions separately from invalid
+// caller content before running semantic checks on the decoded document.
+func (definition contentDefinition) validatePartial(value json.RawMessage) error {
+	instance, err := definition.schema.ValidatePartial(value)
+	if err != nil {
+		if errors.Is(err, lib.ErrContentSchemaInvalid) {
+			return errors.Join(ErrEngineDefinitionInvalid, err)
+		}
+
+		return errors.Join(ErrInvalidRequest, err)
+	}
+
+	if definition.validateSemantics == nil {
+		return nil
+	}
+
+	err = definition.validateSemantics(instance)
+	if err != nil {
+		return errors.Join(ErrInvalidRequest, err)
+	}
+
+	return nil
 }
 
-func (definition *generationTargetDefinition) validateComplete(value json.RawMessage) error {
-	return validateCompleteContent(definition.schema, value, definition.validateSemantics)
+// validateComplete preserves definition failures for service diagnostics and
+// leaves proposal failures for the generation boundary to classify.
+func (definition contentDefinition) validateComplete(value json.RawMessage) error {
+	instance, err := definition.schema.ValidateComplete(value)
+	if errors.Is(err, lib.ErrContentSchemaInvalid) {
+		return errors.Join(ErrEngineDefinitionInvalid, err)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	if definition.validateSemantics == nil {
+		return nil
+	}
+
+	return definition.validateSemantics(instance)
 }
 
+// loadGenerationTarget resolves the trusted prompt and content contract for one
+// static target or Engine-defined step.
 func loadGenerationTarget(
 	ctx context.Context,
 	engineVersionDao EngineVersionSelectDao,
@@ -51,16 +97,15 @@ func loadGenerationTarget(
 	switch target.Kind {
 	case GenerationTargetKindIdea:
 		return otel.ReportSuccess(span, &generationTargetDefinition{
-			Target:         target,
-			PromptTemplate: ideaGenerationPrompt,
-			schema:         ideaContentSchema,
+			Target:            target,
+			PromptTemplate:    ideaGenerationPrompt,
+			contentDefinition: ideaContentDefinition,
 		}), nil
 	case GenerationTargetKindManuscript:
 		return otel.ReportSuccess(span, &generationTargetDefinition{
 			Target:            target,
 			PromptTemplate:    manuscriptGenerationPrompt,
-			schema:            manuscriptContentSchema,
-			validateSemantics: validateManuscriptContent,
+			contentDefinition: manuscriptContentDefinition,
 		}), nil
 	case GenerationTargetKindStep:
 		engineVersion, selectErr := engineVersionDao.Exec(ctx, &dao.EngineVersionSelectRequest{
@@ -82,10 +127,12 @@ func loadGenerationTarget(
 		return otel.ReportSuccess(span, &generationTargetDefinition{
 			Target:         target,
 			PromptTemplate: step.PromptTemplate,
-			schema: lib.NewContentSchema(
-				step.OutputSchema,
-				schemas.ContentDocumentMaxBytes,
-			),
+			contentDefinition: contentDefinition{
+				schema: lib.NewContentSchema(
+					step.OutputSchema,
+					schemas.ContentDocumentMaxBytes,
+				),
+			},
 		}), nil
 	default:
 		return nil, otel.ReportError(

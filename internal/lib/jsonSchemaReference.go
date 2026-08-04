@@ -41,6 +41,8 @@ type partialSchemaReferenceResolver struct {
 	partializableSchemas []partialSchemaLocation
 }
 
+// newPartialSchemaReferenceResolver indexes every local schema resource,
+// anchor, and JSON Pointer needed while deriving the partial form.
 func newPartialSchemaReferenceResolver(root any) (partialSchemaReferenceResolver, error) {
 	rootResource := &partialSchemaResource{
 		uri:     &url.URL{},
@@ -68,6 +70,8 @@ func newPartialSchemaReferenceResolver(root any) (partialSchemaReferenceResolver
 	return resolver, nil
 }
 
+// jsonSchemaUsesDraft7 selects the legacy $ref sibling and fragment-$id rules
+// needed to mirror the validator's reference semantics.
 func jsonSchemaUsesDraft7(root any) bool {
 	schema, ok := root.(map[string]any)
 	if !ok {
@@ -79,6 +83,9 @@ func jsonSchemaUsesDraft7(root any) bool {
 	return version == jsonSchemaDraft7 || version == jsonSchemaDraft7TLS
 }
 
+// indexSchema records one schema location, establishes any nested resource,
+// and recursively indexes only the child values defined as schemas by the
+// active JSON Schema vocabulary.
 func (resolver *partialSchemaReferenceResolver) indexSchema(
 	value any,
 	pointer string,
@@ -150,6 +157,9 @@ func (resolver *partialSchemaReferenceResolver) indexSchema(
 	)
 }
 
+// indexSchemaResource applies $id scoping and returns the resource that owns
+// the current location. Remote references are indexed only when their target
+// is embedded in the same document.
 func (resolver *partialSchemaReferenceResolver) indexSchemaResource(
 	schema map[string]any,
 	pointer string,
@@ -211,6 +221,8 @@ func (resolver *partialSchemaReferenceResolver) indexSchemaResource(
 	return resource, nil
 }
 
+// addAnchor binds one resource-local anchor to a schema location and rejects
+// ambiguous duplicate definitions.
 func (resolver *partialSchemaReferenceResolver) addAnchor(
 	resource *partialSchemaResource,
 	pointer string,
@@ -229,6 +241,9 @@ func (resolver *partialSchemaReferenceResolver) addAnchor(
 	return nil
 }
 
+// resolve follows a reference using the source resource's base URI and accepts
+// only targets indexed from the root document; validation never performs
+// network access.
 func (resolver *partialSchemaReferenceResolver) resolve(
 	source partialSchemaLocation,
 	reference string,
@@ -361,6 +376,8 @@ func forEachPartialSchemaChildAt(
 	return nil
 }
 
+// visitPartialSchemaValueAt normalizes boolean, object, and tuple schemas for
+// callers that track locations by JSON Pointer.
 func visitPartialSchemaValueAt(
 	value any,
 	pointer string,
@@ -387,6 +404,8 @@ func visitPartialSchemaValueAt(
 	return nil
 }
 
+// appendJSONSchemaPointer adds escaped path segments to an existing RFC 6901
+// JSON Pointer.
 func appendJSONSchemaPointer(pointer string, segments ...string) string {
 	var builder strings.Builder
 
@@ -400,6 +419,7 @@ func appendJSONSchemaPointer(pointer string, segments ...string) string {
 	return builder.String()
 }
 
+// escapeJSONSchemaPointerSegment applies RFC 6901 escaping to one path segment.
 func escapeJSONSchemaPointerSegment(segment string) string {
 	segment = strings.ReplaceAll(segment, "~", "~0")
 

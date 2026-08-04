@@ -107,6 +107,8 @@ func WalkJSONSchema(
 	return nil
 }
 
+// walkJSONSchemaValue descends through either a single schema or a
+// tuple-encoded schema list while ignoring application data.
 func walkJSONSchemaValue(
 	value any,
 	includePredicates bool,

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 
@@ -23,10 +22,14 @@ type EngineVersionSelectDao interface {
 	Exec(ctx context.Context, request *dao.EngineVersionSelectRequest) (*dao.EngineVersion, error)
 }
 
+// generationOutputContext reuses the submit-time contract when a submission
+// response is mapped before its target can be read from retained output.
 type generationOutputContext struct {
 	definition *generationTargetDefinition
 }
 
+// generationOutputEnvelope pins generated content to the target identity that
+// selects its complete local validator.
 type generationOutputEnvelope struct {
 	TargetKind      GenerationTargetKind `json:"targetKind"      validate:"required,oneof=idea step manuscript"`
 	EngineVersionID string               `json:"engineVersionID" validate:"omitempty,uuid"`
@@ -34,6 +37,8 @@ type generationOutputEnvelope struct {
 	Value           json.RawMessage      `json:"value"           validate:"required"`
 }
 
+// generationServiceResponse gives validator cross-field checks a local view of
+// the owner-scoped service-genai envelope.
 type generationServiceResponse struct {
 	ID              string `validate:"required,uuid"`
 	ExpectedID      string `validate:"omitempty,uuid,eqfield=ID"`
@@ -55,6 +60,8 @@ var generationStatuses = map[servicegenai.GenerationStatus]GenerationStatus{
 	servicegenai.GenerationStatusCancelled: GenerationStatusCancelled,
 }
 
+// mapGeneration validates the service-genai envelope before exposing stable
+// Narrative lifecycle state or schema-validated output.
 func mapGeneration(
 	ctx context.Context,
 	engineVersionDao EngineVersionSelectDao,
@@ -107,24 +114,36 @@ func mapGeneration(
 		return nil, otel.ReportError(span, err)
 	}
 
-	createdAt, err := parseRequiredGenerationTime("created_at", response.CreatedAt)
+	createdAt, err := lib.ParseRequiredRFC3339("created_at", response.CreatedAt)
 	if err != nil {
-		return nil, otel.ReportError(span, err)
+		return nil, otel.ReportError(
+			span,
+			fmt.Errorf("%w: %w", ErrGenerationResponseInvalid, err),
+		)
 	}
 
-	updatedAt, err := parseRequiredGenerationTime("updated_at", response.UpdatedAt)
+	updatedAt, err := lib.ParseRequiredRFC3339("updated_at", response.UpdatedAt)
 	if err != nil {
-		return nil, otel.ReportError(span, err)
+		return nil, otel.ReportError(
+			span,
+			fmt.Errorf("%w: %w", ErrGenerationResponseInvalid, err),
+		)
 	}
 
-	settledAt, err := parseOptionalGenerationTime("settled_at", response.SettledAt)
+	settledAt, err := lib.ParseOptionalRFC3339("settled_at", response.SettledAt)
 	if err != nil {
-		return nil, otel.ReportError(span, err)
+		return nil, otel.ReportError(
+			span,
+			fmt.Errorf("%w: %w", ErrGenerationResponseInvalid, err),
+		)
 	}
 
-	expiresAt, err := parseOptionalGenerationTime("expires_at", response.ExpiresAt)
+	expiresAt, err := lib.ParseOptionalRFC3339("expires_at", response.ExpiresAt)
 	if err != nil {
-		return nil, otel.ReportError(span, err)
+		return nil, otel.ReportError(
+			span,
+			fmt.Errorf("%w: %w", ErrGenerationResponseInvalid, err),
+		)
 	}
 
 	generation := &Generation{
@@ -170,6 +189,8 @@ func mapGeneration(
 	return otel.ReportSuccess(span, generation), nil
 }
 
+// mapGenerationStatus keeps service-genai values behind Narrative Engine's
+// stable lifecycle vocabulary.
 func mapGenerationStatus(status servicegenai.GenerationStatus) (GenerationStatus, error) {
 	mapped, known := generationStatuses[status]
 	if !known {
@@ -179,32 +200,8 @@ func mapGenerationStatus(status servicegenai.GenerationStatus) (GenerationStatus
 	return mapped, nil
 }
 
-func parseRequiredGenerationTime(name string, value string) (time.Time, error) {
-	if value == "" {
-		return time.Time{}, fmt.Errorf("%w: %s is empty", ErrGenerationResponseInvalid, name)
-	}
-
-	parsed, err := time.Parse(time.RFC3339Nano, value)
-	if err != nil {
-		return time.Time{}, fmt.Errorf("%w: parse %s: %w", ErrGenerationResponseInvalid, name, err)
-	}
-
-	return parsed, nil
-}
-
-func parseOptionalGenerationTime(name string, value string) (*time.Time, error) {
-	if value == "" {
-		return nil, nil
-	}
-
-	parsed, err := parseRequiredGenerationTime(name, value)
-	if err != nil {
-		return nil, err
-	}
-
-	return &parsed, nil
-}
-
+// resolveGenerationProposal extracts the provider envelope, resolves its
+// target contract, and validates the complete proposal before returning it.
 func resolveGenerationProposal(
 	ctx context.Context,
 	engineVersionDao EngineVersionSelectDao,
@@ -289,6 +286,8 @@ func resolveGenerationProposal(
 	return envelope.Value, target, nil
 }
 
+// generationTargetFromEnvelope converts validated wire strings into the
+// target identity used by local schema selection.
 func generationTargetFromEnvelope(envelope *generationOutputEnvelope) (GenerationTarget, error) {
 	target := GenerationTarget{
 		Kind:    envelope.TargetKind,

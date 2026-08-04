@@ -10,13 +10,13 @@ import (
 
 var errManuscriptMarkRangeInvalid = errors.New("manuscript mark range is invalid")
 
-var manuscriptContentSchema = lib.NewContentSchema(
-	schemas.Manuscript,
-	schemas.ContentDocumentMaxBytes,
-)
+var manuscriptContentDefinition = contentDefinition{
+	schema:            lib.NewContentSchema(schemas.Manuscript, schemas.ContentDocumentMaxBytes),
+	validateSemantics: validateManuscriptContent,
+}
 
-// validateManuscriptContent enforces relationships JSON Schema cannot express. It deliberately
-// works on the decoded JSON tree so Manuscript remains an opaque document in Go.
+// validateManuscriptContent checks mark ranges against their text after JSON
+// Schema validation has established every inspected value's shape.
 func validateManuscriptContent(instance map[string]any) error {
 	blocks, hasBlocks := instance["blocks"].([]any)
 	if !hasBlocks {
@@ -49,27 +49,18 @@ func validateManuscriptContent(instance map[string]any) error {
 				continue
 			}
 
-			start, hasStart := manuscriptJSONInteger(mark["start"])
+			start, hasStart := mark["start"].(float64)
 
-			end, hasEnd := manuscriptJSONInteger(mark["end"])
+			end, hasEnd := mark["end"].(float64)
 			if !hasStart || !hasEnd {
 				continue
 			}
 
-			if start < 0 || end <= start || end > textLength {
+			if start < 0 || end <= start || end > float64(textLength) {
 				return errManuscriptMarkRangeInvalid
 			}
 		}
 	}
 
 	return nil
-}
-
-func manuscriptJSONInteger(value any) (int, bool) {
-	number, ok := value.(float64)
-	if !ok {
-		return 0, false
-	}
-
-	return int(number), true
 }

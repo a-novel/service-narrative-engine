@@ -27,9 +27,6 @@ var (
 	ErrGenerationResponseInvalid = errors.New("invalid generation response")
 	ErrGenerationStatusUnknown   = errors.New("unknown generation status")
 	ErrGenerationWatchClosed     = errors.New("generation watch closed before a terminal status")
-
-	errProviderSchemaConflict    = errors.New("schema const is excluded by enum")
-	errProviderSchemaUnsupported = errors.New("provider schema is unsupported")
 )
 
 // GenerationStatus is narrative-engine's stable generation lifecycle vocabulary.

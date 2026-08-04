@@ -76,11 +76,7 @@ func (service *ManuscriptCreate) Exec(
 		return nil, otel.ReportError(span, fmt.Errorf("access project: %w", err))
 	}
 
-	err = validatePartialContent(
-		manuscriptContentSchema,
-		request.Manuscript,
-		validateManuscriptContent,
-	)
+	err = manuscriptContentDefinition.validatePartial(request.Manuscript)
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("manuscript: %w", err))
 	}

@@ -236,6 +236,9 @@ func (service *GenerationSubmit) Exec(
 	}), nil
 }
 
+// loadContextOverrides validates each client replacement against its selected
+// Engine step and returns the step keys that must be excluded from the
+// server-loaded context.
 func (service *GenerationSubmit) loadContextOverrides(
 	ctx context.Context,
 	overrides []GenerationContextOverride,

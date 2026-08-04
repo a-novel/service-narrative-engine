@@ -62,6 +62,8 @@ func (schema *ContentSchema) JSON() json.RawMessage {
 	return bytes.Clone(schema.outputSchema)
 }
 
+// resolveContentSchema validates references and compiles one immutable schema
+// form for repeated document validation.
 func resolveContentSchema(schemaJSON json.RawMessage) (*jsonschema.Resolved, error) {
 	var schema jsonschema.Schema
 
@@ -80,6 +82,8 @@ func resolveContentSchema(schemaJSON json.RawMessage) (*jsonschema.Resolved, err
 	return resolved, nil
 }
 
+// buildPartialContentSchema derives an independent schema that retains value
+// constraints while making content-presence constraints optional.
 func buildPartialContentSchema(schemaJSON json.RawMessage) (json.RawMessage, error) {
 	var schema any
 
@@ -101,6 +105,9 @@ func buildPartialContentSchema(schemaJSON json.RawMessage) (json.RawMessage, err
 	return partialSchema, nil
 }
 
+// makeSchemaPropertiesOptional relaxes presence keywords throughout a schema.
+// It first preserves oneOf value alternatives whose exclusivity would
+// otherwise be invalidated when required fields are removed.
 func makeSchemaPropertiesOptional(value any) error {
 	resolver, err := newPartialSchemaReferenceResolver(value)
 	if err != nil {
@@ -135,6 +142,9 @@ func makeSchemaPropertiesOptional(value any) error {
 	})
 }
 
+// relaxPartialOneOf changes a presence-discriminated oneOf into anyOf before
+// partialization. Scalar and otherwise value-discriminated oneOf constraints
+// remain exclusive.
 func relaxPartialOneOf(
 	resolver partialSchemaReferenceResolver,
 	location partialSchemaLocation,
@@ -186,6 +196,8 @@ func relaxPartialOneOf(
 	return nil
 }
 
+// partialSchemaHasPresenceConstraints reports whether any oneOf branch depends
+// on required properties, including constraints reached through references.
 func partialSchemaHasPresenceConstraints(
 	resolver partialSchemaReferenceResolver,
 	location partialSchemaLocation,
@@ -222,6 +234,9 @@ func partialSchemaHasPresenceConstraints(
 	return false, nil
 }
 
+// partialSchemaLocationHasPresenceConstraints walks one schema location and
+// its local references without treating predicate-only schemas as content
+// presence requirements.
 func partialSchemaLocationHasPresenceConstraints(
 	resolver partialSchemaReferenceResolver,
 	location partialSchemaLocation,
@@ -306,6 +321,8 @@ func partialSchemaLocationHasPresenceConstraints(
 	return hasPresenceConstraints, err
 }
 
+// partialSchemaReferenceHasPresenceConstraints resolves a local target once,
+// preventing cycles from recursing indefinitely.
 func partialSchemaReferenceHasPresenceConstraints(
 	resolver partialSchemaReferenceResolver,
 	source partialSchemaLocation,
@@ -327,6 +344,8 @@ func partialSchemaReferenceHasPresenceConstraints(
 	return partialSchemaLocationHasPresenceConstraints(resolver, target, visitedReferences)
 }
 
+// partialSchemaObjectHasPresenceConstraints recognizes the draft-specific
+// keywords whose only purpose is to require object members.
 func partialSchemaObjectHasPresenceConstraints(schema map[string]any) bool {
 	if required, ok := schema["required"].([]any); ok && len(required) != 0 {
 		return true
@@ -375,6 +394,8 @@ func (schema *ContentSchema) ValidatePartial(value json.RawMessage) (map[string]
 	return schema.validate(value, resolved)
 }
 
+// validate decodes the bounded object before applying a previously resolved
+// schema, keeping detailed rejected values out of returned errors.
 func (schema *ContentSchema) validate(
 	value json.RawMessage,
 	resolved *jsonschema.Resolved,
@@ -393,6 +414,8 @@ func (schema *ContentSchema) validate(
 	return instance, nil
 }
 
+// decodeContentDocument enforces byte and UTF-8 bounds and accepts exactly one
+// JSON object as content.
 func decodeContentDocument(value json.RawMessage, maxBytes int) (map[string]any, error) {
 	if maxBytes > 0 && len(value) > maxBytes {
 		return nil, fmt.Errorf(
