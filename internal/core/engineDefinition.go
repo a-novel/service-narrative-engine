@@ -4,7 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
+
+	"github.com/samber/lo"
 )
 
 var (
@@ -35,27 +36,11 @@ func selectEngineStep(definition json.RawMessage, key string) (*engineStepDefini
 		return nil, fmt.Errorf("%w: decode definition: %w", ErrEngineDefinitionInvalid, err)
 	}
 
-	var match *engineStepDefinition
-
-	for index := range engine.Steps {
-		step := &engine.Steps[index]
-		if step.Key != key {
-			continue
-		}
-
-		if match != nil {
-			return nil, fmt.Errorf("%w: duplicate step key %q", ErrEngineDefinitionInvalid, key)
-		}
-
-		match = step
-	}
-
-	if match == nil {
+	match, found := lo.Find(engine.Steps, func(step engineStepDefinition) bool {
+		return step.Key == key
+	})
+	if !found {
 		return nil, fmt.Errorf("%w: %q", ErrEngineStepNotFound, key)
-	}
-
-	if strings.TrimSpace(match.Key) == "" || strings.TrimSpace(match.PromptTemplate) == "" {
-		return nil, fmt.Errorf("%w: step %q is incomplete", ErrEngineDefinitionInvalid, key)
 	}
 
 	schemaDefinition, err := loadContentSchema(match.OutputSchema)
@@ -65,7 +50,7 @@ func selectEngineStep(definition json.RawMessage, key string) (*engineStepDefini
 
 	match.contentSchemaDefinition = *schemaDefinition
 
-	return match, nil
+	return &match, nil
 }
 
 func (step *engineStepDefinition) validatePartialValue(value json.RawMessage) error {

@@ -14,7 +14,7 @@ const (
 	// GenerationModelDefault balances quality and cost for the Stage 2 fixture.
 	GenerationModelDefault = "gpt-5.6-terra"
 	// GenerationReasoningEffortDefault is the fixture's reasoning budget.
-	GenerationReasoningEffortDefault = "low"
+	GenerationReasoningEffortDefault = "medium"
 	generationMaxAttempts            = 2
 )
 
@@ -28,12 +28,8 @@ var (
 	ErrGenerationStatusUnknown   = errors.New("unknown generation status")
 	ErrGenerationWatchClosed     = errors.New("generation watch closed before a terminal status")
 
-	errGenerationOutputEmpty       = errors.New("generation response output is empty")
-	errGenerationOutputMalformed   = errors.New("generation response output is malformed")
-	errGenerationOutputTextMissing = errors.New("generation response contains no output text")
-	errGenerationOutputMultiple    = errors.New("generation response contains multiple JSON values")
-	errProviderSchemaConflict      = errors.New("schema const is excluded by enum")
-	errProviderSchemaUnsupported   = errors.New("provider schema is unsupported")
+	errProviderSchemaConflict    = errors.New("schema const is excluded by enum")
+	errProviderSchemaUnsupported = errors.New("provider schema is unsupported")
 )
 
 // GenerationStatus is narrative-engine's stable generation lifecycle vocabulary.
@@ -47,6 +43,13 @@ const (
 	GenerationStatusAbandoned GenerationStatus = "abandoned"
 	GenerationStatusCancelled GenerationStatus = "cancelled"
 )
+
+var generationTerminalStatuses = map[GenerationStatus]struct{}{
+	GenerationStatusSucceeded: {},
+	GenerationStatusFailed:    {},
+	GenerationStatusAbandoned: {},
+	GenerationStatusCancelled: {},
+}
 
 // GenerationTargetKind identifies one of the three project content contracts.
 type GenerationTargetKind string
@@ -62,9 +65,9 @@ const (
 
 // GenerationTarget identifies the content contract a proposal must complete.
 type GenerationTarget struct {
-	Kind            GenerationTargetKind `json:"kind"`
+	Kind            GenerationTargetKind `json:"kind"            validate:"required,oneof=idea step manuscript"`
 	EngineVersionID uuid.UUID            `json:"engineVersionID"`
-	StepKey         string               `json:"stepKey"`
+	StepKey         string               `json:"stepKey"         validate:"omitempty,notblank,max=256"`
 }
 
 // GenerationContextOverride replaces one saved step in automatic project context.
@@ -76,17 +79,9 @@ type GenerationContextOverride struct {
 
 // Terminal reports whether no further generation state can follow.
 func (status GenerationStatus) Terminal() bool {
-	switch status {
-	case GenerationStatusSucceeded,
-		GenerationStatusFailed,
-		GenerationStatusAbandoned,
-		GenerationStatusCancelled:
-		return true
-	case GenerationStatusPending, GenerationStatusRunning:
-		return false
-	default:
-		return false
-	}
+	_, terminal := generationTerminalStatuses[status]
+
+	return terminal
 }
 
 // Generation is the owner-scoped lifecycle and volatile schema-validated JSON proposal.

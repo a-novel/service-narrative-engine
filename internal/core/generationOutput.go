@@ -1,13 +1,10 @@
 package core
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -17,11 +14,7 @@ import (
 	"github.com/a-novel-kit/golib/otel"
 
 	"github.com/a-novel/service-narrative-engine/internal/dao"
-)
-
-var (
-	errGenerationStaticTargetStep  = errors.New("static target identifies an Engine step")
-	errGenerationTargetKindUnknown = errors.New("unknown target kind")
+	"github.com/a-novel/service-narrative-engine/internal/lib"
 )
 
 // EngineVersionSelectDao retrieves immutable definitions used to validate
@@ -35,10 +28,31 @@ type generationOutputContext struct {
 }
 
 type generationOutputEnvelope struct {
-	TargetKind      GenerationTargetKind `json:"targetKind"`
-	EngineVersionID string               `json:"engineVersionID"`
-	StepKey         string               `json:"stepKey"`
-	Value           json.RawMessage      `json:"value"`
+	TargetKind      GenerationTargetKind `json:"targetKind"      validate:"required,oneof=idea step manuscript"`
+	EngineVersionID string               `json:"engineVersionID" validate:"omitempty,uuid"`
+	StepKey         string               `json:"stepKey"         validate:"omitempty,notblank,max=256"`
+	Value           json.RawMessage      `json:"value"           validate:"required"`
+}
+
+type generationServiceResponse struct {
+	ID              string `validate:"required,uuid"`
+	ExpectedID      string `validate:"omitempty,uuid,eqfield=ID"`
+	OwnerID         string `validate:"required,uuid"`
+	ExpectedOwnerID string `validate:"required,uuid,eqfield=OwnerID"`
+	Purpose         string `validate:"required,eq=studio.generation"`
+	CreatedAt       string `validate:"required,datetime=2006-01-02T15:04:05Z07:00"`
+	UpdatedAt       string `validate:"required,datetime=2006-01-02T15:04:05Z07:00"`
+	SettledAt       string `validate:"omitempty,datetime=2006-01-02T15:04:05Z07:00"`
+	ExpiresAt       string `validate:"omitempty,datetime=2006-01-02T15:04:05Z07:00"`
+}
+
+var generationStatuses = map[servicegenai.GenerationStatus]GenerationStatus{
+	servicegenai.GenerationStatusPending:   GenerationStatusPending,
+	servicegenai.GenerationStatusRunning:   GenerationStatusRunning,
+	servicegenai.GenerationStatusSucceeded: GenerationStatusSucceeded,
+	servicegenai.GenerationStatusFailed:    GenerationStatusFailed,
+	servicegenai.GenerationStatusAbandoned: GenerationStatusAbandoned,
+	servicegenai.GenerationStatusCancelled: GenerationStatusCancelled,
 }
 
 func mapGeneration(
@@ -59,43 +73,33 @@ func mapGeneration(
 		)
 	}
 
-	id, err := uuid.Parse(source.GetId())
+	expectedIDValue := ""
+	if expectedID != nil {
+		expectedIDValue = expectedID.String()
+	}
+
+	response := generationServiceResponse{
+		ID:              source.GetId(),
+		ExpectedID:      expectedIDValue,
+		OwnerID:         source.GetOwnerId(),
+		ExpectedOwnerID: expectedOwner.String(),
+		Purpose:         source.GetPurpose(),
+		CreatedAt:       source.GetCreatedAt(),
+		UpdatedAt:       source.GetUpdatedAt(),
+		SettledAt:       source.GetSettledAt(),
+		ExpiresAt:       source.GetExpiresAt(),
+	}
+
+	err := validate.Struct(response)
 	if err != nil {
-		return nil, otel.ReportError(
-			span,
-			fmt.Errorf("%w: parse id: %w", ErrGenerationResponseInvalid, err),
-		)
+		span.RecordError(err)
+
+		return nil, otel.ReportError(span, ErrGenerationResponseInvalid)
 	}
 
-	if expectedID != nil && id != *expectedID {
-		return nil, otel.ReportError(span, fmt.Errorf(
-			"%w: expected id %s, got %s",
-			ErrGenerationResponseInvalid,
-			expectedID,
-			id,
-		))
-	}
-
-	ownerID, err := uuid.Parse(source.GetOwnerId())
+	id, err := uuid.Parse(response.ID)
 	if err != nil {
-		return nil, otel.ReportError(
-			span,
-			fmt.Errorf("%w: parse owner id: %w", ErrGenerationResponseInvalid, err),
-		)
-	}
-
-	if ownerID != expectedOwner {
-		return nil, otel.ReportError(
-			span,
-			fmt.Errorf("%w: owner mismatch", ErrGenerationResponseInvalid),
-		)
-	}
-
-	if source.GetPurpose() != GenerationPurposeStudio {
-		return nil, otel.ReportError(
-			span,
-			fmt.Errorf("%w: purpose mismatch", ErrGenerationResponseInvalid),
-		)
+		return nil, otel.ReportError(span, ErrGenerationResponseInvalid)
 	}
 
 	status, err := mapGenerationStatus(source.GetStatus())
@@ -103,22 +107,22 @@ func mapGeneration(
 		return nil, otel.ReportError(span, err)
 	}
 
-	createdAt, err := parseRequiredGenerationTime("created_at", source.GetCreatedAt())
+	createdAt, err := parseRequiredGenerationTime("created_at", response.CreatedAt)
 	if err != nil {
 		return nil, otel.ReportError(span, err)
 	}
 
-	updatedAt, err := parseRequiredGenerationTime("updated_at", source.GetUpdatedAt())
+	updatedAt, err := parseRequiredGenerationTime("updated_at", response.UpdatedAt)
 	if err != nil {
 		return nil, otel.ReportError(span, err)
 	}
 
-	settledAt, err := parseOptionalGenerationTime("settled_at", source.GetSettledAt())
+	settledAt, err := parseOptionalGenerationTime("settled_at", response.SettledAt)
 	if err != nil {
 		return nil, otel.ReportError(span, err)
 	}
 
-	expiresAt, err := parseOptionalGenerationTime("expires_at", source.GetExpiresAt())
+	expiresAt, err := parseOptionalGenerationTime("expires_at", response.ExpiresAt)
 	if err != nil {
 		return nil, otel.ReportError(span, err)
 	}
@@ -167,22 +171,12 @@ func mapGeneration(
 }
 
 func mapGenerationStatus(status servicegenai.GenerationStatus) (GenerationStatus, error) {
-	switch status {
-	case servicegenai.GenerationStatusPending:
-		return GenerationStatusPending, nil
-	case servicegenai.GenerationStatusRunning:
-		return GenerationStatusRunning, nil
-	case servicegenai.GenerationStatusSucceeded:
-		return GenerationStatusSucceeded, nil
-	case servicegenai.GenerationStatusFailed:
-		return GenerationStatusFailed, nil
-	case servicegenai.GenerationStatusAbandoned:
-		return GenerationStatusAbandoned, nil
-	case servicegenai.GenerationStatusCancelled:
-		return GenerationStatusCancelled, nil
-	default:
+	mapped, known := generationStatuses[status]
+	if !known {
 		return "", fmt.Errorf("%w: %d", ErrGenerationStatusUnknown, status)
 	}
+
+	return mapped, nil
 }
 
 func parseRequiredGenerationTime(name string, value string) (time.Time, error) {
@@ -222,8 +216,12 @@ func resolveGenerationProposal(
 
 	var noTarget GenerationTarget
 
-	text, err := extractResponsesOutputText(output)
+	text, err := lib.ExtractResponsesOutputText(output)
 	if err != nil {
+		if errors.Is(err, lib.ErrResponsesRefused) {
+			err = ErrGenerationRefused
+		}
+
 		return nil, noTarget, otel.ReportError(
 			span,
 			fmt.Errorf("%w: %w", ErrGenerationOutputInvalid, err),
@@ -232,24 +230,18 @@ func resolveGenerationProposal(
 
 	var envelope generationOutputEnvelope
 
-	decoder := json.NewDecoder(bytes.NewReader([]byte(text)))
-	decoder.DisallowUnknownFields()
-
-	err = decoder.Decode(&envelope)
+	err = lib.DecodeJSONStrict([]byte(text), &envelope)
 	if err != nil {
+		span.RecordError(err)
+
 		return nil, noTarget, otel.ReportError(span, ErrGenerationOutputInvalid)
 	}
 
-	err = ensureJSONEOF(decoder)
+	err = validate.Struct(envelope)
 	if err != nil {
-		return nil, noTarget, otel.ReportError(span, ErrGenerationOutputInvalid)
-	}
+		span.RecordError(err)
 
-	if len(envelope.Value) == 0 {
-		return nil, noTarget, otel.ReportError(
-			span,
-			fmt.Errorf("%w: incomplete envelope", ErrGenerationOutputInvalid),
-		)
+		return nil, noTarget, otel.ReportError(span, ErrGenerationOutputInvalid)
 	}
 
 	target, err := generationTargetFromEnvelope(&envelope)
@@ -303,91 +295,19 @@ func generationTargetFromEnvelope(envelope *generationOutputEnvelope) (Generatio
 		StepKey: envelope.StepKey,
 	}
 
-	switch target.Kind {
-	case GenerationTargetKindStep:
+	if target.Kind == GenerationTargetKindStep {
 		engineVersionID, err := uuid.Parse(envelope.EngineVersionID)
 		if err != nil {
 			return GenerationTarget{}, fmt.Errorf("parse engine version id: %w", err)
 		}
 
 		target.EngineVersionID = engineVersionID
-	case GenerationTargetKindIdea, GenerationTargetKindManuscript:
-		if envelope.EngineVersionID != "" || envelope.StepKey != "" {
-			return GenerationTarget{}, errGenerationStaticTargetStep
-		}
-	default:
-		return GenerationTarget{}, fmt.Errorf("%w: %q", errGenerationTargetKindUnknown, target.Kind)
 	}
 
-	err := validateGenerationTarget(target)
+	err := validate.Struct(target)
 	if err != nil {
 		return GenerationTarget{}, err
 	}
 
 	return target, nil
-}
-
-func extractResponsesOutputText(output json.RawMessage) (string, error) {
-	if len(output) == 0 {
-		return "", errGenerationOutputEmpty
-	}
-
-	var response struct {
-		// OpenAI owns this snake_case field.
-		//nolint:tagliatelle
-		OutputText string `json:"output_text"`
-		Output     []struct {
-			Content []struct {
-				Type    string `json:"type"`
-				Text    string `json:"text"`
-				Refusal string `json:"refusal"`
-			} `json:"content"`
-		} `json:"output"`
-	}
-
-	err := json.Unmarshal(output, &response)
-	if err != nil {
-		return "", errGenerationOutputMalformed
-	}
-
-	// Scan before reading the aggregate: a response carrying both text and a
-	// refusal is a refusal, and reporting it as malformed output would name the
-	// wrong cause.
-	var text strings.Builder
-
-	for _, item := range response.Output {
-		for _, content := range item.Content {
-			switch content.Type {
-			case "output_text":
-				text.WriteString(content.Text)
-			case "refusal":
-				return "", ErrGenerationRefused
-			}
-		}
-	}
-
-	if response.OutputText != "" {
-		return response.OutputText, nil
-	}
-
-	if text.Len() == 0 {
-		return "", errGenerationOutputTextMissing
-	}
-
-	return text.String(), nil
-}
-
-func ensureJSONEOF(decoder *json.Decoder) error {
-	var trailing any
-
-	err := decoder.Decode(&trailing)
-	if errors.Is(err, io.EOF) {
-		return nil
-	}
-
-	if err != nil {
-		return err
-	}
-
-	return errGenerationOutputMultiple
 }

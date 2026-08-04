@@ -7,5 +7,5 @@ import "github.com/google/uuid"
 type Actor struct {
 	// UserID is the authenticated user. Anonymous actors are rejected before
 	// entering the service layer.
-	UserID uuid.UUID `validate:"required"`
+	UserID uuid.UUID
 }

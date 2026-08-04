@@ -4,9 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
-
-	"github.com/google/uuid"
 
 	"github.com/a-novel-kit/golib/otel"
 
@@ -35,9 +32,9 @@ func loadGenerationTarget(
 	ctx, span := otel.Tracer().Start(ctx, "core.loadGenerationTarget")
 	defer span.End()
 
-	err := validateGenerationTarget(target)
+	err := validate.Struct(target)
 	if err != nil {
-		return nil, otel.ReportError(span, err)
+		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
 	switch target.Kind {
@@ -118,27 +115,4 @@ func loadStaticGenerationTarget(
 		PromptTemplate:          prompt,
 		contentSchemaDefinition: *schema,
 	}, nil
-}
-
-func validateGenerationTarget(target GenerationTarget) error {
-	switch target.Kind {
-	case GenerationTargetKindIdea, GenerationTargetKindManuscript:
-		if target.EngineVersionID != uuid.Nil || target.StepKey != "" {
-			return fmt.Errorf(
-				"%w: %s target cannot identify an Engine step",
-				ErrInvalidRequest,
-				target.Kind,
-			)
-		}
-	case GenerationTargetKindStep:
-		if target.EngineVersionID == uuid.Nil ||
-			strings.TrimSpace(target.StepKey) == "" ||
-			len([]rune(target.StepKey)) > 256 {
-			return fmt.Errorf("%w: incomplete step target", ErrInvalidRequest)
-		}
-	default:
-		return fmt.Errorf("%w: unknown generation target %q", ErrInvalidRequest, target.Kind)
-	}
-
-	return nil
 }

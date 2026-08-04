@@ -24,7 +24,7 @@ type IdeaVersionInsertDao interface {
 
 // IdeaVersionCreateRequest carries one partial Idea save under an owned project.
 type IdeaVersionCreateRequest struct {
-	Actor  Actor     `validate:"required"`
+	Actor  Actor     `validate:"actor"`
 	IdeaID uuid.UUID `validate:"required"`
 	Seed   string
 	Genre  string

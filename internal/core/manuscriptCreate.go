@@ -25,7 +25,7 @@ type ManuscriptInsertDao interface {
 
 // ManuscriptCreateRequest carries only an opaque partial Manuscript document.
 type ManuscriptCreateRequest struct {
-	Actor      Actor           `validate:"required"`
+	Actor      Actor           `validate:"actor"`
 	IdeaID     uuid.UUID       `validate:"required"`
 	Manuscript json.RawMessage `validate:"required"`
 }

@@ -21,7 +21,7 @@ type IdeaCreateDao interface {
 
 // IdeaCreateRequest carries the authenticated owner and partial typed Idea content.
 type IdeaCreateRequest struct {
-	Actor Actor `validate:"required"`
+	Actor Actor `validate:"actor"`
 	Seed  string
 	Genre string
 	Title string

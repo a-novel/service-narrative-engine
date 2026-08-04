@@ -390,7 +390,6 @@ func TestGenerationSubmit(t *testing.T) {
 			callAccess:     true,
 			engineCalls: []engineSelectCall{
 				{id: engineVersionID, response: engineVersionFixture()},
-				{id: engineVersionID, response: engineVersionFixture()},
 			},
 			err: core.ErrInvalidRequest,
 		},

@@ -17,7 +17,7 @@ import (
 
 // GenerationGetRequest identifies one owner-scoped generation.
 type GenerationGetRequest struct {
-	Actor Actor     `validate:"required"`
+	Actor Actor     `validate:"actor"`
 	ID    uuid.UUID `validate:"required"`
 }
 

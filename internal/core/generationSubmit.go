@@ -8,6 +8,7 @@ import (
 	"sort"
 
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 	"go.opentelemetry.io/otel/attribute"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -42,7 +43,7 @@ type ManuscriptSelectLatestDao interface {
 
 // GenerationSubmitRequest carries one partial target input and optional step-context replacements.
 type GenerationSubmitRequest struct {
-	Actor            Actor     `validate:"required"`
+	Actor            Actor     `validate:"actor"`
 	IdeaID           uuid.UUID `validate:"required"`
 	Target           GenerationTarget
 	Input            json.RawMessage             `validate:"required"`
@@ -85,10 +86,6 @@ func (service *GenerationSubmit) Exec(
 	defer span.End()
 
 	err := validate.Struct(request)
-	if err == nil {
-		err = validateGenerationTarget(request.Target)
-	}
-
 	if err != nil {
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
@@ -248,22 +245,26 @@ func (service *GenerationSubmit) loadContextOverrides(
 
 	contextSteps := make([]generationContextStep, 0, len(overrides))
 	excludedStepKeys := make([]string, 0, len(overrides))
-	seen := make(map[string]struct{}, len(overrides))
+
+	duplicates := lo.FindDuplicates(lo.Map(overrides, func(
+		override GenerationContextOverride,
+		_ int,
+	) string {
+		return override.StepKey
+	}))
+	if len(duplicates) != 0 {
+		return nil, nil, otel.ReportError(
+			span,
+			fmt.Errorf(
+				"%w: duplicate context override for step %q",
+				ErrInvalidRequest,
+				duplicates[0],
+			),
+		)
+	}
 
 	for index := range overrides {
 		override := &overrides[index]
-		if _, duplicate := seen[override.StepKey]; duplicate {
-			return nil, nil, otel.ReportError(
-				span,
-				fmt.Errorf(
-					"%w: duplicate context override for step %q",
-					ErrInvalidRequest,
-					override.StepKey,
-				),
-			)
-		}
-
-		seen[override.StepKey] = struct{}{}
 
 		definition, err := loadGenerationTarget(ctx, service.engineVersionDao, GenerationTarget{
 			Kind:            GenerationTargetKindStep,

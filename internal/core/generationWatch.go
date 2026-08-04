@@ -18,7 +18,7 @@ import (
 
 // GenerationWatchRequest identifies one owner-scoped generation to await.
 type GenerationWatchRequest struct {
-	Actor Actor     `validate:"required"`
+	Actor Actor     `validate:"actor"`
 	ID    uuid.UUID `validate:"required"`
 }
 

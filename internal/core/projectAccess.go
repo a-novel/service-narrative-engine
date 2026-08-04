@@ -27,7 +27,7 @@ type ProjectAccessService interface {
 
 // ProjectAccessRequest identifies an actor and the project rooted at an Idea.
 type ProjectAccessRequest struct {
-	Actor  Actor     `validate:"required"`
+	Actor  Actor     `validate:"actor"`
 	IdeaID uuid.UUID `validate:"required"`
 }
 

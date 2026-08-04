@@ -25,7 +25,7 @@ type StepValueInsertDao interface {
 
 // StepValueCreateRequest carries only the client-composed content for one step.
 type StepValueCreateRequest struct {
-	Actor           Actor           `validate:"required"`
+	Actor           Actor           `validate:"actor"`
 	IdeaID          uuid.UUID       `validate:"required"`
 	EngineVersionID uuid.UUID       `validate:"required"`
 	StepKey         string          `validate:"required,notblank,max=256"`
