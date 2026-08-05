@@ -21,7 +21,7 @@ type IdeaCreateDao interface {
 	Exec(ctx context.Context, request *dao.IdeaInsertRequest) (*dao.Idea, error)
 }
 
-// IdeaCreateRequest carries the authenticated owner and partial typed Idea content.
+// IdeaCreateRequest carries the authenticated owner and complete typed Idea content.
 type IdeaCreateRequest struct {
 	Actor Actor `validate:"actor"`
 	Seed  string
@@ -29,7 +29,7 @@ type IdeaCreateRequest struct {
 	Title string
 }
 
-// IdeaCreate validates and persists a new Idea.
+// IdeaCreate validates and persists a new Project with its first Idea Version.
 type IdeaCreate struct {
 	dao IdeaCreateDao
 }

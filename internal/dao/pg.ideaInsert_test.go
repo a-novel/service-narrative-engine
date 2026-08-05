@@ -49,42 +49,6 @@ func TestPgIdeaInsert(t *testing.T) {
 				CreatedAt:        now,
 			},
 		},
-		{
-			name: "Success/WithoutTitle",
-			request: &dao.IdeaInsertRequest{
-				ProjectID: uuid.MustParse("00000000-0000-0000-0000-000000000302"),
-				VersionID: uuid.MustParse("00000000-0000-0000-0000-000000000312"),
-				OwnerID:   ownerID,
-				Seed:      "A city wakes with no shadows.",
-				Genre:     "speculative",
-				Now:       now,
-			},
-			expect: &dao.Idea{
-				ProjectID:        uuid.MustParse("00000000-0000-0000-0000-000000000302"),
-				VersionID:        uuid.MustParse("00000000-0000-0000-0000-000000000312"),
-				OwnerID:          ownerID,
-				Seed:             "A city wakes with no shadows.",
-				Genre:            "speculative",
-				ProjectCreatedAt: now,
-				CreatedAt:        now,
-			},
-		},
-		{
-			name: "Success/EmptyPartialIdea",
-			request: &dao.IdeaInsertRequest{
-				ProjectID: uuid.MustParse("00000000-0000-0000-0000-000000000303"),
-				VersionID: uuid.MustParse("00000000-0000-0000-0000-000000000313"),
-				OwnerID:   ownerID,
-				Now:       now,
-			},
-			expect: &dao.Idea{
-				ProjectID:        uuid.MustParse("00000000-0000-0000-0000-000000000303"),
-				VersionID:        uuid.MustParse("00000000-0000-0000-0000-000000000313"),
-				OwnerID:          ownerID,
-				ProjectCreatedAt: now,
-				CreatedAt:        now,
-			},
-		},
 	}
 
 	operation := dao.NewPgIdeaInsert()

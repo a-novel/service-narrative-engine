@@ -15,9 +15,9 @@ type contentDefinition struct {
 	validateSemantics func(map[string]any) error
 }
 
-// validatePartial keeps service-owned schema failures distinct from invalid caller content.
-func (definition contentDefinition) validatePartial(value json.RawMessage) error {
-	instance, err := definition.schema.ValidatePartial(value)
+// validate keeps service-owned schema failures distinct from invalid caller content.
+func (definition contentDefinition) validate(value json.RawMessage) error {
+	instance, err := definition.schema.Validate(value)
 	if errors.Is(err, lib.ErrContentSchemaInvalid) {
 		return errors.Join(errStaticContentDefinitionInvalid, err)
 	}

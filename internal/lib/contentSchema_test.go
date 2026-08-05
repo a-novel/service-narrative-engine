@@ -13,10 +13,7 @@ import (
 //go:embed testdata/content-schema.yaml
 var contentSchemaYAML []byte
 
-//go:embed testdata/content-schema-draft7.yaml
-var contentSchemaDraft7YAML []byte
-
-func TestContentSchemaValidateComplete(t *testing.T) {
+func TestContentSchemaValidate(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
@@ -36,6 +33,11 @@ func TestContentSchemaValidateComplete(t *testing.T) {
 			expectErr: true,
 		},
 		{
+			name:      "Error/NestedRequired",
+			value:     json.RawMessage(`{"title":"The Answering Light","details":{}}`),
+			expectErr: true,
+		},
+		{
 			name:      "Error/WrongType",
 			value:     json.RawMessage(`{"title":42,"details":{"summary":"A reply."}}`),
 			expectErr: true,
@@ -48,7 +50,7 @@ func TestContentSchemaValidateComplete(t *testing.T) {
 
 			schema := lib.NewContentSchema(yamlToJSON(t, contentSchemaYAML), 1_024)
 
-			instance, err := schema.ValidateComplete(testCase.value)
+			instance, err := schema.Validate(testCase.value)
 
 			if testCase.expectErr {
 				require.Error(t, err)
@@ -59,96 +61,6 @@ func TestContentSchemaValidateComplete(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestContentSchemaValidatePartial(t *testing.T) {
-	t.Parallel()
-
-	testCases := []struct {
-		name string
-
-		value json.RawMessage
-
-		expectErr bool
-	}{
-		{
-			name:  "Success/Empty",
-			value: json.RawMessage(`{}`),
-		},
-		{
-			name:  "Success/NestedRequiredOmitted",
-			value: json.RawMessage(`{"details":{}}`),
-		},
-		{
-			name:  "Success/OneOfPresenceRelaxed",
-			value: json.RawMessage(`{"selection":{}}`),
-		},
-		{
-			name:  "Success/ReferencedPresenceRelaxed",
-			value: json.RawMessage(`{"referencedSelection":{}}`),
-		},
-		{
-			name:  "Success/AnchoredPresenceRelaxed",
-			value: json.RawMessage(`{"anchoredSelection":{}}`),
-		},
-		{
-			name:  "Success/NestedResourcePresenceRelaxed",
-			value: json.RawMessage(`{"nestedResourceSelection":{}}`),
-		},
-		{
-			name:  "Success/LegacyDependencyRelaxed",
-			value: json.RawMessage(`{"legacy":"present"}`),
-		},
-		{
-			name:      "Error/WrongShape",
-			value:     json.RawMessage(`{"details":"unknown"}`),
-			expectErr: true,
-		},
-		{
-			name:      "Error/ScalarOneOfPreserved",
-			value:     json.RawMessage(`{"numericSelection":1}`),
-			expectErr: true,
-		},
-		{
-			name:      "Error/CyclicPresencePreserved",
-			value:     json.RawMessage(`{"cyclicSelection":{}}`),
-			expectErr: true,
-		},
-		{
-			name:      "Error/PredicatePreserved",
-			value:     json.RawMessage(`{"forbidden":"present"}`),
-			expectErr: true,
-		},
-	}
-
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-
-			schema := lib.NewContentSchema(yamlToJSON(t, contentSchemaYAML), 1_024)
-
-			instance, err := schema.ValidatePartial(testCase.value)
-
-			if testCase.expectErr {
-				require.Error(t, err)
-				require.Nil(t, instance)
-			} else {
-				require.NoError(t, err)
-				require.NotNil(t, instance)
-			}
-		})
-	}
-}
-
-func TestContentSchemaValidatePartialDraft7References(t *testing.T) {
-	t.Parallel()
-
-	schema := lib.NewContentSchema(yamlToJSON(t, contentSchemaDraft7YAML), 1_024)
-
-	instance, err := schema.ValidatePartial(json.RawMessage(`{"selection":{}}`))
-
-	require.NoError(t, err)
-	require.NotNil(t, instance)
 }
 
 func TestContentSchemaLimitsAndPreparationErrors(t *testing.T) {
@@ -191,7 +103,7 @@ func TestContentSchemaLimitsAndPreparationErrors(t *testing.T) {
 
 			schema := lib.NewContentSchema(testCase.schema, testCase.maxBytes)
 
-			_, err := schema.ValidateComplete(testCase.value)
+			_, err := schema.Validate(testCase.value)
 
 			require.Error(t, err)
 
@@ -225,7 +137,7 @@ func TestContentSchemaRejectsInvalidDocuments(t *testing.T) {
 
 			schema := lib.NewContentSchema(json.RawMessage(`{"type":"object"}`), 0)
 
-			instance, err := schema.ValidateComplete(testCase.value)
+			instance, err := schema.Validate(testCase.value)
 
 			require.Error(t, err)
 			require.Nil(t, instance)
@@ -233,16 +145,16 @@ func TestContentSchemaRejectsInvalidDocuments(t *testing.T) {
 	}
 }
 
-func TestContentSchemaJSONIsIndependent(t *testing.T) {
+func TestContentSchemaCopiesDefinition(t *testing.T) {
 	t.Parallel()
 
 	source := json.RawMessage(`{"type":"object"}`)
-	expect := append(json.RawMessage(nil), source...)
 	schema := lib.NewContentSchema(source, 1_024)
 
 	source[0] = 'x'
-	first := schema.JSON()
-	first[0] = 'x'
 
-	require.Equal(t, expect, schema.JSON())
+	instance, err := schema.Validate(json.RawMessage(`{}`))
+
+	require.NoError(t, err)
+	require.NotNil(t, instance)
 }

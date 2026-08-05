@@ -45,12 +45,20 @@ func TestManuscriptCreate(t *testing.T) {
 	}{
 		{name: "Success/StaticContractAndFreeformMetadata", request: validRequest, callAccess: true, callDAO: true},
 		{
-			name: "Success/EmptyPartialManuscript",
+			name: "Error/MissingBlocks",
 			request: &core.ManuscriptCreateRequest{
 				Actor: core.Actor{UserID: ownerID}, ProjectID: projectID,
 				Manuscript: json.RawMessage(`{}`),
 			},
-			callAccess: true, callDAO: true,
+			callAccess: true, expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/IncompleteBlock",
+			request: &core.ManuscriptCreateRequest{
+				Actor: core.Actor{UserID: ownerID}, ProjectID: projectID,
+				Manuscript: json.RawMessage(`{"blocks":[{}]}`),
+			},
+			callAccess: true, expectErr: core.ErrInvalidRequest,
 		},
 		{
 			name: "Success/UnicodeAndExactByteLimit",
@@ -77,7 +85,10 @@ func TestManuscriptCreate(t *testing.T) {
 			name: "Error/UnknownStaticField",
 			request: &core.ManuscriptCreateRequest{
 				Actor: core.Actor{UserID: ownerID}, ProjectID: projectID,
-				Manuscript: json.RawMessage(`{"unexpected":true}`),
+				Manuscript: json.RawMessage(
+					`{"blocks":[{"type":"text","metadata":{},` +
+						`"data":{"text":"Valid.","marks":[]}}],"unexpected":true}`,
+				),
 			},
 			callAccess: true, expectErr: core.ErrInvalidRequest,
 		},

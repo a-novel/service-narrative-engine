@@ -17,12 +17,12 @@ import (
 
 var errIdeaVersionInsertMissing = errors.New("idea version insert returned no entity")
 
-// IdeaVersionInsertDao persists typed content under an existing Idea root.
+// IdeaVersionInsertDao persists typed content under an existing Project.
 type IdeaVersionInsertDao interface {
 	Exec(ctx context.Context, request *dao.IdeaVersionInsertRequest) (*dao.IdeaVersion, error)
 }
 
-// IdeaVersionCreateRequest carries one partial Idea save under an owned project.
+// IdeaVersionCreateRequest carries one complete Idea save under an owned Project.
 type IdeaVersionCreateRequest struct {
 	Actor     Actor     `validate:"actor"`
 	ProjectID uuid.UUID `validate:"required"`
@@ -51,7 +51,7 @@ func NewIdeaVersionCreate(
 	}
 }
 
-// Exec appends partial Idea content and retains the newest versions.
+// Exec appends one complete Idea Version and retains the newest versions.
 func (service *IdeaVersionCreate) Exec(
 	ctx context.Context,
 	request *IdeaVersionCreateRequest,

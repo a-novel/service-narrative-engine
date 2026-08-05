@@ -6,12 +6,12 @@ import _ "embed"
 const ContentDocumentMaxBytes = 368_800
 
 var (
-	// Idea defines the static contract for persisted and generated Idea content.
+	// Idea defines the static contract for persisted Idea content.
 	//
 	//go:embed idea.schema.json
 	Idea []byte
 
-	// Manuscript defines the static contract for persisted and generated Manuscript content.
+	// Manuscript defines the static contract for persisted Manuscript content.
 	//
 	//go:embed manuscript.schema.json
 	Manuscript []byte

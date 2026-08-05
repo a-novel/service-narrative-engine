@@ -23,7 +23,7 @@ type ManuscriptInsertDao interface {
 	Exec(ctx context.Context, request *dao.ManuscriptInsertRequest) (*dao.Manuscript, error)
 }
 
-// ManuscriptCreateRequest carries one partial static Manuscript document.
+// ManuscriptCreateRequest carries one complete static Manuscript document.
 type ManuscriptCreateRequest struct {
 	Actor      Actor           `validate:"actor"`
 	ProjectID  uuid.UUID       `validate:"required"`
@@ -84,7 +84,7 @@ func (service *ManuscriptCreate) Exec(
 		return nil, otel.ReportError(span, fmt.Errorf("access Project: %w", err))
 	}
 
-	err = manuscriptContentDefinition.validatePartial(request.Manuscript)
+	err = manuscriptContentDefinition.validate(request.Manuscript)
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("Manuscript: %w", err))
 	}

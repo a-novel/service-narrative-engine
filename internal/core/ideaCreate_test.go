@@ -18,6 +18,13 @@ func TestIdeaCreate(t *testing.T) {
 	t.Parallel()
 
 	errDAO := errors.New("dao failure")
+	validRequest := &core.IdeaCreateRequest{
+		Actor: core.Actor{UserID: ownerID},
+		Title: "The Answering Light",
+		Genre: "speculative",
+		Seed:  "A foghorn answers from beneath the sea.",
+	}
+
 	testCases := []struct {
 		name string
 
@@ -39,9 +46,9 @@ func TestIdeaCreate(t *testing.T) {
 			callDAO: true,
 		},
 		{
-			name:    "Success/EmptyPartialIdea",
-			request: &core.IdeaCreateRequest{Actor: core.Actor{UserID: ownerID}},
-			callDAO: true,
+			name:      "Error/IncompleteIdea",
+			request:   &core.IdeaCreateRequest{Actor: core.Actor{UserID: ownerID}},
+			expectErr: core.ErrInvalidRequest,
 		},
 		{
 			name:      "Error/Anonymous",
@@ -53,6 +60,8 @@ func TestIdeaCreate(t *testing.T) {
 			request: &core.IdeaCreateRequest{
 				Actor: core.Actor{UserID: ownerID},
 				Title: strings.Repeat("t", 129),
+				Genre: "speculative",
+				Seed:  "A foghorn answers from beneath the sea.",
 			},
 			expectErr: core.ErrInvalidRequest,
 		},
@@ -60,20 +69,22 @@ func TestIdeaCreate(t *testing.T) {
 			name: "Error/BlankSeed",
 			request: &core.IdeaCreateRequest{
 				Actor: core.Actor{UserID: ownerID},
+				Title: "The Answering Light",
+				Genre: "speculative",
 				Seed:  "   ",
 			},
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
 			name:      "Error/DAO",
-			request:   &core.IdeaCreateRequest{Actor: core.Actor{UserID: ownerID}},
+			request:   validRequest,
 			callDAO:   true,
 			daoErr:    errDAO,
 			expectErr: errDAO,
 		},
 		{
 			name:      "Error/MissingEntity",
-			request:   &core.IdeaCreateRequest{Actor: core.Actor{UserID: ownerID}},
+			request:   validRequest,
 			callDAO:   true,
 			nilEntity: true,
 			expectErr: errors.New("idea insert returned no entity"),

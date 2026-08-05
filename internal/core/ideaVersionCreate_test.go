@@ -69,6 +69,8 @@ func TestIdeaVersionCreate(t *testing.T) {
 			request: &core.IdeaVersionCreateRequest{
 				Actor:     core.Actor{UserID: ownerID},
 				ProjectID: projectID,
+				Title:     "The Answering Light",
+				Genre:     "speculative",
 				Seed:      "   ",
 			},
 			callAccess: true,

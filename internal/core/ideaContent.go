@@ -12,20 +12,12 @@ var ideaContentDefinition = contentDefinition{
 	schema: lib.NewContentSchema(schemas.Idea, schemas.ContentDocumentMaxBytes),
 }
 
-// validateIdeaContent validates the non-empty fields supplied for one partial
-// Idea without inventing omitted values.
+// validateIdeaContent validates one complete Idea against its static contract.
 func validateIdeaContent(seed string, genre string, title string) error {
-	content := make(map[string]string)
-	if title != "" {
-		content["title"] = title
-	}
-
-	if genre != "" {
-		content["genre"] = genre
-	}
-
-	if seed != "" {
-		content["seed"] = seed
+	content := map[string]string{
+		"title": title,
+		"genre": genre,
+		"seed":  seed,
 	}
 
 	value, err := json.Marshal(content)
@@ -33,7 +25,7 @@ func validateIdeaContent(seed string, genre string, title string) error {
 		return fmt.Errorf("encode Idea content: %w", err)
 	}
 
-	err = ideaContentDefinition.validatePartial(value)
+	err = ideaContentDefinition.validate(value)
 	if err != nil {
 		return fmt.Errorf("Idea: %w", err)
 	}
