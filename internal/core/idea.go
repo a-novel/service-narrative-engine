@@ -1,22 +1,19 @@
 package core
 
 import (
-	"errors"
 	"time"
 
 	"github.com/google/uuid"
 )
 
-// ErrIdeaNotFound is returned when the actor cannot access the requested Idea.
-var ErrIdeaNotFound = errors.New("idea not found")
-
-// Idea is the typed entry contract from which an Engine Version generates content.
+// Idea is one immutable typed content version under a stable Project.
 type Idea struct {
-	ID        uuid.UUID  `json:"id"`
-	OwnerID   uuid.UUID  `json:"ownerID"`
-	Seed      string     `json:"seed"`
-	Genre     string     `json:"genre"`
-	Title     string     `json:"title"`
-	CreatedAt time.Time  `json:"createdAt"`
-	UpdatedAt *time.Time `json:"updatedAt"`
+	ProjectID        uuid.UUID `json:"projectID"`
+	VersionID        uuid.UUID `json:"versionID"`
+	OwnerID          uuid.UUID `json:"ownerID"`
+	Seed             string    `json:"seed"`
+	Genre            string    `json:"genre"`
+	Title            string    `json:"title"`
+	ProjectCreatedAt time.Time `json:"projectCreatedAt"`
+	CreatedAt        time.Time `json:"createdAt"`
 }

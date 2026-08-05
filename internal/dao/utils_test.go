@@ -17,7 +17,8 @@ import (
 
 var (
 	fixtureOwnerID         = uuid.MustParse("00000000-0000-0000-0000-000000000042")
-	fixtureIdeaID          = uuid.MustParse("00000000-0000-0000-0000-000000000201")
+	fixtureProjectID       = uuid.MustParse("00000000-0000-0000-0000-000000000201")
+	fixtureIdeaVersionID   = uuid.MustParse("00000000-0000-0000-0000-000000000202")
 	fixtureEngineID        = uuid.MustParse("00000000-0000-0000-0000-000000000099")
 	fixtureEngineVersionID = uuid.MustParse("00000000-0000-0000-0000-000000000100")
 	fixtureCreatedAt       = time.Date(2026, 7, 26, 0, 0, 0, 123456000, time.UTC)
@@ -48,12 +49,13 @@ func insertWalkingSkeletonFixtures(t *testing.T, ctx context.Context) {
 	require.NoError(t, err)
 
 	_, err = dao.NewPgIdeaInsert().Exec(ctx, &dao.IdeaInsertRequest{
-		ID:      fixtureIdeaID,
-		OwnerID: fixtureOwnerID,
-		Seed:    "A lighthouse keeper hears a second foghorn answer from beneath the sea.",
-		Genre:   "speculative",
-		Title:   "The Answering Light",
-		Now:     fixtureCreatedAt,
+		ProjectID: fixtureProjectID,
+		VersionID: fixtureIdeaVersionID,
+		OwnerID:   fixtureOwnerID,
+		Seed:      "A lighthouse keeper hears a second foghorn answer from beneath the sea.",
+		Genre:     "speculative",
+		Title:     "The Answering Light",
+		Now:       fixtureCreatedAt,
 	})
 	require.NoError(t, err)
 }

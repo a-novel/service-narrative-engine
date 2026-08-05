@@ -16,11 +16,13 @@ import (
 //go:embed pg.ideaInsert.sql
 var ideaInsertQuery string
 
-// IdeaInsertRequest carries a validated Idea into [PgIdeaInsert.Exec].
+// IdeaInsertRequest creates a Project and its initial validated Idea Version.
 type IdeaInsertRequest struct {
-	// ID identifies the Idea.
-	ID uuid.UUID
-	// OwnerID identifies the user who owns the Idea.
+	// ProjectID identifies the stable Project.
+	ProjectID uuid.UUID
+	// VersionID identifies the initial Idea Version.
+	VersionID uuid.UUID
+	// OwnerID identifies the user who owns the Project.
 	OwnerID uuid.UUID
 	// Seed is the source premise supplied by the writer.
 	Seed string
@@ -28,26 +30,27 @@ type IdeaInsertRequest struct {
 	Genre string
 	// Title is the writer-supplied title, or an empty string when omitted.
 	Title string
-	// Now is the logical creation time.
+	// Now is the logical creation time for both rows.
 	Now time.Time
 }
 
-// PgIdeaInsert persists a typed Idea.
+// PgIdeaInsert creates a Project with its initial Idea Version.
 type PgIdeaInsert struct{}
 
-// NewPgIdeaInsert creates an Idea insert operation.
+// NewPgIdeaInsert creates an initial Idea insert operation.
 func NewPgIdeaInsert() *PgIdeaInsert {
 	return &PgIdeaInsert{}
 }
 
-// Exec inserts an Idea and returns the stored row.
+// Exec inserts the Project and Idea Version and returns their combined view.
 func (operation *PgIdeaInsert) Exec(ctx context.Context, request *IdeaInsertRequest) (*Idea, error) {
 	ctx, span := otel.Tracer().Start(ctx, "dao.PgIdeaInsert")
 	defer span.End()
 
 	span.SetAttributes(
-		attribute.String("idea.id", request.ID.String()),
-		attribute.String("idea.owner_id", request.OwnerID.String()),
+		attribute.String("project.id", request.ProjectID.String()),
+		attribute.String("project.owner_id", request.OwnerID.String()),
+		attribute.String("idea.version_id", request.VersionID.String()),
 	)
 
 	db, err := postgres.GetContext(ctx)
@@ -59,7 +62,8 @@ func (operation *PgIdeaInsert) Exec(ctx context.Context, request *IdeaInsertRequ
 
 	err = db.NewRaw(
 		ideaInsertQuery,
-		request.ID,
+		request.ProjectID,
+		request.VersionID,
 		request.OwnerID,
 		request.Seed,
 		request.Genre,

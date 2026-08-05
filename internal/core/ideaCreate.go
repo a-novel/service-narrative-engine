@@ -14,6 +14,8 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
+var errIdeaInsertMissing = errors.New("idea insert returned no entity")
+
 // IdeaCreateDao persists Ideas created by [IdeaCreate].
 type IdeaCreateDao interface {
 	Exec(ctx context.Context, request *dao.IdeaInsertRequest) (*dao.Idea, error)
@@ -55,26 +57,35 @@ func (service *IdeaCreate) Exec(ctx context.Context, request *IdeaCreateRequest)
 	span.SetAttributes(attribute.String("idea.owner_id", request.Actor.UserID.String()))
 
 	entity, err := service.dao.Exec(ctx, &dao.IdeaInsertRequest{
-		ID:      uuid.Must(uuid.NewV7()),
-		OwnerID: request.Actor.UserID,
-		Seed:    request.Seed,
-		Genre:   request.Genre,
-		Title:   request.Title,
-		Now:     time.Now(),
+		ProjectID: uuid.Must(uuid.NewV7()),
+		VersionID: uuid.Must(uuid.NewV7()),
+		OwnerID:   request.Actor.UserID,
+		Seed:      request.Seed,
+		Genre:     request.Genre,
+		Title:     request.Title,
+		Now:       time.Now(),
 	})
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("insert idea: %w", err))
 	}
 
-	span.SetAttributes(attribute.String("idea.id", entity.ID.String()))
+	if entity == nil {
+		return nil, otel.ReportError(span, fmt.Errorf("insert idea: %w", errIdeaInsertMissing))
+	}
+
+	span.SetAttributes(
+		attribute.String("project.id", entity.ProjectID.String()),
+		attribute.String("idea.version_id", entity.VersionID.String()),
+	)
 
 	return otel.ReportSuccess(span, &Idea{
-		ID:        entity.ID,
-		OwnerID:   entity.OwnerID,
-		Seed:      entity.Seed,
-		Genre:     entity.Genre,
-		Title:     entity.Title,
-		CreatedAt: entity.CreatedAt,
-		UpdatedAt: entity.UpdatedAt,
+		ProjectID:        entity.ProjectID,
+		VersionID:        entity.VersionID,
+		OwnerID:          entity.OwnerID,
+		Seed:             entity.Seed,
+		Genre:            entity.Genre,
+		Title:            entity.Title,
+		ProjectCreatedAt: entity.ProjectCreatedAt,
+		CreatedAt:        entity.CreatedAt,
 	}), nil
 }

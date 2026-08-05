@@ -29,34 +29,6 @@ func ValidateActor(fl validator.FieldLevel) bool {
 	return ok && actor.UserID != uuid.Nil
 }
 
-// ValidateGenerationTarget enforces the fields that identify dynamic step
-// targets and excludes those fields from static Idea and Manuscript targets.
-func ValidateGenerationTarget(sl validator.StructLevel) {
-	target, ok := sl.Current().Interface().(GenerationTarget)
-	if !ok {
-		return
-	}
-
-	switch target.Kind {
-	case GenerationTargetKindStep:
-		if target.EngineVersionID == uuid.Nil {
-			sl.ReportError(target.EngineVersionID, "EngineVersionID", "engineVersionID", "required", "")
-		}
-
-		if target.StepKey == "" {
-			sl.ReportError(target.StepKey, "StepKey", "stepKey", "required", "")
-		}
-	case GenerationTargetKindIdea, GenerationTargetKindManuscript:
-		if target.EngineVersionID != uuid.Nil {
-			sl.ReportError(target.EngineVersionID, "EngineVersionID", "engineVersionID", "excluded", "")
-		}
-
-		if target.StepKey != "" {
-			sl.ReportError(target.StepKey, "StepKey", "stepKey", "excluded", "")
-		}
-	}
-}
-
 func init() {
 	err := validate.RegisterValidation("notblank", ValidateNotBlank)
 	if err != nil {
@@ -67,6 +39,4 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-
-	validate.RegisterStructValidation(ValidateGenerationTarget, GenerationTarget{})
 }

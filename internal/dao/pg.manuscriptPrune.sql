@@ -6,7 +6,7 @@ WHERE
     FROM
       manuscripts
     WHERE
-      idea_id = ?0
+      project_id = ?0
     ORDER BY
       created_at DESC,
       id DESC

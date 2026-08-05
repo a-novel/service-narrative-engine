@@ -13,39 +13,44 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-var errProjectAccessIdeaMissing = errors.New("Idea selection returned no entity")
+var (
+	// ErrProjectNotFound is returned for both absent and cross-owner Projects.
+	ErrProjectNotFound = errors.New("project not found")
 
-// IdeaSelectDao retrieves one owner-scoped Idea.
-type IdeaSelectDao interface {
-	Exec(ctx context.Context, request *dao.IdeaSelectRequest) (*dao.Idea, error)
+	errProjectAccessMissing = errors.New("project selection returned no entity")
+)
+
+// ProjectSelectDao retrieves only stable owner-scoped Project metadata.
+type ProjectSelectDao interface {
+	Exec(ctx context.Context, request *dao.ProjectSelectRequest) (*dao.Project, error)
 }
 
-// ProjectAccessService resolves an Idea only when the actor owns its project.
+// ProjectAccessService resolves a Project only when the Actor owns it.
 type ProjectAccessService interface {
-	Exec(ctx context.Context, request *ProjectAccessRequest) (*dao.Idea, error)
+	Exec(ctx context.Context, request *ProjectAccessRequest) (*dao.Project, error)
 }
 
-// ProjectAccessRequest identifies an actor and the project rooted at an Idea.
+// ProjectAccessRequest identifies an Actor and Project.
 type ProjectAccessRequest struct {
-	Actor  Actor     `validate:"actor"`
-	IdeaID uuid.UUID `validate:"required"`
+	Actor     Actor     `validate:"actor"`
+	ProjectID uuid.UUID `validate:"required"`
 }
 
-// ProjectAccess centralizes the current project ownership rule.
+// ProjectAccess centralizes the current Project ownership rule.
 type ProjectAccess struct {
-	ideaDao IdeaSelectDao
+	projectDao ProjectSelectDao
 }
 
-// NewProjectAccess creates a project access service.
-func NewProjectAccess(ideaDao IdeaSelectDao) *ProjectAccess {
-	return &ProjectAccess{ideaDao: ideaDao}
+// NewProjectAccess creates a Project access service.
+func NewProjectAccess(projectDao ProjectSelectDao) *ProjectAccess {
+	return &ProjectAccess{projectDao: projectDao}
 }
 
-// Exec returns the project Idea when the actor is its owner.
+// Exec returns the stable Project when the Actor owns it.
 func (service *ProjectAccess) Exec(
 	ctx context.Context,
 	request *ProjectAccessRequest,
-) (*dao.Idea, error) {
+) (*dao.Project, error) {
 	ctx, span := otel.Tracer().Start(ctx, "core.ProjectAccess")
 	defer span.End()
 
@@ -55,25 +60,25 @@ func (service *ProjectAccess) Exec(
 	}
 
 	span.SetAttributes(
-		attribute.String("idea.id", request.IdeaID.String()),
-		attribute.String("idea.owner_id", request.Actor.UserID.String()),
+		attribute.String("project.id", request.ProjectID.String()),
+		attribute.String("project.owner_id", request.Actor.UserID.String()),
 	)
 
-	idea, err := service.ideaDao.Exec(ctx, &dao.IdeaSelectRequest{
-		ID:      request.IdeaID,
+	project, err := service.projectDao.Exec(ctx, &dao.ProjectSelectRequest{
+		ID:      request.ProjectID,
 		OwnerID: request.Actor.UserID,
 	})
-	if errors.Is(err, dao.ErrIdeaSelectNotFound) {
-		err = errors.Join(err, ErrIdeaNotFound)
+	if errors.Is(err, dao.ErrProjectSelectNotFound) {
+		err = errors.Join(err, ErrProjectNotFound)
 	}
 
 	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("select Idea: %w", err))
+		return nil, otel.ReportError(span, fmt.Errorf("select Project: %w", err))
 	}
 
-	if idea == nil {
-		return nil, otel.ReportError(span, fmt.Errorf("select Idea: %w", errProjectAccessIdeaMissing))
+	if project == nil {
+		return nil, otel.ReportError(span, fmt.Errorf("select Project: %w", errProjectAccessMissing))
 	}
 
-	return otel.ReportSuccess(span, idea), nil
+	return otel.ReportSuccess(span, project), nil
 }

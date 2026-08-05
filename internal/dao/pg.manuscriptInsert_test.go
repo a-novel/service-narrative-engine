@@ -20,18 +20,19 @@ import (
 func TestPgManuscriptInsert(t *testing.T) {
 	t.Parallel()
 
+	otherOwnerID := uuid.MustParse("00000000-0000-0000-0000-000000000043")
 	testCases := []struct {
 		name string
 
-		versions int
+		ownerID   uuid.UUID
+		versions  int
+		expectErr error
 	}{
+		{name: "Success", ownerID: fixtureOwnerID, versions: 1},
+		{name: "Success/RepeatedSaveRetainsNewest25", ownerID: fixtureOwnerID, versions: 26},
 		{
-			name:     "Success",
-			versions: 1,
-		},
-		{
-			name:     "RepeatedSaveRetainsNewest25",
-			versions: 26,
+			name: "Error/OtherOwner", ownerID: otherOwnerID, versions: 1,
+			expectErr: dao.ErrProjectLockNotFound,
 		},
 	}
 
@@ -63,14 +64,16 @@ func TestPgManuscriptInsert(t *testing.T) {
 									"00000000-0000-0000-0000-%012d",
 									400+index,
 								)),
-								IdeaID:  fixtureIdeaID,
-								OwnerID: fixtureOwnerID,
-								Value:   value,
+								ProjectID: fixtureProjectID,
+								OwnerID:   testCase.ownerID,
+								Value:     value,
 								Now: fixtureCreatedAt.Add(
 									time.Duration(index) * time.Second,
 								),
 							})
-							require.NoError(t, err)
+							if err != nil {
+								return err
+							}
 						}
 
 						db, err := postgres.GetContext(ctx)
@@ -80,7 +83,7 @@ func TestPgManuscriptInsert(t *testing.T) {
 
 						err = db.NewSelect().
 							Model(&manuscripts).
-							Where("idea_id = ?", fixtureIdeaID).
+							Where("project_id = ?", fixtureProjectID).
 							OrderExpr("created_at DESC, id DESC").
 							Scan(ctx)
 						require.NoError(t, err)
@@ -95,7 +98,7 @@ func TestPgManuscriptInsert(t *testing.T) {
 
 						return nil
 					})
-					require.NoError(t, err)
+					require.ErrorIs(t, err, testCase.expectErr)
 				},
 			)
 		})

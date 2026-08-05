@@ -6,8 +6,8 @@ WHERE
     FROM
       step_values
     WHERE
-      idea_id = ?0
-      AND step_key = ?1
+      project_id = ?0
+      AND key = ?1
     ORDER BY
       created_at DESC,
       id DESC

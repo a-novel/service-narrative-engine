@@ -23,9 +23,9 @@ var ideaVersionPruneQuery string
 type IdeaVersionInsertRequest struct {
 	// ID identifies the content version.
 	ID uuid.UUID
-	// IdeaID identifies the stable Idea root.
-	IdeaID uuid.UUID
-	// OwnerID identifies the user who owns the Idea.
+	// ProjectID identifies the stable Project.
+	ProjectID uuid.UUID
+	// OwnerID identifies the user who owns the Project.
 	OwnerID uuid.UUID
 	// Seed is the source premise supplied by the writer.
 	Seed string
@@ -54,7 +54,7 @@ func (operation *PgIdeaVersionInsert) Exec(
 	defer span.End()
 
 	span.SetAttributes(
-		attribute.String("idea.id", request.IdeaID.String()),
+		attribute.String("project.id", request.ProjectID.String()),
 		attribute.String("idea.version_id", request.ID.String()),
 		attribute.String("idea.owner_id", request.OwnerID.String()),
 	)
@@ -69,9 +69,9 @@ func (operation *PgIdeaVersionInsert) Exec(
 		return nil, otel.ReportError(span, err)
 	}
 
-	err = lockIdea(ctx, db, request.IdeaID, request.OwnerID)
+	err = lockProject(ctx, db, request.ProjectID, request.OwnerID)
 	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("lock Idea: %w", err))
+		return nil, otel.ReportError(span, fmt.Errorf("lock Project: %w", err))
 	}
 
 	var ideaVersion IdeaVersion
@@ -79,7 +79,7 @@ func (operation *PgIdeaVersionInsert) Exec(
 	err = db.NewRaw(
 		ideaVersionInsertQuery,
 		request.ID,
-		request.IdeaID,
+		request.ProjectID,
 		request.Seed,
 		request.Genre,
 		request.Title,
@@ -89,7 +89,7 @@ func (operation *PgIdeaVersionInsert) Exec(
 		return nil, otel.ReportError(span, fmt.Errorf("execute insert query: %w", err))
 	}
 
-	_, err = db.NewRaw(ideaVersionPruneQuery, request.IdeaID, contentVersionLimit).Exec(ctx)
+	_, err = db.NewRaw(ideaVersionPruneQuery, request.ProjectID, contentVersionLimit).Exec(ctx)
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("execute prune query: %w", err))
 	}

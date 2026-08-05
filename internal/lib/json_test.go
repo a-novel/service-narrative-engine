@@ -1,7 +1,6 @@
 package lib_test
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -9,60 +8,35 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/lib"
 )
 
-func TestDecodeJSONStrict(t *testing.T) {
+func TestValidateJSON(t *testing.T) {
 	t.Parallel()
-
-	type payload struct {
-		Value string `json:"value"`
-	}
 
 	testCases := []struct {
 		name string
 
-		source []byte
+		source   []byte
+		maxBytes int
 
-		expect    payload
 		expectErr error
 	}{
-		{
-			name:   "Success",
-			source: []byte(`{"value":"accepted"}`),
-			expect: payload{Value: "accepted"},
-		},
-		{
-			name:      "Error/Malformed",
-			source:    []byte(`{`),
-			expectErr: errors.New("decode JSON"),
-		},
-		{
-			name:      "Error/UnknownField",
-			source:    []byte(`{"value":"accepted","extra":true}`),
-			expectErr: errors.New("decode JSON"),
-		},
-		{
-			name:      "Error/MultipleValues",
-			source:    []byte(`{"value":"accepted"} {}`),
-			expectErr: lib.ErrJSONMultipleValues,
-		},
+		{name: "Success/Object", source: []byte(`{"freeform":true}`), maxBytes: 17},
+		{name: "Success/Array", source: []byte(`[1,"two"]`), maxBytes: 9},
+		{name: "Success/String", source: []byte(`"freeform"`), maxBytes: 10},
+		{name: "Success/Number", source: []byte(`42`), maxBytes: 2},
+		{name: "Success/Boolean", source: []byte(`true`), maxBytes: 4},
+		{name: "Success/Null", source: []byte(`null`), maxBytes: 4},
+		{name: "Success/Unlimited", source: []byte(`{"large":"accepted"}`)},
+		{name: "Error/Empty", maxBytes: 1, expectErr: lib.ErrJSONEmpty},
+		{name: "Error/Invalid", source: []byte(`{`), maxBytes: 1, expectErr: lib.ErrJSONInvalid},
+		{name: "Error/TooLarge", source: []byte(`true`), maxBytes: 3, expectErr: lib.ErrJSONTooLarge},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			var result payload
-
-			err := lib.DecodeJSONStrict(testCase.source, &result)
-
-			if testCase.expectErr != nil && !errors.Is(testCase.expectErr, lib.ErrJSONMultipleValues) {
-				require.ErrorContains(t, err, testCase.expectErr.Error())
-			} else {
-				require.ErrorIs(t, err, testCase.expectErr)
-			}
-
-			if testCase.expectErr == nil {
-				require.Equal(t, testCase.expect, result)
-			}
+			err := lib.ValidateJSON(testCase.source, testCase.maxBytes)
+			require.ErrorIs(t, err, testCase.expectErr)
 		})
 	}
 }

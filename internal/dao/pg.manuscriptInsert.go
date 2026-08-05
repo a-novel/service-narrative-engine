@@ -22,19 +22,19 @@ var manuscriptPruneQuery string
 
 // ManuscriptInsertRequest carries a validated Manuscript into [PgManuscriptInsert.Exec].
 type ManuscriptInsertRequest struct {
-	// ID identifies the Manuscript.
+	// ID identifies the Manuscript Version.
 	ID uuid.UUID
-	// IdeaID identifies the Idea from which this project content is being saved.
-	IdeaID uuid.UUID
-	// OwnerID identifies the user who owns the Idea.
+	// ProjectID identifies the Project whose Manuscript is being saved.
+	ProjectID uuid.UUID
+	// OwnerID identifies the user who owns the Project.
 	OwnerID uuid.UUID
-	// Value is the opaque, self-contained Manuscript document.
+	// Value is the self-contained Manuscript document.
 	Value json.RawMessage
 	// Now is the logical creation time.
 	Now time.Time
 }
 
-// PgManuscriptInsert persists a self-contained Manuscript.
+// PgManuscriptInsert persists one Manuscript Version.
 type PgManuscriptInsert struct{}
 
 // NewPgManuscriptInsert creates a Manuscript insert operation.
@@ -42,7 +42,7 @@ func NewPgManuscriptInsert() *PgManuscriptInsert {
 	return &PgManuscriptInsert{}
 }
 
-// Exec inserts a Manuscript and returns the stored row.
+// Exec appends a Manuscript and retains the Project's newest versions.
 func (operation *PgManuscriptInsert) Exec(
 	ctx context.Context,
 	request *ManuscriptInsertRequest,
@@ -52,7 +52,7 @@ func (operation *PgManuscriptInsert) Exec(
 
 	span.SetAttributes(
 		attribute.String("manuscript.id", request.ID.String()),
-		attribute.String("manuscript.idea_id", request.IdeaID.String()),
+		attribute.String("manuscript.project_id", request.ProjectID.String()),
 	)
 
 	db, err := postgres.GetContext(ctx)
@@ -65,9 +65,9 @@ func (operation *PgManuscriptInsert) Exec(
 		return nil, otel.ReportError(span, err)
 	}
 
-	err = lockIdea(ctx, db, request.IdeaID, request.OwnerID)
+	err = lockProject(ctx, db, request.ProjectID, request.OwnerID)
 	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("lock Idea: %w", err))
+		return nil, otel.ReportError(span, fmt.Errorf("lock Project: %w", err))
 	}
 
 	var manuscript Manuscript
@@ -75,7 +75,7 @@ func (operation *PgManuscriptInsert) Exec(
 	err = db.NewRaw(
 		manuscriptInsertQuery,
 		request.ID,
-		request.IdeaID,
+		request.ProjectID,
 		request.Value,
 		request.Now,
 	).Scan(ctx, &manuscript)
@@ -83,7 +83,7 @@ func (operation *PgManuscriptInsert) Exec(
 		return nil, otel.ReportError(span, fmt.Errorf("execute insert query: %w", err))
 	}
 
-	_, err = db.NewRaw(manuscriptPruneQuery, request.IdeaID, contentVersionLimit).Exec(ctx)
+	_, err = db.NewRaw(manuscriptPruneQuery, request.ProjectID, contentVersionLimit).Exec(ctx)
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("execute prune query: %w", err))
 	}

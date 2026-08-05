@@ -20,15 +20,19 @@ func TestPgIdeaSelect(t *testing.T) {
 
 	createdAt := time.Date(2026, 7, 26, 1, 2, 3, 0, time.UTC)
 	updatedAt := createdAt.Add(time.Second)
-	ideaVersionID := uuid.MustParse("00000000-0000-0000-0000-000000000312")
+	projectID := uuid.MustParse("00000000-0000-0000-0000-000000000311")
+	initialVersionID := uuid.MustParse("00000000-0000-0000-0000-000000000312")
+	latestVersionID := uuid.MustParse("00000000-0000-0000-0000-000000000313")
+	ownerID := uuid.MustParse("00000000-0000-0000-0000-000000000042")
 	idea := &dao.Idea{
-		ID:        uuid.MustParse("00000000-0000-0000-0000-000000000311"),
-		OwnerID:   uuid.MustParse("00000000-0000-0000-0000-000000000042"),
-		Seed:      "The answering foghorn moves closer.",
-		Genre:     "speculative",
-		Title:     "The Nearer Light",
-		CreatedAt: createdAt,
-		UpdatedAt: &updatedAt,
+		ProjectID:        projectID,
+		VersionID:        latestVersionID,
+		OwnerID:          ownerID,
+		Seed:             "The answering foghorn moves closer.",
+		Genre:            "speculative",
+		Title:            "The Nearer Light",
+		ProjectCreatedAt: createdAt,
+		CreatedAt:        updatedAt,
 	}
 
 	testCases := []struct {
@@ -40,26 +44,26 @@ func TestPgIdeaSelect(t *testing.T) {
 		expectErr error
 	}{
 		{
-			name: "Success",
+			name: "Success/LatestVersion",
 			request: &dao.IdeaSelectRequest{
-				ID:      idea.ID,
-				OwnerID: idea.OwnerID,
+				ProjectID: projectID,
+				OwnerID:   ownerID,
 			},
 			expect: idea,
 		},
 		{
 			name: "Error/OtherOwner",
 			request: &dao.IdeaSelectRequest{
-				ID:      idea.ID,
-				OwnerID: uuid.MustParse("00000000-0000-0000-0000-000000000043"),
+				ProjectID: projectID,
+				OwnerID:   uuid.MustParse("00000000-0000-0000-0000-000000000043"),
 			},
 			expectErr: dao.ErrIdeaSelectNotFound,
 		},
 		{
 			name: "Error/Absent",
 			request: &dao.IdeaSelectRequest{
-				ID:      uuid.MustParse("00000000-0000-0000-0000-000000000399"),
-				OwnerID: idea.OwnerID,
+				ProjectID: uuid.MustParse("00000000-0000-0000-0000-000000000399"),
+				OwnerID:   ownerID,
 			},
 			expectErr: dao.ErrIdeaSelectNotFound,
 		},
@@ -79,24 +83,25 @@ func TestPgIdeaSelect(t *testing.T) {
 					t.Helper()
 
 					_, err := dao.NewPgIdeaInsert().Exec(ctx, &dao.IdeaInsertRequest{
-						ID:      idea.ID,
-						OwnerID: idea.OwnerID,
-						Seed:    "A second foghorn answers from beneath the sea.",
-						Genre:   idea.Genre,
-						Title:   "The Answering Light",
-						Now:     createdAt,
+						ProjectID: projectID,
+						VersionID: initialVersionID,
+						OwnerID:   ownerID,
+						Seed:      "A second foghorn answers from beneath the sea.",
+						Genre:     idea.Genre,
+						Title:     "The Answering Light",
+						Now:       createdAt,
 					})
 					require.NoError(t, err)
 
 					err = postgres.WithinTx(ctx, nil, func(ctx context.Context) error {
 						_, err := dao.NewPgIdeaVersionInsert().Exec(ctx, &dao.IdeaVersionInsertRequest{
-							ID:      ideaVersionID,
-							IdeaID:  idea.ID,
-							OwnerID: idea.OwnerID,
-							Seed:    idea.Seed,
-							Genre:   idea.Genre,
-							Title:   idea.Title,
-							Now:     updatedAt,
+							ID:        latestVersionID,
+							ProjectID: projectID,
+							OwnerID:   ownerID,
+							Seed:      idea.Seed,
+							Genre:     idea.Genre,
+							Title:     idea.Title,
+							Now:       updatedAt,
 						})
 
 						return err

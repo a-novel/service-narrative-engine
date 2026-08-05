@@ -125,35 +125,34 @@ func saveConcurrentContentVersion(
 	switch kind {
 	case concurrentContentIdea:
 		_, err := dao.NewPgIdeaVersionInsert().Exec(ctx, &dao.IdeaVersionInsertRequest{
-			ID:      id,
-			IdeaID:  fixtureIdeaID,
-			OwnerID: fixtureOwnerID,
-			Seed:    fmt.Sprintf("Revision %d", index),
-			Genre:   "speculative",
-			Title:   "The Answering Light",
-			Now:     now,
+			ID:        id,
+			ProjectID: fixtureProjectID,
+			OwnerID:   fixtureOwnerID,
+			Seed:      fmt.Sprintf("Revision %d", index),
+			Genre:     "speculative",
+			Title:     "The Answering Light",
+			Now:       now,
 		})
 
 		return err
 	case concurrentContentStep:
 		_, err := dao.NewPgStepValueInsert().Exec(ctx, &dao.StepValueInsertRequest{
-			ID:              id,
-			IdeaID:          fixtureIdeaID,
-			OwnerID:         fixtureOwnerID,
-			EngineVersionID: fixtureEngineVersionID,
-			StepKey:         "manuscript",
-			Value:           json.RawMessage(fmt.Sprintf(`{"revision":%d}`, index)),
-			Now:             now,
+			ID:        id,
+			ProjectID: fixtureProjectID,
+			OwnerID:   fixtureOwnerID,
+			Key:       "manuscript",
+			Value:     json.RawMessage(fmt.Sprintf(`{"revision":%d}`, index)),
+			Now:       now,
 		})
 
 		return err
 	case concurrentContentManuscript:
 		_, err := dao.NewPgManuscriptInsert().Exec(ctx, &dao.ManuscriptInsertRequest{
-			ID:      id,
-			IdeaID:  fixtureIdeaID,
-			OwnerID: fixtureOwnerID,
-			Value:   json.RawMessage(fmt.Sprintf(`{"revision":%d}`, index)),
-			Now:     now,
+			ID:        id,
+			ProjectID: fixtureProjectID,
+			OwnerID:   fixtureOwnerID,
+			Value:     json.RawMessage(fmt.Sprintf(`{"revision":%d}`, index)),
+			Now:       now,
 		})
 
 		return err
@@ -178,22 +177,22 @@ func selectConcurrentContentVersionIDs(
 		err = db.NewSelect().
 			Model((*dao.IdeaVersion)(nil)).
 			Column("id").
-			Where("idea_id = ?", fixtureIdeaID).
+			Where("project_id = ?", fixtureProjectID).
 			OrderExpr("created_at DESC, id DESC").
 			Scan(ctx, &ids)
 	case concurrentContentStep:
 		err = db.NewSelect().
 			Model((*dao.StepValue)(nil)).
 			Column("id").
-			Where("idea_id = ?", fixtureIdeaID).
-			Where("step_key = ?", "manuscript").
+			Where("project_id = ?", fixtureProjectID).
+			Where("key = ?", "manuscript").
 			OrderExpr("created_at DESC, id DESC").
 			Scan(ctx, &ids)
 	case concurrentContentManuscript:
 		err = db.NewSelect().
 			Model((*dao.Manuscript)(nil)).
 			Column("id").
-			Where("idea_id = ?", fixtureIdeaID).
+			Where("project_id = ?", fixtureProjectID).
 			OrderExpr("created_at DESC, id DESC").
 			Scan(ctx, &ids)
 	default:

@@ -15,49 +15,54 @@ import (
 func TestProjectAccess(t *testing.T) {
 	t.Parallel()
 
-	errFoo := errors.New("foo")
+	errDAO := errors.New("dao failure")
 	validRequest := &core.ProjectAccessRequest{
-		Actor:  core.Actor{UserID: ownerID},
-		IdeaID: ideaID,
+		Actor:     core.Actor{UserID: ownerID},
+		ProjectID: projectID,
 	}
 
 	testCases := []struct {
 		name string
 
-		request *core.ProjectAccessRequest
+		request  *core.ProjectAccessRequest
+		response *dao.Project
+		daoErr   error
+		callDAO  bool
 
-		daoResult *dao.Idea
-		daoErr    error
-		callDao   bool
-
-		expect    *dao.Idea
+		expect    *dao.Project
 		expectErr error
 	}{
 		{
-			name:      "Owner",
-			request:   validRequest,
-			daoResult: ideaFixture(),
-			callDao:   true,
-			expect:    ideaFixture(),
+			name:     "Success",
+			request:  validRequest,
+			response: projectFixture(),
+			callDAO:  true,
+			expect:   projectFixture(),
 		},
 		{
-			name:      "InvalidRequest",
+			name:      "Error/InvalidRequest",
 			request:   &core.ProjectAccessRequest{},
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
-			name:      "HiddenOtherOwnerOrAbsent",
+			name:      "Error/OtherOwnerOrAbsent",
 			request:   validRequest,
-			daoErr:    dao.ErrIdeaSelectNotFound,
-			callDao:   true,
-			expectErr: core.ErrIdeaNotFound,
+			daoErr:    dao.ErrProjectSelectNotFound,
+			callDAO:   true,
+			expectErr: core.ErrProjectNotFound,
 		},
 		{
-			name:      "Dao",
+			name:      "Error/DAO",
 			request:   validRequest,
-			daoErr:    errFoo,
-			callDao:   true,
-			expectErr: errFoo,
+			daoErr:    errDAO,
+			callDAO:   true,
+			expectErr: errDAO,
+		},
+		{
+			name:      "Error/MissingEntity",
+			request:   validRequest,
+			callDAO:   true,
+			expectErr: errors.New("project selection returned no entity"),
 		},
 	}
 
@@ -65,18 +70,26 @@ func TestProjectAccess(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			ideaDao := coremocks.NewMockIdeaSelectDao(t)
-			if testCase.callDao {
-				ideaDao.EXPECT().
-					Exec(mock.Anything, &dao.IdeaSelectRequest{
-						ID:      testCase.request.IdeaID,
+			projectDao := coremocks.NewMockProjectSelectDao(t)
+			if testCase.callDAO {
+				projectDao.EXPECT().
+					Exec(mock.Anything, &dao.ProjectSelectRequest{
+						ID:      testCase.request.ProjectID,
 						OwnerID: testCase.request.Actor.UserID,
 					}).
-					Return(testCase.daoResult, testCase.daoErr)
+					Return(testCase.response, testCase.daoErr)
 			}
 
-			result, err := core.NewProjectAccess(ideaDao).Exec(t.Context(), testCase.request)
-			require.ErrorIs(t, err, testCase.expectErr)
+			result, err := core.NewProjectAccess(projectDao).Exec(t.Context(), testCase.request)
+
+			if testCase.expectErr != nil && !errors.Is(testCase.expectErr, core.ErrInvalidRequest) &&
+				!errors.Is(testCase.expectErr, core.ErrProjectNotFound) &&
+				!errors.Is(testCase.expectErr, errDAO) {
+				require.ErrorContains(t, err, testCase.expectErr.Error())
+			} else {
+				require.ErrorIs(t, err, testCase.expectErr)
+			}
+
 			require.Equal(t, testCase.expect, result)
 		})
 	}

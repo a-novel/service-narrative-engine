@@ -16,24 +16,25 @@ import (
 	"github.com/a-novel-kit/golib/otel"
 )
 
-// GenerationWatchRequest identifies one owner-scoped generation to await.
+// GenerationWatchRequest identifies one Project-owned generation to await.
 type GenerationWatchRequest struct {
-	Actor Actor     `validate:"actor"`
-	ID    uuid.UUID `validate:"required"`
+	Actor     Actor     `validate:"actor"`
+	ProjectID uuid.UUID `validate:"required"`
+	ID        uuid.UUID `validate:"required"`
 }
 
-// GenerationWatch waits on service-genai's resumable state stream.
+// GenerationWatch waits on service-genai after Project authorization.
 type GenerationWatch struct {
-	engineVersionDao EngineVersionSelectDao
-	genai            servicegenai.Client
+	projectAccess ProjectAccessService
+	genai         servicegenai.Client
 }
 
 // NewGenerationWatch creates the low-latency generation wait service.
 func NewGenerationWatch(
-	engineVersionDao EngineVersionSelectDao,
+	projectAccess ProjectAccessService,
 	genai servicegenai.Client,
 ) *GenerationWatch {
-	return &GenerationWatch{engineVersionDao: engineVersionDao, genai: genai}
+	return &GenerationWatch{projectAccess: projectAccess, genai: genai}
 }
 
 // Exec consumes snapshots until service-genai reports a terminal state.
@@ -50,9 +51,18 @@ func (service *GenerationWatch) Exec(
 	}
 
 	span.SetAttributes(
+		attribute.String("project.id", request.ProjectID.String()),
 		attribute.String("generation.id", request.ID.String()),
-		attribute.String("generation.owner_id", request.Actor.UserID.String()),
+		attribute.String("project.owner_id", request.Actor.UserID.String()),
 	)
+
+	_, err = service.projectAccess.Exec(ctx, &ProjectAccessRequest{
+		Actor:     request.Actor,
+		ProjectID: request.ProjectID,
+	})
+	if err != nil {
+		return nil, otel.ReportError(span, fmt.Errorf("access Project: %w", err))
+	}
 
 	stream, err := service.genai.GenerationWatch(ctx, &servicegenai.GenerationWatchRequest{
 		Id:      request.ID.String(),
@@ -73,7 +83,10 @@ func (service *GenerationWatch) Exec(
 		}
 
 		if status.Code(receiveErr) == codes.NotFound {
-			return nil, otel.ReportError(span, fmt.Errorf("%w: %w", ErrGenerationNotFound, receiveErr))
+			return nil, otel.ReportError(
+				span,
+				fmt.Errorf("%w: %w", ErrGenerationNotFound, receiveErr),
+			)
 		}
 
 		if receiveErr != nil {
@@ -81,16 +94,17 @@ func (service *GenerationWatch) Exec(
 		}
 
 		if response == nil {
-			return nil, otel.ReportError(span, fmt.Errorf("%w: missing watch response", ErrGenerationResponseInvalid))
+			return nil, otel.ReportError(
+				span,
+				fmt.Errorf("%w: missing watch response", ErrGenerationResponseInvalid),
+			)
 		}
 
 		generation, mapErr := mapGeneration(
 			ctx,
-			service.engineVersionDao,
 			response.GetGeneration(),
 			&request.ID,
 			request.Actor.UserID,
-			nil,
 		)
 		if mapErr != nil {
 			return nil, otel.ReportError(span, mapErr)

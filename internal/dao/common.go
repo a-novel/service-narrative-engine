@@ -10,8 +10,8 @@ import (
 
 const contentVersionLimit = 25
 
-// ErrIdeaLockNotFound is returned when an owner-scoped Idea root cannot be locked for a write.
-var ErrIdeaLockNotFound = errors.New("idea not found")
+// ErrProjectLockNotFound is returned when an owner-scoped Project cannot be locked for a write.
+var ErrProjectLockNotFound = errors.New("project not found")
 
 var errVersionedWriteRequiresTransaction = errors.New("versioned write requires a transaction")
 

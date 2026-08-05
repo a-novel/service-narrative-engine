@@ -15,27 +15,28 @@ import (
 	"github.com/a-novel-kit/golib/otel"
 )
 
-// GenerationGetRequest identifies one owner-scoped generation.
+// GenerationGetRequest identifies one Project-owned generation.
 type GenerationGetRequest struct {
-	Actor Actor     `validate:"actor"`
-	ID    uuid.UUID `validate:"required"`
+	Actor     Actor     `validate:"actor"`
+	ProjectID uuid.UUID `validate:"required"`
+	ID        uuid.UUID `validate:"required"`
 }
 
-// GenerationGet reads current state directly from service-genai.
+// GenerationGet reads current state directly from service-genai after Project authorization.
 type GenerationGet struct {
-	engineVersionDao EngineVersionSelectDao
-	genai            servicegenai.Client
+	projectAccess ProjectAccessService
+	genai         servicegenai.Client
 }
 
 // NewGenerationGet creates the current-state generation service.
 func NewGenerationGet(
-	engineVersionDao EngineVersionSelectDao,
+	projectAccess ProjectAccessService,
 	genai servicegenai.Client,
 ) *GenerationGet {
-	return &GenerationGet{engineVersionDao: engineVersionDao, genai: genai}
+	return &GenerationGet{projectAccess: projectAccess, genai: genai}
 }
 
-// Exec returns current lifecycle state and a validated proposal on success.
+// Exec returns current lifecycle state and an opaque JSON proposal on success.
 func (service *GenerationGet) Exec(
 	ctx context.Context,
 	request *GenerationGetRequest,
@@ -49,9 +50,18 @@ func (service *GenerationGet) Exec(
 	}
 
 	span.SetAttributes(
+		attribute.String("project.id", request.ProjectID.String()),
 		attribute.String("generation.id", request.ID.String()),
-		attribute.String("generation.owner_id", request.Actor.UserID.String()),
+		attribute.String("project.owner_id", request.Actor.UserID.String()),
 	)
+
+	_, err = service.projectAccess.Exec(ctx, &ProjectAccessRequest{
+		Actor:     request.Actor,
+		ProjectID: request.ProjectID,
+	})
+	if err != nil {
+		return nil, otel.ReportError(span, fmt.Errorf("access Project: %w", err))
+	}
 
 	response, err := service.genai.GenerationGet(ctx, &servicegenai.GenerationGetRequest{
 		Id:      request.ID.String(),
@@ -66,16 +76,17 @@ func (service *GenerationGet) Exec(
 	}
 
 	if response == nil {
-		return nil, otel.ReportError(span, fmt.Errorf("%w: missing get response", ErrGenerationResponseInvalid))
+		return nil, otel.ReportError(
+			span,
+			fmt.Errorf("%w: missing get response", ErrGenerationResponseInvalid),
+		)
 	}
 
 	generation, err := mapGeneration(
 		ctx,
-		service.engineVersionDao,
 		response.GetGeneration(),
 		&request.ID,
 		request.Actor.UserID,
-		nil,
 	)
 	if err != nil {
 		return nil, otel.ReportError(span, err)

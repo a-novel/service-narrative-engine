@@ -24,11 +24,11 @@ type IdeaVersionInsertDao interface {
 
 // IdeaVersionCreateRequest carries one partial Idea save under an owned project.
 type IdeaVersionCreateRequest struct {
-	Actor  Actor     `validate:"actor"`
-	IdeaID uuid.UUID `validate:"required"`
-	Seed   string
-	Genre  string
-	Title  string
+	Actor     Actor     `validate:"actor"`
+	ProjectID uuid.UUID `validate:"required"`
+	Seed      string
+	Genre     string
+	Title     string
 }
 
 // IdeaVersionCreate validates and saves one immutable Idea content version.
@@ -65,13 +65,13 @@ func (service *IdeaVersionCreate) Exec(
 	}
 
 	span.SetAttributes(
-		attribute.String("idea.id", request.IdeaID.String()),
-		attribute.String("idea.owner_id", request.Actor.UserID.String()),
+		attribute.String("project.id", request.ProjectID.String()),
+		attribute.String("project.owner_id", request.Actor.UserID.String()),
 	)
 
-	idea, err := service.projectAccess.Exec(ctx, &ProjectAccessRequest{
-		Actor:  request.Actor,
-		IdeaID: request.IdeaID,
+	project, err := service.projectAccess.Exec(ctx, &ProjectAccessRequest{
+		Actor:     request.Actor,
+		ProjectID: request.ProjectID,
 	})
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("access project: %w", err))
@@ -86,16 +86,16 @@ func (service *IdeaVersionCreate) Exec(
 
 	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
 		entity, err = service.dao.Exec(ctx, &dao.IdeaVersionInsertRequest{
-			ID:      uuid.Must(uuid.NewV7()),
-			IdeaID:  request.IdeaID,
-			OwnerID: request.Actor.UserID,
-			Seed:    request.Seed,
-			Genre:   request.Genre,
-			Title:   request.Title,
-			Now:     time.Now(),
+			ID:        uuid.Must(uuid.NewV7()),
+			ProjectID: request.ProjectID,
+			OwnerID:   request.Actor.UserID,
+			Seed:      request.Seed,
+			Genre:     request.Genre,
+			Title:     request.Title,
+			Now:       time.Now(),
 		})
-		if errors.Is(err, dao.ErrIdeaLockNotFound) {
-			err = errors.Join(err, ErrIdeaNotFound)
+		if errors.Is(err, dao.ErrProjectLockNotFound) {
+			err = errors.Join(err, ErrProjectNotFound)
 		}
 
 		if err != nil {
@@ -112,15 +112,14 @@ func (service *IdeaVersionCreate) Exec(
 		return nil, otel.ReportError(span, fmt.Errorf("save Idea version: %w", err))
 	}
 
-	updatedAt := entity.CreatedAt
-
 	return otel.ReportSuccess(span, &Idea{
-		ID:        idea.ID,
-		OwnerID:   idea.OwnerID,
-		Seed:      entity.Seed,
-		Genre:     entity.Genre,
-		Title:     entity.Title,
-		CreatedAt: idea.CreatedAt,
-		UpdatedAt: &updatedAt,
+		ProjectID:        project.ID,
+		VersionID:        entity.ID,
+		OwnerID:          project.OwnerID,
+		Seed:             entity.Seed,
+		Genre:            entity.Genre,
+		Title:            entity.Title,
+		ProjectCreatedAt: project.CreatedAt,
+		CreatedAt:        entity.CreatedAt,
 	}), nil
 }

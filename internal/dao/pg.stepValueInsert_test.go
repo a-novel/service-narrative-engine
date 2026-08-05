@@ -20,18 +20,26 @@ import (
 func TestPgStepValueInsert(t *testing.T) {
 	t.Parallel()
 
+	otherOwnerID := uuid.MustParse("00000000-0000-0000-0000-000000000043")
 	testCases := []struct {
 		name string
 
+		ownerID  uuid.UUID
 		versions int
+		value    json.RawMessage
+
+		expectErr error
 	}{
+		{name: "Success/Object", ownerID: fixtureOwnerID, versions: 1, value: json.RawMessage(`{"freeform":true}`)},
+		{name: "Success/Array", ownerID: fixtureOwnerID, versions: 1, value: json.RawMessage(`[1,"two"]`)},
+		{name: "Success/String", ownerID: fixtureOwnerID, versions: 1, value: json.RawMessage(`"freeform"`)},
+		{name: "Success/Number", ownerID: fixtureOwnerID, versions: 1, value: json.RawMessage(`42`)},
+		{name: "Success/Boolean", ownerID: fixtureOwnerID, versions: 1, value: json.RawMessage(`true`)},
+		{name: "Success/Null", ownerID: fixtureOwnerID, versions: 1, value: json.RawMessage(`null`)},
+		{name: "Success/RepeatedSaveRetainsNewest25", ownerID: fixtureOwnerID, versions: 26},
 		{
-			name:     "Success",
-			versions: 1,
-		},
-		{
-			name:     "RepeatedSaveRetainsNewest25",
-			versions: 26,
+			name: "Error/OtherOwner", ownerID: otherOwnerID, versions: 1,
+			value: json.RawMessage(`{"private":true}`), expectErr: dao.ErrProjectLockNotFound,
 		},
 	}
 
@@ -52,33 +60,41 @@ func TestPgStepValueInsert(t *testing.T) {
 
 					err := postgres.WithinTx(ctx, nil, func(ctx context.Context) error {
 						_, err := operation.Exec(ctx, &dao.StepValueInsertRequest{
-							ID:              uuid.MustParse("00000000-0000-0000-0000-000000000399"),
-							IdeaID:          fixtureIdeaID,
-							OwnerID:         fixtureOwnerID,
-							EngineVersionID: fixtureEngineVersionID,
-							StepKey:         "outline",
-							Value:           json.RawMessage(`{"beats":[]}`),
-							Now:             fixtureCreatedAt,
+							ID:        uuid.MustParse("00000000-0000-0000-0000-000000000399"),
+							ProjectID: fixtureProjectID,
+							OwnerID:   fixtureOwnerID,
+							Key:       "unrelated",
+							Value:     json.RawMessage(`{"kept":true}`),
+							Now:       fixtureCreatedAt,
 						})
-						require.NoError(t, err)
+						if err != nil {
+							return err
+						}
 
 						var latest *dao.StepValue
 
 						for index := 1; index <= testCase.versions; index++ {
-							value := json.RawMessage(fmt.Sprintf(`{"revision":%d}`, index))
+							value := testCase.value
+							if testCase.versions > 1 {
+								value = json.RawMessage(fmt.Sprintf(`{"revision":%d}`, index))
+							}
+
 							latest, err = operation.Exec(ctx, &dao.StepValueInsertRequest{
 								ID: uuid.MustParse(fmt.Sprintf(
 									"00000000-0000-0000-0000-%012d",
 									300+index,
 								)),
-								IdeaID:          fixtureIdeaID,
-								OwnerID:         fixtureOwnerID,
-								EngineVersionID: fixtureEngineVersionID,
-								StepKey:         "manuscript",
-								Value:           value,
-								Now:             fixtureCreatedAt.Add(time.Duration(index) * time.Second),
+								ProjectID: fixtureProjectID,
+								OwnerID:   testCase.ownerID,
+								Key:       "client-key",
+								Value:     value,
+								Now: fixtureCreatedAt.Add(
+									time.Duration(index) * time.Second,
+								),
 							})
-							require.NoError(t, err)
+							if err != nil {
+								return err
+							}
 						}
 
 						db, err := postgres.GetContext(ctx)
@@ -88,8 +104,8 @@ func TestPgStepValueInsert(t *testing.T) {
 
 						err = db.NewSelect().
 							Model(&stepValues).
-							Where("idea_id = ?", fixtureIdeaID).
-							Where("step_key = ?", "manuscript").
+							Where("project_id = ?", fixtureProjectID).
+							Where("key = ?", "client-key").
 							OrderExpr("created_at DESC, id DESC").
 							Scan(ctx)
 						require.NoError(t, err)
@@ -104,15 +120,15 @@ func TestPgStepValueInsert(t *testing.T) {
 
 						count, err := db.NewSelect().
 							Model((*dao.StepValue)(nil)).
-							Where("idea_id = ?", fixtureIdeaID).
-							Where("step_key = ?", "outline").
+							Where("project_id = ?", fixtureProjectID).
+							Where("key = ?", "unrelated").
 							Count(ctx)
 						require.NoError(t, err)
 						require.Equal(t, 1, count)
 
 						return nil
 					})
-					require.NoError(t, err)
+					require.ErrorIs(t, err, testCase.expectErr)
 				},
 			)
 		})

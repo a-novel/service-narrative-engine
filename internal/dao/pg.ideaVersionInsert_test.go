@@ -32,7 +32,7 @@ func TestPgIdeaVersionInsert(t *testing.T) {
 		{
 			name:      "OtherOwner",
 			ownerID:   uuid.MustParse("00000000-0000-0000-0000-000000000043"),
-			expectErr: dao.ErrIdeaLockNotFound,
+			expectErr: dao.ErrProjectLockNotFound,
 		},
 	}
 
@@ -61,13 +61,15 @@ func TestPgIdeaVersionInsert(t *testing.T) {
 							))
 
 							version, err := operation.Exec(ctx, &dao.IdeaVersionInsertRequest{
-								ID:      versionID,
-								IdeaID:  fixtureIdeaID,
-								OwnerID: testCase.ownerID,
-								Seed:    fmt.Sprintf("Revision %d", index),
-								Genre:   "speculative",
-								Title:   "The Answering Light",
-								Now:     fixtureCreatedAt.Add(time.Duration(index) * time.Second),
+								ID:        versionID,
+								ProjectID: fixtureProjectID,
+								OwnerID:   testCase.ownerID,
+								Seed:      fmt.Sprintf("Revision %d", index),
+								Genre:     "speculative",
+								Title:     "The Answering Light",
+								Now: fixtureCreatedAt.Add(
+									time.Duration(index) * time.Second,
+								),
 							})
 							if err != nil {
 								return err
@@ -83,13 +85,13 @@ func TestPgIdeaVersionInsert(t *testing.T) {
 
 						err = db.NewSelect().
 							Model(&versions).
-							Where("idea_id = ?", fixtureIdeaID).
+							Where("project_id = ?", fixtureProjectID).
 							OrderExpr("created_at DESC, id DESC").
 							Scan(ctx)
 						require.NoError(t, err)
 						require.Len(t, versions, 25)
 						require.Equal(t, latest, versions[0])
-						require.NotEqual(t, fixtureIdeaID, versions[len(versions)-1].ID)
+						require.NotEqual(t, fixtureIdeaVersionID, versions[len(versions)-1].ID)
 
 						return nil
 					})

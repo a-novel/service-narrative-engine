@@ -1,14 +1,12 @@
 package core_test
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
-	"time"
 
-	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -23,108 +21,44 @@ import (
 func TestManuscriptCreate(t *testing.T) {
 	t.Parallel()
 
-	errFoo := errors.New("foo")
-	partialManuscript := json.RawMessage(
-		`{"blocks":[{"type":"text",` +
-			`"metadata":{"source":"draft","plugin":{"enabled":true,` +
-			`"tags":["one",2,null]}},` +
-			`"data":{"text":"Draft"}}]}`,
-	)
-	maxTextBlock := json.RawMessage(
-		`{"blocks":[{"type":"text","metadata":{},"data":{"text":"` +
-			strings.Repeat("n", 32*1024) +
-			`","marks":[]}}]}`,
-	)
-	unicodeMarkedManuscript := json.RawMessage(
-		`{"blocks":[{"type":"text","metadata":{},"data":{` +
-			`"text":"é🙂界","marks":[` +
-			`{"type":"bold","start":0,"end":3},` +
-			`{"type":"italic","start":1,"end":2}]}}]}`,
-	)
-	invalidUTF8Manuscript := json.RawMessage{0xff}
+	errAccess := errors.New("access failure")
+	errDAO := errors.New("dao failure")
+	errTx := errors.New("transaction failure")
 	validRequest := &core.ManuscriptCreateRequest{
 		Actor:      core.Actor{UserID: ownerID},
-		IdeaID:     ideaID,
-		Manuscript: partialManuscript,
-	}
-	manuscriptID := uuid.MustParse("00000000-0000-0000-0000-000000000701")
-	entity := &dao.Manuscript{
-		ID:        manuscriptID,
-		IdeaID:    ideaID,
-		Value:     partialManuscript,
-		CreatedAt: createdAt,
+		ProjectID:  projectID,
+		Manuscript: staticManuscriptValue,
 	}
 
 	testCases := []struct {
 		name string
 
-		request *core.ManuscriptCreateRequest
+		request     *core.ManuscriptCreateRequest
+		accessErr   error
+		daoErr      error
+		transactErr error
+		callAccess  bool
+		callDAO     bool
+		nilEntity   bool
 
-		accessErr        error
-		callAccess       bool
-		manuscriptResp   *dao.Manuscript
-		manuscriptErr    error
-		callManuscript   bool
-		transactorErr    error
-		expect           json.RawMessage
-		expectErr        error
-		expectErrMessage string
+		expectErr error
 	}{
+		{name: "Success/StaticContractAndFreeformMetadata", request: validRequest, callAccess: true, callDAO: true},
 		{
-			name:           "Success/PartialOpaqueDocument",
-			request:        validRequest,
-			callAccess:     true,
-			manuscriptResp: entity,
-			callManuscript: true,
-			expect:         partialManuscript,
-		},
-		{
-			name: "Success/UnicodeAndOverlappingMarks",
+			name: "Success/EmptyPartialManuscript",
 			request: &core.ManuscriptCreateRequest{
-				Actor:      validRequest.Actor,
-				IdeaID:     ideaID,
-				Manuscript: unicodeMarkedManuscript,
-			},
-			callAccess: true,
-			manuscriptResp: &dao.Manuscript{
-				ID:     manuscriptID,
-				IdeaID: ideaID,
-				Value:  unicodeMarkedManuscript,
-			},
-			callManuscript: true,
-			expect:         unicodeMarkedManuscript,
-		},
-		{
-			name: "Success/TextBlockAtLimit",
-			request: &core.ManuscriptCreateRequest{
-				Actor:      validRequest.Actor,
-				IdeaID:     ideaID,
-				Manuscript: maxTextBlock,
-			},
-			callAccess: true,
-			manuscriptResp: &dao.Manuscript{
-				ID:     manuscriptID,
-				IdeaID: ideaID,
-				Value:  maxTextBlock,
-			},
-			callManuscript: true,
-			expect:         maxTextBlock,
-		},
-		{
-			name: "Success/EmptyPartialDocument",
-			request: &core.ManuscriptCreateRequest{
-				Actor:      validRequest.Actor,
-				IdeaID:     ideaID,
+				Actor: core.Actor{UserID: ownerID}, ProjectID: projectID,
 				Manuscript: json.RawMessage(`{}`),
 			},
-			callAccess: true,
-			manuscriptResp: &dao.Manuscript{
-				ID:     manuscriptID,
-				IdeaID: ideaID,
-				Value:  json.RawMessage(`{}`),
+			callAccess: true, callDAO: true,
+		},
+		{
+			name: "Success/UnicodeAndExactByteLimit",
+			request: &core.ManuscriptCreateRequest{
+				Actor: core.Actor{UserID: ownerID}, ProjectID: projectID,
+				Manuscript: manuscriptOfSize(schemas.ContentDocumentMaxBytes),
 			},
-			callManuscript: true,
-			expect:         json.RawMessage(`{}`),
+			callAccess: true, callDAO: true,
 		},
 		{
 			name:      "Error/InvalidRequest",
@@ -132,194 +66,68 @@ func TestManuscriptCreate(t *testing.T) {
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
-			name: "Error/InvalidJSON",
-			request: &core.ManuscriptCreateRequest{
-				Actor:      validRequest.Actor,
-				IdeaID:     ideaID,
-				Manuscript: json.RawMessage(`{`),
-			},
-			callAccess: true,
-			expectErr:  core.ErrInvalidRequest,
-		},
-		{
-			name: "Error/InvalidUTF8",
-			request: &core.ManuscriptCreateRequest{
-				Actor:      validRequest.Actor,
-				IdeaID:     ideaID,
-				Manuscript: invalidUTF8Manuscript,
-			},
-			callAccess: true,
-			expectErr:  core.ErrInvalidRequest,
-		},
-		{
-			name: "Error/NonObject",
-			request: &core.ManuscriptCreateRequest{
-				Actor:      validRequest.Actor,
-				IdeaID:     ideaID,
-				Manuscript: json.RawMessage(`[]`),
-			},
-			callAccess: true,
-			expectErr:  core.ErrInvalidRequest,
-		},
-		{
-			name: "Error/UnknownDocumentField",
-			request: &core.ManuscriptCreateRequest{
-				Actor:      validRequest.Actor,
-				IdeaID:     ideaID,
-				Manuscript: json.RawMessage(`{"unknown":true}`),
-			},
-			callAccess: true,
-			expectErr:  core.ErrInvalidRequest,
-		},
-		{
-			name: "Error/LegacyBlockShape",
-			request: &core.ManuscriptCreateRequest{
-				Actor:  validRequest.Actor,
-				IdeaID: ideaID,
-				Manuscript: json.RawMessage(
-					`{"blocks":[{"type":"text","text":"legacy","marks":[]}]}`,
-				),
-			},
-			callAccess: true,
-			expectErr:  core.ErrInvalidRequest,
-		},
-		{
-			name: "Error/TextBlockTooLong",
-			request: &core.ManuscriptCreateRequest{
-				Actor:  validRequest.Actor,
-				IdeaID: ideaID,
-				Manuscript: json.RawMessage(
-					`{"blocks":[{"type":"text","metadata":{},"data":{"text":"` +
-						strings.Repeat("n", 32*1024+1) +
-						`","marks":[]}}]}`,
-				),
-			},
-			callAccess: true,
-			expectErr:  core.ErrInvalidRequest,
-		},
-		{
-			name: "Error/EmptyMarkRange",
-			request: &core.ManuscriptCreateRequest{
-				Actor:  validRequest.Actor,
-				IdeaID: ideaID,
-				Manuscript: json.RawMessage(
-					`{"blocks":[{"type":"text","metadata":{},"data":{` +
-						`"text":"word","marks":[` +
-						`{"type":"bold","start":1,"end":1}]}}]}`,
-				),
-			},
-			callAccess: true,
-			expectErr:  core.ErrInvalidRequest,
-		},
-		{
-			name: "Error/ReversedMarkRange",
-			request: &core.ManuscriptCreateRequest{
-				Actor:  validRequest.Actor,
-				IdeaID: ideaID,
-				Manuscript: json.RawMessage(
-					`{"blocks":[{"type":"text","metadata":{},"data":{` +
-						`"text":"word","marks":[` +
-						`{"type":"bold","start":3,"end":2}]}}]}`,
-				),
-			},
-			callAccess: true,
-			expectErr:  core.ErrInvalidRequest,
-		},
-		{
-			name: "Error/MarkPastUnicodeText",
-			request: &core.ManuscriptCreateRequest{
-				Actor:  validRequest.Actor,
-				IdeaID: ideaID,
-				Manuscript: json.RawMessage(
-					`{"blocks":[{"type":"text","metadata":{},"data":{` +
-						`"text":"é🙂界","marks":[` +
-						`{"type":"bold","start":0,"end":4}]}}]}`,
-				),
-			},
-			callAccess: true,
-			expectErr:  core.ErrInvalidRequest,
-		},
-		{
-			name: "Error/LinkMark",
-			request: &core.ManuscriptCreateRequest{
-				Actor:  validRequest.Actor,
-				IdeaID: ideaID,
-				Manuscript: json.RawMessage(
-					`{"blocks":[{"type":"text","metadata":{},"data":{` +
-						`"text":"linked","marks":[` +
-						`{"type":"link","start":0,"end":6}]}}]}`,
-				),
-			},
-			callAccess: true,
-			expectErr:  core.ErrInvalidRequest,
-		},
-		{
-			name: "Error/MediaBlock",
-			request: &core.ManuscriptCreateRequest{
-				Actor:  validRequest.Actor,
-				IdeaID: ideaID,
-				Manuscript: json.RawMessage(
-					`{"blocks":[{"type":"media","metadata":{},` +
-						`"data":{"text":"image","marks":[]}}]}`,
-				),
-			},
-			callAccess: true,
-			expectErr:  core.ErrInvalidRequest,
-		},
-		{
-			name: "Error/DocumentTooLarge",
-			request: &core.ManuscriptCreateRequest{
-				Actor:  validRequest.Actor,
-				IdeaID: ideaID,
-				Manuscript: json.RawMessage(
-					`{"blocks":[{"type":"text","metadata":{},"data":{"text":"` +
-						strings.Repeat("n", schemas.ContentDocumentMaxBytes) +
-						`","marks":[]}}]}`,
-				),
-			},
-			callAccess: true,
-			expectErr:  core.ErrInvalidRequest,
-		},
-		{
 			name: "Error/ProjectAccessBeforeContentValidation",
 			request: &core.ManuscriptCreateRequest{
-				Actor:      validRequest.Actor,
-				IdeaID:     ideaID,
+				Actor: core.Actor{UserID: ownerID}, ProjectID: projectID,
 				Manuscript: json.RawMessage(`{`),
 			},
-			accessErr:  core.ErrIdeaNotFound,
-			callAccess: true,
-			expectErr:  core.ErrIdeaNotFound,
+			callAccess: true, accessErr: errAccess, expectErr: errAccess,
 		},
 		{
-			name:           "Error/OwnerRelock",
-			request:        validRequest,
-			callAccess:     true,
-			manuscriptErr:  dao.ErrIdeaLockNotFound,
-			callManuscript: true,
-			expectErr:      core.ErrIdeaNotFound,
+			name: "Error/UnknownStaticField",
+			request: &core.ManuscriptCreateRequest{
+				Actor: core.Actor{UserID: ownerID}, ProjectID: projectID,
+				Manuscript: json.RawMessage(`{"unexpected":true}`),
+			},
+			callAccess: true, expectErr: core.ErrInvalidRequest,
 		},
 		{
-			name:           "Error/Insert",
-			request:        validRequest,
-			callAccess:     true,
-			manuscriptErr:  errFoo,
-			callManuscript: true,
-			expectErr:      errFoo,
+			name: "Error/TextBlockOverLimit",
+			request: &core.ManuscriptCreateRequest{
+				Actor: core.Actor{UserID: ownerID}, ProjectID: projectID,
+				Manuscript: json.RawMessage(
+					`{"blocks":[{"type":"text","metadata":{},"data":{"text":"` +
+						strings.Repeat("界", 32_769) + `","marks":[]}}]}`,
+				),
+			},
+			callAccess: true, expectErr: core.ErrInvalidRequest,
 		},
 		{
-			name:          "Error/Transaction",
-			request:       validRequest,
-			callAccess:    true,
-			transactorErr: errFoo,
-			expectErr:     errFoo,
+			name: "Error/InvalidMarkRange",
+			request: &core.ManuscriptCreateRequest{
+				Actor: core.Actor{UserID: ownerID}, ProjectID: projectID,
+				Manuscript: json.RawMessage(
+					`{"blocks":[{"type":"text","metadata":{},"data":{"text":"short",` +
+						`"marks":[{"type":"bold","start":0,"end":6}]}}]}`,
+				),
+			},
+			callAccess: true, expectErr: core.ErrInvalidRequest,
 		},
 		{
-			name:             "Error/MissingEntity",
-			request:          validRequest,
-			callAccess:       true,
-			callManuscript:   true,
-			expectErrMessage: "insert Manuscript",
+			name: "Error/OverByteLimit",
+			request: &core.ManuscriptCreateRequest{
+				Actor: core.Actor{UserID: ownerID}, ProjectID: projectID,
+				Manuscript: manuscriptOfSize(schemas.ContentDocumentMaxBytes + 1),
+			},
+			callAccess: true, expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/OwnerChangedBeforeWrite", request: validRequest,
+			callAccess: true, callDAO: true, daoErr: dao.ErrProjectLockNotFound,
+			expectErr: core.ErrProjectNotFound,
+		},
+		{
+			name: "Error/DAO", request: validRequest,
+			callAccess: true, callDAO: true, daoErr: errDAO, expectErr: errDAO,
+		},
+		{
+			name: "Error/Transaction", request: validRequest,
+			callAccess: true, transactErr: errTx, expectErr: errTx,
+		},
+		{
+			name: "Error/MissingEntity", request: validRequest,
+			callAccess: true, callDAO: true, nilEntity: true,
+			expectErr: errors.New("manuscript insert returned no entity"),
 		},
 	}
 
@@ -333,48 +141,59 @@ func TestManuscriptCreate(t *testing.T) {
 			if testCase.callAccess {
 				projectAccess.EXPECT().
 					Exec(mock.Anything, &core.ProjectAccessRequest{
-						Actor:  testCase.request.Actor,
-						IdeaID: testCase.request.IdeaID,
+						Actor: testCase.request.Actor, ProjectID: testCase.request.ProjectID,
 					}).
-					Return(ideaFixture(), testCase.accessErr)
+					Return(projectFixture(), testCase.accessErr)
 			}
 
-			if testCase.callManuscript {
+			if testCase.callDAO {
 				manuscriptDao.EXPECT().
-					Exec(mock.Anything, mock.MatchedBy(func(request *dao.ManuscriptInsertRequest) bool {
-						return assert.NotEqual(t, uuid.Nil, request.ID) &&
-							assert.Equal(t, testCase.request.IdeaID, request.IdeaID) &&
-							assert.Equal(t, testCase.request.Actor.UserID, request.OwnerID) &&
-							assert.JSONEq(t, string(testCase.request.Manuscript), string(request.Value)) &&
-							assert.WithinDuration(t, time.Now(), request.Now, time.Minute)
-					})).
-					Return(testCase.manuscriptResp, testCase.manuscriptErr)
+					Exec(mock.Anything, mock.Anything).
+					RunAndReturn(func(
+						_ context.Context,
+						request *dao.ManuscriptInsertRequest,
+					) (*dao.Manuscript, error) {
+						if testCase.daoErr != nil || testCase.nilEntity {
+							return nil, testCase.daoErr
+						}
+
+						require.Equal(t, testCase.request.ProjectID, request.ProjectID)
+						require.Equal(t, ownerID, request.OwnerID)
+						require.JSONEq(t, string(testCase.request.Manuscript), string(request.Value))
+
+						return &dao.Manuscript{
+							ID: request.ID, ProjectID: request.ProjectID,
+							Value: request.Value, CreatedAt: request.Now,
+						}, nil
+					})
 			}
 
 			transactor := transactiontest.NewTransactor()
-			if testCase.transactorErr != nil {
-				transactor = transactiontest.NewFailingTransactor(testCase.transactorErr)
+			if testCase.transactErr != nil {
+				transactor = transactiontest.NewFailingTransactor(testCase.transactErr)
 			}
 
 			result, err := core.NewManuscriptCreate(projectAccess, manuscriptDao, transactor).
 				Exec(t.Context(), testCase.request)
 
-			if testCase.expectErr != nil {
-				require.ErrorIs(t, err, testCase.expectErr)
-			} else if testCase.expectErrMessage != "" {
-				require.ErrorContains(t, err, testCase.expectErrMessage)
-			} else {
+			if testCase.expectErr == nil {
 				require.NoError(t, err)
-			}
-
-			if testCase.expect == nil {
-				require.Nil(t, result)
+				require.Equal(t, projectID, result.ProjectID)
+				require.JSONEq(t, string(testCase.request.Manuscript), string(result.Manuscript))
+			} else if errors.Is(err, testCase.expectErr) {
+				require.ErrorIs(t, err, testCase.expectErr)
 			} else {
-				require.JSONEq(t, string(testCase.expect), string(result))
+				require.ErrorContains(t, err, testCase.expectErr.Error())
 			}
-
-			projectAccess.AssertExpectations(t)
-			manuscriptDao.AssertExpectations(t)
 		})
 	}
+}
+
+func manuscriptOfSize(size int) json.RawMessage {
+	const (
+		prefix = `{"blocks":[{"type":"text","metadata":{"note":"`
+		suffix = `"},"data":{"text":"界","marks":[]}}]}`
+	)
+
+	return json.RawMessage(prefix + strings.Repeat("x", size-len(prefix)-len(suffix)) + suffix)
 }

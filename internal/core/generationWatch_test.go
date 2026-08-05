@@ -1,6 +1,7 @@
 package core_test
 
 import (
+	"encoding/json"
 	"errors"
 	"io"
 	"testing"
@@ -16,7 +17,6 @@ import (
 
 	"github.com/a-novel/service-narrative-engine/internal/core"
 	coremocks "github.com/a-novel/service-narrative-engine/internal/core/mocks"
-	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
 type generationWatchStream struct {
@@ -48,95 +48,84 @@ func (stream *generationWatchStream) Recv() (*servicegenai.GenerationWatchRespon
 func TestGenerationWatch(t *testing.T) {
 	t.Parallel()
 
-	errFoo := errors.New("foo")
+	errAccess := errors.New("access failure")
+	errStream := errors.New("stream failure")
+	proposal := map[string]any{"freeform": []any{"client", "shape"}}
 	validRequest := &core.GenerationWatchRequest{
-		Actor: core.Actor{UserID: ownerID},
-		ID:    generationID,
+		Actor: core.Actor{UserID: ownerID}, ProjectID: projectID, ID: generationID,
 	}
 
 	testCases := []struct {
 		name string
 
-		request      *core.GenerationWatchRequest
-		responses    []*servicegenai.GenerationWatchResponse
-		streamErr    error
-		initialErr   error
-		callGenAI    bool
-		engineResult *dao.EngineVersion
+		request    *core.GenerationWatchRequest
+		accessErr  error
+		responses  []*servicegenai.GenerationWatchResponse
+		streamErr  error
+		initialErr error
+		callAccess bool
+		callGenAI  bool
 
 		expect    *core.Generation
 		expectErr error
 	}{
 		{
-			name:      "Success/Succeeded",
-			request:   validRequest,
-			callGenAI: true,
+			name: "Success/Succeeded", request: validRequest, callAccess: true, callGenAI: true,
 			responses: []*servicegenai.GenerationWatchResponse{
 				{Generation: generationFixture(servicegenai.GenerationStatusPending, nil)},
 				{Generation: generationFixture(servicegenai.GenerationStatusRunning, nil)},
 				{Generation: generationFixture(
 					servicegenai.GenerationStatusSucceeded,
-					responsesOutput(t, manuscriptValue),
+					responsesOutput(t, proposal),
 				)},
 			},
-			engineResult: engineVersionFixture(),
-			expect:       expectedGeneration(core.GenerationStatusSucceeded, manuscriptValue),
+			expect: expectedGeneration(
+				core.GenerationStatusSucceeded,
+				json.RawMessage(`{"freeform":["client","shape"]}`),
+			),
 		},
 		{
-			name:      "Success/Failed",
-			request:   validRequest,
-			callGenAI: true,
+			name: "Success/Failed", request: validRequest, callAccess: true, callGenAI: true,
 			responses: []*servicegenai.GenerationWatchResponse{{
 				Generation: generationFixture(servicegenai.GenerationStatusFailed, nil),
 			}},
 			expect: expectedGeneration(core.GenerationStatusFailed, nil),
 		},
 		{
-			name:      "Error/InvalidRequest",
-			request:   &core.GenerationWatchRequest{},
+			name: "Error/InvalidRequest", request: &core.GenerationWatchRequest{},
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
-			name:       "Error/InitialNotFound",
-			request:    validRequest,
-			callGenAI:  true,
+			name: "Error/ProjectAccess", request: validRequest,
+			callAccess: true, accessErr: errAccess, expectErr: errAccess,
+		},
+		{
+			name: "Error/InitialNotFound", request: validRequest, callAccess: true, callGenAI: true,
 			initialErr: status.Error(codes.NotFound, "not found"),
 			expectErr:  core.ErrGenerationNotFound,
 		},
 		{
-			name:       "Error/Initial",
-			request:    validRequest,
-			callGenAI:  true,
-			initialErr: errFoo,
-			expectErr:  errFoo,
+			name: "Error/Initial", request: validRequest, callAccess: true, callGenAI: true,
+			initialErr: errStream, expectErr: errStream,
 		},
 		{
-			name:      "Error/Closed",
-			request:   validRequest,
-			callGenAI: true,
+			name: "Error/Closed", request: validRequest, callAccess: true, callGenAI: true,
 			responses: []*servicegenai.GenerationWatchResponse{{
 				Generation: generationFixture(servicegenai.GenerationStatusPending, nil),
 			}},
 			expectErr: core.ErrGenerationWatchClosed,
 		},
 		{
-			name:      "Error/ReceiveNotFound",
-			request:   validRequest,
-			callGenAI: true,
+			name: "Error/ReceiveNotFound", request: validRequest, callAccess: true, callGenAI: true,
 			streamErr: status.Error(codes.NotFound, "not found"),
 			expectErr: core.ErrGenerationNotFound,
 		},
 		{
-			name:      "Error/Receive",
-			request:   validRequest,
-			callGenAI: true,
-			streamErr: errFoo,
-			expectErr: errFoo,
+			name: "Error/Receive", request: validRequest, callAccess: true, callGenAI: true,
+			streamErr: errStream, expectErr: errStream,
 		},
 		{
-			name:      "Error/MissingResponse",
-			request:   validRequest,
-			callGenAI: true,
+			name: "Error/MissingResponse", request: validRequest, callAccess: true, callGenAI: true,
 			responses: []*servicegenai.GenerationWatchResponse{nil},
 			expectErr: core.ErrGenerationResponseInvalid,
 		},
@@ -146,8 +135,16 @@ func TestGenerationWatch(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			engineVersionDao := coremocks.NewMockEngineVersionSelectDao(t)
+			projectAccess := coremocks.NewMockProjectAccessService(t)
 			genai := servicegenaimocks.NewMockClient(t)
+
+			if testCase.callAccess {
+				projectAccess.EXPECT().
+					Exec(mock.Anything, &core.ProjectAccessRequest{
+						Actor: testCase.request.Actor, ProjectID: testCase.request.ProjectID,
+					}).
+					Return(projectFixture(), testCase.accessErr)
+			}
 
 			if testCase.callGenAI {
 				var stream grpc.ServerStreamingClient[servicegenai.GenerationWatchResponse]
@@ -160,19 +157,12 @@ func TestGenerationWatch(t *testing.T) {
 
 				genai.EXPECT().
 					GenerationWatch(mock.Anything, &servicegenai.GenerationWatchRequest{
-						Id:      testCase.request.ID.String(),
-						OwnerId: testCase.request.Actor.UserID.String(),
+						Id: testCase.request.ID.String(), OwnerId: testCase.request.Actor.UserID.String(),
 					}).
 					Return(stream, testCase.initialErr)
 			}
 
-			if testCase.engineResult != nil {
-				engineVersionDao.EXPECT().
-					Exec(mock.Anything, &dao.EngineVersionSelectRequest{ID: engineVersionID}).
-					Return(testCase.engineResult, nil)
-			}
-
-			result, err := core.NewGenerationWatch(engineVersionDao, genai).
+			result, err := core.NewGenerationWatch(projectAccess, genai).
 				Exec(t.Context(), testCase.request)
 
 			require.ErrorIs(t, err, testCase.expectErr)

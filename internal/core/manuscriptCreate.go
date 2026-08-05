@@ -18,26 +18,34 @@ import (
 
 var errManuscriptInsertMissing = errors.New("manuscript insert returned no entity")
 
-// ManuscriptInsertDao persists a self-contained Manuscript.
+// ManuscriptInsertDao persists one validated Manuscript Version.
 type ManuscriptInsertDao interface {
 	Exec(ctx context.Context, request *dao.ManuscriptInsertRequest) (*dao.Manuscript, error)
 }
 
-// ManuscriptCreateRequest carries only an opaque partial Manuscript document.
+// ManuscriptCreateRequest carries one partial static Manuscript document.
 type ManuscriptCreateRequest struct {
 	Actor      Actor           `validate:"actor"`
-	IdeaID     uuid.UUID       `validate:"required"`
+	ProjectID  uuid.UUID       `validate:"required"`
 	Manuscript json.RawMessage `validate:"required"`
 }
 
-// ManuscriptCreate validates and saves one independent Manuscript.
+// Manuscript is one saved static document version.
+type Manuscript struct {
+	ID         uuid.UUID       `json:"id"`
+	ProjectID  uuid.UUID       `json:"projectID"`
+	Manuscript json.RawMessage `json:"manuscript"`
+	CreatedAt  time.Time       `json:"createdAt"`
+}
+
+// ManuscriptCreate validates and saves one Project-owned Manuscript Version.
 type ManuscriptCreate struct {
 	projectAccess ProjectAccessService
 	dao           ManuscriptInsertDao
 	transactor    transaction.Transactor
 }
 
-// NewManuscriptCreate creates an independent Manuscript save service.
+// NewManuscriptCreate creates a Project-owned Manuscript save service.
 func NewManuscriptCreate(
 	projectAccess ProjectAccessService,
 	manuscriptDao ManuscriptInsertDao,
@@ -50,11 +58,11 @@ func NewManuscriptCreate(
 	}
 }
 
-// Exec saves partial Manuscript content without generation provenance.
+// Exec validates the static contract and appends a Manuscript Version.
 func (service *ManuscriptCreate) Exec(
 	ctx context.Context,
 	request *ManuscriptCreateRequest,
-) (json.RawMessage, error) {
+) (*Manuscript, error) {
 	ctx, span := otel.Tracer().Start(ctx, "core.ManuscriptCreate")
 	defer span.End()
 
@@ -64,35 +72,35 @@ func (service *ManuscriptCreate) Exec(
 	}
 
 	span.SetAttributes(
-		attribute.String("idea.id", request.IdeaID.String()),
-		attribute.String("manuscript.owner_id", request.Actor.UserID.String()),
+		attribute.String("project.id", request.ProjectID.String()),
+		attribute.String("project.owner_id", request.Actor.UserID.String()),
 	)
 
 	_, err = service.projectAccess.Exec(ctx, &ProjectAccessRequest{
-		Actor:  request.Actor,
-		IdeaID: request.IdeaID,
+		Actor:     request.Actor,
+		ProjectID: request.ProjectID,
 	})
 	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("access project: %w", err))
+		return nil, otel.ReportError(span, fmt.Errorf("access Project: %w", err))
 	}
 
 	err = manuscriptContentDefinition.validatePartial(request.Manuscript)
 	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("manuscript: %w", err))
+		return nil, otel.ReportError(span, fmt.Errorf("Manuscript: %w", err))
 	}
 
 	var entity *dao.Manuscript
 
 	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
 		entity, err = service.dao.Exec(ctx, &dao.ManuscriptInsertRequest{
-			ID:      uuid.Must(uuid.NewV7()),
-			IdeaID:  request.IdeaID,
-			OwnerID: request.Actor.UserID,
-			Value:   request.Manuscript,
-			Now:     time.Now(),
+			ID:        uuid.Must(uuid.NewV7()),
+			ProjectID: request.ProjectID,
+			OwnerID:   request.Actor.UserID,
+			Value:     request.Manuscript,
+			Now:       time.Now(),
 		})
-		if errors.Is(err, dao.ErrIdeaLockNotFound) {
-			err = errors.Join(err, ErrIdeaNotFound)
+		if errors.Is(err, dao.ErrProjectLockNotFound) {
+			err = errors.Join(err, ErrProjectNotFound)
 		}
 
 		if err != nil {
@@ -111,5 +119,10 @@ func (service *ManuscriptCreate) Exec(
 
 	span.SetAttributes(attribute.String("manuscript.id", entity.ID.String()))
 
-	return otel.ReportSuccess(span, entity.Value), nil
+	return otel.ReportSuccess(span, &Manuscript{
+		ID:         entity.ID,
+		ProjectID:  entity.ProjectID,
+		Manuscript: entity.Value,
+		CreatedAt:  entity.CreatedAt,
+	}), nil
 }

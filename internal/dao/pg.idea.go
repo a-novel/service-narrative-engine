@@ -6,11 +6,13 @@ import (
 	"github.com/google/uuid"
 )
 
-// Idea combines a stable project root with its latest typed content version.
+// Idea combines one immutable content version with its stable Project identity.
 type Idea struct {
-	// ID identifies the stable Idea root.
-	ID uuid.UUID `bun:"id,pk,type:uuid"`
-	// OwnerID identifies the user who owns the Idea.
+	// ProjectID identifies the stable Project.
+	ProjectID uuid.UUID `bun:"project_id,type:uuid"`
+	// VersionID identifies the selected Idea Version.
+	VersionID uuid.UUID `bun:"version_id,pk,type:uuid"`
+	// OwnerID identifies the user who owns the Project.
 	OwnerID uuid.UUID `bun:"owner_id,type:uuid"`
 	// Seed is the source premise supplied by the writer.
 	Seed string `bun:"seed"`
@@ -18,8 +20,8 @@ type Idea struct {
 	Genre string `bun:"genre"`
 	// Title is the writer-supplied title, or an empty string when omitted.
 	Title string `bun:"title"`
-	// CreatedAt records when the Idea root was created.
+	// ProjectCreatedAt records when the stable Project was created.
+	ProjectCreatedAt time.Time `bun:"project_created_at"`
+	// CreatedAt records when this Idea Version was saved.
 	CreatedAt time.Time `bun:"created_at"`
-	// UpdatedAt records when the selected content version was saved, or is nil for the initial version.
-	UpdatedAt *time.Time `bun:"updated_at"`
 }

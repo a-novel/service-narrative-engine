@@ -8,20 +8,18 @@ import (
 	"github.com/uptrace/bun"
 )
 
-// StepValue is client-saved content for one immutable Engine Version step.
+// StepValue is one immutable arbitrary JSON save under an opaque Project key.
 type StepValue struct {
 	bun.BaseModel `bun:"table:step_values,alias:step_value"`
 
-	// ID identifies the saved value.
+	// ID identifies the saved version.
 	ID uuid.UUID `bun:"id,pk,type:uuid"`
-	// IdeaID identifies the Idea whose content was saved.
-	IdeaID uuid.UUID `bun:"idea_id,type:uuid"`
-	// EngineVersionID identifies the immutable definition that owns the step.
-	EngineVersionID uuid.UUID `bun:"engine_version_id,type:uuid"`
-	// StepKey identifies the step inside the Engine Version definition.
-	StepKey string `bun:"step_key"`
-	// Value is the schema-validated, source-agnostic content.
+	// ProjectID identifies the Project whose content was saved.
+	ProjectID uuid.UUID `bun:"project_id,type:uuid"`
+	// Key is an opaque client-controlled content identity.
+	Key string `bun:"key"`
+	// Value is arbitrary valid JSON.
 	Value json.RawMessage `bun:"value,type:jsonb"`
-	// CreatedAt records when the value was saved.
+	// CreatedAt records when the version was saved.
 	CreatedAt time.Time `bun:"created_at"`
 }

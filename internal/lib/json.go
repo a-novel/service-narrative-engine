@@ -1,37 +1,33 @@
 package lib
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"io"
 )
 
-// ErrJSONMultipleValues reports input that contains more than one JSON value.
-var ErrJSONMultipleValues = errors.New("multiple JSON values")
+var (
+	// ErrJSONEmpty reports a missing JSON value.
+	ErrJSONEmpty = errors.New("JSON value is empty")
+	// ErrJSONInvalid reports malformed JSON.
+	ErrJSONInvalid = errors.New("JSON value is invalid")
+	// ErrJSONTooLarge reports a JSON value over its byte limit.
+	ErrJSONTooLarge = errors.New("JSON value exceeds the size limit")
+)
 
-// DecodeJSONStrict decodes exactly one JSON value and rejects unknown object
-// fields when destination is a struct.
-func DecodeJSONStrict(source []byte, destination any) error {
-	decoder := json.NewDecoder(bytes.NewReader(source))
-	decoder.DisallowUnknownFields()
-
-	err := decoder.Decode(destination)
-	if err != nil {
-		return fmt.Errorf("decode JSON: %w", err)
+// ValidateJSON accepts any single JSON value within maxBytes.
+// A non-positive maxBytes disables the byte limit.
+func ValidateJSON(source []byte, maxBytes int) error {
+	if len(source) == 0 {
+		return ErrJSONEmpty
 	}
 
-	var trailing any
-
-	err = decoder.Decode(&trailing)
-	if errors.Is(err, io.EOF) {
-		return nil
+	if maxBytes > 0 && len(source) > maxBytes {
+		return ErrJSONTooLarge
 	}
 
-	if err != nil {
-		return fmt.Errorf("decode trailing JSON: %w", err)
+	if !json.Valid(source) {
+		return ErrJSONInvalid
 	}
 
-	return ErrJSONMultipleValues
+	return nil
 }

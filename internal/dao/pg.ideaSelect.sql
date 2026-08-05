@@ -1,24 +1,21 @@
 SELECT
-  idea.id,
-  idea.owner_id,
+  project.id AS project_id,
+  idea_version.id AS version_id,
+  project.owner_id,
   idea_version.seed,
   idea_version.genre,
   idea_version.title,
-  idea.created_at,
-  CASE
-    WHEN idea_version.id = idea.id
-    AND idea_version.created_at = idea.created_at THEN NULL
-    ELSE idea_version.created_at
-  END AS updated_at
+  project.created_at AS project_created_at,
+  idea_version.created_at
 FROM
-  ideas AS idea
+  projects AS project
   INNER JOIN LATERAL (
     SELECT
       *
     FROM
       idea_versions
     WHERE
-      idea_id = idea.id
+      project_id = project.id
     ORDER BY
       created_at DESC,
       id DESC
@@ -26,5 +23,5 @@ FROM
       1
   ) AS idea_version ON TRUE
 WHERE
-  idea.id = ?0
-  AND idea.owner_id = ?1;
+  project.id = ?0
+  AND project.owner_id = ?1;

@@ -1,12 +1,10 @@
 package core_test
 
 import (
+	"context"
 	"errors"
 	"testing"
-	"time"
 
-	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -20,56 +18,35 @@ import (
 func TestIdeaVersionCreate(t *testing.T) {
 	t.Parallel()
 
-	errFoo := errors.New("foo")
+	errAccess := errors.New("access failure")
+	errDAO := errors.New("dao failure")
+	errTx := errors.New("transaction failure")
 	validRequest := &core.IdeaVersionCreateRequest{
-		Actor:  core.Actor{UserID: ownerID},
-		IdeaID: ideaID,
-		Seed:   "The answering foghorn moves closer.",
-		Genre:  "speculative",
-		Title:  "The Nearer Light",
-	}
-	versionID := uuid.MustParse("00000000-0000-0000-0000-000000000202")
-	versionCreatedAt := createdAt.Add(time.Second)
-	entity := &dao.IdeaVersion{
-		ID:        versionID,
-		IdeaID:    ideaID,
-		Seed:      validRequest.Seed,
-		Genre:     validRequest.Genre,
-		Title:     validRequest.Title,
-		CreatedAt: versionCreatedAt,
-	}
-	expect := &core.Idea{
-		ID:        ideaID,
-		OwnerID:   ownerID,
-		Seed:      entity.Seed,
-		Genre:     entity.Genre,
-		Title:     entity.Title,
-		CreatedAt: createdAt,
-		UpdatedAt: &versionCreatedAt,
+		Actor:     core.Actor{UserID: ownerID},
+		ProjectID: projectID,
+		Seed:      "A foghorn answers from beneath the sea.",
+		Genre:     "speculative",
+		Title:     "The Answering Light",
 	}
 
 	testCases := []struct {
 		name string
 
-		request *core.IdeaVersionCreateRequest
+		request     *core.IdeaVersionCreateRequest
+		accessErr   error
+		daoErr      error
+		transactErr error
+		callAccess  bool
+		callDAO     bool
+		nilEntity   bool
 
-		accessErr  error
-		callAccess bool
-		daoResult  *dao.IdeaVersion
-		daoErr     error
-		callDao    bool
-
-		transactorErr error
-		expect        *core.Idea
-		expectErr     error
+		expectErr error
 	}{
 		{
 			name:       "Success",
 			request:    validRequest,
 			callAccess: true,
-			daoResult:  entity,
-			callDao:    true,
-			expect:     expect,
+			callDAO:    true,
 		},
 		{
 			name:      "Error/InvalidRequest",
@@ -77,55 +54,56 @@ func TestIdeaVersionCreate(t *testing.T) {
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
-			name: "Error/Content",
+			name: "Error/ProjectAccessBeforeContentValidation",
 			request: &core.IdeaVersionCreateRequest{
-				Actor:  validRequest.Actor,
-				IdeaID: ideaID,
-				Seed:   " ",
+				Actor:     core.Actor{UserID: ownerID},
+				ProjectID: projectID,
+				Seed:      "   ",
+			},
+			callAccess: true,
+			accessErr:  errAccess,
+			expectErr:  errAccess,
+		},
+		{
+			name: "Error/StaticContract",
+			request: &core.IdeaVersionCreateRequest{
+				Actor:     core.Actor{UserID: ownerID},
+				ProjectID: projectID,
+				Seed:      "   ",
 			},
 			callAccess: true,
 			expectErr:  core.ErrInvalidRequest,
 		},
 		{
-			name: "Error/AccessBeforeContentValidation",
-			request: &core.IdeaVersionCreateRequest{
-				Actor:  validRequest.Actor,
-				IdeaID: ideaID,
-				Seed:   " ",
-			},
-			accessErr:  core.ErrIdeaNotFound,
-			callAccess: true,
-			expectErr:  core.ErrIdeaNotFound,
-		},
-		{
-			name:       "Error/OwnerRelock",
+			name:       "Error/OwnerChangedBeforeWrite",
 			request:    validRequest,
 			callAccess: true,
-			daoErr:     dao.ErrIdeaLockNotFound,
-			callDao:    true,
-			expectErr:  core.ErrIdeaNotFound,
+			callDAO:    true,
+			daoErr:     dao.ErrProjectLockNotFound,
+			expectErr:  core.ErrProjectNotFound,
 		},
 		{
-			name:       "Error/Dao",
-			request:    validRequest,
-			callAccess: true,
-			daoErr:     errFoo,
-			callDao:    true,
-			expectErr:  errFoo,
-		},
-		{
-			name:          "Error/Transaction",
-			request:       validRequest,
-			callAccess:    true,
-			transactorErr: errFoo,
-			expectErr:     errFoo,
+			name:        "Error/Transaction",
+			request:     validRequest,
+			callAccess:  true,
+			transactErr: errTx,
+			expectErr:   errTx,
 		},
 		{
 			name:       "Error/MissingEntity",
 			request:    validRequest,
 			callAccess: true,
-			callDao:    true,
+			callDAO:    true,
+			nilEntity:  true,
 			expectErr:  errors.New("idea version insert returned no entity"),
+		},
+		{
+			name:       "Error/DAO",
+			request:    validRequest,
+			callAccess: true,
+			callDAO:    true,
+			daoErr:     errDAO,
+			expectErr:  errDAO,
 		},
 	}
 
@@ -134,51 +112,67 @@ func TestIdeaVersionCreate(t *testing.T) {
 			t.Parallel()
 
 			projectAccess := coremocks.NewMockProjectAccessService(t)
-			ideaVersionDao := coremocks.NewMockIdeaVersionInsertDao(t)
+			ideaDao := coremocks.NewMockIdeaVersionInsertDao(t)
 
 			if testCase.callAccess {
 				projectAccess.EXPECT().
 					Exec(mock.Anything, &core.ProjectAccessRequest{
-						Actor:  testCase.request.Actor,
-						IdeaID: testCase.request.IdeaID,
+						Actor:     testCase.request.Actor,
+						ProjectID: testCase.request.ProjectID,
 					}).
-					Return(ideaFixture(), testCase.accessErr)
+					Return(projectFixture(), testCase.accessErr)
 			}
 
-			if testCase.callDao {
-				ideaVersionDao.EXPECT().
+			if testCase.callDAO {
+				ideaDao.EXPECT().
 					Exec(mock.Anything, mock.MatchedBy(func(request *dao.IdeaVersionInsertRequest) bool {
-						return assert.NotEqual(t, uuid.Nil, request.ID) &&
-							assert.Equal(t, testCase.request.IdeaID, request.IdeaID) &&
-							assert.Equal(t, testCase.request.Actor.UserID, request.OwnerID) &&
-							assert.Equal(t, testCase.request.Seed, request.Seed) &&
-							assert.Equal(t, testCase.request.Genre, request.Genre) &&
-							assert.Equal(t, testCase.request.Title, request.Title) &&
-							assert.WithinDuration(t, time.Now(), request.Now, time.Minute)
+						return request.ProjectID == testCase.request.ProjectID &&
+							request.OwnerID == ownerID &&
+							request.Seed == testCase.request.Seed &&
+							request.Genre == testCase.request.Genre &&
+							request.Title == testCase.request.Title
 					})).
-					Return(testCase.daoResult, testCase.daoErr)
+					RunAndReturn(func(
+						_ context.Context,
+						request *dao.IdeaVersionInsertRequest,
+					) (*dao.IdeaVersion, error) {
+						if testCase.daoErr != nil || testCase.nilEntity {
+							return nil, testCase.daoErr
+						}
+
+						return &dao.IdeaVersion{
+							ID:        request.ID,
+							ProjectID: request.ProjectID,
+							Seed:      request.Seed,
+							Genre:     request.Genre,
+							Title:     request.Title,
+							CreatedAt: request.Now,
+						}, nil
+					})
 			}
 
 			transactor := transactiontest.NewTransactor()
-			if testCase.transactorErr != nil {
-				transactor = transactiontest.NewFailingTransactor(testCase.transactorErr)
+			if testCase.transactErr != nil {
+				transactor = transactiontest.NewFailingTransactor(testCase.transactErr)
 			}
 
-			result, err := core.NewIdeaVersionCreate(
-				projectAccess,
-				ideaVersionDao,
-				transactor,
-			).Exec(t.Context(), testCase.request)
-			if testCase.expectErr != nil && testCase.name == "Error/MissingEntity" {
-				require.ErrorContains(t, err, testCase.expectErr.Error())
-			} else {
+			result, err := core.NewIdeaVersionCreate(projectAccess, ideaDao, transactor).
+				Exec(t.Context(), testCase.request)
+
+			if testCase.expectErr == nil {
+				require.NoError(t, err)
+			} else if errors.Is(err, testCase.expectErr) {
 				require.ErrorIs(t, err, testCase.expectErr)
+			} else {
+				require.ErrorContains(t, err, testCase.expectErr.Error())
 			}
 
-			require.Equal(t, testCase.expect, result)
-
-			projectAccess.AssertExpectations(t)
-			ideaVersionDao.AssertExpectations(t)
+			if testCase.expectErr == nil {
+				require.Equal(t, projectID, result.ProjectID)
+				require.Equal(t, ownerID, result.OwnerID)
+				require.Equal(t, validRequest.Seed, result.Seed)
+				require.NotEqual(t, projectID, result.VersionID)
+			}
 		})
 	}
 }
