@@ -31,7 +31,13 @@ const (
 func TestContentRetentionConcurrent(t *testing.T) {
 	t.Parallel()
 
-	const versionCount = 32
+	const (
+		versionCount        = 32
+		maxConcurrentWrites = 16
+	)
+
+	// Bound cross-case client use while preserving concurrent writes within each history.
+	transactionSlots := make(chan struct{}, maxConcurrentWrites)
 
 	testCases := []struct {
 		name     string
@@ -45,6 +51,8 @@ func TestContentRetentionConcurrent(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
 			postgres.RunDBTest(
 				t,
 				configtest.PostgresPreset,
@@ -71,6 +79,9 @@ func TestContentRetentionConcurrent(t *testing.T) {
 
 							ready.Done()
 							<-start
+
+							transactionSlots <- struct{}{}
+							defer func() { <-transactionSlots }()
 
 							id := concurrentContentVersionID(testCase.idOffset, index)
 							errs[index] = postgres.WithinTx(ctx, nil, func(txCtx context.Context) error {
