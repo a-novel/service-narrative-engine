@@ -8,22 +8,29 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/core"
 )
 
-func TestGenerationStatusTerminal(t *testing.T) {
+func TestGenerationStatus(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
+		name string
+
 		status core.GenerationStatus
 		expect bool
 	}{
-		{status: core.GenerationStatusPending},
-		{status: core.GenerationStatusRunning},
-		{status: core.GenerationStatusSucceeded, expect: true},
-		{status: core.GenerationStatusFailed, expect: true},
-		{status: core.GenerationStatusAbandoned, expect: true},
-		{status: core.GenerationStatusCancelled, expect: true},
+		{name: "Pending", status: core.GenerationStatusPending},
+		{name: "Running", status: core.GenerationStatusRunning},
+		{name: "Succeeded", status: core.GenerationStatusSucceeded, expect: true},
+		{name: "Failed", status: core.GenerationStatusFailed, expect: true},
+		{name: "Abandoned", status: core.GenerationStatusAbandoned, expect: true},
+		{name: "Cancelled", status: core.GenerationStatusCancelled, expect: true},
+		{name: "Unknown", status: core.GenerationStatus("unknown")},
 	}
 
 	for _, testCase := range testCases {
-		require.Equal(t, testCase.expect, testCase.status.Terminal())
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			require.Equal(t, testCase.expect, testCase.status.Terminal())
+		})
 	}
 }

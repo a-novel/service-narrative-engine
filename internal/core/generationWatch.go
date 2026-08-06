@@ -18,9 +18,12 @@ import (
 
 // GenerationWatchRequest identifies one Project-owned generation to await.
 type GenerationWatchRequest struct {
-	Actor     Actor     `validate:"actor"`
+	// Actor identifies the authenticated Project owner.
+	Actor Actor `validate:"actor"`
+	// ProjectID identifies the Project used for authorization.
 	ProjectID uuid.UUID `validate:"required"`
-	ID        uuid.UUID `validate:"required"`
+	// ID identifies the generation in service-genai.
+	ID uuid.UUID `validate:"required"`
 }
 
 // GenerationWatch waits on service-genai after Project authorization.
@@ -74,6 +77,13 @@ func (service *GenerationWatch) Exec(
 
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("watch generation: %w", err))
+	}
+
+	if stream == nil {
+		return nil, otel.ReportError(
+			span,
+			fmt.Errorf("%w: missing watch stream", ErrGenerationResponseInvalid),
+		)
 	}
 
 	for {

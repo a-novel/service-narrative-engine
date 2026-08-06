@@ -120,3 +120,19 @@ func responsesOutputText(t *testing.T, text string) []byte {
 
 	return output
 }
+
+func responsesRefusal(t *testing.T) []byte {
+	t.Helper()
+
+	output, err := json.Marshal(map[string]any{
+		"output": []any{map[string]any{
+			"content": []any{map[string]any{
+				"type":    "refusal",
+				"refusal": "provider refusal",
+			}},
+		}},
+	})
+	require.NoError(t, err)
+
+	return output
+}

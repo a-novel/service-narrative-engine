@@ -20,13 +20,20 @@ import (
 
 // GenerationSubmitRequest contains the complete client-composed generation.
 type GenerationSubmitRequest struct {
-	Actor          Actor           `validate:"actor"`
-	ProjectID      uuid.UUID       `validate:"required"`
-	IdempotencyKey string          `validate:"required,notblank,max=256"`
-	Instructions   string          `validate:"required,notblank,max=32768"`
-	Input          json.RawMessage `validate:"required"`
-	Context        json.RawMessage `validate:"required"`
-	OutputSchema   json.RawMessage `validate:"required"`
+	// Actor identifies the authenticated Project owner.
+	Actor Actor `validate:"actor"`
+	// ProjectID scopes authorization and idempotency to one Project.
+	ProjectID uuid.UUID `validate:"required"`
+	// IdempotencyKey identifies one caller retry sequence within the Project.
+	IdempotencyKey string `validate:"required,notblank,max=256"`
+	// Instructions contains the caller-controlled generation guidance.
+	Instructions string `validate:"required,notblank,max=32768"`
+	// Input is the caller-controlled partial value to complete.
+	Input json.RawMessage `validate:"required"`
+	// Context is the caller-controlled source material for the generation.
+	Context json.RawMessage `validate:"required"`
+	// OutputSchema is the caller-controlled provider output contract.
+	OutputSchema json.RawMessage `validate:"required"`
 }
 
 // GenerationSubmit authorizes and forwards one client-composed generation.

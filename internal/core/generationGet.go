@@ -17,9 +17,12 @@ import (
 
 // GenerationGetRequest identifies one Project-owned generation.
 type GenerationGetRequest struct {
-	Actor     Actor     `validate:"actor"`
+	// Actor identifies the authenticated Project owner.
+	Actor Actor `validate:"actor"`
+	// ProjectID identifies the Project used for authorization.
 	ProjectID uuid.UUID `validate:"required"`
-	ID        uuid.UUID `validate:"required"`
+	// ID identifies the generation in service-genai.
+	ID uuid.UUID `validate:"required"`
 }
 
 // GenerationGet reads current state directly from service-genai after Project authorization.

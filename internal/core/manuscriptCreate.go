@@ -86,7 +86,7 @@ func (service *ManuscriptCreate) Exec(
 
 	err = manuscriptContentDefinition.validate(request.Manuscript)
 	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("Manuscript: %w", err))
+		return nil, otel.ReportError(span, fmt.Errorf("manuscript: %w", err))
 	}
 
 	var entity *dao.Manuscript

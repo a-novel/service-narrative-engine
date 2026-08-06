@@ -22,12 +22,12 @@ func validateIdeaContent(seed string, genre string, title string) error {
 
 	value, err := json.Marshal(content)
 	if err != nil {
-		return fmt.Errorf("encode Idea content: %w", err)
+		return fmt.Errorf("encode idea content: %w", err)
 	}
 
 	err = ideaContentDefinition.validate(value)
 	if err != nil {
-		return fmt.Errorf("Idea: %w", err)
+		return fmt.Errorf("idea: %w", err)
 	}
 
 	return nil

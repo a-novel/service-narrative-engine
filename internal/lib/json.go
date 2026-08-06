@@ -7,11 +7,11 @@ import (
 
 var (
 	// ErrJSONEmpty reports a missing JSON value.
-	ErrJSONEmpty = errors.New("JSON value is empty")
+	ErrJSONEmpty = errors.New("json value is empty")
 	// ErrJSONInvalid reports malformed JSON.
-	ErrJSONInvalid = errors.New("JSON value is invalid")
+	ErrJSONInvalid = errors.New("json value is invalid")
 	// ErrJSONTooLarge reports a JSON value over its byte limit.
-	ErrJSONTooLarge = errors.New("JSON value exceeds the size limit")
+	ErrJSONTooLarge = errors.New("json value exceeds the size limit")
 )
 
 // ValidateJSON accepts any single JSON value within maxBytes.

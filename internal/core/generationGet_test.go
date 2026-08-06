@@ -97,6 +97,12 @@ func TestGenerationGet(t *testing.T) {
 			callAccess: true, callGenAI: true, expectErr: core.ErrGenerationResponseInvalid,
 		},
 		{
+			name: "Error/MissingGeneration", request: validRequest,
+			callAccess: true, callGenAI: true,
+			response:  &servicegenai.GenerationGetResponse{},
+			expectErr: core.ErrGenerationResponseInvalid,
+		},
+		{
 			name: "Error/WrongOwner", request: validRequest, callAccess: true, callGenAI: true,
 			response:  &servicegenai.GenerationGetResponse{Generation: wrongOwner},
 			expectErr: core.ErrGenerationResponseInvalid,
@@ -116,6 +122,22 @@ func TestGenerationGet(t *testing.T) {
 			response: &servicegenai.GenerationGetResponse{Generation: generationFixture(
 				servicegenai.GenerationStatusSucceeded,
 				responsesOutputText(t, "{"),
+			)},
+			expectErr: core.ErrGenerationOutputInvalid,
+		},
+		{
+			name: "Error/Refused", request: validRequest, callAccess: true, callGenAI: true,
+			response: &servicegenai.GenerationGetResponse{Generation: generationFixture(
+				servicegenai.GenerationStatusSucceeded,
+				responsesRefusal(t),
+			)},
+			expectErr: core.ErrGenerationRefused,
+		},
+		{
+			name: "Error/ProposalOverLimit", request: validRequest, callAccess: true, callGenAI: true,
+			response: &servicegenai.GenerationGetResponse{Generation: generationFixture(
+				servicegenai.GenerationStatusSucceeded,
+				responsesOutputText(t, string(contentDocumentOfSize((1<<20)+1))),
 			)},
 			expectErr: core.ErrGenerationOutputInvalid,
 		},

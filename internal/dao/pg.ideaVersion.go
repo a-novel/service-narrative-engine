@@ -19,7 +19,7 @@ type IdeaVersion struct {
 	Seed string `bun:"seed"`
 	// Genre selects the platform genre vocabulary.
 	Genre string `bun:"genre"`
-	// Title is the writer-supplied title, or an empty string when omitted.
+	// Title is the writer-supplied title.
 	Title string `bun:"title"`
 	// CreatedAt records when the content version was saved.
 	CreatedAt time.Time `bun:"created_at"`

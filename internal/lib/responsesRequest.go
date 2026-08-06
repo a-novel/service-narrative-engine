@@ -15,9 +15,9 @@ type ResponsesJSONSchemaRequest struct {
 	Model string
 	// Reasoning selects the provider reasoning effort.
 	Reasoning string
-	// Instructions contains trusted system-channel guidance.
+	// Instructions contains guidance sent through the provider's instruction channel.
 	Instructions string
-	// Input contains the untrusted data-channel document.
+	// Input contains the provider input document.
 	Input string
 	// SchemaName identifies the output contract to the provider.
 	SchemaName string

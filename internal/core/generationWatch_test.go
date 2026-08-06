@@ -63,6 +63,7 @@ func TestGenerationWatch(t *testing.T) {
 		responses  []*servicegenai.GenerationWatchResponse
 		streamErr  error
 		initialErr error
+		nilStream  bool
 		callAccess bool
 		callGenAI  bool
 
@@ -109,6 +110,10 @@ func TestGenerationWatch(t *testing.T) {
 			initialErr: errStream, expectErr: errStream,
 		},
 		{
+			name: "Error/MissingStream", request: validRequest, callAccess: true, callGenAI: true,
+			nilStream: true, expectErr: core.ErrGenerationResponseInvalid,
+		},
+		{
 			name: "Error/Closed", request: validRequest, callAccess: true, callGenAI: true,
 			responses: []*servicegenai.GenerationWatchResponse{{
 				Generation: generationFixture(servicegenai.GenerationStatusPending, nil),
@@ -148,7 +153,7 @@ func TestGenerationWatch(t *testing.T) {
 
 			if testCase.callGenAI {
 				var stream grpc.ServerStreamingClient[servicegenai.GenerationWatchResponse]
-				if testCase.initialErr == nil {
+				if testCase.initialErr == nil && !testCase.nilStream {
 					stream = &generationWatchStream{
 						responses: testCase.responses,
 						err:       testCase.streamErr,

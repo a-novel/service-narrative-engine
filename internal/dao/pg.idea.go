@@ -18,7 +18,7 @@ type Idea struct {
 	Seed string `bun:"seed"`
 	// Genre selects the platform genre vocabulary.
 	Genre string `bun:"genre"`
-	// Title is the writer-supplied title, or an empty string when omitted.
+	// Title is the writer-supplied title.
 	Title string `bun:"title"`
 	// ProjectCreatedAt records when the stable Project was created.
 	ProjectCreatedAt time.Time `bun:"project_created_at"`
