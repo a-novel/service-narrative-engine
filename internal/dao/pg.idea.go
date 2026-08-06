@@ -4,25 +4,24 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/uptrace/bun"
 )
 
-// Idea is the typed entry contract from which an Engine Version generates content.
+// Idea combines one immutable content version with its stable Project identity.
 type Idea struct {
-	bun.BaseModel `bun:"table:ideas,alias:idea"`
-
-	// ID identifies the Idea.
-	ID uuid.UUID `bun:"id,pk,type:uuid"`
-	// OwnerID identifies the user who owns the Idea.
+	// ProjectID identifies the stable Project.
+	ProjectID uuid.UUID `bun:"project_id,type:uuid"`
+	// VersionID identifies the selected Idea Version.
+	VersionID uuid.UUID `bun:"version_id,pk,type:uuid"`
+	// OwnerID identifies the user who owns the Project.
 	OwnerID uuid.UUID `bun:"owner_id,type:uuid"`
 	// Seed is the source premise supplied by the writer.
 	Seed string `bun:"seed"`
 	// Genre selects the platform genre vocabulary.
 	Genre string `bun:"genre"`
-	// Title is the writer-supplied title, or an empty string when omitted.
+	// Title is the writer-supplied title.
 	Title string `bun:"title"`
-	// CreatedAt records when the Idea was created.
+	// ProjectCreatedAt records when the stable Project was created.
+	ProjectCreatedAt time.Time `bun:"project_created_at"`
+	// CreatedAt records when this Idea Version was saved.
 	CreatedAt time.Time `bun:"created_at"`
-	// UpdatedAt records when the Idea last changed, or is nil before its first update.
-	UpdatedAt *time.Time `bun:"updated_at"`
 }

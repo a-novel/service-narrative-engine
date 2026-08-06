@@ -1,0 +1,18 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+type: object
+additionalProperties: false
+required:
+  - title
+  - details
+properties:
+  title:
+    type: string
+    maxLength: 32
+  details:
+    type: object
+    additionalProperties: false
+    required:
+      - summary
+    properties:
+      summary:
+        type: string

@@ -19,6 +19,7 @@ func TestPgIdeaInsert(t *testing.T) {
 	t.Parallel()
 
 	now := time.Date(2026, 7, 26, 1, 2, 3, 0, time.UTC)
+	ownerID := uuid.MustParse("00000000-0000-0000-0000-000000000042")
 	testCases := []struct {
 		name string
 
@@ -28,42 +29,24 @@ func TestPgIdeaInsert(t *testing.T) {
 	}{
 		{
 			name: "Success",
-
 			request: &dao.IdeaInsertRequest{
-				ID:      uuid.MustParse("00000000-0000-0000-0000-000000000301"),
-				OwnerID: uuid.MustParse("00000000-0000-0000-0000-000000000042"),
-				Seed:    "A second foghorn answers from beneath the sea.",
-				Genre:   "speculative",
-				Title:   "The Answering Light",
-				Now:     now,
-			},
-
-			expect: &dao.Idea{
-				ID:        uuid.MustParse("00000000-0000-0000-0000-000000000301"),
-				OwnerID:   uuid.MustParse("00000000-0000-0000-0000-000000000042"),
+				ProjectID: uuid.MustParse("00000000-0000-0000-0000-000000000301"),
+				VersionID: uuid.MustParse("00000000-0000-0000-0000-000000000311"),
+				OwnerID:   ownerID,
 				Seed:      "A second foghorn answers from beneath the sea.",
 				Genre:     "speculative",
 				Title:     "The Answering Light",
-				CreatedAt: now,
+				Now:       now,
 			},
-		},
-		{
-			name: "Success/WithoutTitle",
-
-			request: &dao.IdeaInsertRequest{
-				ID:      uuid.MustParse("00000000-0000-0000-0000-000000000302"),
-				OwnerID: uuid.MustParse("00000000-0000-0000-0000-000000000042"),
-				Seed:    "A city wakes with no shadows.",
-				Genre:   "speculative",
-				Now:     now,
-			},
-
 			expect: &dao.Idea{
-				ID:        uuid.MustParse("00000000-0000-0000-0000-000000000302"),
-				OwnerID:   uuid.MustParse("00000000-0000-0000-0000-000000000042"),
-				Seed:      "A city wakes with no shadows.",
-				Genre:     "speculative",
-				CreatedAt: now,
+				ProjectID:        uuid.MustParse("00000000-0000-0000-0000-000000000301"),
+				VersionID:        uuid.MustParse("00000000-0000-0000-0000-000000000311"),
+				OwnerID:          ownerID,
+				Seed:             "A second foghorn answers from beneath the sea.",
+				Genre:            "speculative",
+				Title:            "The Answering Light",
+				ProjectCreatedAt: now,
+				CreatedAt:        now,
 			},
 		},
 	}

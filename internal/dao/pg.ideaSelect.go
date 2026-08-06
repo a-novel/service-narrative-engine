@@ -17,33 +17,33 @@ import (
 //go:embed pg.ideaSelect.sql
 var ideaSelectQuery string
 
-// ErrIdeaSelectNotFound is returned when the owner cannot access the requested Idea.
+// ErrIdeaSelectNotFound is returned when the owner cannot access the requested Project Idea.
 var ErrIdeaSelectNotFound = errors.New("idea not found")
 
-// IdeaSelectRequest identifies an owner-scoped Idea for [PgIdeaSelect.Exec].
+// IdeaSelectRequest identifies a Project whose current Idea Version is requested.
 type IdeaSelectRequest struct {
-	// ID identifies the Idea.
-	ID uuid.UUID
-	// OwnerID identifies the user requesting the Idea.
+	// ProjectID identifies the Project.
+	ProjectID uuid.UUID
+	// OwnerID identifies the user requesting its Idea.
 	OwnerID uuid.UUID
 }
 
-// PgIdeaSelect retrieves an Idea within its owner boundary.
+// PgIdeaSelect retrieves the current Idea Version within its Project owner boundary.
 type PgIdeaSelect struct{}
 
-// NewPgIdeaSelect creates an owner-scoped Idea select operation.
+// NewPgIdeaSelect creates an owner-scoped current-Idea select operation.
 func NewPgIdeaSelect() *PgIdeaSelect {
 	return &PgIdeaSelect{}
 }
 
-// Exec returns the owned Idea or [ErrIdeaSelectNotFound].
+// Exec returns the current owned Idea or [ErrIdeaSelectNotFound].
 func (operation *PgIdeaSelect) Exec(ctx context.Context, request *IdeaSelectRequest) (*Idea, error) {
 	ctx, span := otel.Tracer().Start(ctx, "dao.PgIdeaSelect")
 	defer span.End()
 
 	span.SetAttributes(
-		attribute.String("idea.id", request.ID.String()),
-		attribute.String("idea.owner_id", request.OwnerID.String()),
+		attribute.String("project.id", request.ProjectID.String()),
+		attribute.String("project.owner_id", request.OwnerID.String()),
 	)
 
 	db, err := postgres.GetContext(ctx)
@@ -53,7 +53,7 @@ func (operation *PgIdeaSelect) Exec(ctx context.Context, request *IdeaSelectRequ
 
 	var idea Idea
 
-	err = db.NewRaw(ideaSelectQuery, request.ID, request.OwnerID).Scan(ctx, &idea)
+	err = db.NewRaw(ideaSelectQuery, request.ProjectID, request.OwnerID).Scan(ctx, &idea)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			err = errors.Join(err, ErrIdeaSelectNotFound)

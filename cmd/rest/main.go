@@ -71,7 +71,7 @@ func main() {
 		servicejsonkeys.NewClaimsVerifier[serviceauthentication.Claims](jsonKeysClient),
 	)
 	withAuth := serviceauthentication.NewAuthHandler(claimsVerifier, cfg.Permissions, cfg.Logger)
-	// TODO: Attach authorization to the Idea and generation routes.
+	// TODO: Attach authorization to the Project content and generic generation routes.
 	// Tracked in https://github.com/a-novel/service-narrative-engine/issues/503.
 	_ = withAuth
 
