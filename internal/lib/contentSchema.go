@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"sync"
-	"unicode/utf8"
 
 	"github.com/google/jsonschema-go/jsonschema"
 )
@@ -15,11 +14,9 @@ var (
 	// ErrContentSchemaInvalid reports a schema that cannot be prepared for validation.
 	ErrContentSchemaInvalid = errors.New("invalid content schema")
 
-	errContentDocumentEmpty         = errors.New("json document is empty")
 	errContentDocumentInvalid       = errors.New("json document is invalid")
 	errContentDocumentNotObject     = errors.New("json value must be an object")
 	errContentDocumentSchemaInvalid = errors.New("json document does not match its schema")
-	errContentDocumentTooLarge      = errors.New("json document exceeds the size limit")
 )
 
 // ContentSchema validates bounded object documents against one JSON Schema.
@@ -85,27 +82,14 @@ func (schema *ContentSchema) Validate(value json.RawMessage) (map[string]any, er
 // decodeContentDocument enforces byte and UTF-8 bounds and accepts exactly one
 // JSON object as content.
 func decodeContentDocument(value json.RawMessage, maxBytes int) (map[string]any, error) {
-	if maxBytes > 0 && len(value) > maxBytes {
-		return nil, fmt.Errorf(
-			"%w: contains %d bytes, limit is %d",
-			errContentDocumentTooLarge,
-			len(value),
-			maxBytes,
-		)
-	}
-
-	if !utf8.Valid(value) {
-		return nil, errContentDocumentInvalid
-	}
-
-	value = bytes.TrimSpace(value)
-	if len(value) == 0 {
-		return nil, errContentDocumentEmpty
+	err := ValidateJSON(value, maxBytes)
+	if err != nil {
+		return nil, err
 	}
 
 	var instance map[string]any
 
-	err := json.Unmarshal(value, &instance)
+	err = json.Unmarshal(value, &instance)
 	if err != nil {
 		return nil, errContentDocumentInvalid
 	}

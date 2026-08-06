@@ -28,6 +28,10 @@ func TestValidateJSON(t *testing.T) {
 		{name: "Success/Unlimited", source: []byte(`{"large":"accepted"}`)},
 		{name: "Error/Empty", maxBytes: 1, expectErr: lib.ErrJSONEmpty},
 		{name: "Error/Invalid", source: []byte(`{`), maxBytes: 1, expectErr: lib.ErrJSONInvalid},
+		{
+			name: "Error/InvalidUTF8", source: []byte{'"', 0xff, '"'}, maxBytes: 3,
+			expectErr: lib.ErrJSONInvalid,
+		},
 		{name: "Error/TooLarge", source: []byte(`true`), maxBytes: 3, expectErr: lib.ErrJSONTooLarge},
 	}
 

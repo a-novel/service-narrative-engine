@@ -3,6 +3,7 @@ package lib
 import (
 	"encoding/json"
 	"errors"
+	"unicode/utf8"
 )
 
 var (
@@ -25,7 +26,7 @@ func ValidateJSON(source []byte, maxBytes int) error {
 		return ErrJSONTooLarge
 	}
 
-	if !json.Valid(source) {
+	if !utf8.Valid(source) || !json.Valid(source) {
 		return ErrJSONInvalid
 	}
 
