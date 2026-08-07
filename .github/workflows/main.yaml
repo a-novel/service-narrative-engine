@@ -180,6 +180,8 @@ jobs:
     env:
       REST_URL: "http://localhost:8080"
       SERVICE_AUTHENTICATION_URL: "http://localhost:4000"
+      SERVICE_AUTHENTICATION_B_URL: "http://localhost:4001"
+      OPENAI_MOCK_URL: "http://localhost:5000"
       SUPER_ADMIN_EMAIL: noreply@agorastoryverse.com
       SUPER_ADMIN_PASSWORD: admin
     steps:
@@ -188,7 +190,7 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/start-ci-services
         with:
-          services: standalone-rest service-authentication
+          services: standalone-rest service-authentication service-authentication-b openai-mock
           database_image: ghcr.io/a-novel/service-narrative-engine/database@${{ needs.build-database.outputs.digest }}
           standalone_rest_image: ghcr.io/a-novel/service-narrative-engine/standalone-rest@${{ needs.build-standalone-rest.outputs.digest }}
           registry_login: "true"
