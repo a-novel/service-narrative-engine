@@ -87,7 +87,13 @@ services:
     volumes:
       - ../pkg/js/test/rest/testdata/openaiMock.mjs:/app/openaiMock.mjs:ro
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:8080/health').then(response => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
       interval: 1s
       timeout: 1s
       retries: 30
