@@ -31,7 +31,7 @@ inputs:
     description: Authentication REST image reference.
   genai_database_image:
     required: false
-    default: ghcr.io/a-novel/service-genai/database:v0.2.0
+    default: ghcr.io/a-novel/service-genai/database:v0.3.0
     description: GenAI database image reference.
   genai_migrations_image:
     required: false
