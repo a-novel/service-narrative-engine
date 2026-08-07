@@ -126,6 +126,14 @@ func TestGenerationGet(t *testing.T) {
 			expectErr: core.ErrGenerationOutputInvalid,
 		},
 		{
+			name: "Error/InvalidResponseOutput", request: validRequest, callAccess: true, callGenAI: true,
+			response: &servicegenai.GenerationGetResponse{Generation: generationFixture(
+				servicegenai.GenerationStatusSucceeded,
+				[]byte("{"),
+			)},
+			expectErr: core.ErrGenerationOutputInvalid,
+		},
+		{
 			name: "Error/Refused", request: validRequest, callAccess: true, callGenAI: true,
 			response: &servicegenai.GenerationGetResponse{Generation: generationFixture(
 				servicegenai.GenerationStatusSucceeded,
