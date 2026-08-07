@@ -173,11 +173,11 @@ func resolveGenerationProposal(
 	_, span := otel.Tracer().Start(ctx, "core.resolveGenerationProposal")
 	defer span.End()
 
-	text, err := lib.ExtractResponsesOutputText(output)
+	text, err := servicegenai.ExtractResponsesOutputText(output)
 	if err != nil {
 		span.RecordError(err)
 
-		if errors.Is(err, lib.ErrResponsesRefused) {
+		if errors.Is(err, servicegenai.ErrResponsesRefused) {
 			return nil, otel.ReportError(span, ErrGenerationRefused)
 		}
 
