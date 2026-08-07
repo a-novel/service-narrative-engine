@@ -36,7 +36,7 @@ COPY --from=builder /migrations /migrations
 
 # Alpine ships BusyBox wget — no extra package needed for the healthcheck.
 HEALTHCHECK --interval=1s --timeout=5s --retries=10 --start-period=1s \
-  CMD wget -qO /dev/null http://localhost:8080/ping || exit 1
+  CMD ["wget", "-qO", "/dev/null", "http://localhost:8080/ping"]
 
 ENV REST_PORT=8080
 
