@@ -61,7 +61,7 @@ services:
       POSTGRES_INITDB_ARGS: --auth=scram-sha-256
 
   service-genai-migrations:
-    image: ghcr.io/a-novel/service-genai/jobs/migrations:v0.2.0
+    image: ghcr.io/a-novel/service-genai/jobs/migrations:v0.3.0
     depends_on:
       postgres-genai:
         condition: service_healthy
