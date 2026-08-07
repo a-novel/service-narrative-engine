@@ -37,10 +37,7 @@ func (operation *PgStepValueList) Exec(
 	ctx, span := otel.Tracer().Start(ctx, "dao.PgStepValueList")
 	defer span.End()
 
-	span.SetAttributes(
-		attribute.String("project.id", request.ProjectID.String()),
-		attribute.String("step_value.key", request.Key),
-	)
+	span.SetAttributes(attribute.String("project.id", request.ProjectID.String()))
 
 	db, err := postgres.GetContext(ctx)
 	if err != nil {

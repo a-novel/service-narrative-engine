@@ -206,20 +206,29 @@ describe("owned Project contract", () => {
     expect(providerResponse.ok).toBe(true);
 
     const providerRequest = (await providerResponse.json()) as {
+      model: string;
+      reasoning: { effort: string };
+      max_output_tokens: number;
+      safety_identifier: string;
       instructions: string;
       input: string;
       text: { format: { schema: unknown } };
       background: boolean;
       store: boolean;
-    };
+    } & Record<string, unknown>;
     const providerInput = JSON.parse(providerRequest.input) as Record<string, unknown>;
 
+    expect(providerRequest.model).toBe("gpt-5.6-terra");
+    expect(providerRequest.reasoning.effort).toBe("medium");
+    expect(providerRequest.max_output_tokens).toBe(32_768);
+    expect(providerRequest.safety_identifier).toMatch(/^[0-9a-f]{64}$/u);
     expect(providerRequest.instructions).toBe(instructions);
     expect(providerInput).toEqual({ input, context });
     expect(Object.keys(providerInput).sort()).toEqual(["context", "input"]);
     expect(providerRequest.text.format.schema).toEqual(outputSchema);
     expect(providerRequest.background).toBe(true);
     expect(providerRequest.store).toBe(false);
+    expect(providerRequest).not.toHaveProperty("tools");
 
     const selected = await stepValueCreate(api, ownerToken, {
       projectID: project.id,

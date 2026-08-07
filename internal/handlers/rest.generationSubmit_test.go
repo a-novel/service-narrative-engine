@@ -3,6 +3,7 @@ package handlers_test
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -107,6 +108,41 @@ func TestRestGenerationSubmit(t *testing.T) {
 
 		require.Equal(t, http.StatusBadRequest, response.Code)
 	})
+
+	for _, hiddenControl := range []string{
+		"model",
+		"provider",
+		"reasoning",
+		"effort",
+		"maxOutputTokens",
+		"maxAttempts",
+		"purpose",
+	} {
+		t.Run("Error/HiddenProviderControl/"+hiddenControl, func(t *testing.T) {
+			t.Parallel()
+
+			service := handlersmocks.NewMockRestGenerationSubmitService(t)
+			body := fmt.Sprintf(`{
+				"instructions":"Continue the scene.",
+				"input":{},
+				"context":{},
+				"outputSchema":{},
+				%q:"client-selected"
+			}`, hiddenControl)
+
+			response := executeGenerationSubmit(
+				t,
+				handlers.NewRestGenerationSubmit(service, config.LoggerDev),
+				ownerID,
+				projectID,
+				"draft-42",
+				body,
+			)
+
+			require.Equal(t, http.StatusBadRequest, response.Code)
+			service.AssertExpectations(t)
+		})
+	}
 
 	t.Run("Replay", func(t *testing.T) {
 		t.Parallel()

@@ -55,7 +55,6 @@ func (service *StepValueHistory) Exec(
 	span.SetAttributes(
 		attribute.String("project.id", request.ProjectID.String()),
 		attribute.String("project.owner_id", request.Actor.UserID.String()),
-		attribute.String("step_value.key", request.Key),
 	)
 
 	_, err = service.projectAccess.Exec(ctx, &ProjectAccessRequest{
