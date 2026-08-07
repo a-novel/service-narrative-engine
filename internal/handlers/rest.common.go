@@ -35,7 +35,10 @@ var restTransportErrors = httpf.ErrMap{
 	nil:               http.StatusBadRequest,
 }
 
-var errMultipleJSONDocuments = errors.New("expected one JSON document")
+var (
+	errInvalidJSONDocument   = errors.New("invalid JSON request body")
+	errMultipleJSONDocuments = errors.New("expected one JSON document")
+)
 
 // RestIdeaValue is the static Idea content shared by create and version responses.
 type RestIdeaValue struct {
@@ -99,7 +102,8 @@ func decodeRestJSON(r *http.Request, target any) error {
 
 	err := decoder.Decode(target)
 	if err != nil {
-		return fmt.Errorf("decode request body: %w", err)
+		// Decoder errors may quote attacker-controlled object keys. Keep them out of logs and spans.
+		return errInvalidJSONDocument
 	}
 
 	err = decoder.Decode(&struct{}{})

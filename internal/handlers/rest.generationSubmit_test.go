@@ -16,6 +16,8 @@ import (
 
 	serviceauthentication "github.com/a-novel/service-authentication/v2/pkg/go"
 
+	loggingpresets "github.com/a-novel-kit/golib/logging/presets"
+
 	"github.com/a-novel/service-narrative-engine/internal/config"
 	"github.com/a-novel/service-narrative-engine/internal/core"
 	"github.com/a-novel/service-narrative-engine/internal/handlers"
@@ -122,6 +124,7 @@ func TestRestGenerationSubmit(t *testing.T) {
 			t.Parallel()
 
 			service := handlersmocks.NewMockRestGenerationSubmitService(t)
+			logOutput := new(bytes.Buffer)
 			body := fmt.Sprintf(`{
 				"instructions":"Continue the scene.",
 				"input":{},
@@ -132,7 +135,10 @@ func TestRestGenerationSubmit(t *testing.T) {
 
 			response := executeGenerationSubmit(
 				t,
-				handlers.NewRestGenerationSubmit(service, config.LoggerDev),
+				handlers.NewRestGenerationSubmit(
+					service,
+					&loggingpresets.LogLocal{Out: logOutput},
+				),
 				ownerID,
 				projectID,
 				"draft-42",
@@ -140,6 +146,7 @@ func TestRestGenerationSubmit(t *testing.T) {
 			)
 
 			require.Equal(t, http.StatusBadRequest, response.Code)
+			require.NotContains(t, logOutput.String(), hiddenControl)
 			service.AssertExpectations(t)
 		})
 	}
