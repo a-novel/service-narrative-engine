@@ -16,13 +16,16 @@ import (
 )
 
 var (
-	ownerID      = uuid.MustParse("00000000-0000-0000-0000-000000000042")
-	projectID    = uuid.MustParse("00000000-0000-0000-0000-000000000201")
-	generationID = uuid.MustParse("00000000-0000-0000-0000-000000000601")
-	createdAt    = time.Date(2026, 7, 28, 12, 0, 0, 123456000, time.UTC)
-	updatedAt    = createdAt.Add(time.Second)
-	settledAt    = updatedAt.Add(time.Second)
-	expiresAt    = settledAt.Add(30 * 24 * time.Hour)
+	ownerID              = uuid.MustParse("00000000-0000-0000-0000-000000000042")
+	projectID            = uuid.MustParse("00000000-0000-0000-0000-000000000201")
+	fixtureIdeaVersionID = uuid.MustParse("00000000-0000-0000-0000-000000000202")
+	fixtureStepValueID   = uuid.MustParse("00000000-0000-0000-0000-000000000401")
+	fixtureManuscriptID  = uuid.MustParse("00000000-0000-0000-0000-000000000501")
+	generationID         = uuid.MustParse("00000000-0000-0000-0000-000000000601")
+	createdAt            = time.Date(2026, 7, 28, 12, 0, 0, 123456000, time.UTC)
+	updatedAt            = createdAt.Add(time.Second)
+	settledAt            = updatedAt.Add(time.Second)
+	expiresAt            = settledAt.Add(30 * 24 * time.Hour)
 )
 
 var staticManuscriptValue = json.RawMessage(

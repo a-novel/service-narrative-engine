@@ -38,6 +38,20 @@ type Manuscript struct {
 	CreatedAt  time.Time       `json:"createdAt"`
 }
 
+// manuscriptFromDao maps one stored document into the core contract.
+func manuscriptFromDao(entity *dao.Manuscript) *Manuscript {
+	if entity == nil {
+		return nil
+	}
+
+	return &Manuscript{
+		ID:         entity.ID,
+		ProjectID:  entity.ProjectID,
+		Manuscript: entity.Value,
+		CreatedAt:  entity.CreatedAt,
+	}
+}
+
 // ManuscriptCreate validates and saves one Project-owned Manuscript Version.
 type ManuscriptCreate struct {
 	projectAccess ProjectAccessService
@@ -119,10 +133,5 @@ func (service *ManuscriptCreate) Exec(
 
 	span.SetAttributes(attribute.String("manuscript.id", entity.ID.String()))
 
-	return otel.ReportSuccess(span, &Manuscript{
-		ID:         entity.ID,
-		ProjectID:  entity.ProjectID,
-		Manuscript: entity.Value,
-		CreatedAt:  entity.CreatedAt,
-	}), nil
+	return otel.ReportSuccess(span, manuscriptFromDao(entity)), nil
 }
