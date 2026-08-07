@@ -89,7 +89,7 @@ services:
 
   service-genai:
     profiles: ["genai"]
-    image: ghcr.io/a-novel/service-genai/grpc:v0.2.0
+    image: ghcr.io/a-novel/service-genai/grpc:v0.3.0
     ports:
       - "${SERVICE_GENAI_PORT}:8080"
     depends_on:
