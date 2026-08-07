@@ -2,6 +2,7 @@ package core_test
 
 import (
 	"encoding/json"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/mock"
@@ -19,90 +20,168 @@ func TestProjectGet(t *testing.T) {
 		Actor:     core.Actor{UserID: ownerID},
 		ProjectID: projectID,
 	}
-
-	t.Run("Success", func(t *testing.T) {
-		t.Parallel()
-
-		ideaEntity := &dao.Idea{
+	ideaEntity := &dao.Idea{
+		ProjectID:        projectID,
+		VersionID:        fixtureIdeaVersionID,
+		OwnerID:          ownerID,
+		Title:            "The Answering Light",
+		Genre:            "speculative",
+		Seed:             "A foghorn answers from beneath the sea.",
+		ProjectCreatedAt: createdAt,
+		CreatedAt:        updatedAt,
+	}
+	stepEntity := &dao.StepValue{
+		ID:        fixtureStepValueID,
+		ProjectID: projectID,
+		Key:       "outline",
+		Value:     json.RawMessage(`{"unexpected":"still opaque"}`),
+		CreatedAt: updatedAt,
+	}
+	manuscriptEntity := &dao.Manuscript{
+		ID:        fixtureManuscriptID,
+		ProjectID: projectID,
+		Value:     staticManuscriptValue,
+		CreatedAt: updatedAt,
+	}
+	expect := &core.ProjectSnapshot{
+		ID:        projectID,
+		CreatedAt: createdAt,
+		Idea: &core.Idea{
 			ProjectID:        projectID,
 			VersionID:        fixtureIdeaVersionID,
 			OwnerID:          ownerID,
-			Title:            "The Answering Light",
-			Genre:            "speculative",
-			Seed:             "A foghorn answers from beneath the sea.",
+			Title:            ideaEntity.Title,
+			Genre:            ideaEntity.Genre,
+			Seed:             ideaEntity.Seed,
 			ProjectCreatedAt: createdAt,
 			CreatedAt:        updatedAt,
-		}
-		stepEntity := &dao.StepValue{
+		},
+		StepValues: []*core.StepValue{{
 			ID:        fixtureStepValueID,
 			ProjectID: projectID,
-			Key:       "outline",
-			Value:     json.RawMessage(`{"unexpected":"still opaque"}`),
+			Key:       stepEntity.Key,
+			Value:     stepEntity.Value,
 			CreatedAt: updatedAt,
-		}
-		manuscriptEntity := &dao.Manuscript{
-			ID:        fixtureManuscriptID,
-			ProjectID: projectID,
-			Value:     staticManuscriptValue,
-			CreatedAt: updatedAt,
-		}
+		}},
+		Manuscript: &core.Manuscript{
+			ID:         fixtureManuscriptID,
+			ProjectID:  projectID,
+			Manuscript: staticManuscriptValue,
+			CreatedAt:  updatedAt,
+		},
+	}
+	errAccess := errors.New("access failure")
+	errIdea := errors.New("idea failure")
+	errSteps := errors.New("step values failure")
+	errManuscript := errors.New("manuscript failure")
 
-		projectAccess := coremocks.NewMockProjectAccessService(t)
-		projectAccess.EXPECT().
-			Exec(mock.Anything, &core.ProjectAccessRequest{
-				Actor:     request.Actor,
-				ProjectID: projectID,
-			}).
-			Return(projectFixture(), nil)
+	type mocks struct {
+		access     *coremocks.MockProjectAccessService
+		idea       *coremocks.MockProjectGetIdeaDao
+		steps      *coremocks.MockProjectGetStepValueDao
+		manuscript *coremocks.MockProjectGetManuscriptDao
+	}
 
-		ideaDao := coremocks.NewMockProjectGetIdeaDao(t)
-		ideaDao.EXPECT().
-			Exec(mock.Anything, &dao.IdeaSelectRequest{ProjectID: projectID, OwnerID: ownerID}).
-			Return(ideaEntity, nil)
+	testCases := []struct {
+		name string
 
-		stepValueDao := coremocks.NewMockProjectGetStepValueDao(t)
-		stepValueDao.EXPECT().
-			Exec(mock.Anything, &dao.StepValueCurrentListRequest{ProjectID: projectID}).
-			Return([]*dao.StepValue{stepEntity}, nil)
+		request *core.ProjectGetRequest
+		setup   func(mocks)
 
-		manuscriptDao := coremocks.NewMockProjectGetManuscriptDao(t)
-		manuscriptDao.EXPECT().
-			Exec(mock.Anything, &dao.ManuscriptSelectRequest{ProjectID: projectID}).
-			Return(manuscriptEntity, nil)
+		expect    *core.ProjectSnapshot
+		expectErr error
+	}{
+		{
+			name:    "Success",
+			request: request,
+			setup: func(m mocks) {
+				m.access.EXPECT().Exec(mock.Anything, &core.ProjectAccessRequest{
+					Actor: request.Actor, ProjectID: projectID,
+				}).Return(projectFixture(), nil)
+				m.idea.EXPECT().Exec(mock.Anything, &dao.IdeaSelectRequest{
+					ProjectID: projectID, OwnerID: ownerID,
+				}).Return(ideaEntity, nil)
+				m.steps.EXPECT().Exec(mock.Anything, &dao.StepValueCurrentListRequest{
+					ProjectID: projectID,
+				}).Return([]*dao.StepValue{stepEntity}, nil)
+				m.manuscript.EXPECT().Exec(mock.Anything, &dao.ManuscriptSelectRequest{
+					ProjectID: projectID,
+				}).Return(manuscriptEntity, nil)
+			},
+			expect: expect,
+		},
+		{
+			name:      "Error/InvalidRequest",
+			request:   &core.ProjectGetRequest{},
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name:    "Error/Access",
+			request: request,
+			setup: func(m mocks) {
+				m.access.EXPECT().Exec(mock.Anything, mock.Anything).Return(nil, errAccess)
+			},
+			expectErr: errAccess,
+		},
+		{
+			name:    "Error/Idea",
+			request: request,
+			setup: func(m mocks) {
+				m.access.EXPECT().Exec(mock.Anything, mock.Anything).Return(projectFixture(), nil)
+				m.idea.EXPECT().Exec(mock.Anything, mock.Anything).Return(nil, errIdea)
+			},
+			expectErr: errIdea,
+		},
+		{
+			name:    "Error/StepValues",
+			request: request,
+			setup: func(m mocks) {
+				m.access.EXPECT().Exec(mock.Anything, mock.Anything).Return(projectFixture(), nil)
+				m.idea.EXPECT().Exec(mock.Anything, mock.Anything).Return(ideaEntity, nil)
+				m.steps.EXPECT().Exec(mock.Anything, mock.Anything).Return(nil, errSteps)
+			},
+			expectErr: errSteps,
+		},
+		{
+			name:    "Error/Manuscript",
+			request: request,
+			setup: func(m mocks) {
+				m.access.EXPECT().Exec(mock.Anything, mock.Anything).Return(projectFixture(), nil)
+				m.idea.EXPECT().Exec(mock.Anything, mock.Anything).Return(ideaEntity, nil)
+				m.steps.EXPECT().Exec(mock.Anything, mock.Anything).Return([]*dao.StepValue{}, nil)
+				m.manuscript.EXPECT().Exec(mock.Anything, mock.Anything).Return(nil, errManuscript)
+			},
+			expectErr: errManuscript,
+		},
+	}
 
-		result, err := core.NewProjectGet(
-			projectAccess,
-			ideaDao,
-			stepValueDao,
-			manuscriptDao,
-		).Exec(t.Context(), request)
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
 
-		require.NoError(t, err)
-		require.Equal(t, projectID, result.ID)
-		require.Equal(t, fixtureIdeaVersionID, result.Idea.VersionID)
-		require.Equal(t, stepEntity.Value, result.StepValues[0].Value)
-		require.Equal(t, manuscriptEntity.Value, result.Manuscript.Manuscript)
-	})
+			dependencies := mocks{
+				access:     coremocks.NewMockProjectAccessService(t),
+				idea:       coremocks.NewMockProjectGetIdeaDao(t),
+				steps:      coremocks.NewMockProjectGetStepValueDao(t),
+				manuscript: coremocks.NewMockProjectGetManuscriptDao(t),
+			}
+			if testCase.setup != nil {
+				testCase.setup(dependencies)
+			}
 
-	t.Run("Error/OtherOwnerStopsBeforeContentReads", func(t *testing.T) {
-		t.Parallel()
+			result, err := core.NewProjectGet(
+				dependencies.access,
+				dependencies.idea,
+				dependencies.steps,
+				dependencies.manuscript,
+			).Exec(t.Context(), testCase.request)
 
-		projectAccess := coremocks.NewMockProjectAccessService(t)
-		projectAccess.EXPECT().
-			Exec(mock.Anything, &core.ProjectAccessRequest{
-				Actor:     request.Actor,
-				ProjectID: projectID,
-			}).
-			Return(nil, core.ErrProjectNotFound)
-
-		result, err := core.NewProjectGet(
-			projectAccess,
-			coremocks.NewMockProjectGetIdeaDao(t),
-			coremocks.NewMockProjectGetStepValueDao(t),
-			coremocks.NewMockProjectGetManuscriptDao(t),
-		).Exec(t.Context(), request)
-
-		require.ErrorIs(t, err, core.ErrProjectNotFound)
-		require.Nil(t, result)
-	})
+			require.ErrorIs(t, err, testCase.expectErr)
+			require.Equal(t, testCase.expect, result)
+			dependencies.access.AssertExpectations(t)
+			dependencies.idea.AssertExpectations(t)
+			dependencies.steps.AssertExpectations(t)
+			dependencies.manuscript.AssertExpectations(t)
+		})
+	}
 }
