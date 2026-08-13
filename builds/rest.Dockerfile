@@ -1,7 +1,7 @@
 # Exposes the service as a REST server.
 #
 # It needs a database instance with the schema migrations already applied.
-FROM docker.io/library/golang:1.26.5-alpine AS builder
+FROM docker.io/library/golang:1.26.6-alpine AS builder
 
 ENV CGO_ENABLED=0
 
