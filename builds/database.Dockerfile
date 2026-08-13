@@ -1,7 +1,7 @@
 # A postgres image with the extensions the service needs pre-loaded at build time.
 #
 # It does not run the service's schema migrations; run the migrations target separately.
-FROM docker.io/library/postgres:18.4
+FROM docker.io/library/postgres:18.6
 
 ENV POSTGRES_INITDB_ARGS=--auth=scram-sha-256
 
