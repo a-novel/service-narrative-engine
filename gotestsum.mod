@@ -1,6 +1,6 @@
 module github.com/a-novel/service-narrative-engine/gotestsum
 
-go 1.26.6
+go 1.27.0
 
 tool gotest.tools/gotestsum
 
