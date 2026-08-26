@@ -6,7 +6,7 @@ require (
 	github.com/a-novel-kit/golib v0.30.1
 	github.com/a-novel/service-authentication/v2 v2.5.0
 	github.com/a-novel/service-genai v0.3.0
-	github.com/a-novel/service-json-keys/v2 v2.5.0
+	github.com/a-novel/service-json-keys/v2 v2.5.1
 	github.com/go-chi/chi/v5 v5.3.2
 	github.com/go-chi/cors v1.2.2
 	github.com/go-playground/validator/v10 v10.30.3
@@ -93,6 +93,6 @@ require (
 	google.golang.org/api v0.290.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260715232425-e75dac1f907d // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260803160001-6ac0973c030d // indirect
-	google.golang.org/protobuf v1.36.11 // indirect
+	google.golang.org/protobuf v1.36.12 // indirect
 	mellium.im/sasl v0.3.2 // indirect
 )
