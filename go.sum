@@ -29,6 +29,8 @@ github.com/a-novel-kit/jwt/v2 v2.2.1 h1:Oqu29DG6k9/v3Eo3uLpYPCGP1c8xp4cFcjaVlUpR
 github.com/a-novel-kit/jwt/v2 v2.2.1/go.mod h1:QLLGdh58mLRNb0SiRCrYww2EJrdyaMSVKPn3jovPEQg=
 github.com/a-novel/service-authentication/v2 v2.5.0 h1:IX0dwNpVEEqW6XRJrZOOX2ToWVQqUFJcFCLMaS09ENw=
 github.com/a-novel/service-authentication/v2 v2.5.0/go.mod h1:8Ilgqo9Ll9J8S/WQYbONVpN6rU+Uf4lAbkFd7uFolDM=
+github.com/a-novel/service-authentication/v2 v2.5.1 h1:v8IvlbsU2A05Rub3cA/v8Mpfo8r1Cd/kC/SUVbDjwho=
+github.com/a-novel/service-authentication/v2 v2.5.1/go.mod h1:zwGCXWnW2uRx+JBeYHs7Jj8aAdXpjTpr+IntWvxQfr8=
 github.com/a-novel/service-genai v0.3.0 h1:qXb5K0S7cwCZqrQ1fqk57lMhJi+NPBlvSqxvR+fgSa0=
 github.com/a-novel/service-genai v0.3.0/go.mod h1:pqg1xVHnDDss79ISF8zQbytcmq7VQ3bFaSRBm4FITlM=
 github.com/a-novel/service-json-keys/v2 v2.5.0 h1:CDQvgPZU0yKHDhshH1bYEkoRnb/Bga7e76ZTMcoCp0Y=
