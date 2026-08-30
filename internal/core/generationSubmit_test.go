@@ -224,10 +224,12 @@ func assertGenerationProviderPayload(
 	t.Helper()
 
 	var providerRequest struct {
-		Model        string `json:"model"`
-		Instructions string `json:"instructions"`
-		Input        string `json:"input"`
-		Reasoning    struct {
+		Model            string `json:"model"`
+		MaxOutputTokens  int64  `json:"max_output_tokens"`
+		SafetyIdentifier string `json:"safety_identifier"`
+		Instructions     string `json:"instructions"`
+		Input            string `json:"input"`
+		Reasoning        struct {
 			Effort string `json:"effort"`
 		} `json:"reasoning"`
 		Text struct {
@@ -243,6 +245,13 @@ func assertGenerationProviderPayload(
 	require.NoError(t, json.Unmarshal(payload, &providerRequest))
 	require.Equal(t, core.GenerationModelDefault, providerRequest.Model)
 	require.Equal(t, core.GenerationReasoningEffortDefault, providerRequest.Reasoning.Effort)
+	require.Equal(t, core.GenerationMaxOutputTokensDefault, providerRequest.MaxOutputTokens)
+	require.Equal(
+		t,
+		"c5c62cc8237a1364feed2ff5e8daeaa0c03a554d9d75f60605fda0933b333784",
+		providerRequest.SafetyIdentifier,
+	)
+	require.NotContains(t, providerRequest.SafetyIdentifier, ownerID.String())
 	require.Equal(t, request.Instructions, providerRequest.Instructions)
 	require.Equal(t, "json_schema", providerRequest.Text.Format.Type)
 	require.Equal(t, "project_content_output", providerRequest.Text.Format.Name)

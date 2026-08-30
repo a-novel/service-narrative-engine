@@ -49,6 +49,57 @@ services:
       SUPER_ADMIN_PASSWORD: "${SUPER_ADMIN_PASSWORD:-admin}"
     networks:
       - narrative-engine-integration-rest-test
+
+  postgres-authentication-b:
+    image: ghcr.io/a-novel/service-authentication/database:v2.5.0
+    networks:
+      - narrative-engine-integration-rest-test
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+      POSTGRES_INITDB_ARGS: --auth=scram-sha-256
+
+  service-authentication-b:
+    image: ghcr.io/a-novel/service-authentication/standalone-rest:v2.5.0
+    ports:
+      - "${SERVICE_AUTHENTICATION_B_PORT}:8080"
+    depends_on:
+      postgres-authentication-b:
+        condition: service_healthy
+      service-json-keys:
+        condition: service_healthy
+    environment:
+      POSTGRES_DSN: postgres://postgres:postgres@postgres-authentication-b:5432/postgres?sslmode=disable
+      SERVICE_JSON_KEYS_HOST: service-json-keys
+      SERVICE_JSON_KEYS_PORT: 8080
+      SUPER_ADMIN_EMAIL: "${SUPER_ADMIN_B_EMAIL:-other@agorastoryverse.com}"
+      SUPER_ADMIN_PASSWORD: "${SUPER_ADMIN_B_PASSWORD:-admin}"
+    networks:
+      - narrative-engine-integration-rest-test
+
+  openai-mock:
+    image: node:24-alpine
+    command: ["node", "/app/openaiMock.mjs"]
+    ports:
+      - "${OPENAI_MOCK_PORT}:8080"
+    volumes:
+      - ../pkg/js/test/rest/testdata/openaiMock.mjs:/app/openaiMock.mjs:ro
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:8080/health').then(response => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 1s
+      timeout: 1s
+      retries: 30
+    networks:
+      - narrative-engine-integration-rest-test
+
   postgres-genai:
     image: ghcr.io/a-novel/service-genai/database:v0.3.0
     networks:
@@ -77,9 +128,14 @@ services:
         condition: service_healthy
       service-genai-migrations:
         condition: service_completed_successfully
+      openai-mock:
+        condition: service_healthy
     environment:
       POSTGRES_DSN: postgres://postgres:postgres@postgres-genai:5432/postgres?sslmode=disable
-      OPENAI_API_KEY: "${OPENAI_API_KEY:-test}"
+      OPENAI_API_KEY: test
+      OPENAI_BASE_URL: http://openai-mock:8080/v1
+      WORKER_INTERVAL: 100ms
+      WORKER_POLL_INTERVAL: 100ms
     networks:
       - narrative-engine-integration-rest-test
 

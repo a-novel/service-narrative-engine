@@ -3,6 +3,7 @@ package dao_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 
@@ -57,5 +58,73 @@ func insertWalkingSkeletonFixtures(t *testing.T, ctx context.Context) {
 		Title:     "The Answering Light",
 		Now:       fixtureCreatedAt,
 	})
+	require.NoError(t, err)
+}
+
+func insertIdeaVersionHistoryFixtures(t *testing.T, ctx context.Context, count int) {
+	t.Helper()
+
+	db, err := postgres.GetContext(ctx)
+	require.NoError(t, err)
+
+	versions := make([]*dao.IdeaVersion, 0, count)
+	for index := range count {
+		versions = append(versions, &dao.IdeaVersion{
+			ID:        uuid.NewSHA1(uuid.Nil, []byte(fmt.Sprintf("idea-history-%02d", index))),
+			ProjectID: fixtureProjectID,
+			Title:     fmt.Sprintf("Title %02d", index),
+			Genre:     "speculative",
+			Seed:      fmt.Sprintf("Seed %02d", index),
+			CreatedAt: fixtureCreatedAt.Add(time.Duration(index+1) * time.Second),
+		})
+	}
+
+	_, err = db.NewInsert().Model(&versions).Exec(ctx)
+	require.NoError(t, err)
+}
+
+func insertStepValueHistoryFixtures(
+	t *testing.T,
+	ctx context.Context,
+	key string,
+	count int,
+) {
+	t.Helper()
+
+	db, err := postgres.GetContext(ctx)
+	require.NoError(t, err)
+
+	values := make([]*dao.StepValue, 0, count)
+	for index := range count {
+		values = append(values, &dao.StepValue{
+			ID:        uuid.NewSHA1(uuid.Nil, []byte(fmt.Sprintf("step-%s-%02d", key, index))),
+			ProjectID: fixtureProjectID,
+			Key:       key,
+			Value:     json.RawMessage(fmt.Sprintf(`{"version":%d}`, index)),
+			CreatedAt: fixtureCreatedAt.Add(time.Duration(index) * time.Second),
+		})
+	}
+
+	_, err = db.NewInsert().Model(&values).Exec(ctx)
+	require.NoError(t, err)
+}
+
+func insertManuscriptHistoryFixtures(t *testing.T, ctx context.Context, count int) {
+	t.Helper()
+
+	db, err := postgres.GetContext(ctx)
+	require.NoError(t, err)
+
+	manuscripts := make([]*dao.Manuscript, 0, count)
+	for index := range count {
+		manuscripts = append(manuscripts, &dao.Manuscript{
+			ID:        uuid.NewSHA1(uuid.Nil, []byte(fmt.Sprintf("manuscript-%02d", index))),
+			ProjectID: fixtureProjectID,
+			Value:     json.RawMessage(fmt.Sprintf(`{"blocks":[{"version":%d}]}`, index)),
+			CreatedAt: fixtureCreatedAt.Add(time.Duration(index) * time.Second),
+		})
+	}
+
+	_, err = db.NewInsert().Model(&manuscripts).Exec(ctx)
 	require.NoError(t, err)
 }

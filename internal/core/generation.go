@@ -15,6 +15,8 @@ const (
 	GenerationModelDefault = "gpt-5.6-terra"
 	// GenerationReasoningEffortDefault selects the reasoning budget for Studio generation.
 	GenerationReasoningEffortDefault = "medium"
+	// GenerationMaxOutputTokensDefault bounds output spend while leaving room for long story fragments.
+	GenerationMaxOutputTokensDefault int64 = 32_768
 
 	generationJSONComponentMaxBytes   = 1 << 20
 	generationProviderRequestMaxBytes = 1 << 20

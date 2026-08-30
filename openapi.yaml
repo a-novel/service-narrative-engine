@@ -8,9 +8,10 @@ servers:
 
 info:
   title: Service Narrative Engine API
-  summary: Public REST API for the narrative-engine service.
+  summary: Creator-owned story storage and client-composed generation.
   description: |
-    The public health surface for the narrative-engine service.
+    Stores versioned Project content and forwards complete, client-composed generation requests.
+    Project snapshots are convenience reads; the service never hydrates Generation context from them.
   version: v0.0.0
   license:
     name: AGPL-3.0
@@ -19,15 +20,29 @@ info:
 security:
   - BearerAuth: []
 
+tags:
+  - name: health
+    description: Public liveness and dependency diagnosis.
+  - name: projects
+    description: Stable owner-scoped Project identities and current snapshots.
+  - name: ideas
+    description: Static Idea values and their bounded histories.
+  - name: step-values
+    description: Opaque keyed JSON values and their bounded histories.
+  - name: manuscripts
+    description: Static Manuscript documents and their bounded histories.
+  - name: generations
+    description: Client-composed asynchronous Generation work.
+
 paths:
-  /ping:
+  /v0/ping:
     get:
       operationId: ping
       summary: Ping the server.
       description: |
         A simple endpoint to check if the server is up and running. It always returns the same response.
 
-        It does not check the server dependencies; use the `/healthcheck` endpoint to diagnose the server's
+        It does not check the server dependencies; use the `/v0/healthcheck` endpoint to diagnose the server's
         actual health.
       tags: [health]
       security: []
@@ -39,10 +54,10 @@ paths:
         default:
           $ref: "#/components/responses/internalError"
 
-  /healthcheck:
+  /v0/healthcheck:
     get:
       operationId: healthcheck
-      summary: Health diagnosis of the server.
+      summary: Diagnose the server dependencies.
       description: |
         Returns a dependency report cached for about 30 seconds. It checks PostgreSQL and
         JSON-keys reachability, and includes the service-genai queue backlog when available.
@@ -56,6 +71,321 @@ paths:
         default:
           $ref: "#/components/responses/internalError"
 
+  /v0/projects:
+    post:
+      operationId: projectCreate
+      summary: Create a Project with its initial Idea.
+      tags: [projects]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/projectCreateRequest"
+      responses:
+        "201":
+          description: Project created.
+          headers:
+            Location:
+              $ref: "#/components/headers/location"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/project"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+        default:
+          $ref: "#/components/responses/internalError"
+
+  /v0/projects/{projectID}:
+    parameters:
+      - $ref: "#/components/parameters/projectID"
+    get:
+      operationId: projectGet
+      summary: Get the current Project snapshot.
+      description: Returns the latest Idea, latest Step Value per key, and latest Manuscript.
+      tags: [projects]
+      responses:
+        "200":
+          description: Current Project snapshot.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/project"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        default:
+          $ref: "#/components/responses/internalError"
+
+  /v0/projects/{projectID}/ideas:
+    parameters:
+      - $ref: "#/components/parameters/projectID"
+    get:
+      operationId: ideaHistory
+      summary: List retained Idea Versions.
+      tags: [ideas]
+      responses:
+        "200":
+          description: Newest-first retained Idea history, containing at most 25 versions.
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 25
+                items:
+                  $ref: "#/components/schemas/ideaVersion"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        default:
+          $ref: "#/components/responses/internalError"
+    post:
+      operationId: ideaVersionCreate
+      summary: Save a complete Idea Version.
+      tags: [ideas]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ideaVersionCreateRequest"
+      responses:
+        "201":
+          description: Idea Version saved.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ideaVersion"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+        default:
+          $ref: "#/components/responses/internalError"
+
+  /v0/projects/{projectID}/step-values:
+    parameters:
+      - $ref: "#/components/parameters/projectID"
+    get:
+      operationId: stepValueHistory
+      summary: List retained Step Values for one opaque key.
+      tags: [step-values]
+      parameters:
+        - $ref: "#/components/parameters/stepKey"
+      responses:
+        "200":
+          description: Newest-first retained Step history, containing at most 25 versions.
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 25
+                items:
+                  $ref: "#/components/schemas/stepValueVersion"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+        default:
+          $ref: "#/components/responses/internalError"
+    post:
+      operationId: stepValueCreate
+      summary: Save opaque JSON under a client-controlled key.
+      tags: [step-values]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/stepValueCreateRequest"
+      responses:
+        "201":
+          description: Step Value saved without shape interpretation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/stepValueVersion"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+        default:
+          $ref: "#/components/responses/internalError"
+
+  /v0/projects/{projectID}/manuscripts:
+    parameters:
+      - $ref: "#/components/parameters/projectID"
+    get:
+      operationId: manuscriptHistory
+      summary: List retained Manuscript Versions.
+      tags: [manuscripts]
+      responses:
+        "200":
+          description: Newest-first retained Manuscript history, containing at most 25 versions.
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 25
+                items:
+                  $ref: "#/components/schemas/manuscriptVersion"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        default:
+          $ref: "#/components/responses/internalError"
+    post:
+      operationId: manuscriptCreate
+      summary: Save a complete Manuscript Version.
+      tags: [manuscripts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/manuscriptCreateRequest"
+      responses:
+        "201":
+          description: Manuscript Version saved.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/manuscriptVersion"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+        default:
+          $ref: "#/components/responses/internalError"
+
+  /v0/projects/{projectID}/generations:
+    parameters:
+      - $ref: "#/components/parameters/projectID"
+    post:
+      operationId: generationSubmit
+      summary: Submit a complete client-composed Generation.
+      description: Authorizes the Project, then forwards the supplied values without loading Project content.
+      tags: [generations]
+      parameters:
+        - $ref: "#/components/parameters/idempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/generationSubmitRequest"
+      responses:
+        "200":
+          description: Existing Generation returned for an idempotent replay.
+          headers:
+            Location:
+              $ref: "#/components/headers/location"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/generation"
+        "202":
+          description: Generation work accepted.
+          headers:
+            Location:
+              $ref: "#/components/headers/location"
+            Retry-After:
+              $ref: "#/components/headers/retryAfter"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/generation"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "409":
+          $ref: "#/components/responses/conflict"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+        "502":
+          $ref: "#/components/responses/badGateway"
+        default:
+          $ref: "#/components/responses/internalError"
+
+  /v0/projects/{projectID}/generations/{generationID}:
+    parameters:
+      - $ref: "#/components/parameters/projectID"
+      - $ref: "#/components/parameters/generationID"
+    get:
+      operationId: generationGet
+      summary: Get current Generation state.
+      tags: [generations]
+      responses:
+        "200":
+          description: Owner-scoped Generation lifecycle and opaque proposal.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/generation"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "502":
+          $ref: "#/components/responses/badGateway"
+        default:
+          $ref: "#/components/responses/internalError"
+
 components:
   securitySchemes:
     BearerAuth:
@@ -66,6 +396,52 @@ components:
         A JWT access token. The Authorization header must use `Bearer`, followed
         by exactly one space and the token.
 
+  parameters:
+    projectID:
+      name: projectID
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    generationID:
+      name: generationID
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    stepKey:
+      name: key
+      in: query
+      required: true
+      description: Opaque client-controlled Step identity.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 256
+        pattern: '\S'
+    idempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 256
+        pattern: '\S'
+
+  headers:
+    location:
+      description: Relative URL of the created or replayed resource.
+      schema:
+        type: string
+    retryAfter:
+      description: Seconds to wait before polling the Generation.
+      schema:
+        type: integer
+        minimum: 0
+
   responses:
     pong:
       description: A plain-text pong response.
@@ -74,7 +450,6 @@ components:
           schema:
             type: string
             examples: [pong]
-
     health:
       description: Cached health and queue summary for every server dependency.
       content:
@@ -103,14 +478,284 @@ components:
                 "client:postgres": { "status": "up" }
                 "client:json-keys": { "status": "up" }
                 "client:genai": { "status": "down" }
-
+    teapot:
+      description: The test middleware deliberately answered as a teapot.
+    badRequest:
+      description: The HTTP request is malformed or a required header is missing.
+    unauthorized:
+      description: The bearer token is absent or invalid.
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+    forbidden:
+      description: The authenticated role lacks the required permission.
+    notFound:
+      description: The resource is absent, purged, or owned by another user.
+    conflict:
+      description: The idempotency key already identifies a different Generation request.
+    unprocessableEntity:
+      description: The request is well-formed but violates a content or size contract.
+    badGateway:
+      description: The Generation dependency returned an invalid response.
     internalError:
       description: Something unexpected happened.
 
-    teapot:
-      description: I'm a teapot!
-
   schemas:
+    ideaValue:
+      type: object
+      required: [title, genre, seed]
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '\S'
+        genre:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '\S'
+        seed:
+          type: string
+          minLength: 1
+          maxLength: 32768
+          pattern: '\S'
+
+    manuscriptValue:
+      type: object
+      required: [blocks]
+      additionalProperties: false
+      properties:
+        blocks:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/manuscriptTextBlock"
+
+    manuscriptTextBlock:
+      type: object
+      required: [type, metadata, data]
+      additionalProperties: false
+      properties:
+        type:
+          type: string
+          const: text
+        metadata:
+          type: object
+          description: Free-form plugin and editor metadata.
+          additionalProperties: true
+        data:
+          type: object
+          required: [text, marks]
+          additionalProperties: false
+          properties:
+            text:
+              type: string
+              minLength: 1
+              maxLength: 32768
+              pattern: '\S'
+            marks:
+              type: array
+              items:
+                $ref: "#/components/schemas/manuscriptTextMark"
+
+    manuscriptTextMark:
+      type: object
+      required: [type, start, end]
+      additionalProperties: false
+      description: Half-open Unicode code-point range within the block text; start must be below end.
+      properties:
+        type:
+          type: string
+          enum: [bold, italic, underline, strikethrough]
+        start:
+          type: integer
+          minimum: 0
+          maximum: 32768
+        end:
+          type: integer
+          minimum: 1
+          maximum: 32768
+
+    projectCreateRequest:
+      type: object
+      required: [idea]
+      additionalProperties: false
+      properties:
+        idea:
+          $ref: "#/components/schemas/ideaValue"
+
+    ideaVersionCreateRequest:
+      type: object
+      required: [value]
+      additionalProperties: false
+      properties:
+        value:
+          $ref: "#/components/schemas/ideaValue"
+
+    stepValueCreateRequest:
+      type: object
+      required: [key, value]
+      additionalProperties: false
+      properties:
+        key:
+          type: string
+          minLength: 1
+          maxLength: 256
+          pattern: '\S'
+        value:
+          description: Arbitrary valid JSON. Narrative Engine does not apply an Engine schema.
+
+    manuscriptCreateRequest:
+      type: object
+      required: [value]
+      additionalProperties: false
+      properties:
+        value:
+          $ref: "#/components/schemas/manuscriptValue"
+
+    generationSubmitRequest:
+      type: object
+      required: [instructions, input, context, outputSchema]
+      additionalProperties: false
+      properties:
+        instructions:
+          type: string
+          minLength: 1
+          maxLength: 32768
+          pattern: '\S'
+        input:
+          description: Arbitrary valid JSON supplied by the client.
+        context:
+          description: Arbitrary valid JSON supplied entirely by the client.
+        outputSchema:
+          description: JSON Schema supplied by the client to constrain the provider output.
+
+    ideaVersion:
+      type: object
+      required: [id, projectID, value, createdAt]
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        projectID:
+          type: string
+          format: uuid
+        value:
+          $ref: "#/components/schemas/ideaValue"
+        createdAt:
+          type: string
+          format: date-time
+
+    stepValueVersion:
+      type: object
+      required: [id, projectID, key, value, createdAt]
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        projectID:
+          type: string
+          format: uuid
+        key:
+          type: string
+          minLength: 1
+          maxLength: 256
+          pattern: '\S'
+        value:
+          description: Arbitrary valid JSON, returned unchanged.
+        createdAt:
+          type: string
+          format: date-time
+
+    manuscriptVersion:
+      type: object
+      required: [id, projectID, value, createdAt]
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        projectID:
+          type: string
+          format: uuid
+        value:
+          $ref: "#/components/schemas/manuscriptValue"
+        createdAt:
+          type: string
+          format: date-time
+
+    project:
+      type: object
+      required: [id, createdAt, idea, stepValues, manuscript]
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        idea:
+          $ref: "#/components/schemas/ideaVersion"
+        stepValues:
+          type: array
+          items:
+            $ref: "#/components/schemas/stepValueVersion"
+        manuscript:
+          oneOf:
+            - $ref: "#/components/schemas/manuscriptVersion"
+            - type: "null"
+
+    generation:
+      type: object
+      required:
+        - id
+        - status
+        - attempt
+        - maxAttempts
+        - proposal
+        - failure
+        - createdAt
+        - updatedAt
+        - settledAt
+        - expiresAt
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, running, succeeded, failed, abandoned, cancelled]
+        attempt:
+          type: integer
+          minimum: 0
+        maxAttempts:
+          type: integer
+          minimum: 1
+        proposal:
+          description: Arbitrary JSON on success, otherwise null.
+        failure:
+          type: [string, "null"]
+          description: Sanitized terminal failure, otherwise null.
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        settledAt:
+          type: [string, "null"]
+          format: date-time
+        expiresAt:
+          type: [string, "null"]
+          format: date-time
+
     healthStatus:
       type: object
       description: |

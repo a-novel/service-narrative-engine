@@ -20,7 +20,7 @@ An A-Novel backend service that turns a writer Idea into client-saved project co
 
 The narrative-engine service owns the typed Idea entry contract, Engine definitions, client-saved project content, and the opaque Manuscript exit contract. It submits generation work to `service-genai`, which owns provider execution, volatile results, retries, and usage records. This service persists only the proposals a client chooses to save.
 
-The current **public REST API** exposes liveness and dependency health through `cmd/rest`. Request and response shapes live in [`openapi.yaml`](./openapi.yaml).
+The **public REST API** exposes owner-scoped Project storage and client-composed Generation, plus liveness and dependency health. Request and response shapes live in [`openapi.yaml`](./openapi.yaml).
 
 ## Deploying
 
@@ -30,7 +30,7 @@ The service runs as published OCI images plus a PostgreSQL database. The server 
 
 | Image                                      | Role                                                                        |
 | ------------------------------------------ | --------------------------------------------------------------------------- |
-| `service-narrative-engine/rest`            | Public health API.                                                          |
+| `service-narrative-engine/rest`            | Public Project storage and Generation API.                                  |
 | `service-narrative-engine/jobs/migrations` | One-shot schema migration job; runs to completion before the servers start. |
 | `service-narrative-engine/database`        | Pre-tuned PostgreSQL image — or bring your own Postgres.                    |
 
@@ -129,7 +129,7 @@ Logs and tracing — OpenTelemetry supports a stdout and a Google Cloud exporter
 
 </details>
 
-## Using the client package
+## Using the client packages
 
 A REST client ships with the service. The snippet below is the **minimum viable call**; the full surface is what your editor's intellisense and the [API reference](https://a-novel.github.io/service-narrative-engine) are for.
 
@@ -148,10 +148,16 @@ pnpm add @a-novel/service-narrative-engine-rest
 ```
 
 ```typescript
-import { NarrativeEngineApi } from "@a-novel/service-narrative-engine-rest";
+import { NarrativeEngineApi, projectCreate } from "@a-novel/service-narrative-engine-rest";
 
 const api = new NarrativeEngineApi("http://service-narrative-engine:8080");
-const health = await api.health();
+const project = await projectCreate(api, accessToken, {
+  idea: {
+    title: "The Answering Light",
+    genre: "speculative",
+    seed: "A lighthouse keeper hears an answer beneath the sea.",
+  },
+});
 ```
 
 API reference: [a-novel.github.io/service-narrative-engine](https://a-novel.github.io/service-narrative-engine).
