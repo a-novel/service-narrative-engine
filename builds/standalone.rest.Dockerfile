@@ -2,7 +2,7 @@
 #
 # It ships the migrations binary alongside the server and applies pending migrations on start,
 # which makes it larger than the base REST image and suited to local development.
-FROM docker.io/library/golang:1.27.0-alpine AS builder
+FROM docker.io/library/golang:1.27.1-alpine AS builder
 
 ENV CGO_ENABLED=0
 
