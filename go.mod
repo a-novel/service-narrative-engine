@@ -1,6 +1,6 @@
 module github.com/a-novel/service-narrative-engine
 
-go 1.27.0
+go 1.27.1
 
 require (
 	github.com/a-novel-kit/golib v0.30.2
