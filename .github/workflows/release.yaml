@@ -92,7 +92,7 @@ jobs:
         with:
           persist-credentials: false
       - &start-release-database
-        uses: ./.github/actions/start-ci-services
+        uses: $/.github/actions/start-ci-services
         with:
           services: postgres
           database_image: ghcr.io/a-novel/service-narrative-engine/database:${{ needs.release.outputs.tag }}
@@ -121,7 +121,7 @@ jobs:
         with:
           persist-credentials: false
       - *start-release-database
-      - uses: ./.github/actions/run-migrations
+      - uses: $/.github/actions/run-migrations
       - uses: a-novel-kit/workflows/build-actions/docker@v1.30.0
         with:
           file: builds/rest.Dockerfile
@@ -146,7 +146,7 @@ jobs:
         with:
           persist-credentials: false
       - *start-release-database
-      - uses: ./.github/actions/run-migrations
+      - uses: $/.github/actions/run-migrations
       - uses: a-novel-kit/workflows/build-actions/docker@v1.30.0
         with:
           file: builds/standalone.rest.Dockerfile
