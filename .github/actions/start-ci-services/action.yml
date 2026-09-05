@@ -23,11 +23,11 @@ inputs:
     description: JSON keys gRPC image reference.
   authentication_database_image:
     required: false
-    default: ghcr.io/a-novel/service-authentication/database:v2.5.3
+    default: ghcr.io/a-novel/service-authentication/database:v2.5.4
     description: Authentication database image reference.
   authentication_rest_image:
     required: false
-    default: ghcr.io/a-novel/service-authentication/standalone-rest:v2.5.3
+    default: ghcr.io/a-novel/service-authentication/standalone-rest:v2.5.4
     description: Authentication REST image reference.
   genai_database_image:
     required: false
