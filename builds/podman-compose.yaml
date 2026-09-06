@@ -64,7 +64,7 @@ services:
       - api
   postgres-genai:
     profiles: ["genai"]
-    image: ghcr.io/a-novel/service-genai/database:v0.3.0
+    image: ghcr.io/a-novel/service-genai/database:v0.4.0
     networks:
       - api
     environment:
