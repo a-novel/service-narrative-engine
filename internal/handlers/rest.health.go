@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/samber/lo"
-	"github.com/uptrace/bun"
 
 	servicegenai "github.com/a-novel/service-genai/pkg/go"
 	servicejsonkeys "github.com/a-novel/service-json-keys/v2/pkg/go"
@@ -110,19 +109,7 @@ func (handler *RestHealth) reportPostgres(ctx context.Context) error {
 	ctx, span := otel.Tracer().Start(ctx, "rest.Health(reportPostgres)")
 	defer span.End()
 
-	pg, err := postgres.GetContext(ctx)
-	if err != nil {
-		return otel.ReportError(span, err)
-	}
-
-	pgdb, ok := pg.(*bun.DB)
-	if !ok {
-		// In transaction mode the pooled handle is a transaction, which exposes
-		// no Ping; treat the dependency as healthy.
-		return nil
-	}
-
-	err = pgdb.Ping()
+	err := postgres.Health(ctx)
 	if err != nil {
 		return otel.ReportError(span, err)
 	}

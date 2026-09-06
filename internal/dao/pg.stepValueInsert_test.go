@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/a-novel-kit/golib/postgres"
+	"github.com/a-novel-kit/golib/postgres/postgrestest"
 
 	"github.com/a-novel/service-narrative-engine/internal/config/configtest"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
@@ -49,7 +50,7 @@ func TestPgStepValueInsert(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			postgres.RunIsolatedTransactionalTest(
+			postgrestest.RunIsolatedTransactionalTest(
 				t,
 				configtest.PostgresPreset,
 				migrations.Migrations,
