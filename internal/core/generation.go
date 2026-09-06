@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/a-novel/service-narrative-engine/internal/lib"
 )
 
 const (
@@ -23,17 +25,17 @@ const (
 
 var (
 	// ErrGenerationConflict is returned when an idempotency key already identifies different work.
-	ErrGenerationConflict = errors.New("generation idempotency conflict")
+	ErrGenerationConflict = lib.ErrGenerationConflict
 	// ErrGenerationNotFound is returned when service-genai has no matching owner-scoped generation.
-	ErrGenerationNotFound = errors.New("generation not found")
+	ErrGenerationNotFound = lib.ErrGenerationNotFound
 	// ErrGenerationOutputInvalid is returned when successful provider output is not bounded JSON.
-	ErrGenerationOutputInvalid = errors.New("invalid generation output")
+	ErrGenerationOutputInvalid = lib.ErrGenerationOutputInvalid
 	// ErrGenerationRefused is returned when the provider refuses a generation.
-	ErrGenerationRefused = errors.New("generation refused")
+	ErrGenerationRefused = lib.ErrGenerationRefused
 	// ErrGenerationResponseInvalid is returned when service-genai breaks its response contract.
-	ErrGenerationResponseInvalid = errors.New("invalid generation response")
+	ErrGenerationResponseInvalid = lib.ErrGenerationResponseInvalid
 	// ErrGenerationStatusUnknown is returned for a service-genai status this service cannot expose.
-	ErrGenerationStatusUnknown = errors.New("unknown generation status")
+	ErrGenerationStatusUnknown = lib.ErrGenerationStatusUnknown
 	// ErrGenerationWatchClosed is returned when a stream ends before generation settles.
 	ErrGenerationWatchClosed = errors.New("generation watch closed before a terminal status")
 )

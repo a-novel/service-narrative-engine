@@ -7,13 +7,17 @@ import (
 
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel/attribute"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
-	servicegenai "github.com/a-novel/service-genai/pkg/go"
 
 	"github.com/a-novel-kit/golib/otel"
+
+	"github.com/a-novel/service-narrative-engine/internal/lib"
 )
+
+// GenerationGetGateway is the domain operation used to retrieve generation state.
+type GenerationGetGateway interface {
+	// Exec retrieves one owner-scoped generation.
+	Exec(ctx context.Context, request *lib.GenerationGetGatewayRequest) (*lib.Generation, error)
+}
 
 // GenerationGetRequest identifies one Project-owned generation.
 type GenerationGetRequest struct {
@@ -25,18 +29,18 @@ type GenerationGetRequest struct {
 	ID uuid.UUID `validate:"required"`
 }
 
-// GenerationGet reads current state directly from service-genai after Project authorization.
+// GenerationGet reads current state through the generation gateway after Project authorization.
 type GenerationGet struct {
 	projectAccess ProjectAccessService
-	genai         servicegenai.Client
+	gateway       GenerationGetGateway
 }
 
 // NewGenerationGet creates the current-state generation service.
 func NewGenerationGet(
 	projectAccess ProjectAccessService,
-	genai servicegenai.Client,
+	gateway GenerationGetGateway,
 ) *GenerationGet {
-	return &GenerationGet{projectAccess: projectAccess, genai: genai}
+	return &GenerationGet{projectAccess: projectAccess, gateway: gateway}
 }
 
 // Exec returns current lifecycle state and an opaque JSON proposal on success.
@@ -66,28 +70,17 @@ func (service *GenerationGet) Exec(
 		return nil, otel.ReportError(span, fmt.Errorf("access Project: %w", err))
 	}
 
-	response, err := service.genai.GenerationGet(ctx, &servicegenai.GenerationGetRequest{
-		Id:      request.ID.String(),
-		OwnerId: request.Actor.UserID.String(),
+	response, err := service.gateway.Exec(ctx, &lib.GenerationGetGatewayRequest{
+		ID:      request.ID,
+		OwnerID: request.Actor.UserID,
 	})
-	if status.Code(err) == codes.NotFound {
-		return nil, otel.ReportError(span, fmt.Errorf("%w: %w", ErrGenerationNotFound, err))
-	}
-
 	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("get generation: %w", err))
-	}
-
-	if response == nil {
-		return nil, otel.ReportError(
-			span,
-			fmt.Errorf("%w: missing get response", ErrGenerationResponseInvalid),
-		)
+		return nil, otel.ReportError(span, err)
 	}
 
 	generation, err := mapGeneration(
 		ctx,
-		response.GetGeneration(),
+		response,
 		&request.ID,
 		request.Actor.UserID,
 	)

@@ -10,22 +10,17 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
-	servicegenai "github.com/a-novel/service-genai/pkg/go"
-	servicegenaimocks "github.com/a-novel/service-genai/pkg/go/mocks"
 
 	"github.com/a-novel/service-narrative-engine/internal/core"
 	coremocks "github.com/a-novel/service-narrative-engine/internal/core/mocks"
+	"github.com/a-novel/service-narrative-engine/internal/lib"
 )
 
 func TestGenerationSubmit(t *testing.T) {
 	t.Parallel()
 
 	errAccess := errors.New("access failure")
-	errGenAI := errors.New("genai failure")
+	errGateway := errors.New("generation gateway failure")
 	proposal := json.RawMessage(`{"clientOwns":"this shape","extra":[1,2,3]}`)
 	validRequest := &core.GenerationSubmitRequest{
 		Actor:          core.Actor{UserID: ownerID},
@@ -36,27 +31,22 @@ func TestGenerationSubmit(t *testing.T) {
 		Context:        json.RawMessage(`{"digest":"prior context","steps":[1,2]}`),
 		OutputSchema:   json.RawMessage(`{"type":"string"}`),
 	}
-	validResponse := &servicegenai.GenerationSubmitResponse{
-		Generation: generationFixture(
-			servicegenai.GenerationStatusSucceeded,
-			responsesOutput(t, proposal),
-		),
-		Created: true,
+	validResult := &lib.GenerationSubmitGatewayResult{
+		Generation: generationFixture(lib.GenerationStatusSucceeded, string(proposal)),
+		Created:    true,
 	}
-	invalidOwnerResponse := generationFixture(servicegenai.GenerationStatusPending, nil)
-	invalidOwnerResponse.OwnerId = uuid.MustParse(
-		"00000000-0000-0000-0000-000000000099",
-	).String()
+	invalidOwner := generationFixture(lib.GenerationStatusPending, "")
+	invalidOwner.OwnerID = uuid.MustParse("00000000-0000-0000-0000-000000000099")
 
 	testCases := []struct {
 		name string
 
 		request        *core.GenerationSubmitRequest
 		accessErr      error
-		genaiResponse  *servicegenai.GenerationSubmitResponse
-		genaiErr       error
+		gatewayResult  *lib.GenerationSubmitGatewayResult
+		gatewayErr     error
 		callAccess     bool
-		callGenAI      bool
+		callGateway    bool
 		inspectPayload bool
 
 		expect    *core.GenerationSubmitResult
@@ -66,9 +56,9 @@ func TestGenerationSubmit(t *testing.T) {
 			name:           "Success/ClientComposedAndSchemaOpaque",
 			request:        validRequest,
 			callAccess:     true,
-			callGenAI:      true,
+			callGateway:    true,
 			inspectPayload: true,
-			genaiResponse:  validResponse,
+			gatewayResult:  validResult,
 			expect: &core.GenerationSubmitResult{
 				Generation: expectedGeneration(core.GenerationStatusSucceeded, proposal),
 				Created:    true,
@@ -82,8 +72,9 @@ func TestGenerationSubmit(t *testing.T) {
 				Instructions:   "Generate.", Input: json.RawMessage(`null`),
 				Context: json.RawMessage(`[]`), OutputSchema: json.RawMessage(`"not-a-schema"`),
 			},
-			callAccess: true, callGenAI: true, genaiResponse: &servicegenai.GenerationSubmitResponse{
-				Generation: generationFixture(servicegenai.GenerationStatusPending, nil),
+			callAccess: true, callGateway: true,
+			gatewayResult: &lib.GenerationSubmitGatewayResult{
+				Generation: generationFixture(lib.GenerationStatusPending, ""),
 				Created:    true,
 			},
 			expect: &core.GenerationSubmitResult{
@@ -92,8 +83,7 @@ func TestGenerationSubmit(t *testing.T) {
 			},
 		},
 		{
-			name:      "Error/InvalidRequest",
-			request:   &core.GenerationSubmitRequest{},
+			name: "Error/InvalidRequest", request: &core.GenerationSubmitRequest{},
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
@@ -141,30 +131,36 @@ func TestGenerationSubmit(t *testing.T) {
 			request: &core.GenerationSubmitRequest{
 				Actor: core.Actor{UserID: ownerID}, ProjectID: projectID,
 				IdempotencyKey: "retry", Instructions: "Generate.",
-				Input:        contentDocumentOfSize(600_000),
-				Context:      contentDocumentOfSize(600_000),
+				Input: contentDocumentOfSize(600_000), Context: contentDocumentOfSize(600_000),
 				OutputSchema: json.RawMessage(`{}`),
 			},
 			callAccess: true, expectErr: core.ErrInvalidRequest,
 		},
 		{
 			name: "Error/Conflict", request: validRequest,
-			callAccess: true, callGenAI: true,
-			genaiErr:  status.Error(codes.AlreadyExists, "conflict"),
-			expectErr: core.ErrGenerationConflict,
+			callAccess: true, callGateway: true,
+			gatewayErr: lib.ErrGenerationConflict, expectErr: core.ErrGenerationConflict,
 		},
 		{
-			name: "Error/GenAI", request: validRequest,
-			callAccess: true, callGenAI: true, genaiErr: errGenAI, expectErr: errGenAI,
+			name: "Error/Gateway", request: validRequest,
+			callAccess: true, callGateway: true,
+			gatewayErr: errGateway, expectErr: errGateway,
 		},
 		{
 			name: "Error/MissingResponse", request: validRequest,
-			callAccess: true, callGenAI: true, expectErr: core.ErrGenerationResponseInvalid,
+			callAccess: true, callGateway: true,
+			expectErr: core.ErrGenerationResponseInvalid,
+		},
+		{
+			name: "Error/MissingGeneration", request: validRequest,
+			callAccess: true, callGateway: true,
+			gatewayResult: &lib.GenerationSubmitGatewayResult{},
+			expectErr:     core.ErrGenerationResponseInvalid,
 		},
 		{
 			name: "Error/InvalidResponseOwner", request: validRequest,
-			callAccess: true, callGenAI: true,
-			genaiResponse: &servicegenai.GenerationSubmitResponse{Generation: invalidOwnerResponse},
+			callAccess: true, callGateway: true,
+			gatewayResult: &lib.GenerationSubmitGatewayResult{Generation: invalidOwner},
 			expectErr:     core.ErrGenerationResponseInvalid,
 		},
 	}
@@ -174,7 +170,7 @@ func TestGenerationSubmit(t *testing.T) {
 			t.Parallel()
 
 			projectAccess := coremocks.NewMockProjectAccessService(t)
-			genai := servicegenaimocks.NewMockClient(t)
+			gateway := coremocks.NewMockGenerationSubmitGateway(t)
 
 			if testCase.callAccess {
 				projectAccess.EXPECT().
@@ -185,33 +181,35 @@ func TestGenerationSubmit(t *testing.T) {
 					Once()
 			}
 
-			if testCase.callGenAI {
-				genai.EXPECT().
-					GenerationSubmit(mock.Anything, mock.Anything).
+			if testCase.callGateway {
+				gateway.EXPECT().
+					Exec(mock.Anything, mock.Anything).
 					RunAndReturn(func(
 						_ context.Context,
-						request *servicegenai.GenerationSubmitRequest,
-						_ ...grpc.CallOption,
-					) (*servicegenai.GenerationSubmitResponse, error) {
-						require.Equal(t, ownerID.String(), request.GetOwnerId())
-						require.Equal(t, core.GenerationPurposeStudio, request.GetPurpose())
-						require.Len(t, request.GetIdempotencyKey(), 64)
-						require.NotEqual(t, testCase.request.IdempotencyKey, request.GetIdempotencyKey())
-						require.EqualValues(t, 2, request.GetMaxAttempts())
+						request *lib.GenerationSubmitGatewayRequest,
+					) (*lib.GenerationSubmitGatewayResult, error) {
+						require.Equal(t, ownerID, request.OwnerID)
+						require.Equal(t, core.GenerationPurposeStudio, request.Purpose)
+						require.Len(t, request.IdempotencyKey, 64)
+						require.NotEqual(t, testCase.request.IdempotencyKey, request.IdempotencyKey)
+						require.EqualValues(t, 2, request.MaxAttempts)
 
 						if testCase.inspectPayload {
-							assertGenerationProviderPayload(t, request.GetRequest(), testCase.request)
+							assertGenerationProviderPayload(t, request.Request, testCase.request)
 						}
 
-						return testCase.genaiResponse, testCase.genaiErr
-					})
+						return testCase.gatewayResult, testCase.gatewayErr
+					}).
+					Once()
 			}
 
-			result, err := core.NewGenerationSubmit(projectAccess, genai).
+			result, err := core.NewGenerationSubmit(projectAccess, gateway).
 				Exec(t.Context(), testCase.request)
 
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
+			projectAccess.AssertExpectations(t)
+			gateway.AssertExpectations(t)
 		})
 	}
 }
