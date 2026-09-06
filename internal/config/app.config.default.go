@@ -46,6 +46,7 @@ var AppPresetDefault = App{
 			Write:      env.RestTimeoutWrite,
 			Idle:       env.RestTimeoutIdle,
 			Request:    env.RestTimeoutRequest,
+			Shutdown:   env.RestTimeoutShutdown,
 		},
 		MaxRequestSize: env.RestMaxRequestSize,
 		Cors: RestCors{
