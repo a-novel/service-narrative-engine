@@ -41,22 +41,35 @@ var (
 )
 
 // GenerationStatus is Narrative Engine's stable generation lifecycle vocabulary.
-type GenerationStatus = lib.GenerationStatus
+type GenerationStatus string
 
 const (
 	// GenerationStatusPending means the generation is waiting for a worker.
-	GenerationStatusPending = lib.GenerationStatusPending
+	GenerationStatusPending GenerationStatus = "pending"
 	// GenerationStatusRunning means a worker is executing the generation.
-	GenerationStatusRunning = lib.GenerationStatusRunning
+	GenerationStatusRunning GenerationStatus = "running"
 	// GenerationStatusSucceeded means the generation produced a proposal.
-	GenerationStatusSucceeded = lib.GenerationStatusSucceeded
+	GenerationStatusSucceeded GenerationStatus = "succeeded"
 	// GenerationStatusFailed means every provider attempt failed.
-	GenerationStatusFailed = lib.GenerationStatusFailed
+	GenerationStatusFailed GenerationStatus = "failed"
 	// GenerationStatusAbandoned means the generation can no longer be executed.
-	GenerationStatusAbandoned = lib.GenerationStatusAbandoned
+	GenerationStatusAbandoned GenerationStatus = "abandoned"
 	// GenerationStatusCancelled means the generation was cancelled before completion.
-	GenerationStatusCancelled = lib.GenerationStatusCancelled
+	GenerationStatusCancelled GenerationStatus = "cancelled"
 )
+
+// Terminal reports whether no further generation state can follow.
+func (status GenerationStatus) Terminal() bool {
+	switch status {
+	case GenerationStatusSucceeded,
+		GenerationStatusFailed,
+		GenerationStatusAbandoned,
+		GenerationStatusCancelled:
+		return true
+	default:
+		return false
+	}
+}
 
 // Generation is the owner-scoped lifecycle and opaque JSON proposal.
 type Generation struct {

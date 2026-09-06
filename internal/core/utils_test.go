@@ -42,12 +42,12 @@ func projectFixture() *dao.Project {
 	return &dao.Project{ID: projectID, OwnerID: ownerID, CreatedAt: createdAt}
 }
 
-func generationFixture(status lib.GenerationStatus, output string) *lib.Generation {
+func generationFixture(status core.GenerationStatus, output string) *lib.Generation {
 	generation := &lib.Generation{
 		ID:          generationID,
 		OwnerID:     ownerID,
 		Purpose:     core.GenerationPurposeStudio,
-		Status:      status,
+		Status:      string(status),
 		Attempt:     1,
 		MaxAttempts: 2,
 		Output:      output,
@@ -55,11 +55,7 @@ func generationFixture(status lib.GenerationStatus, output string) *lib.Generati
 		UpdatedAt:   updatedAt,
 	}
 
-	switch status {
-	case lib.GenerationStatusSucceeded,
-		lib.GenerationStatusFailed,
-		lib.GenerationStatusAbandoned,
-		lib.GenerationStatusCancelled:
+	if status.Terminal() {
 		generation.SettledAt = &settledAt
 		generation.ExpiresAt = &expiresAt
 	}

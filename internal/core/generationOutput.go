@@ -43,7 +43,7 @@ func mapGeneration(
 
 	generation := &Generation{
 		ID:          source.ID,
-		Status:      source.Status,
+		Status:      GenerationStatus(source.Status),
 		Attempt:     source.Attempt,
 		MaxAttempts: source.MaxAttempts,
 		CreatedAt:   source.CreatedAt,
@@ -59,7 +59,7 @@ func mapGeneration(
 		generation.Failure = "generation failed"
 	}
 
-	if source.Status == GenerationStatusSucceeded {
+	if generation.Status == GenerationStatusSucceeded {
 		proposal, err := resolveGenerationProposal(ctx, source.Output)
 		if err != nil {
 			return nil, otel.ReportError(span, err)
@@ -71,7 +71,7 @@ func mapGeneration(
 	return otel.ReportSuccess(span, generation), nil
 }
 
-// resolveGenerationProposal extracts one bounded JSON value without applying a domain schema.
+// resolveGenerationProposal validates one bounded JSON value without applying a domain schema.
 func resolveGenerationProposal(
 	ctx context.Context,
 	output string,

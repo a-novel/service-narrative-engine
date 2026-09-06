@@ -25,47 +25,16 @@ var (
 	ErrGenerationStatusUnknown = errors.New("unknown generation status")
 )
 
-// GenerationStatus is the lifecycle vocabulary exposed by the generation gateway.
-type GenerationStatus string
-
-const (
-	// GenerationStatusPending means the generation is waiting for a worker.
-	GenerationStatusPending GenerationStatus = "pending"
-	// GenerationStatusRunning means a worker is executing the generation.
-	GenerationStatusRunning GenerationStatus = "running"
-	// GenerationStatusSucceeded means the generation produced output.
-	GenerationStatusSucceeded GenerationStatus = "succeeded"
-	// GenerationStatusFailed means every provider attempt failed.
-	GenerationStatusFailed GenerationStatus = "failed"
-	// GenerationStatusAbandoned means the generation can no longer be executed.
-	GenerationStatusAbandoned GenerationStatus = "abandoned"
-	// GenerationStatusCancelled means the generation was cancelled before completion.
-	GenerationStatusCancelled GenerationStatus = "cancelled"
-)
-
-// Terminal reports whether no further generation state can follow.
-func (status GenerationStatus) Terminal() bool {
-	switch status {
-	case GenerationStatusSucceeded,
-		GenerationStatusFailed,
-		GenerationStatusAbandoned,
-		GenerationStatusCancelled:
-		return true
-	default:
-		return false
-	}
+var generationStatuses = map[servicegenai.GenerationStatus]string{
+	servicegenai.GenerationStatusPending:   "pending",
+	servicegenai.GenerationStatusRunning:   "running",
+	servicegenai.GenerationStatusSucceeded: "succeeded",
+	servicegenai.GenerationStatusFailed:    "failed",
+	servicegenai.GenerationStatusAbandoned: "abandoned",
+	servicegenai.GenerationStatusCancelled: "cancelled",
 }
 
-var generationStatuses = map[servicegenai.GenerationStatus]GenerationStatus{
-	servicegenai.GenerationStatusPending:   GenerationStatusPending,
-	servicegenai.GenerationStatusRunning:   GenerationStatusRunning,
-	servicegenai.GenerationStatusSucceeded: GenerationStatusSucceeded,
-	servicegenai.GenerationStatusFailed:    GenerationStatusFailed,
-	servicegenai.GenerationStatusAbandoned: GenerationStatusAbandoned,
-	servicegenai.GenerationStatusCancelled: GenerationStatusCancelled,
-}
-
-// Generation contains the owner-scoped state returned by the generation gateway.
+// Generation is a decoded service-genai snapshot awaiting workflow validation.
 type Generation struct {
 	// ID identifies the generation in service-genai.
 	ID uuid.UUID
@@ -73,8 +42,8 @@ type Generation struct {
 	OwnerID uuid.UUID
 	// Purpose identifies the workflow that submitted the generation.
 	Purpose string
-	// Status is the current lifecycle state.
-	Status GenerationStatus
+	// Status is service-genai's lifecycle state normalized to a lowercase name.
+	Status string
 	// Attempt is the number of provider runs already started.
 	Attempt int32
 	// MaxAttempts is the maximum number of provider runs allowed.
@@ -147,7 +116,7 @@ func mapGenAIGeneration(source *servicegenai.Generation) (*Generation, error) {
 		ExpiresAt:   expiresAt,
 	}
 
-	if status == GenerationStatusSucceeded {
+	if source.GetStatus() == servicegenai.GenerationStatusSucceeded {
 		generation.Output, err = servicegenai.ExtractResponsesOutputText(source.GetOutput())
 		if errors.Is(err, servicegenai.ErrResponsesRefused) {
 			return nil, fmt.Errorf("%w: %w", ErrGenerationRefused, err)

@@ -23,15 +23,15 @@ func TestGenerationGet(t *testing.T) {
 	validRequest := &core.GenerationGetRequest{
 		Actor: core.Actor{UserID: ownerID}, ProjectID: projectID, ID: generationID,
 	}
-	failed := generationFixture(lib.GenerationStatusFailed, "")
+	failed := generationFixture(core.GenerationStatusFailed, "")
 	failed.Failed = true
 	expectFailed := expectedGeneration(core.GenerationStatusFailed, nil)
 	expectFailed.Failure = "generation failed"
-	wrongOwner := generationFixture(lib.GenerationStatusPending, "")
+	wrongOwner := generationFixture(core.GenerationStatusPending, "")
 	wrongOwner.OwnerID = uuid.MustParse("00000000-0000-0000-0000-000000000099")
-	wrongID := generationFixture(lib.GenerationStatusPending, "")
+	wrongID := generationFixture(core.GenerationStatusPending, "")
 	wrongID.ID = uuid.MustParse("00000000-0000-0000-0000-000000000699")
-	wrongPurpose := generationFixture(lib.GenerationStatusPending, "")
+	wrongPurpose := generationFixture(core.GenerationStatusPending, "")
 	wrongPurpose.Purpose = "other"
 
 	testCases := []struct {
@@ -49,13 +49,13 @@ func TestGenerationGet(t *testing.T) {
 	}{
 		{
 			name: "Success/Pending", request: validRequest, callAccess: true, callGateway: true,
-			response: generationFixture(lib.GenerationStatusPending, ""),
+			response: generationFixture(core.GenerationStatusPending, ""),
 			expect:   expectedGeneration(core.GenerationStatusPending, nil),
 		},
 		{
 			name: "Success/OpaqueJSONProposal", request: validRequest,
 			callAccess: true, callGateway: true,
-			response: generationFixture(lib.GenerationStatusSucceeded, string(proposal)),
+			response: generationFixture(core.GenerationStatusSucceeded, string(proposal)),
 			expect:   expectedGeneration(core.GenerationStatusSucceeded, proposal),
 		},
 		{
@@ -101,14 +101,14 @@ func TestGenerationGet(t *testing.T) {
 		{
 			name: "Error/InvalidProposalJSON", request: validRequest,
 			callAccess: true, callGateway: true,
-			response:  generationFixture(lib.GenerationStatusSucceeded, "{"),
+			response:  generationFixture(core.GenerationStatusSucceeded, "{"),
 			expectErr: core.ErrGenerationOutputInvalid,
 		},
 		{
 			name: "Error/ProposalOverLimit", request: validRequest,
 			callAccess: true, callGateway: true,
 			response: generationFixture(
-				lib.GenerationStatusSucceeded,
+				core.GenerationStatusSucceeded,
 				string(contentDocumentOfSize((1<<20)+1)),
 			),
 			expectErr: core.ErrGenerationOutputInvalid,

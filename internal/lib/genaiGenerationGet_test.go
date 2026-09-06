@@ -28,7 +28,7 @@ func TestGenAIGenerationGet(t *testing.T) {
 	settledAt, expiresAt := genAICreatedAt.Add(2*time.Second), genAICreatedAt.Add(time.Hour)
 	expect := &lib.Generation{
 		ID: genAIGenerationID, OwnerID: genAIOwnerID, Purpose: "studio.generation",
-		Status: lib.GenerationStatusSucceeded, Attempt: 1, MaxAttempts: 2, Output: "{}",
+		Status: "succeeded", Attempt: 1, MaxAttempts: 2, Output: "{}",
 		CreatedAt: genAICreatedAt, UpdatedAt: genAICreatedAt.Add(time.Second),
 		SettledAt: &settledAt, ExpiresAt: &expiresAt,
 	}

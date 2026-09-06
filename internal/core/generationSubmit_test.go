@@ -32,10 +32,10 @@ func TestGenerationSubmit(t *testing.T) {
 		OutputSchema:   json.RawMessage(`{"type":"string"}`),
 	}
 	validResult := &lib.GenerationSubmitGatewayResult{
-		Generation: generationFixture(lib.GenerationStatusSucceeded, string(proposal)),
+		Generation: generationFixture(core.GenerationStatusSucceeded, string(proposal)),
 		Created:    true,
 	}
-	invalidOwner := generationFixture(lib.GenerationStatusPending, "")
+	invalidOwner := generationFixture(core.GenerationStatusPending, "")
 	invalidOwner.OwnerID = uuid.MustParse("00000000-0000-0000-0000-000000000099")
 
 	testCases := []struct {
@@ -74,7 +74,7 @@ func TestGenerationSubmit(t *testing.T) {
 			},
 			callAccess: true, callGateway: true,
 			gatewayResult: &lib.GenerationSubmitGatewayResult{
-				Generation: generationFixture(lib.GenerationStatusPending, ""),
+				Generation: generationFixture(core.GenerationStatusPending, ""),
 				Created:    true,
 			},
 			expect: &core.GenerationSubmitResult{

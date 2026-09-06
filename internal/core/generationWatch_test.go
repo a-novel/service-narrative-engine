@@ -72,9 +72,9 @@ func TestGenerationWatch(t *testing.T) {
 			name: "Success/Succeeded", request: validRequest,
 			callAccess: true, callGateway: true,
 			responses: []*lib.Generation{
-				generationFixture(lib.GenerationStatusPending, ""),
-				generationFixture(lib.GenerationStatusRunning, ""),
-				generationFixture(lib.GenerationStatusSucceeded, string(proposal)),
+				generationFixture(core.GenerationStatusPending, ""),
+				generationFixture(core.GenerationStatusRunning, ""),
+				generationFixture(core.GenerationStatusSucceeded, string(proposal)),
 			},
 			expect: expectedGeneration(core.GenerationStatusSucceeded, proposal),
 		},
@@ -82,7 +82,7 @@ func TestGenerationWatch(t *testing.T) {
 			name: "Success/Failed", request: validRequest,
 			callAccess: true, callGateway: true,
 			responses: []*lib.Generation{
-				generationFixture(lib.GenerationStatusFailed, ""),
+				generationFixture(core.GenerationStatusFailed, ""),
 			},
 			expect: expectedGeneration(core.GenerationStatusFailed, nil),
 		},
@@ -113,7 +113,7 @@ func TestGenerationWatch(t *testing.T) {
 			name: "Error/Closed", request: validRequest,
 			callAccess: true, callGateway: true,
 			responses: []*lib.Generation{
-				generationFixture(lib.GenerationStatusPending, ""),
+				generationFixture(core.GenerationStatusPending, ""),
 			},
 			expectErr: core.ErrGenerationWatchClosed,
 		},
