@@ -31,6 +31,7 @@ const (
 	RestTimeoutWriteDefault      = 30 * time.Second
 	RestTimeoutIdleDefault       = 60 * time.Second
 	RestTimeoutRequestDefault    = 60 * time.Second
+	RestTimeoutShutdownDefault   = 30 * time.Second
 	RestMaxRequestSizeDefault    = 2 << 20 // 2 MiB
 	CorsAllowCredentialsDefault  = false
 	CorsMaxAgeDefault            = 3600
@@ -73,6 +74,7 @@ var (
 	restTimeoutIdle       = getEnv("REST_TIMEOUT_IDLE")
 	restTimeoutRequest    = getEnv("REST_TIMEOUT_REQUEST")
 	restMaxRequestSize    = getEnv("REST_MAX_REQUEST_SIZE")
+	restTimeoutShutdown   = getEnv("REST_TIMEOUT_SHUTDOWN")
 
 	corsAllowedOrigins   = getEnv("REST_CORS_ALLOWED_ORIGINS")
 	corsAllowedHeaders   = getEnv("REST_CORS_ALLOWED_HEADERS")
@@ -122,6 +124,10 @@ var (
 	RestTimeoutIdle = config.LoadEnv(restTimeoutIdle, RestTimeoutIdleDefault, config.DurationParser)
 	// RestTimeoutRequest is the maximum duration for processing an incoming REST request.
 	RestTimeoutRequest = config.LoadEnv(restTimeoutRequest, RestTimeoutRequestDefault, config.DurationParser)
+	// RestTimeoutShutdown bounds graceful request drain before remaining connections are closed.
+	RestTimeoutShutdown = config.LoadEnv(
+		restTimeoutShutdown, RestTimeoutShutdownDefault, config.DurationParser,
+	)
 	// RestMaxRequestSize is the maximum size of an incoming REST request body.
 	RestMaxRequestSize = config.LoadEnv(restMaxRequestSize, RestMaxRequestSizeDefault, config.Int64Parser)
 

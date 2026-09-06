@@ -42,6 +42,8 @@ type RestTimeouts struct {
 	Write      time.Duration `json:"write"      yaml:"write"`
 	Idle       time.Duration `json:"idle"       yaml:"idle"`
 	Request    time.Duration `json:"request"    yaml:"request"`
+	// Shutdown bounds graceful request drain before remaining connections are closed.
+	Shutdown time.Duration `json:"shutdown" yaml:"shutdown"`
 }
 
 // Rest holds the REST server configuration.

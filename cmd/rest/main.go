@@ -5,8 +5,8 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -24,6 +24,7 @@ import (
 	servicegenai "github.com/a-novel/service-genai/pkg/go"
 	servicejsonkeys "github.com/a-novel/service-json-keys/v2/pkg/go"
 
+	"github.com/a-novel-kit/golib/httpf"
 	"github.com/a-novel-kit/golib/otel"
 	"github.com/a-novel-kit/golib/postgres"
 
@@ -34,7 +35,11 @@ import (
 
 func main() {
 	cfg := config.AppPresetDefault
-	ctx := context.Background()
+
+	processCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	ctx := processCtx
 
 	otel.SetAppName(cfg.App.Name)
 
@@ -46,6 +51,9 @@ func main() {
 	}
 
 	ctx = lo.Must(postgres.NewContext(ctx, cfg.Postgres))
+
+	database := lo.Must(cfg.Postgres.DB(ctx))
+	defer closeDatabase(database)
 
 	// =================================================================================================================
 	// CLIENTS
@@ -127,24 +135,18 @@ func main() {
 
 	log.Println("Starting REST server on " + httpServer.Addr)
 
-	go func() {
-		err := httpServer.ListenAndServe()
-		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			panic(err)
-		}
-	}()
+	err := httpf.Serve(ctx, httpServer, cfg.Rest.Timeouts.Shutdown)
 
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
+	stop()
 
-	log.Println("Shutting down REST server...")
-
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.Rest.Timeouts.Request)
-	defer cancel()
-
-	err := httpServer.Shutdown(shutdownCtx)
 	if err != nil {
 		panic(err)
+	}
+}
+
+func closeDatabase(database io.Closer) {
+	err := database.Close()
+	if err != nil {
+		log.Println("Close Postgres: " + err.Error())
 	}
 }
