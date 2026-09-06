@@ -78,7 +78,7 @@ services:
 
   service-genai-migrations:
     profiles: ["genai"]
-    image: ghcr.io/a-novel/service-genai/jobs/migrations:v0.3.0
+    image: ghcr.io/a-novel/service-genai/jobs/migrations:v0.4.0
     depends_on:
       postgres-genai:
         condition: service_healthy
