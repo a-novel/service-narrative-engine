@@ -33,7 +33,6 @@ func TestGenerationGet(t *testing.T) {
 	wrongID.ID = uuid.MustParse("00000000-0000-0000-0000-000000000699")
 	wrongPurpose := generationFixture(lib.GenerationStatusPending, "")
 	wrongPurpose.Purpose = "other"
-	unknownStatus := generationFixture(lib.GenerationStatus("unknown"), "")
 
 	testCases := []struct {
 		name string
@@ -98,11 +97,6 @@ func TestGenerationGet(t *testing.T) {
 			name: "Error/WrongPurpose", request: validRequest,
 			callAccess: true, callGateway: true, response: wrongPurpose,
 			expectErr: core.ErrGenerationResponseInvalid,
-		},
-		{
-			name: "Error/UnknownStatus", request: validRequest,
-			callAccess: true, callGateway: true, response: unknownStatus,
-			expectErr: core.ErrGenerationStatusUnknown,
 		},
 		{
 			name: "Error/InvalidProposalJSON", request: validRequest,

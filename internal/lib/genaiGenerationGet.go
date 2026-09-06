@@ -2,7 +2,6 @@ package lib
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
@@ -13,15 +12,12 @@ import (
 	"github.com/a-novel-kit/golib/otel"
 )
 
-// GenAIGenerationGetClient is the service-genai operation used by [GenAIGenerationGet].
-type GenAIGenerationGetClient interface {
-	// GenerationGet retrieves one owner-scoped service-genai generation.
-	GenerationGet(
-		ctx context.Context,
-		request *servicegenai.GenerationGetRequest,
-		options ...grpc.CallOption,
-	) (*servicegenai.GenerationGetResponse, error)
-}
+// GenAIGenerationGet adapts a client's GenerationGet method to the core gateway.
+type GenAIGenerationGet func(
+	ctx context.Context,
+	request *servicegenai.GenerationGetRequest,
+	options ...grpc.CallOption,
+) (*servicegenai.GenerationGetResponse, error)
 
 // GenerationGetGatewayRequest identifies one owner-scoped generation.
 type GenerationGetGatewayRequest struct {
@@ -31,39 +27,26 @@ type GenerationGetGatewayRequest struct {
 	OwnerID uuid.UUID
 }
 
-// GenAIGenerationGet adapts the service-genai get RPC to a domain result.
-type GenAIGenerationGet struct {
-	client GenAIGenerationGetClient
-}
-
-// NewGenAIGenerationGet creates a service-genai generation-get adapter.
-func NewGenAIGenerationGet(client GenAIGenerationGetClient) *GenAIGenerationGet {
-	return &GenAIGenerationGet{client: client}
-}
-
 // Exec retrieves and converts one owner-scoped generation.
-func (gateway *GenAIGenerationGet) Exec(
+func (gateway GenAIGenerationGet) Exec(
 	ctx context.Context,
 	request *GenerationGetGatewayRequest,
 ) (*Generation, error) {
 	ctx, span := otel.Tracer().Start(ctx, "lib.GenAIGenerationGet")
 	defer span.End()
 
-	response, err := gateway.client.GenerationGet(ctx, &servicegenai.GenerationGetRequest{
+	response, err := gateway(ctx, &servicegenai.GenerationGetRequest{
 		Id:      request.ID.String(),
 		OwnerId: request.OwnerID.String(),
 	})
-
-	err = normalizeGenAIError("get generation", err, map[codes.Code]error{
-		codes.NotFound: ErrGenerationNotFound,
-	})
 	if err != nil {
-		return nil, err
+		return nil, otel.ReportError(span, normalizeGenAIError(err, codes.NotFound, ErrGenerationNotFound))
 	}
 
-	if response == nil {
-		return nil, fmt.Errorf("%w: missing get response", ErrGenerationResponseInvalid)
+	generation, err := mapGenAIGeneration(response.GetGeneration())
+	if err != nil {
+		return nil, otel.ReportError(span, err)
 	}
 
-	return mapGenAIGeneration(response.GetGeneration())
+	return otel.ReportSuccess(span, generation), nil
 }

@@ -43,6 +43,19 @@ const (
 	GenerationStatusCancelled GenerationStatus = "cancelled"
 )
 
+// Terminal reports whether no further generation state can follow.
+func (status GenerationStatus) Terminal() bool {
+	switch status {
+	case GenerationStatusSucceeded,
+		GenerationStatusFailed,
+		GenerationStatusAbandoned,
+		GenerationStatusCancelled:
+		return true
+	default:
+		return false
+	}
+}
+
 var generationStatuses = map[servicegenai.GenerationStatus]GenerationStatus{
 	servicegenai.GenerationStatusPending:   GenerationStatusPending,
 	servicegenai.GenerationStatusRunning:   GenerationStatusRunning,

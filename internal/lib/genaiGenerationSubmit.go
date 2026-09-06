@@ -2,7 +2,6 @@ package lib
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
@@ -13,15 +12,12 @@ import (
 	"github.com/a-novel-kit/golib/otel"
 )
 
-// GenAIGenerationSubmitClient is the service-genai operation used by [GenAIGenerationSubmit].
-type GenAIGenerationSubmitClient interface {
-	// GenerationSubmit records one owner-scoped service-genai generation.
-	GenerationSubmit(
-		ctx context.Context,
-		request *servicegenai.GenerationSubmitRequest,
-		options ...grpc.CallOption,
-	) (*servicegenai.GenerationSubmitResponse, error)
-}
+// GenAIGenerationSubmit adapts a client's GenerationSubmit method to the core gateway.
+type GenAIGenerationSubmit func(
+	ctx context.Context,
+	request *servicegenai.GenerationSubmitRequest,
+	options ...grpc.CallOption,
+) (*servicegenai.GenerationSubmitResponse, error)
 
 // GenerationSubmitGatewayRequest contains one service-genai submission.
 type GenerationSubmitGatewayRequest struct {
@@ -45,50 +41,32 @@ type GenerationSubmitGatewayResult struct {
 	Created bool
 }
 
-// GenAIGenerationSubmit adapts the service-genai submit RPC to a domain result.
-type GenAIGenerationSubmit struct {
-	client GenAIGenerationSubmitClient
-}
-
-// NewGenAIGenerationSubmit creates a service-genai generation-submit adapter.
-func NewGenAIGenerationSubmit(client GenAIGenerationSubmitClient) *GenAIGenerationSubmit {
-	return &GenAIGenerationSubmit{client: client}
-}
-
 // Exec submits and converts one owner-scoped generation.
-func (gateway *GenAIGenerationSubmit) Exec(
+func (gateway GenAIGenerationSubmit) Exec(
 	ctx context.Context,
 	request *GenerationSubmitGatewayRequest,
 ) (*GenerationSubmitGatewayResult, error) {
 	ctx, span := otel.Tracer().Start(ctx, "lib.GenAIGenerationSubmit")
 	defer span.End()
 
-	response, err := gateway.client.GenerationSubmit(ctx, &servicegenai.GenerationSubmitRequest{
+	response, err := gateway(ctx, &servicegenai.GenerationSubmitRequest{
 		OwnerId:        request.OwnerID.String(),
 		Purpose:        request.Purpose,
 		IdempotencyKey: request.IdempotencyKey,
 		Request:        request.Request,
 		MaxAttempts:    request.MaxAttempts,
 	})
-
-	err = normalizeGenAIError("submit generation", err, map[codes.Code]error{
-		codes.AlreadyExists: ErrGenerationConflict,
-	})
 	if err != nil {
-		return nil, err
-	}
-
-	if response == nil {
-		return nil, fmt.Errorf("%w: missing submit response", ErrGenerationResponseInvalid)
+		return nil, otel.ReportError(span, normalizeGenAIError(err, codes.AlreadyExists, ErrGenerationConflict))
 	}
 
 	generation, err := mapGenAIGeneration(response.GetGeneration())
 	if err != nil {
-		return nil, err
+		return nil, otel.ReportError(span, err)
 	}
 
-	return &GenerationSubmitGatewayResult{
+	return otel.ReportSuccess(span, &GenerationSubmitGatewayResult{
 		Generation: generation,
 		Created:    response.GetCreated(),
-	}, nil
+	}), nil
 }

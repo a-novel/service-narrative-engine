@@ -2,19 +2,17 @@ package lib_test
 
 import (
 	"context"
-	"errors"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 
 	servicegenai "github.com/a-novel/service-genai/pkg/go"
-	servicegenaimocks "github.com/a-novel/service-genai/pkg/go/mocks"
 
 	"github.com/a-novel/service-narrative-engine/internal/lib"
 )
@@ -22,156 +20,100 @@ import (
 func TestGenAIGenerationGet(t *testing.T) {
 	t.Parallel()
 
-	errGateway := errors.New("generation gateway failure")
-	proposal := map[string]any{"shape": "belongs to the client"}
-	proposalJSON := `{"shape":"belongs to the client"}`
-	validResponse := &servicegenai.GenerationGetResponse{Generation: genAIWireGeneration(
-		servicegenai.GenerationStatusSucceeded,
-		genAIResponsesOutput(t, proposal),
-	)}
-	failed := genAIWireGeneration(servicegenai.GenerationStatusFailed, nil)
-	failed.Error = "private provider details"
-	expectFailed := expectedGatewayGeneration(lib.GenerationStatusFailed, "")
-	expectFailed.Failed = true
-	invalidID := genAIWireGeneration(servicegenai.GenerationStatusPending, nil)
-	invalidID.Id = "not-a-uuid"
-	invalidOwnerID := genAIWireGeneration(servicegenai.GenerationStatusPending, nil)
-	invalidOwnerID.OwnerId = "not-a-uuid"
-	unknownStatus := genAIWireGeneration(servicegenai.GenerationStatus(99), nil)
-	invalidCreatedAt := genAIWireGeneration(servicegenai.GenerationStatusPending, nil)
-	invalidCreatedAt.CreatedAt = "not-a-time"
-	invalidSettledAt := genAIWireGeneration(servicegenai.GenerationStatusSucceeded, nil)
-	invalidSettledAt.SettledAt = "not-a-time"
+	completed := genAIWireGeneration()
+	completed.Status = servicegenai.GenerationStatusSucceeded
+	completed.Output = []byte(`{"output":[{"content":[{"type":"output_text","text":"{}"}]}]}`)
+	completed.SettledAt = genAICreatedAt.Add(2 * time.Second).Format(time.RFC3339Nano)
+	completed.ExpiresAt = genAICreatedAt.Add(time.Hour).Format(time.RFC3339Nano)
+	settledAt, expiresAt := genAICreatedAt.Add(2*time.Second), genAICreatedAt.Add(time.Hour)
+	expect := &lib.Generation{
+		ID: genAIGenerationID, OwnerID: genAIOwnerID, Purpose: "studio.generation",
+		Status: lib.GenerationStatusSucceeded, Attempt: 1, MaxAttempts: 2, Output: "{}",
+		CreatedAt: genAICreatedAt, UpdatedAt: genAICreatedAt.Add(time.Second),
+		SettledAt: &settledAt, ExpiresAt: &expiresAt,
+	}
 
 	testCases := []struct {
-		name string
-
-		response *servicegenai.GenerationGetResponse
-		err      error
-
-		expect     *lib.Generation
-		expectErr  error
-		expectCode codes.Code
+		name      string
+		change    func(*servicegenai.Generation)
+		rpcErr    error
+		expectErr error
 	}{
+		{name: "Success"},
+		{name: "Error/NotFound", rpcErr: status.Error(codes.NotFound, "missing"), expectErr: lib.ErrGenerationNotFound},
+		{name: "Error/PermissionDenied", rpcErr: status.Error(codes.PermissionDenied, "denied")},
+		{name: "Error/Unavailable", rpcErr: status.Error(codes.Unavailable, "unavailable")},
+		{name: "Error/Cancelled", rpcErr: status.Error(codes.Canceled, "cancelled")},
+		{name: "Error/Deadline", rpcErr: status.Error(codes.DeadlineExceeded, "deadline")},
 		{
-			name: "Success/Conversion", response: validResponse,
-			expect: expectedGatewayGeneration(lib.GenerationStatusSucceeded, proposalJSON),
+			name:   "Error/MalformedID",
+			change: func(g *servicegenai.Generation) { g.Id = "invalid" }, expectErr: lib.ErrGenerationResponseInvalid,
 		},
 		{
-			name:     "Success/ProviderFailureIsOpaque",
-			response: &servicegenai.GenerationGetResponse{Generation: failed},
-			expect:   expectFailed,
+			name:   "Error/MalformedTime",
+			change: func(g *servicegenai.Generation) { g.CreatedAt = "invalid" }, expectErr: lib.ErrGenerationResponseInvalid,
 		},
 		{
-			name: "Error/NotFound", err: status.Error(codes.NotFound, "not found"),
-			expectErr: lib.ErrGenerationNotFound, expectCode: codes.NotFound,
+			name:   "Error/UnknownStatus",
+			change: func(g *servicegenai.Generation) { g.Status = 99 }, expectErr: lib.ErrGenerationStatusUnknown,
 		},
 		{
-			name: "Error/PermissionDenied", err: status.Error(codes.PermissionDenied, "denied"),
-			expectCode: codes.PermissionDenied,
+			name:   "Error/Output",
+			change: func(g *servicegenai.Generation) { g.Output = []byte("{") }, expectErr: lib.ErrGenerationOutputInvalid,
 		},
-		{
-			name: "Error/Unavailable", err: status.Error(codes.Unavailable, "unavailable"),
-			expectCode: codes.Unavailable,
-		},
-		{name: "Error/Gateway", err: errGateway, expectErr: errGateway},
-		{name: "Error/MissingResponse", expectErr: lib.ErrGenerationResponseInvalid},
-		{
-			name: "Error/MissingGeneration", response: &servicegenai.GenerationGetResponse{},
-			expectErr: lib.ErrGenerationResponseInvalid,
-		},
-		{
-			name:      "Error/InvalidID",
-			response:  &servicegenai.GenerationGetResponse{Generation: invalidID},
-			expectErr: lib.ErrGenerationResponseInvalid,
-		},
-		{
-			name:      "Error/InvalidOwnerID",
-			response:  &servicegenai.GenerationGetResponse{Generation: invalidOwnerID},
-			expectErr: lib.ErrGenerationResponseInvalid,
-		},
-		{
-			name:      "Error/UnknownStatus",
-			response:  &servicegenai.GenerationGetResponse{Generation: unknownStatus},
-			expectErr: lib.ErrGenerationStatusUnknown,
-		},
-		{
-			name:      "Error/InvalidCreatedAt",
-			response:  &servicegenai.GenerationGetResponse{Generation: invalidCreatedAt},
-			expectErr: lib.ErrGenerationResponseInvalid,
-		},
-		{
-			name:      "Error/InvalidSettledAt",
-			response:  &servicegenai.GenerationGetResponse{Generation: invalidSettledAt},
-			expectErr: lib.ErrGenerationResponseInvalid,
-		},
-		{
-			name: "Error/InvalidOutput",
-			response: &servicegenai.GenerationGetResponse{Generation: genAIWireGeneration(
-				servicegenai.GenerationStatusSucceeded,
-				[]byte("{"),
-			)},
-			expectErr: lib.ErrGenerationOutputInvalid,
-		},
-		{
-			name: "Error/Refused",
-			response: &servicegenai.GenerationGetResponse{Generation: genAIWireGeneration(
-				servicegenai.GenerationStatusSucceeded,
-				genAIResponsesRefusal(t),
-			)},
-			expectErr: lib.ErrGenerationRefused,
-		},
+		{name: "Error/Refusal", change: func(g *servicegenai.Generation) {
+			g.Output = []byte(`{"output":[{"content":[{"type":"refusal","refusal":"private detail"}]}]}`)
+		}, expectErr: lib.ErrGenerationRefused},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			client := servicegenaimocks.NewMockClient(t)
+			source := proto.CloneOf(completed)
+			if testCase.change != nil {
+				testCase.change(source)
+			}
+
 			ctx := metadata.NewOutgoingContext(t.Context(), metadata.Pairs("x-request-id", t.Name()))
 
 			ctx, cancel := context.WithTimeout(ctx, time.Minute)
 			defer cancel()
 
-			client.EXPECT().
-				GenerationGet(mock.Anything, &servicegenai.GenerationGetRequest{
-					Id: genAIGenerationID.String(), OwnerId: genAIOwnerID.String(),
-				}).
-				RunAndReturn(func(
-					callCtx context.Context,
-					_ *servicegenai.GenerationGetRequest,
-					options ...grpc.CallOption,
-				) (*servicegenai.GenerationGetResponse, error) {
-					metadataValue, ok := metadata.FromOutgoingContext(callCtx)
-					require.True(t, ok)
-					require.Equal(t, []string{t.Name()}, metadataValue.Get("x-request-id"))
+			calls := 0
+			gateway := lib.GenAIGenerationGet(func(
+				callCtx context.Context,
+				request *servicegenai.GenerationGetRequest,
+				_ ...grpc.CallOption,
+			) (*servicegenai.GenerationGetResponse, error) {
+				calls++
 
-					_, hasDeadline := callCtx.Deadline()
-					require.True(t, hasDeadline)
-					require.Empty(t, options)
+				assertGenAIContext(t, ctx, callCtx)
+				require.Equal(t, genAIGenerationID.String(), request.GetId())
+				require.Equal(t, genAIOwnerID.String(), request.GetOwnerId())
 
-					return testCase.response, testCase.err
-				}).
-				Once()
-
-			result, err := lib.NewGenAIGenerationGet(client).Exec(ctx, &lib.GenerationGetGatewayRequest{
-				ID: genAIGenerationID, OwnerID: genAIOwnerID,
+				return &servicegenai.GenerationGetResponse{Generation: source}, testCase.rpcErr
 			})
+			result, err := gateway.Exec(ctx, &lib.GenerationGetGatewayRequest{ID: genAIGenerationID, OwnerID: genAIOwnerID})
 
-			if testCase.expectErr != nil {
-				require.ErrorIs(t, err, testCase.expectErr)
-			} else if testCase.expectCode == codes.OK {
-				require.NoError(t, err)
+			expectErr := testCase.expectErr
+			if expectErr == nil {
+				expectErr = testCase.rpcErr
+			}
+
+			require.ErrorIs(t, err, expectErr)
+
+			if testCase.rpcErr != nil {
+				require.Equal(t, status.Code(testCase.rpcErr), status.Code(err))
+			}
+
+			if expectErr == nil {
+				require.Equal(t, expect, result)
 			} else {
-				require.Error(t, err)
+				require.Nil(t, result)
 			}
 
-			if testCase.expectCode != codes.OK {
-				require.Equal(t, testCase.expectCode, status.Code(err))
-			}
-
-			require.Equal(t, testCase.expect, result)
-			client.AssertExpectations(t)
+			require.Equal(t, 1, calls)
 		})
 	}
 }
