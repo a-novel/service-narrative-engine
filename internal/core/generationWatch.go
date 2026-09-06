@@ -8,13 +8,20 @@ import (
 
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel/attribute"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
-	servicegenai "github.com/a-novel/service-genai/pkg/go"
 
 	"github.com/a-novel-kit/golib/otel"
+
+	"github.com/a-novel/service-narrative-engine/internal/lib"
 )
+
+// GenerationWatchGateway is the domain operation used to stream generation state.
+type GenerationWatchGateway interface {
+	// Exec opens one owner-scoped generation stream.
+	Exec(
+		ctx context.Context,
+		request *lib.GenerationWatchGatewayRequest,
+	) (lib.GenerationWatchGatewayStream, error)
+}
 
 // GenerationWatchRequest identifies one Project-owned generation to await.
 type GenerationWatchRequest struct {
@@ -26,18 +33,18 @@ type GenerationWatchRequest struct {
 	ID uuid.UUID `validate:"required"`
 }
 
-// GenerationWatch waits on service-genai after Project authorization.
+// GenerationWatch waits on the generation gateway after Project authorization.
 type GenerationWatch struct {
 	projectAccess ProjectAccessService
-	genai         servicegenai.Client
+	gateway       GenerationWatchGateway
 }
 
 // NewGenerationWatch creates the low-latency generation wait service.
 func NewGenerationWatch(
 	projectAccess ProjectAccessService,
-	genai servicegenai.Client,
+	gateway GenerationWatchGateway,
 ) *GenerationWatch {
-	return &GenerationWatch{projectAccess: projectAccess, genai: genai}
+	return &GenerationWatch{projectAccess: projectAccess, gateway: gateway}
 }
 
 // Exec consumes snapshots until service-genai reports a terminal state.
@@ -67,16 +74,12 @@ func (service *GenerationWatch) Exec(
 		return nil, otel.ReportError(span, fmt.Errorf("access Project: %w", err))
 	}
 
-	stream, err := service.genai.GenerationWatch(ctx, &servicegenai.GenerationWatchRequest{
-		Id:      request.ID.String(),
-		OwnerId: request.Actor.UserID.String(),
+	stream, err := service.gateway.Exec(ctx, &lib.GenerationWatchGatewayRequest{
+		ID:      request.ID,
+		OwnerID: request.Actor.UserID,
 	})
-	if status.Code(err) == codes.NotFound {
-		return nil, otel.ReportError(span, fmt.Errorf("%w: %w", ErrGenerationNotFound, err))
-	}
-
 	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("watch generation: %w", err))
+		return nil, otel.ReportError(span, err)
 	}
 
 	if stream == nil {
@@ -85,6 +88,7 @@ func (service *GenerationWatch) Exec(
 			fmt.Errorf("%w: missing watch stream", ErrGenerationResponseInvalid),
 		)
 	}
+	defer stream.Close()
 
 	for {
 		response, receiveErr := stream.Recv()
@@ -92,27 +96,13 @@ func (service *GenerationWatch) Exec(
 			return nil, otel.ReportError(span, ErrGenerationWatchClosed)
 		}
 
-		if status.Code(receiveErr) == codes.NotFound {
-			return nil, otel.ReportError(
-				span,
-				fmt.Errorf("%w: %w", ErrGenerationNotFound, receiveErr),
-			)
-		}
-
 		if receiveErr != nil {
-			return nil, otel.ReportError(span, fmt.Errorf("receive generation: %w", receiveErr))
-		}
-
-		if response == nil {
-			return nil, otel.ReportError(
-				span,
-				fmt.Errorf("%w: missing watch response", ErrGenerationResponseInvalid),
-			)
+			return nil, otel.ReportError(span, receiveErr)
 		}
 
 		generation, mapErr := mapGeneration(
 			ctx,
-			response.GetGeneration(),
+			response,
 			&request.ID,
 			request.Actor.UserID,
 		)

@@ -3,16 +3,13 @@ package core_test
 import (
 	"encoding/json"
 	"strings"
-	"testing"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/stretchr/testify/require"
-
-	servicegenai "github.com/a-novel/service-genai/pkg/go"
 
 	"github.com/a-novel/service-narrative-engine/internal/core"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
+	"github.com/a-novel/service-narrative-engine/internal/lib"
 )
 
 var (
@@ -45,26 +42,22 @@ func projectFixture() *dao.Project {
 	return &dao.Project{ID: projectID, OwnerID: ownerID, CreatedAt: createdAt}
 }
 
-func generationFixture(status servicegenai.GenerationStatus, output []byte) *servicegenai.Generation {
-	generation := &servicegenai.Generation{
-		Id:          generationID.String(),
-		OwnerId:     ownerID.String(),
+func generationFixture(status core.GenerationStatus, output string) *lib.Generation {
+	generation := &lib.Generation{
+		ID:          generationID,
+		OwnerID:     ownerID,
 		Purpose:     core.GenerationPurposeStudio,
-		Status:      status,
+		Status:      string(status),
 		Attempt:     1,
 		MaxAttempts: 2,
 		Output:      output,
-		CreatedAt:   createdAt.Format(time.RFC3339Nano),
-		UpdatedAt:   updatedAt.Format(time.RFC3339Nano),
+		CreatedAt:   createdAt,
+		UpdatedAt:   updatedAt,
 	}
 
-	switch status {
-	case servicegenai.GenerationStatusSucceeded,
-		servicegenai.GenerationStatusFailed,
-		servicegenai.GenerationStatusAbandoned,
-		servicegenai.GenerationStatusCancelled:
-		generation.SettledAt = settledAt.Format(time.RFC3339Nano)
-		generation.ExpiresAt = expiresAt.Format(time.RFC3339Nano)
+	if status.Terminal() {
+		generation.SettledAt = &settledAt
+		generation.ExpiresAt = &expiresAt
 	}
 
 	return generation
@@ -90,49 +83,4 @@ func expectedGeneration(
 	}
 
 	return generation
-}
-
-func responsesOutput(t *testing.T, value any) []byte {
-	t.Helper()
-
-	text, err := json.Marshal(value)
-	require.NoError(t, err)
-
-	output, err := json.Marshal(map[string]any{
-		"output": []any{map[string]any{
-			"type": "message",
-			"content": []any{map[string]any{
-				"type": "output_text",
-				"text": string(text),
-			}},
-		}},
-	})
-	require.NoError(t, err)
-
-	return output
-}
-
-func responsesOutputText(t *testing.T, text string) []byte {
-	t.Helper()
-
-	output, err := json.Marshal(map[string]any{"output_text": text})
-	require.NoError(t, err)
-
-	return output
-}
-
-func responsesRefusal(t *testing.T) []byte {
-	t.Helper()
-
-	output, err := json.Marshal(map[string]any{
-		"output": []any{map[string]any{
-			"content": []any{map[string]any{
-				"type":    "refusal",
-				"refusal": "provider refusal",
-			}},
-		}},
-	})
-	require.NoError(t, err)
-
-	return output
 }

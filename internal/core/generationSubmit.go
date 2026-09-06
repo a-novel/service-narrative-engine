@@ -8,15 +8,20 @@ import (
 
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel/attribute"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
-	servicegenai "github.com/a-novel/service-genai/pkg/go"
 
 	"github.com/a-novel-kit/golib/otel"
 
 	"github.com/a-novel/service-narrative-engine/internal/lib"
 )
+
+// GenerationSubmitGateway is the domain operation used to submit generation work.
+type GenerationSubmitGateway interface {
+	// Exec submits one owner-scoped generation.
+	Exec(
+		ctx context.Context,
+		request *lib.GenerationSubmitGatewayRequest,
+	) (*lib.GenerationSubmitGatewayResult, error)
+}
 
 // GenerationSubmitRequest contains the complete client-composed generation.
 type GenerationSubmitRequest struct {
@@ -39,15 +44,15 @@ type GenerationSubmitRequest struct {
 // GenerationSubmit authorizes and forwards one client-composed generation.
 type GenerationSubmit struct {
 	projectAccess ProjectAccessService
-	genai         servicegenai.Client
+	gateway       GenerationSubmitGateway
 }
 
-// NewGenerationSubmit creates the thin Narrative generation adapter.
+// NewGenerationSubmit creates the generation submission service.
 func NewGenerationSubmit(
 	projectAccess ProjectAccessService,
-	genai servicegenai.Client,
+	gateway GenerationSubmitGateway,
 ) *GenerationSubmit {
-	return &GenerationSubmit{projectAccess: projectAccess, genai: genai}
+	return &GenerationSubmit{projectAccess: projectAccess, gateway: gateway}
 }
 
 // Exec submits one priced generation or attaches to the caller's existing work.
@@ -116,19 +121,15 @@ func (service *GenerationSubmit) Exec(
 		return nil, otel.ReportError(span, err)
 	}
 
-	response, err := service.genai.GenerationSubmit(ctx, &servicegenai.GenerationSubmitRequest{
-		OwnerId:        request.Actor.UserID.String(),
+	response, err := service.gateway.Exec(ctx, &lib.GenerationSubmitGatewayRequest{
+		OwnerID:        request.Actor.UserID,
 		Purpose:        GenerationPurposeStudio,
 		IdempotencyKey: idempotencyKey,
 		Request:        payload,
 		MaxAttempts:    generationMaxAttempts,
 	})
-	if status.Code(err) == codes.AlreadyExists {
-		return nil, otel.ReportError(span, fmt.Errorf("%w: %w", ErrGenerationConflict, err))
-	}
-
 	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("submit generation: %w", err))
+		return nil, otel.ReportError(span, err)
 	}
 
 	if response == nil {
@@ -140,7 +141,7 @@ func (service *GenerationSubmit) Exec(
 
 	generation, err := mapGeneration(
 		ctx,
-		response.GetGeneration(),
+		response.Generation,
 		nil,
 		request.Actor.UserID,
 	)
@@ -150,12 +151,12 @@ func (service *GenerationSubmit) Exec(
 
 	span.SetAttributes(
 		attribute.String("generation.id", generation.ID.String()),
-		attribute.Bool("generation.created", response.GetCreated()),
+		attribute.Bool("generation.created", response.Created),
 	)
 
 	return otel.ReportSuccess(span, &GenerationSubmitResult{
 		Generation: generation,
-		Created:    response.GetCreated(),
+		Created:    response.Created,
 	}), nil
 }
 

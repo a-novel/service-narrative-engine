@@ -8,72 +8,59 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
-	servicegenai "github.com/a-novel/service-genai/pkg/go"
-	servicegenaimocks "github.com/a-novel/service-genai/pkg/go/mocks"
 
 	"github.com/a-novel/service-narrative-engine/internal/core"
 	coremocks "github.com/a-novel/service-narrative-engine/internal/core/mocks"
+	"github.com/a-novel/service-narrative-engine/internal/lib"
 )
 
 func TestGenerationGet(t *testing.T) {
 	t.Parallel()
 
-	const privateProviderError = "private provider details"
-
 	errAccess := errors.New("access failure")
-	errGenAI := errors.New("genai failure")
+	errGateway := errors.New("generation gateway failure")
 	proposal := json.RawMessage(`{"shape":"belongs to the client"}`)
 	validRequest := &core.GenerationGetRequest{
 		Actor: core.Actor{UserID: ownerID}, ProjectID: projectID, ID: generationID,
 	}
-	failed := generationFixture(servicegenai.GenerationStatusFailed, nil)
-	failed.Error = privateProviderError
+	failed := generationFixture(core.GenerationStatusFailed, "")
+	failed.Failed = true
 	expectFailed := expectedGeneration(core.GenerationStatusFailed, nil)
 	expectFailed.Failure = "generation failed"
-	wrongOwner := generationFixture(servicegenai.GenerationStatusPending, nil)
-	wrongOwner.OwnerId = uuid.MustParse("00000000-0000-0000-0000-000000000099").String()
-	wrongID := generationFixture(servicegenai.GenerationStatusPending, nil)
-	wrongID.Id = uuid.MustParse("00000000-0000-0000-0000-000000000699").String()
-	unknownStatus := generationFixture(servicegenai.GenerationStatus(99), nil)
+	wrongOwner := generationFixture(core.GenerationStatusPending, "")
+	wrongOwner.OwnerID = uuid.MustParse("00000000-0000-0000-0000-000000000099")
+	wrongID := generationFixture(core.GenerationStatusPending, "")
+	wrongID.ID = uuid.MustParse("00000000-0000-0000-0000-000000000699")
+	wrongPurpose := generationFixture(core.GenerationStatusPending, "")
+	wrongPurpose.Purpose = "other"
 
 	testCases := []struct {
 		name string
 
-		request    *core.GenerationGetRequest
-		accessErr  error
-		response   *servicegenai.GenerationGetResponse
-		genaiErr   error
-		callAccess bool
-		callGenAI  bool
+		request     *core.GenerationGetRequest
+		accessErr   error
+		response    *lib.Generation
+		gatewayErr  error
+		callAccess  bool
+		callGateway bool
 
 		expect    *core.Generation
 		expectErr error
 	}{
 		{
-			name: "Success/Pending", request: validRequest, callAccess: true, callGenAI: true,
-			response: &servicegenai.GenerationGetResponse{
-				Generation: generationFixture(servicegenai.GenerationStatusPending, nil),
-			},
-			expect: expectedGeneration(core.GenerationStatusPending, nil),
+			name: "Success/Pending", request: validRequest, callAccess: true, callGateway: true,
+			response: generationFixture(core.GenerationStatusPending, ""),
+			expect:   expectedGeneration(core.GenerationStatusPending, nil),
 		},
 		{
-			name: "Success/OpaqueJSONProposal", request: validRequest, callAccess: true, callGenAI: true,
-			response: &servicegenai.GenerationGetResponse{
-				Generation: generationFixture(
-					servicegenai.GenerationStatusSucceeded,
-					responsesOutput(t, proposal),
-				),
-			},
-			expect: expectedGeneration(core.GenerationStatusSucceeded, proposal),
+			name: "Success/OpaqueJSONProposal", request: validRequest,
+			callAccess: true, callGateway: true,
+			response: generationFixture(core.GenerationStatusSucceeded, string(proposal)),
+			expect:   expectedGeneration(core.GenerationStatusSucceeded, proposal),
 		},
 		{
 			name: "Success/ProviderErrorIsOpaque", request: validRequest,
-			callAccess: true, callGenAI: true,
-			response: &servicegenai.GenerationGetResponse{Generation: failed},
-			expect:   expectFailed,
+			callAccess: true, callGateway: true, response: failed, expect: expectFailed,
 		},
 		{
 			name: "Error/InvalidRequest", request: &core.GenerationGetRequest{},
@@ -84,70 +71,52 @@ func TestGenerationGet(t *testing.T) {
 			callAccess: true, accessErr: errAccess, expectErr: errAccess,
 		},
 		{
-			name: "Error/NotFound", request: validRequest, callAccess: true, callGenAI: true,
-			genaiErr:  status.Error(codes.NotFound, "not found"),
-			expectErr: core.ErrGenerationNotFound,
+			name: "Error/NotFound", request: validRequest,
+			callAccess: true, callGateway: true,
+			gatewayErr: lib.ErrGenerationNotFound, expectErr: core.ErrGenerationNotFound,
 		},
 		{
-			name: "Error/GenAI", request: validRequest, callAccess: true, callGenAI: true,
-			genaiErr: errGenAI, expectErr: errGenAI,
+			name: "Error/Gateway", request: validRequest,
+			callAccess: true, callGateway: true, gatewayErr: errGateway, expectErr: errGateway,
 		},
 		{
 			name: "Error/MissingResponse", request: validRequest,
-			callAccess: true, callGenAI: true, expectErr: core.ErrGenerationResponseInvalid,
+			callAccess: true, callGateway: true, expectErr: core.ErrGenerationResponseInvalid,
 		},
 		{
-			name: "Error/MissingGeneration", request: validRequest,
-			callAccess: true, callGenAI: true,
-			response:  &servicegenai.GenerationGetResponse{},
+			name: "Error/WrongOwner", request: validRequest,
+			callAccess: true, callGateway: true, response: wrongOwner,
 			expectErr: core.ErrGenerationResponseInvalid,
 		},
 		{
-			name: "Error/WrongOwner", request: validRequest, callAccess: true, callGenAI: true,
-			response:  &servicegenai.GenerationGetResponse{Generation: wrongOwner},
+			name: "Error/WrongID", request: validRequest,
+			callAccess: true, callGateway: true, response: wrongID,
 			expectErr: core.ErrGenerationResponseInvalid,
 		},
 		{
-			name: "Error/WrongID", request: validRequest, callAccess: true, callGenAI: true,
-			response:  &servicegenai.GenerationGetResponse{Generation: wrongID},
+			name: "Error/WrongPurpose", request: validRequest,
+			callAccess: true, callGateway: true, response: wrongPurpose,
 			expectErr: core.ErrGenerationResponseInvalid,
 		},
 		{
-			name: "Error/UnknownStatus", request: validRequest, callAccess: true, callGenAI: true,
-			response:  &servicegenai.GenerationGetResponse{Generation: unknownStatus},
-			expectErr: core.ErrGenerationStatusUnknown,
-		},
-		{
-			name: "Error/InvalidProposalJSON", request: validRequest, callAccess: true, callGenAI: true,
-			response: &servicegenai.GenerationGetResponse{Generation: generationFixture(
-				servicegenai.GenerationStatusSucceeded,
-				responsesOutputText(t, "{"),
-			)},
+			name: "Error/InvalidProposalJSON", request: validRequest,
+			callAccess: true, callGateway: true,
+			response:  generationFixture(core.GenerationStatusSucceeded, "{"),
 			expectErr: core.ErrGenerationOutputInvalid,
 		},
 		{
-			name: "Error/InvalidResponseOutput", request: validRequest, callAccess: true, callGenAI: true,
-			response: &servicegenai.GenerationGetResponse{Generation: generationFixture(
-				servicegenai.GenerationStatusSucceeded,
-				[]byte("{"),
-			)},
+			name: "Error/ProposalOverLimit", request: validRequest,
+			callAccess: true, callGateway: true,
+			response: generationFixture(
+				core.GenerationStatusSucceeded,
+				string(contentDocumentOfSize((1<<20)+1)),
+			),
 			expectErr: core.ErrGenerationOutputInvalid,
 		},
 		{
-			name: "Error/Refused", request: validRequest, callAccess: true, callGenAI: true,
-			response: &servicegenai.GenerationGetResponse{Generation: generationFixture(
-				servicegenai.GenerationStatusSucceeded,
-				responsesRefusal(t),
-			)},
-			expectErr: core.ErrGenerationRefused,
-		},
-		{
-			name: "Error/ProposalOverLimit", request: validRequest, callAccess: true, callGenAI: true,
-			response: &servicegenai.GenerationGetResponse{Generation: generationFixture(
-				servicegenai.GenerationStatusSucceeded,
-				responsesOutputText(t, string(contentDocumentOfSize((1<<20)+1))),
-			)},
-			expectErr: core.ErrGenerationOutputInvalid,
+			name: "Error/Refused", request: validRequest,
+			callAccess: true, callGateway: true,
+			gatewayErr: lib.ErrGenerationRefused, expectErr: core.ErrGenerationRefused,
 		},
 	}
 
@@ -156,33 +125,33 @@ func TestGenerationGet(t *testing.T) {
 			t.Parallel()
 
 			projectAccess := coremocks.NewMockProjectAccessService(t)
-			genai := servicegenaimocks.NewMockClient(t)
+			gateway := coremocks.NewMockGenerationGetGateway(t)
 
 			if testCase.callAccess {
 				projectAccess.EXPECT().
 					Exec(mock.Anything, &core.ProjectAccessRequest{
 						Actor: testCase.request.Actor, ProjectID: testCase.request.ProjectID,
 					}).
-					Return(projectFixture(), testCase.accessErr)
+					Return(projectFixture(), testCase.accessErr).
+					Once()
 			}
 
-			if testCase.callGenAI {
-				genai.EXPECT().
-					GenerationGet(mock.Anything, &servicegenai.GenerationGetRequest{
-						Id: testCase.request.ID.String(), OwnerId: testCase.request.Actor.UserID.String(),
+			if testCase.callGateway {
+				gateway.EXPECT().
+					Exec(mock.Anything, &lib.GenerationGetGatewayRequest{
+						ID: testCase.request.ID, OwnerID: testCase.request.Actor.UserID,
 					}).
-					Return(testCase.response, testCase.genaiErr)
+					Return(testCase.response, testCase.gatewayErr).
+					Once()
 			}
 
-			result, err := core.NewGenerationGet(projectAccess, genai).
+			result, err := core.NewGenerationGet(projectAccess, gateway).
 				Exec(t.Context(), testCase.request)
 
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
-
-			if result != nil {
-				require.NotContains(t, result.Failure, privateProviderError)
-			}
+			projectAccess.AssertExpectations(t)
+			gateway.AssertExpectations(t)
 		})
 	}
 }
