@@ -71,7 +71,7 @@ services:
       - narrative-engine-integration-rest-test
 
   service-genai:
-    image: ghcr.io/a-novel/service-genai/grpc:v0.3.0
+    image: ghcr.io/a-novel/service-genai/grpc:v0.4.0
     depends_on:
       postgres-genai:
         condition: service_healthy
