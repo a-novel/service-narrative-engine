@@ -32,7 +32,7 @@ services:
 
   postgres-authentication:
     profiles: ["auth"]
-    image: ghcr.io/a-novel/service-authentication/database:v2.6.0
+    image: ghcr.io/a-novel/service-authentication/database:v2.8.0
     networks:
       - api
     environment:
@@ -46,7 +46,7 @@ services:
 
   service-authentication:
     profiles: ["auth"]
-    image: ghcr.io/a-novel/service-authentication/standalone-rest:v2.6.0
+    image: ghcr.io/a-novel/service-authentication/standalone-rest:v2.8.0
     ports:
       - "${SERVICE_AUTHENTICATION_PORT}:8080"
     depends_on:
