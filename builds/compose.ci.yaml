@@ -57,6 +57,47 @@ services:
       SUPER_ADMIN_EMAIL: noreply@agorastoryverse.com
       SUPER_ADMIN_PASSWORD: admin
 
+  postgres-authentication-b:
+    image: "${AUTHENTICATION_DATABASE_IMAGE:?AUTHENTICATION_DATABASE_IMAGE is required}"
+    environment: *external-postgres-environment
+    healthcheck: *postgres-healthcheck
+
+  service-authentication-b:
+    image: "${AUTHENTICATION_REST_IMAGE:?AUTHENTICATION_REST_IMAGE is required}"
+    restart: on-failure:10
+    ports:
+      - "4001:8080"
+    depends_on:
+      postgres-authentication-b:
+        condition: service_healthy
+      service-json-keys:
+        condition: service_healthy
+    environment:
+      POSTGRES_DSN: postgres://postgres:postgres@postgres-authentication-b:5432/postgres?sslmode=disable
+      SERVICE_JSON_KEYS_HOST: service-json-keys
+      SERVICE_JSON_KEYS_PORT: 8080
+      SUPER_ADMIN_EMAIL: other@agorastoryverse.com
+      SUPER_ADMIN_PASSWORD: admin
+
+  openai-mock:
+    image: node:24-alpine
+    command: ["node", "/app/openaiMock.mjs"]
+    ports:
+      - "5000:8080"
+    volumes:
+      - ../pkg/js/test/rest/testdata/openaiMock.mjs:/app/openaiMock.mjs:ro
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:8080/health').then(response => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 1s
+      timeout: 1s
+      retries: 30
+
   postgres-genai:
     image: "${GENAI_DATABASE_IMAGE:?GENAI_DATABASE_IMAGE is required}"
     environment: *external-postgres-environment
@@ -77,9 +118,14 @@ services:
     depends_on:
       service-genai-migrations:
         condition: service_completed_successfully
+      openai-mock:
+        condition: service_healthy
     environment:
       POSTGRES_DSN: postgres://postgres:postgres@postgres-genai:5432/postgres?sslmode=disable
-      OPENAI_API_KEY: "${OPENAI_API_KEY:-test}"
+      OPENAI_API_KEY: test
+      OPENAI_BASE_URL: http://openai-mock:8080/v1
+      WORKER_INTERVAL: 100ms
+      WORKER_POLL_INTERVAL: 100ms
 
   standalone-rest:
     image: "${STANDALONE_REST_IMAGE:?STANDALONE_REST_IMAGE is required}"

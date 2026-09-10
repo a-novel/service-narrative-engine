@@ -1,8 +1,12 @@
 package config
 
 const (
-	// PermissionIdeaRead grants access to read Idea resources.
-	PermissionIdeaRead = "narrative:idea:read"
-	// PermissionIdeaWrite grants access to create and update Idea resources.
-	PermissionIdeaWrite = "narrative:idea:write"
+	// PermissionProjectRead grants access to owned Project content reads.
+	PermissionProjectRead = "narrative:project:read"
+	// PermissionProjectWrite grants access to owned Project content writes.
+	PermissionProjectWrite = "narrative:project:write"
+	// PermissionGenerationRead grants access to owned Generation lifecycle reads.
+	PermissionGenerationRead = "narrative:generation:read"
+	// PermissionGenerationWrite grants access to owned Generation submissions.
+	PermissionGenerationWrite = "narrative:generation:write"
 )

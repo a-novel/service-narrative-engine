@@ -42,6 +42,21 @@ type StepValue struct {
 	CreatedAt time.Time       `json:"createdAt"`
 }
 
+// stepValueFromDao maps one stored opaque value into the core contract.
+func stepValueFromDao(entity *dao.StepValue) *StepValue {
+	if entity == nil {
+		return nil
+	}
+
+	return &StepValue{
+		ID:        entity.ID,
+		ProjectID: entity.ProjectID,
+		Key:       entity.Key,
+		Value:     entity.Value,
+		CreatedAt: entity.CreatedAt,
+	}
+}
+
 // StepValueCreate saves Project-owned JSON without interpreting its shape.
 type StepValueCreate struct {
 	projectAccess ProjectAccessService
@@ -124,11 +139,5 @@ func (service *StepValueCreate) Exec(
 
 	span.SetAttributes(attribute.String("step_value.id", entity.ID.String()))
 
-	return otel.ReportSuccess(span, &StepValue{
-		ID:        entity.ID,
-		ProjectID: entity.ProjectID,
-		Key:       entity.Key,
-		Value:     entity.Value,
-		CreatedAt: entity.CreatedAt,
-	}), nil
+	return otel.ReportSuccess(span, stepValueFromDao(entity)), nil
 }

@@ -16,3 +16,14 @@ export async function superAdminAccessToken(): Promise<string> {
   });
   return accessToken;
 }
+
+/** Logs in through the isolated second auth stack to obtain a different user identity. */
+export async function otherSuperAdminAccessToken(): Promise<string> {
+  const api = new AuthenticationApi(process.env.SERVICE_AUTHENTICATION_B_URL!);
+  const { accessToken } = await tokenCreate(api, {
+    email: process.env.SUPER_ADMIN_B_EMAIL ?? "other@agorastoryverse.com",
+    password: process.env.SUPER_ADMIN_B_PASSWORD ?? "admin",
+  });
+
+  return accessToken;
+}
