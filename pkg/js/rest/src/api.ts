@@ -55,11 +55,11 @@ export class NarrativeEngineApi {
 
   /** Liveness probe; resolves when the service is reachable. */
   async ping(): Promise<void> {
-    await this.fetchVoid("/ping", { method: "GET" });
+    await this.fetchVoid("/v0/ping", { method: "GET" });
   }
 
   /** Reports the cached health and queue metrics for every upstream dependency. */
   async health(): Promise<HealthReport> {
-    return await this.fetch("/healthcheck", undefined, { method: "GET" });
+    return await this.fetch("/v0/healthcheck", undefined, { method: "GET" });
   }
 }

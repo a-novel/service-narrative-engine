@@ -22,12 +22,14 @@ func TestEncodeResponsesJSONSchemaRequest(t *testing.T) {
 		{
 			name: "Success",
 			request: &lib.ResponsesJSONSchemaRequest{
-				Model:        "gpt-test",
-				Reasoning:    "medium",
-				Instructions: "Complete the target.",
-				Input:        `{"target":"idea"}`,
-				SchemaName:   "target_output",
-				OutputSchema: json.RawMessage(`{"type":"object"}`),
+				Model:            "gpt-test",
+				Reasoning:        "medium",
+				MaxOutputTokens:  32_768,
+				SafetyIdentifier: "hashed-user",
+				Instructions:     "Complete the target.",
+				Input:            `{"target":"idea"}`,
+				SchemaName:       "target_output",
+				OutputSchema:     json.RawMessage(`{"type":"object"}`),
 			},
 		},
 		{
@@ -58,10 +60,12 @@ func TestEncodeResponsesJSONSchemaRequest(t *testing.T) {
 			require.NoError(t, err)
 
 			var payload struct {
-				Model        string `json:"model"`
-				Instructions string `json:"instructions"`
-				Input        string `json:"input"`
-				Reasoning    struct {
+				Model            string `json:"model"`
+				MaxOutputTokens  int64  `json:"max_output_tokens"`
+				SafetyIdentifier string `json:"safety_identifier"`
+				Instructions     string `json:"instructions"`
+				Input            string `json:"input"`
+				Reasoning        struct {
 					Effort string `json:"effort"`
 				} `json:"reasoning"`
 				Text struct {
@@ -78,6 +82,8 @@ func TestEncodeResponsesJSONSchemaRequest(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, testCase.request.Model, payload.Model)
 			require.Equal(t, testCase.request.Reasoning, payload.Reasoning.Effort)
+			require.Equal(t, testCase.request.MaxOutputTokens, payload.MaxOutputTokens)
+			require.Equal(t, testCase.request.SafetyIdentifier, payload.SafetyIdentifier)
 			require.Equal(t, testCase.request.Instructions, payload.Instructions)
 			require.Equal(t, testCase.request.Input, payload.Input)
 			require.Equal(t, "json_schema", payload.Text.Format.Type)
