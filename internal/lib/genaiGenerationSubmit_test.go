@@ -62,7 +62,7 @@ func TestGenAIGenerationSubmit(t *testing.T) {
 			require.ErrorIs(t, err, testCase.expectErr)
 
 			if err == nil {
-				require.Equal(t, testCase.response.Created, result.Created)
+				require.Equal(t, testCase.response.GetCreated(), result.Created)
 				require.Equal(t, genAIGenerationID, result.Generation.ID)
 			} else {
 				require.Nil(t, result)
