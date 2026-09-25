@@ -15,6 +15,10 @@ type ResponsesJSONSchemaRequest struct {
 	Model string
 	// Reasoning selects the provider reasoning effort.
 	Reasoning string
+	// MaxOutputTokens bounds the complete provider output, including reasoning tokens.
+	MaxOutputTokens int64
+	// SafetyIdentifier attributes abuse to one privacy-preserving end-user identity.
+	SafetyIdentifier string
 	// Instructions contains guidance sent through the provider's instruction channel.
 	Instructions string
 	// Input contains the provider input document.
@@ -26,11 +30,13 @@ type ResponsesJSONSchemaRequest struct {
 }
 
 type responsesRequest struct {
-	Model        string             `json:"model"`
-	Reasoning    responsesReasoning `json:"reasoning"`
-	Instructions string             `json:"instructions"`
-	Input        string             `json:"input"`
-	Text         responsesText      `json:"text"`
+	Model            string             `json:"model"`
+	Reasoning        responsesReasoning `json:"reasoning"`
+	MaxOutputTokens  int64              `json:"max_output_tokens"` //nolint:tagliatelle // Provider wire name.
+	SafetyIdentifier string             `json:"safety_identifier"` //nolint:tagliatelle // Provider wire name.
+	Instructions     string             `json:"instructions"`
+	Input            string             `json:"input"`
+	Text             responsesText      `json:"text"`
 }
 
 type responsesReasoning struct {
@@ -56,10 +62,12 @@ func EncodeResponsesJSONSchemaRequest(request *ResponsesJSONSchemaRequest) (json
 	}
 
 	payload, err := json.Marshal(&responsesRequest{
-		Model:        request.Model,
-		Reasoning:    responsesReasoning{Effort: request.Reasoning},
-		Instructions: request.Instructions,
-		Input:        request.Input,
+		Model:            request.Model,
+		Reasoning:        responsesReasoning{Effort: request.Reasoning},
+		MaxOutputTokens:  request.MaxOutputTokens,
+		SafetyIdentifier: request.SafetyIdentifier,
+		Instructions:     request.Instructions,
+		Input:            request.Input,
 		Text: responsesText{Format: responsesTextFormat{
 			Type:   "json_schema",
 			Name:   request.SchemaName,

@@ -97,6 +97,7 @@ func (service *GenerationSubmit) Exec(
 	}
 
 	payload, err := buildGenerationPayload(
+		request.Actor.UserID,
 		request.Instructions,
 		request.Input,
 		request.Context,
