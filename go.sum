@@ -16,8 +16,6 @@ github.com/a-novel/service-authentication/v2 v2.9.1 h1:e+AQDgIOhjE33OjpDUKV4KL7P
 github.com/a-novel/service-authentication/v2 v2.9.1/go.mod h1:gZzIfQnlCfVctQaYfymTcDqRBGHaszcucUk/Bu69vwc=
 github.com/a-novel/service-genai v0.4.0 h1:D/sbD5r5MzGUr9dPnZ8L8BGQyPqTU0UVhUv/5oEiPno=
 github.com/a-novel/service-genai v0.4.0/go.mod h1:PGtZNYfcVq74/EB67U4EUdx+AusO0IowMriU2Yha0Ek=
-github.com/a-novel/service-json-keys/v2 v2.6.1 h1:LDkWbqYIW0UvYy4y/iGGuF/MGThkWGryh1RVpVzdlBc=
-github.com/a-novel/service-json-keys/v2 v2.6.1/go.mod h1:SrG2di1k0vBK/QFDdNgGl3SvL98N291LjMUwCRDCXvA=
 github.com/a-novel/service-json-keys/v2 v2.6.2 h1:SWfTMi8bfTUtGOBwsO1ibFNDrM0jy/x8k3Pieih2P5E=
 github.com/a-novel/service-json-keys/v2 v2.6.2/go.mod h1:LM3vwzJDCbi60fftJtx9TkpP0iO8KPnz94Ox88/w12A=
 github.com/cenkalti/backoff/v5 v5.0.3 h1:ZN+IMa753KfX5hd8vVaMixjnqRZ3y8CuJKRKj1xcsSM=
