@@ -1,4 +1,15 @@
 services:
+  mailserver:
+    image: ghcr.io/axllent/mailpit:v1.31.3
+    ports:
+      - "${MAIL_UI_PORT}:8025"
+    networks:
+      - narrative-engine-integration-rest-test
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "true"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
+      MP_DISABLE_WAL: "true"
+
   postgres-json-keys:
     image: ghcr.io/a-novel/service-json-keys/database:v2.6.5
     networks:
@@ -22,7 +33,7 @@ services:
       - narrative-engine-integration-rest-test
 
   postgres-authentication:
-    image: ghcr.io/a-novel/service-authentication/database:v2.9.1
+    image: ghcr.io/a-novel/service-authentication/database:v2.10.0
     networks:
       - narrative-engine-integration-rest-test
     environment:
@@ -33,7 +44,7 @@ services:
       POSTGRES_INITDB_ARGS: --auth=scram-sha-256
 
   service-authentication:
-    image: ghcr.io/a-novel/service-authentication/standalone-rest:v2.9.1
+    image: ghcr.io/a-novel/service-authentication/standalone-rest:v2.10.0
     ports:
       - "${SERVICE_AUTHENTICATION_PORT}:8080"
     depends_on:
@@ -41,12 +52,27 @@ services:
         condition: service_healthy
       service-json-keys:
         condition: service_healthy
+      mailserver:
+        condition: service_started
+    command:
+      - sh
+      - -c
+      - >-
+        /migrations &&
+        /maintenance account-role --email "$${SUPER_ADMIN_EMAIL}" --role auth:superadmin --lang en &&
+        exec /rest
     environment:
       POSTGRES_DSN: postgres://postgres:postgres@postgres-authentication:5432/postgres?sslmode=disable
       SERVICE_JSON_KEYS_HOST: service-json-keys
       SERVICE_JSON_KEYS_PORT: 8080
       SUPER_ADMIN_EMAIL: "${SUPER_ADMIN_EMAIL:-noreply@agorastoryverse.com}"
-      SUPER_ADMIN_PASSWORD: "${SUPER_ADMIN_PASSWORD:-admin}"
+      PLATFORM_AUTH_URL: http://localhost
+      SMTP_SENDER_DOMAIN: mailserver
+      SMTP_ADDR: mailserver:1025
+      SMTP_SENDER_NAME: Narrative Engine integration tests
+      SMTP_SENDER_EMAIL: noreply@agorastoryverse.com
+      SMTP_SENDER_PASSWORD: test-only
+      SMTP_FORCE_UNENCRYPTED: "true"
     networks:
       - narrative-engine-integration-rest-test
   postgres-genai:

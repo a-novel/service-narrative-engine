@@ -306,8 +306,8 @@ importers:
         specifier: ^1.3.18
         version: 1.6.3(@a-novel-kit/nodelib-browser@1.6.3(zod@4.6.5))(msw@2.14.6(@types/node@24.19.0)(typescript@5.9.3))
       '@a-novel/service-authentication-rest':
-        specifier: ^2.5.0
-        version: 2.5.0(@a-novel-kit/nodelib-browser@1.6.3(zod@4.6.5))(zod@4.6.5)
+        specifier: ^2.10.0
+        version: 2.10.0(@a-novel-kit/nodelib-browser@1.6.3(zod@4.6.5))(zod@4.6.5)
       '@a-novel/service-narrative-engine-rest':
         specifier: workspace:*
         version: link:../../rest
@@ -381,8 +381,8 @@ packages:
       '@a-novel-kit/nodelib-browser': '*'
       msw: ^2.10.4
 
-  '@a-novel/service-authentication-rest@2.5.0':
-    resolution: {integrity: sha512-EB3prHLRJvCsxY15fnj8ojGoRM5YibFXihVCG16nCuE1pnYn+PEGhm+V8xKPcO8ZuPP7ECROUdgkAzHTreX8LA==, tarball: https://npm.pkg.github.com/download/@a-novel/service-authentication-rest/2.5.0/e40c5c7fc92c67a220e12800ed354b604d6f7421}
+  '@a-novel/service-authentication-rest@2.10.0':
+    resolution: {integrity: sha512-yYZYqeFq7/h3n4mFksbUJ8Y8diaBVSRyRlv9N7uzVcWsBX6MBBtABYPHgrC17SCH/9XCUtvYNlaYCXdPze50Mw==, tarball: https://npm.pkg.github.com/download/@a-novel/service-authentication-rest/2.10.0/7f9e944e99422d0a687f657443a0ed0638e569f5}
     engines: {node: '>=23.11.0', npm: '>=10.9.2'}
     peerDependencies:
       '@a-novel-kit/nodelib-browser': ^1.3.21
@@ -3658,7 +3658,7 @@ snapshots:
       lodash-es: 4.18.1
       msw: 2.14.6(@types/node@24.19.0)(typescript@6.0.3)
 
-  '@a-novel/service-authentication-rest@2.5.0(@a-novel-kit/nodelib-browser@1.6.3(zod@4.6.5))(zod@4.6.5)':
+  '@a-novel/service-authentication-rest@2.10.0(@a-novel-kit/nodelib-browser@1.6.3(zod@4.6.5))(zod@4.6.5)':
     dependencies:
       '@a-novel-kit/nodelib-browser': 1.6.3(zod@4.6.5)
       zod: 4.6.5
