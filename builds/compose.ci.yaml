@@ -12,6 +12,15 @@ x-postgres-healthcheck: &postgres-healthcheck
   retries: 5
 
 services:
+  mailserver:
+    image: ghcr.io/axllent/mailpit:v1.31.3
+    ports:
+      - "${MAIL_UI_PORT:?MAIL_UI_PORT is required}:8025"
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "true"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
+      MP_DISABLE_WAL: "true"
+
   postgres:
     image: "${DATABASE_IMAGE:?DATABASE_IMAGE is required}"
     ports:
@@ -50,12 +59,27 @@ services:
         condition: service_healthy
       service-json-keys:
         condition: service_healthy
+      mailserver:
+        condition: service_started
+    command:
+      - sh
+      - -c
+      - >-
+        /migrations &&
+        /maintenance account-role --email "$${SUPER_ADMIN_EMAIL}" --role auth:superadmin --lang en &&
+        exec /rest
     environment:
       POSTGRES_DSN: postgres://postgres:postgres@postgres-authentication:5432/postgres?sslmode=disable
       SERVICE_JSON_KEYS_HOST: service-json-keys
       SERVICE_JSON_KEYS_PORT: 8080
       SUPER_ADMIN_EMAIL: noreply@agorastoryverse.com
-      SUPER_ADMIN_PASSWORD: admin
+      PLATFORM_AUTH_URL: http://localhost
+      SMTP_SENDER_DOMAIN: mailserver
+      SMTP_ADDR: mailserver:1025
+      SMTP_SENDER_NAME: Narrative Engine integration tests
+      SMTP_SENDER_EMAIL: noreply@agorastoryverse.com
+      SMTP_SENDER_PASSWORD: test-only
+      SMTP_FORCE_UNENCRYPTED: "true"
 
   postgres-genai:
     image: "${GENAI_DATABASE_IMAGE:?GENAI_DATABASE_IMAGE is required}"

@@ -180,6 +180,7 @@ jobs:
     env:
       REST_URL: "http://localhost:8080"
       SERVICE_AUTHENTICATION_URL: "http://localhost:4000"
+      MAIL_UI_URL: "http://localhost:8025"
       SUPER_ADMIN_EMAIL: noreply@agorastoryverse.com
       SUPER_ADMIN_PASSWORD: admin
     steps:

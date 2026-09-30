@@ -73,6 +73,7 @@ runs:
         GENAI_DATABASE_IMAGE: ${{ inputs.genai_database_image }}
         GENAI_MIGRATIONS_IMAGE: ${{ inputs.genai_migrations_image }}
         GENAI_GRPC_IMAGE: ${{ inputs.genai_grpc_image }}
+        MAIL_UI_PORT: 8025
         POSTGRES_PASSWORD: postgres
       run: |
         set -euo pipefail
