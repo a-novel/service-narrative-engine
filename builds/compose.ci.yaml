@@ -13,7 +13,7 @@ x-postgres-healthcheck: &postgres-healthcheck
 
 services:
   mailserver:
-    image: ghcr.io/axllent/mailpit:v1.31.3
+    image: ghcr.io/axllent/mailpit:v1.31.4
     ports:
       - "${MAIL_UI_PORT:?MAIL_UI_PORT is required}:8025"
     environment:
