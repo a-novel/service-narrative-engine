@@ -119,11 +119,15 @@ func TestPgStepValueInsert(t *testing.T) {
 						require.Equal(t, latestWithoutValue, selectedWithoutValue)
 						require.JSONEq(t, string(latest.Value), string(stepValues[0].Value))
 
-						count, err := db.NewSelect().
+						// Scanned into an int rather than read from Count, whose return type changed in bun v1.3.0.
+						var count int
+
+						err = db.NewSelect().
 							Model((*dao.StepValue)(nil)).
+							ColumnExpr("count(*)").
 							Where("project_id = ?", fixtureProjectID).
 							Where("key = ?", "unrelated").
-							Count(ctx)
+							Scan(ctx, &count)
 						require.NoError(t, err)
 						require.Equal(t, 1, count)
 
