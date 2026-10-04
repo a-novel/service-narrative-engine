@@ -11,7 +11,7 @@ services:
       MP_DISABLE_WAL: "true"
 
   postgres-json-keys:
-    image: ghcr.io/a-novel/service-json-keys/database:v2.6.6
+    image: ghcr.io/a-novel/service-json-keys/database:v2.7.0
     networks:
       - narrative-engine-integration-rest-test
     environment:
@@ -22,7 +22,7 @@ services:
       POSTGRES_INITDB_ARGS: --auth=scram-sha-256
 
   service-json-keys:
-    image: ghcr.io/a-novel/service-json-keys/standalone-grpc:v2.6.6
+    image: ghcr.io/a-novel/service-json-keys/standalone-grpc:v2.7.0
     depends_on:
       postgres-json-keys:
         condition: service_healthy
