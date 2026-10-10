@@ -20,7 +20,7 @@ services:
 
   postgres-json-keys:
     profiles: ["auth"]
-    image: ghcr.io/a-novel/service-json-keys/database:v2.8.0
+    image: ghcr.io/a-novel/service-json-keys/database:v2.9.0
     networks:
       - api
     environment:
@@ -34,7 +34,7 @@ services:
 
   service-json-keys:
     profiles: ["auth"]
-    image: ghcr.io/a-novel/service-json-keys/standalone-grpc:v2.8.0
+    image: ghcr.io/a-novel/service-json-keys/standalone-grpc:v2.9.0
     depends_on:
       postgres-json-keys:
         condition: service_healthy
