@@ -53,6 +53,8 @@ paths:
           $ref: "#/components/responses/health"
         "418":
           $ref: "#/components/responses/teapot"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
         default:
           $ref: "#/components/responses/internalError"
 
@@ -103,6 +105,15 @@ components:
                 "client:postgres": { "status": "up" }
                 "client:json-keys": { "status": "up" }
                 "client:genai": { "status": "down" }
+
+    tooManyRequests:
+      description: |
+        The caller sent too many requests to this route. Retry once `Retry-After` has elapsed.
+      headers:
+        Retry-After:
+          description: Seconds to wait before retrying.
+          schema:
+            type: integer
 
     internalError:
       description: Something unexpected happened.

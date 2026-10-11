@@ -48,7 +48,9 @@ var AppPresetDefault = App{
 			Request:    env.RestTimeoutRequest,
 			Shutdown:   env.RestTimeoutShutdown,
 		},
-		MaxRequestSize: env.RestMaxRequestSize,
+		MaxRequestSize:    env.RestMaxRequestSize,
+		ClientIPHeader:    env.RestClientIPHeader,
+		RateLimitsEnabled: env.RestRateLimitsEnabled,
 		Cors: RestCors{
 			AllowedOrigins:   env.CorsAllowedOrigins,
 			AllowedHeaders:   env.CorsAllowedHeaders,

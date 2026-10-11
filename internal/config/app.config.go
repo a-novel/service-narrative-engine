@@ -54,6 +54,11 @@ type Rest struct {
 	Timeouts RestTimeouts `json:"timeouts" yaml:"timeouts"`
 	// MaxRequestSize is the maximum size of an incoming request body.
 	MaxRequestSize int64 `json:"maxRequestSize" yaml:"maxRequestSize"`
+	// ClientIPHeader names the header a trusted proxy sets to the visitor IP. Empty keeps the TCP
+	// peer address.
+	ClientIPHeader string `json:"clientIPHeader" yaml:"clientIPHeader"`
+	// RateLimitsEnabled turns the per-visitor rate limits on.
+	RateLimitsEnabled bool `json:"rateLimitsEnabled" yaml:"rateLimitsEnabled"`
 	// Cors holds the CORS configuration.
 	Cors RestCors `json:"cors" yaml:"cors"`
 }

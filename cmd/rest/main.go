@@ -14,6 +14,7 @@ import (
 	"os/signal"
 	"strconv"
 	"syscall"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -32,6 +33,9 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/config/env"
 	"github.com/a-novel/service-narrative-engine/internal/handlers"
 )
+
+// restRateLimit caps the requests per second each visitor sends to each route.
+const restRateLimit = 5
 
 func main() {
 	cfg := config.AppPresetDefault
@@ -98,6 +102,12 @@ func main() {
 
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.ClientIPFromRemoteAddr)
+
+	if cfg.Rest.ClientIPHeader != "" {
+		// The proxy's header names the visitor; a request without it keeps the peer address.
+		router.Use(middleware.ClientIPFromHeader(cfg.Rest.ClientIPHeader))
+	}
+
 	router.Use(middleware.Timeout(cfg.Rest.Timeouts.Request))
 	router.Use(middleware.RequestSize(cfg.Rest.MaxRequestSize))
 	router.Use(cfg.Otel.HttpHandler())
@@ -116,8 +126,16 @@ func main() {
 	}))
 	router.Use(cfg.HttpLogger.Logger())
 
+	// Probes reach /ping without a budget.
 	router.Get("/ping", handlerPing.ServeHTTP)
-	router.Get("/healthcheck", handlerHealth.ServeHTTP)
+
+	router.Group(func(api chi.Router) {
+		if cfg.Rest.RateLimitsEnabled {
+			api.Use(handlers.RestLimit(restRateLimit, time.Second))
+		}
+
+		api.Get("/healthcheck", handlerHealth.ServeHTTP)
+	})
 
 	// =================================================================================================================
 	// RUN

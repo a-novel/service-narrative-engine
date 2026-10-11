@@ -32,7 +32,8 @@ const (
 	RestTimeoutIdleDefault       = 60 * time.Second
 	RestTimeoutRequestDefault    = 60 * time.Second
 	RestTimeoutShutdownDefault   = 30 * time.Second
-	RestMaxRequestSizeDefault    = 2 << 20 // 2 MiB
+	RestMaxRequestSizeDefault    = 16 << 10 // 16 KiB
+	RestRateLimitsEnabledDefault = true
 	CorsAllowCredentialsDefault  = false
 	CorsMaxAgeDefault            = 3600
 
@@ -75,6 +76,8 @@ var (
 	restTimeoutRequest    = getEnv("REST_TIMEOUT_REQUEST")
 	restMaxRequestSize    = getEnv("REST_MAX_REQUEST_SIZE")
 	restTimeoutShutdown   = getEnv("REST_TIMEOUT_SHUTDOWN")
+	restClientIPHeader    = getEnv("REST_CLIENT_IP_HEADER")
+	restRateLimitsEnabled = getEnv("REST_RATE_LIMITS_ENABLED")
 
 	corsAllowedOrigins   = getEnv("REST_CORS_ALLOWED_ORIGINS")
 	corsAllowedHeaders   = getEnv("REST_CORS_ALLOWED_HEADERS")
@@ -130,6 +133,13 @@ var (
 	)
 	// RestMaxRequestSize is the maximum size of an incoming REST request body.
 	RestMaxRequestSize = config.LoadEnv(restMaxRequestSize, RestMaxRequestSizeDefault, config.Int64Parser)
+	// RestClientIPHeader names the header a trusted proxy sets to the visitor IP. Empty keeps the
+	// TCP peer address. Name a header only when every request reaches the server through that proxy.
+	RestClientIPHeader = restClientIPHeader
+	// RestRateLimitsEnabled turns the per-visitor rate limits on. Only test stacks turn them off.
+	RestRateLimitsEnabled = config.LoadEnv(
+		restRateLimitsEnabled, RestRateLimitsEnabledDefault, config.BoolParser,
+	)
 
 	// CorsAllowedOrigins lists the origins allowed to access the REST API.
 	CorsAllowedOrigins = config.LoadEnv(
