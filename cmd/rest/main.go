@@ -8,17 +8,12 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
-	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-	"github.com/go-chi/cors"
 	"github.com/samber/lo"
 
 	serviceauthentication "github.com/a-novel/service-authentication/v2/pkg/go"
@@ -33,9 +28,6 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/config/env"
 	"github.com/a-novel/service-narrative-engine/internal/handlers"
 )
-
-// restRateLimit caps the requests per second each visitor sends to each route.
-const restRateLimit = 5
 
 func main() {
 	cfg := config.AppPresetDefault
@@ -98,41 +90,18 @@ func main() {
 	// ROUTER
 	// =================================================================================================================
 
-	router := chi.NewRouter()
-
-	router.Use(middleware.Recoverer)
-	router.Use(middleware.ClientIPFromRemoteAddr)
-
-	if cfg.Rest.ClientIPHeader != "" {
-		// The proxy's header names the visitor; a request without it keeps the peer address.
-		router.Use(middleware.ClientIPFromHeader(cfg.Rest.ClientIPHeader))
-	}
-
-	router.Use(middleware.Timeout(cfg.Rest.Timeouts.Request))
-	router.Use(middleware.RequestSize(cfg.Rest.MaxRequestSize))
-	router.Use(cfg.Otel.HttpHandler())
-	router.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   cfg.Rest.Cors.AllowedOrigins,
-		AllowedHeaders:   cfg.Rest.Cors.AllowedHeaders,
-		AllowCredentials: cfg.Rest.Cors.AllowCredentials,
-		AllowedMethods: []string{
-			http.MethodHead,
-			http.MethodGet,
-			http.MethodPost,
-			http.MethodPut,
-			http.MethodDelete,
-		},
-		MaxAge: cfg.Rest.Cors.MaxAge,
-	}))
-	router.Use(cfg.HttpLogger.Logger())
+	router := httpf.NewRouter(cfg.Rest, httpf.RouterOptions{
+		Otel:     cfg.Otel,
+		Logger:   cfg.HttpLogger,
+		Liveness: "/ping",
+		Methods:  []string{http.MethodHead, http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
+	})
 
 	// Probes reach /ping without a budget.
 	router.Get("/ping", handlerPing.ServeHTTP)
 
 	router.Group(func(api chi.Router) {
-		if cfg.Rest.RateLimitsEnabled {
-			api.Use(handlers.RestLimit(restRateLimit, time.Second))
-		}
+		api.Use(httpf.NewLimits(cfg.Rest).Standard())
 
 		api.Get("/healthcheck", handlerHealth.ServeHTTP)
 	})
@@ -141,15 +110,7 @@ func main() {
 	// RUN
 	// =================================================================================================================
 
-	httpServer := &http.Server{
-		Addr:              ":" + strconv.Itoa(cfg.Rest.Port),
-		Handler:           router,
-		ReadTimeout:       cfg.Rest.Timeouts.Read,
-		ReadHeaderTimeout: cfg.Rest.Timeouts.ReadHeader,
-		WriteTimeout:      cfg.Rest.Timeouts.Write,
-		IdleTimeout:       cfg.Rest.Timeouts.Idle,
-		BaseContext:       func(_ net.Listener) context.Context { return ctx },
-	}
+	httpServer := httpf.NewServer(ctx, cfg.Rest, router)
 
 	log.Println("Starting REST server on " + httpServer.Addr)
 
