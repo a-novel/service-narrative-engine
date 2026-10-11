@@ -94,7 +94,8 @@ REST tuning (images `rest`, `standalone-rest`):
 | ----------------------------- | ------------------------------------------------------------------------------------------------------- | --------------- |
 | `REST_MAX_REQUEST_SIZE`       | Maximum request body size, in bytes.                                                                    | `16384` (16KiB) |
 | `REST_CLIENT_IP_HEADER`       | Header a trusted proxy sets to the visitor IP. Set it only when every request comes through that proxy. | TCP peer        |
-| `REST_RATE_LIMITS_ENABLED`    | Limit each visitor to 5 requests per second per route, `/ping` excepted. Turn off only in test stacks.  | `true`          |
+| `REST_RATE_LIMITS_ENABLED`    | Rate-limit each visitor on every route but the ping. Turn off only in test stacks.                      | `true`          |
+| `REST_RATE_LIMIT`             | Requests each visitor sends to each route, as `<requests>/<window>`.                                    | `5/1s`          |
 | `REST_TIMEOUT_READ`           | Read timeout.                                                                                           | `15s`           |
 | `REST_TIMEOUT_READ_HEADER`    | Header read timeout.                                                                                    | `3s`            |
 | `REST_TIMEOUT_WRITE`          | Write timeout.                                                                                          | `30s`           |
