@@ -8,12 +8,11 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/samber/lo"
 
 	serviceauthentication "github.com/a-novel/service-authentication/v2/pkg/go"
@@ -90,31 +89,18 @@ func main() {
 	// ROUTER
 	// =================================================================================================================
 
-	router := httpf.NewRouter(cfg.Rest, httpf.RouterOptions{
-		Otel:     cfg.Otel,
-		Logger:   cfg.HttpLogger,
-		Liveness: "/ping",
-		Methods:  []string{http.MethodHead, http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
-	})
+	router := httpf.NewRouter(cfg.Rest, cfg.Otel, cfg.HttpLogger, nil)
 
-	// Probes reach /ping without a budget.
 	router.Get("/ping", handlerPing.ServeHTTP)
-
-	router.Group(func(api chi.Router) {
-		api.Use(httpf.NewLimits(cfg.Rest).Standard())
-
-		api.Get("/healthcheck", handlerHealth.ServeHTTP)
-	})
+	router.Get("/healthcheck", handlerHealth.ServeHTTP)
 
 	// =================================================================================================================
 	// RUN
 	// =================================================================================================================
 
-	httpServer := httpf.NewServer(ctx, cfg.Rest, router)
+	log.Println("Starting REST server on :" + strconv.Itoa(cfg.Rest.Port))
 
-	log.Println("Starting REST server on " + httpServer.Addr)
-
-	err := httpf.Serve(ctx, httpServer, cfg.Rest.Timeouts.Shutdown)
+	err := httpf.ListenAndServe(ctx, cfg.Rest, router)
 
 	stop()
 

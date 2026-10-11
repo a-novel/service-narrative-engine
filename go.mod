@@ -3,11 +3,10 @@ module github.com/a-novel/service-narrative-engine
 go 1.27.2
 
 require (
-	github.com/a-novel-kit/golib v0.43.0
+	github.com/a-novel-kit/golib v0.43.1-0.20261011221726-ea12558d455c
 	github.com/a-novel/service-authentication/v2 v2.12.0
 	github.com/a-novel/service-genai v0.4.0
 	github.com/a-novel/service-json-keys/v2 v2.9.1
-	github.com/go-chi/chi/v5 v5.3.2
 	github.com/go-playground/validator/v10 v10.30.5
 	github.com/goccy/go-yaml v1.19.2
 	github.com/google/jsonschema-go v0.4.3
@@ -42,6 +41,7 @@ require (
 	github.com/getsentry/sentry-go v0.50.0 // indirect
 	github.com/getsentry/sentry-go/otel v0.50.0 // indirect
 	github.com/getsentry/sentry-go/otel/otlp v0.50.0 // indirect
+	github.com/go-chi/chi/v5 v5.3.2 // indirect
 	github.com/go-chi/cors v1.2.2 // indirect
 	github.com/go-chi/httprate v0.16.1 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
