@@ -6,12 +6,12 @@ cloud.google.com/go/auth/oauth2adapt v0.3.0 h1:FY8oSZpCYoUNv6QxVODuMjQz4IlSOVeiQ
 cloud.google.com/go/auth/oauth2adapt v0.3.0/go.mod h1:7+2uCm7++XFO+/lN06c2HXpDXb/NMNn2/UwyBPbTnkk=
 cloud.google.com/go/compute/metadata v0.10.0 h1:pyKMUQSwchgkIBBJGdILqQbs/BNJXqwSA7Ej6LAvvtY=
 cloud.google.com/go/compute/metadata v0.10.0/go.mod h1:rGFHRrIif570kSibjFTMbt6/4/tzgJWFGI/HVol4GIk=
-github.com/a-novel-kit/golib v0.44.0 h1:DTvU67ejaLZsv0K+6f5/eGFPJAO0PqKzZAZTM2A5DEM=
-github.com/a-novel-kit/golib v0.44.0/go.mod h1:RH666caGMonM09xp8cwsujtszJBTll4Zoh1NblW169s=
+github.com/a-novel-kit/golib v0.45.0 h1:P5EbpRsj3AYDhhAKQCl0WDg/6ED28Fedr1FRFNCIGec=
+github.com/a-novel-kit/golib v0.45.0/go.mod h1:RH666caGMonM09xp8cwsujtszJBTll4Zoh1NblW169s=
 github.com/a-novel-kit/jwt/v2 v2.3.0 h1:E3e5cv/uYTEAZaRb+aB6aQx+D11UdnT4JmjfyBil47Q=
 github.com/a-novel-kit/jwt/v2 v2.3.0/go.mod h1:DaD0CXjkz2pFaWq7TMNWaRtEwxe+IvRH4IUAfH5Z2mo=
-github.com/a-novel/service-authentication/v2 v2.13.0 h1:8c+/W2fyFzX0vaVZOxO4sFCSSzmThHKx9xYBDOb1RHM=
-github.com/a-novel/service-authentication/v2 v2.13.0/go.mod h1:qKbjd+6Onew5e+kGaqfCc6svRwXnYP451WPpWWAnhIc=
+github.com/a-novel/service-authentication/v2 v2.13.1 h1:BsUqLE3m7LubcB7hpJB6CHuZ5rJFdHzIezskwaSH2Pc=
+github.com/a-novel/service-authentication/v2 v2.13.1/go.mod h1:yRYPYnIVVPnqdTpzwnBmla3sDAIUE7jBByAkSiRJefU=
 github.com/a-novel/service-genai v0.4.0 h1:D/sbD5r5MzGUr9dPnZ8L8BGQyPqTU0UVhUv/5oEiPno=
 github.com/a-novel/service-genai v0.4.0/go.mod h1:PGtZNYfcVq74/EB67U4EUdx+AusO0IowMriU2Yha0Ek=
 github.com/a-novel/service-json-keys/v2 v2.9.1 h1:BZ1oIqGWKem46LQghh0NagMNzm3dL0ASIbgPUCf2Qr0=
