@@ -11,11 +11,17 @@
 # `renovate/stability-days` status is pending. Renovate marks the update stable
 # with a status event, not a PR event, hence the `status` trigger. Every status in
 # the repo fires it; the job skips all but that one.
+#
+# On a-novel/infra, whose merges deploy production, the engine runs strict: a bot
+# PR merges on its own only as a release pin, or as a version update Renovate
+# itself put on auto-merge; anything else waits for approve-pr. Renovate arms
+# auto-merge seconds after opening its PR, so that event re-runs the job; the
+# agent arming a pin does not.
 name: auto-approve dependencies
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, auto_merge_enabled]
   status:
   # Only fixed API calls and pinned actions consume validated metadata; no PR checkout, artifacts, caches or environment files.
   workflow_run: # zizmor: ignore[dangerous-triggers] Privileged bot approval requires base-branch Actions secrets.
@@ -26,6 +32,7 @@ jobs:
   auto-approve:
     if: >-
       github.actor != vars.DEPENDABOT_SECURITY_LOGIN &&
+      (github.event.action != 'auto_merge_enabled' || github.event.sender.login == vars.DEPENDENCY_BOT_LOGIN) &&
       (github.event.pull_request.user.login == vars.DEPENDENCY_BOT_LOGIN ||
        github.event.pull_request.user.login == vars.DEPENDABOT_SECURITY_LOGIN ||
        (github.event_name == 'status' && github.event.context == 'renovate/stability-days' &&
@@ -39,6 +46,7 @@ jobs:
       client_id: ${{ vars.AGENT_BOT_CLIENT_ID }}
       dependency_bot_login: ${{ vars.DEPENDENCY_BOT_LOGIN }}
       dependabot_security_login: ${{ vars.DEPENDABOT_SECURITY_LOGIN }}
+      strict: ${{ github.repository == 'a-novel/infra' }}
     secrets:
       bot_private_key: ${{ secrets.AGENT_BOT_PRIVATE_KEY }}
 
