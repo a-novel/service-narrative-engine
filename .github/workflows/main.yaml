@@ -72,8 +72,6 @@ jobs:
       - uses: a-novel-kit/workflows/node-actions/lint-node@v1.56.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          app_private_key: ${{ secrets.DEPENDENCY_BOT_PRIVATE_KEY }}
-          client_id: ${{ vars.DEPENDENCY_BOT_CLIENT_ID }}
           lint_action: "lint:ci"
 
   lint-shell:
@@ -201,8 +199,6 @@ jobs:
         id: test
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          app_private_key: ${{ secrets.DEPENDENCY_BOT_PRIVATE_KEY }}
-          client_id: ${{ vars.DEPENDENCY_BOT_CLIENT_ID }}
           coverage_artifact: jscover
           test_action: "test:ci"
 
@@ -300,8 +296,6 @@ jobs:
       - uses: a-novel-kit/workflows/node-actions/build-node@v1.56.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          app_private_key: ${{ secrets.DEPENDENCY_BOT_PRIVATE_KEY }}
-          client_id: ${{ vars.DEPENDENCY_BOT_CLIENT_ID }}
           build_action: "build:rest"
 
   report-codecov:
