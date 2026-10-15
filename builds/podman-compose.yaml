@@ -5,7 +5,7 @@ services:
 
   mailserver:
     profiles: ["auth"]
-    image: ghcr.io/axllent/mailpit:v1.31.5
+    image: ghcr.io/axllent/mailpit:v1.31.6
     ports:
       - "${MAIL_UI_PORT}:8025"
     networks:
