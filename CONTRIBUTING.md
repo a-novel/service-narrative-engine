@@ -1,6 +1,6 @@
 # Contributing to service-narrative-engine
 
-This file covers only what is specific to this service. For service-level contribution shared across every service — the architecture, the layers, the conventions — start with the [service & architecture concepts](https://github.com/a-novel/.github/blob/master/CONTRIBUTING.md). Platform setup and day-to-day commands are in the [developer onboarding guide](https://github.com/a-novel-kit/.github/blob/master/README.md).
+This file covers only what is specific to this service. For service-level contribution shared across every service — the architecture, the layers, the conventions — start with the [service & architecture concepts](https://github.com/a-novel/.github/blob/master/CONTRIBUTING.md). Platform setup and day-to-day commands are in the [developer guide](https://a-novel-kit.github.io/stack/).
 
 `service-narrative-engine` stores the typed Idea and Manuscript boundaries around its data-driven generation workflow. The client saves chosen proposals through the same project-content path as authored values; provider execution and usage belong to `service-genai`.
 
