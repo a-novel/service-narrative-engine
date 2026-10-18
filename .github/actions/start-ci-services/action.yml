@@ -31,15 +31,15 @@ inputs:
     description: Authentication REST image reference.
   genai_database_image:
     required: false
-    default: ghcr.io/a-novel/service-genai/database:v0.4.0
+    default: ghcr.io/a-novel/service-genai/database:v0.5.0
     description: GenAI database image reference.
   genai_migrations_image:
     required: false
-    default: ghcr.io/a-novel/service-genai/jobs/migrations:v0.4.0
+    default: ghcr.io/a-novel/service-genai/jobs/migrations:v0.5.0
     description: GenAI migrations image reference.
   genai_grpc_image:
     required: false
-    default: ghcr.io/a-novel/service-genai/grpc:v0.4.0
+    default: ghcr.io/a-novel/service-genai/grpc:v0.5.0
     description: GenAI gRPC image reference.
   registry_login:
     required: false
