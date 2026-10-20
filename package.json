@@ -43,9 +43,9 @@
     "types:rest-test": "tsc --p ./pkg/js/test/rest/tsconfig.json --noEmit"
   },
   "devDependencies": {
-    "@a-novel-kit/nodelib-browser": "^1.3.18",
-    "@a-novel-kit/nodelib-config": "^1.3.18",
-    "@a-novel-kit/nodelib-test": "^1.3.18",
+    "@a-novel-kit/nodelib-browser": "^2.0.0",
+    "@a-novel-kit/nodelib-config": "^2.0.0",
+    "@a-novel-kit/nodelib-test": "^2.0.0",
     "@eslint/js": "^10.0.1",
     "@redocly/cli": "^2.20.4",
     "@trivago/prettier-plugin-sort-imports": "^6.0.2",
