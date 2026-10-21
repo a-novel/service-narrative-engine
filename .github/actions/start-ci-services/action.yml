@@ -15,31 +15,31 @@ inputs:
     description: Narrative standalone REST image reference.
   json_keys_database_image:
     required: false
-    default: ghcr.io/a-novel/service-json-keys/database:v2.11.0
+    default: ghcr.io/a-novel/service-json-keys/database:v2.11.0@sha256:f1072d3e67f7c333eb84c35b1be9bdad6bb3beae362a6d808b39f2f2ec073c11
     description: JSON keys database image reference.
   json_keys_grpc_image:
     required: false
-    default: ghcr.io/a-novel/service-json-keys/standalone-grpc:v2.11.0
+    default: ghcr.io/a-novel/service-json-keys/standalone-grpc:v2.11.0@sha256:eb13c01b29471174349972424ddb8be109c4923306499af86c4dd2f7e01398d4
     description: JSON keys gRPC image reference.
   authentication_database_image:
     required: false
-    default: ghcr.io/a-novel/service-authentication/database:v2.14.0
+    default: ghcr.io/a-novel/service-authentication/database:v2.14.0@sha256:024090f703849c1c12fabc7cd78b5abac8ab0df043d64ab31e254ea75c973263
     description: Authentication database image reference.
   authentication_rest_image:
     required: false
-    default: ghcr.io/a-novel/service-authentication/standalone-rest:v2.14.0
+    default: ghcr.io/a-novel/service-authentication/standalone-rest:v2.14.0@sha256:70d1e0810dea27fead49473a88268ba2853a64e6c4f462caba4862b2a953ebe2
     description: Authentication REST image reference.
   genai_database_image:
     required: false
-    default: ghcr.io/a-novel/service-genai/database:v0.4.0
+    default: ghcr.io/a-novel/service-genai/database:v0.4.0@sha256:ad6e510afe9ac40050e30d17fbad59ec0b6695d8574725671305347ab3d2b5ff
     description: GenAI database image reference.
   genai_migrations_image:
     required: false
-    default: ghcr.io/a-novel/service-genai/jobs/migrations:v0.4.0
+    default: ghcr.io/a-novel/service-genai/jobs/migrations:v0.4.0@sha256:7c4d62f75c9f0f8b52add93e93a6125ec1b7f94a13614c785e534250e83f3d10
     description: GenAI migrations image reference.
   genai_grpc_image:
     required: false
-    default: ghcr.io/a-novel/service-genai/grpc:v0.4.0
+    default: ghcr.io/a-novel/service-genai/grpc:v0.4.0@sha256:2716eb5f4e9c93b00c5b092f2a62b070e966e52e49e0a3ce1e43596922ea3708
     description: GenAI gRPC image reference.
   registry_login:
     required: false
