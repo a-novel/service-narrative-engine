@@ -28,7 +28,7 @@ var LoggerDev = &loggingpresets.LogLocal{
 
 // LoggerProd ships production logs to Google Cloud Logging.
 var LoggerProd = &loggingpresets.LogGcloud{
-	ProjectId: env.GcloudProjectId,
+	ProjectID: env.GcloudProjectId,
 }
 
 // AppPresetDefault is the configuration the service starts with. It reads every

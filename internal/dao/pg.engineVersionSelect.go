@@ -60,5 +60,5 @@ func (operation *PgEngineVersionSelect) Exec(
 		return nil, otel.ReportError(span, fmt.Errorf("execute query: %w", err))
 	}
 
-	return otel.ReportSuccess(span, &engineVersion), nil
+	return &engineVersion, nil
 }

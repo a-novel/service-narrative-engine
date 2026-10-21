@@ -74,5 +74,5 @@ func (operation *PgIdeaInsert) Exec(ctx context.Context, request *IdeaInsertRequ
 		return nil, otel.ReportError(span, fmt.Errorf("execute query: %w", err))
 	}
 
-	return otel.ReportSuccess(span, &idea), nil
+	return &idea, nil
 }

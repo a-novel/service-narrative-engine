@@ -88,5 +88,5 @@ func (service *GenerationGet) Exec(
 		return nil, otel.ReportError(span, err)
 	}
 
-	return otel.ReportSuccess(span, generation), nil
+	return generation, nil
 }

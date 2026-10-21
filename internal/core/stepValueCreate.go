@@ -124,11 +124,11 @@ func (service *StepValueCreate) Exec(
 
 	span.SetAttributes(attribute.String("step_value.id", entity.ID.String()))
 
-	return otel.ReportSuccess(span, &StepValue{
+	return &StepValue{
 		ID:        entity.ID,
 		ProjectID: entity.ProjectID,
 		Key:       entity.Key,
 		Value:     entity.Value,
 		CreatedAt: entity.CreatedAt,
-	}), nil
+	}, nil
 }

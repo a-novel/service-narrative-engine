@@ -65,8 +65,8 @@ func (gateway GenAIGenerationSubmit) Exec(
 		return nil, otel.ReportError(span, err)
 	}
 
-	return otel.ReportSuccess(span, &GenerationSubmitGatewayResult{
+	return &GenerationSubmitGatewayResult{
 		Generation: generation,
 		Created:    response.GetCreated(),
-	}), nil
+	}, nil
 }

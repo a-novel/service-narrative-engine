@@ -111,7 +111,7 @@ func (service *GenerationWatch) Exec(
 		}
 
 		if generation.Status.Terminal() {
-			return otel.ReportSuccess(span, generation), nil
+			return generation, nil
 		}
 	}
 }

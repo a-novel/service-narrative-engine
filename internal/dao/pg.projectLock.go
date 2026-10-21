@@ -41,7 +41,5 @@ func lockProject(
 		return otel.ReportError(span, err)
 	}
 
-	otel.ReportSuccessNoContent(span)
-
 	return nil
 }

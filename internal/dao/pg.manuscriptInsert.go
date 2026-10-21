@@ -88,5 +88,5 @@ func (operation *PgManuscriptInsert) Exec(
 		return nil, otel.ReportError(span, fmt.Errorf("execute prune query: %w", err))
 	}
 
-	return otel.ReportSuccess(span, &manuscript), nil
+	return &manuscript, nil
 }

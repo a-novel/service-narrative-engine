@@ -62,5 +62,5 @@ func (operation *PgIdeaSelect) Exec(ctx context.Context, request *IdeaSelectRequ
 		return nil, otel.ReportError(span, fmt.Errorf("execute query: %w", err))
 	}
 
-	return otel.ReportSuccess(span, &idea), nil
+	return &idea, nil
 }

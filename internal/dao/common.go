@@ -23,7 +23,5 @@ func requireVersionedWriteTransaction(ctx context.Context) error {
 		return otel.ReportError(span, errVersionedWriteRequiresTransaction)
 	}
 
-	otel.ReportSuccessNoContent(span)
-
 	return nil
 }
