@@ -154,10 +154,10 @@ func (service *GenerationSubmit) Exec(
 		attribute.Bool("generation.created", response.Created),
 	)
 
-	return otel.ReportSuccess(span, &GenerationSubmitResult{
+	return &GenerationSubmitResult{
 		Generation: generation,
 		Created:    response.Created,
-	}), nil
+	}, nil
 }
 
 // validateGenerationJSON applies the transport ceiling without interpreting caller JSON.

@@ -61,9 +61,7 @@ func (gateway GenAIGenerationWatch) Exec(
 		return nil, otel.ReportError(span, ErrGenerationResponseInvalid)
 	}
 
-	return otel.ReportSuccess[GenerationWatchGatewayStream](
-		span, &genAIGenerationWatchStream{stream: stream, cancel: cancel},
-	), nil
+	return &genAIGenerationWatchStream{stream: stream, cancel: cancel}, nil
 }
 
 type genAIGenerationWatchStream struct {

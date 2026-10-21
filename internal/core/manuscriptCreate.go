@@ -119,10 +119,10 @@ func (service *ManuscriptCreate) Exec(
 
 	span.SetAttributes(attribute.String("manuscript.id", entity.ID.String()))
 
-	return otel.ReportSuccess(span, &Manuscript{
+	return &Manuscript{
 		ID:         entity.ID,
 		ProjectID:  entity.ProjectID,
 		Manuscript: entity.Value,
 		CreatedAt:  entity.CreatedAt,
-	}), nil
+	}, nil
 }

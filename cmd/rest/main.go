@@ -100,7 +100,7 @@ func main() {
 	router.Use(middleware.ClientIPFromRemoteAddr)
 	router.Use(middleware.Timeout(cfg.Rest.Timeouts.Request))
 	router.Use(middleware.RequestSize(cfg.Rest.MaxRequestSize))
-	router.Use(cfg.Otel.HttpHandler())
+	router.Use(cfg.Otel.HTTPHandler())
 	router.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   cfg.Rest.Cors.AllowedOrigins,
 		AllowedHeaders:   cfg.Rest.Cors.AllowedHeaders,

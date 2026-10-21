@@ -80,5 +80,5 @@ func (service *ProjectAccess) Exec(
 		return nil, otel.ReportError(span, fmt.Errorf("select Project: %w", errProjectAccessMissing))
 	}
 
-	return otel.ReportSuccess(span, project), nil
+	return project, nil
 }

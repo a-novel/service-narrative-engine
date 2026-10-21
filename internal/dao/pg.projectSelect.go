@@ -63,5 +63,5 @@ func (operation *PgProjectSelect) Exec(
 		return nil, otel.ReportError(span, fmt.Errorf("execute query: %w", err))
 	}
 
-	return otel.ReportSuccess(span, &project), nil
+	return &project, nil
 }

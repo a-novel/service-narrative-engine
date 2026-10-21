@@ -96,5 +96,5 @@ func (operation *PgStepValueInsert) Exec(
 		return nil, otel.ReportError(span, fmt.Errorf("execute prune query: %w", err))
 	}
 
-	return otel.ReportSuccess(span, &stepValue), nil
+	return &stepValue, nil
 }

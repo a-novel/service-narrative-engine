@@ -35,5 +35,5 @@ func ActorFromContext(ctx context.Context) (*core.Actor, error) {
 		return nil, otel.ReportError(span, ErrAnonymousActor)
 	}
 
-	return otel.ReportSuccess(span, &core.Actor{UserID: *claims.UserID}), nil
+	return &core.Actor{UserID: *claims.UserID}, nil
 }

@@ -94,5 +94,5 @@ func (operation *PgIdeaVersionInsert) Exec(
 		return nil, otel.ReportError(span, fmt.Errorf("execute prune query: %w", err))
 	}
 
-	return otel.ReportSuccess(span, &ideaVersion), nil
+	return &ideaVersion, nil
 }

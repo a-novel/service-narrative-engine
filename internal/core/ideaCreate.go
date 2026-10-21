@@ -78,7 +78,7 @@ func (service *IdeaCreate) Exec(ctx context.Context, request *IdeaCreateRequest)
 		attribute.String("idea.version_id", entity.VersionID.String()),
 	)
 
-	return otel.ReportSuccess(span, &Idea{
+	return &Idea{
 		ProjectID:        entity.ProjectID,
 		VersionID:        entity.VersionID,
 		OwnerID:          entity.OwnerID,
@@ -87,5 +87,5 @@ func (service *IdeaCreate) Exec(ctx context.Context, request *IdeaCreateRequest)
 		Title:            entity.Title,
 		ProjectCreatedAt: entity.ProjectCreatedAt,
 		CreatedAt:        entity.CreatedAt,
-	}), nil
+	}, nil
 }

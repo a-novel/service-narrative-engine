@@ -75,7 +75,7 @@ func (handler *RestHealth) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx, span := otel.Tracer().Start(r.Context(), "rest.Health")
 	defer span.End()
 
-	httpf.SendJSONStatus(ctx, w, span, http.StatusOK, handler.report(ctx))
+	httpf.SendJSONStatus(w, span, http.StatusOK, handler.report(ctx))
 }
 
 func (handler *RestHealth) report(ctx context.Context) map[string]any {
@@ -87,7 +87,7 @@ func (handler *RestHealth) report(ctx context.Context) map[string]any {
 
 	now := time.Now()
 	if handler.cachedReport != nil && now.Before(handler.cacheExpiresAt) {
-		return otel.ReportSuccess(span, handler.cachedReport)
+		return handler.cachedReport
 	}
 
 	genaiQueue, genaiErr := handler.reportGenAI(ctx)
@@ -102,7 +102,7 @@ func (handler *RestHealth) report(ctx context.Context) map[string]any {
 	}
 	handler.cacheExpiresAt = now.Add(restHealthCacheTTL)
 
-	return otel.ReportSuccess(span, handler.cachedReport)
+	return handler.cachedReport
 }
 
 func (handler *RestHealth) reportPostgres(ctx context.Context) error {
@@ -113,8 +113,6 @@ func (handler *RestHealth) reportPostgres(ctx context.Context) error {
 	if err != nil {
 		return otel.ReportError(span, err)
 	}
-
-	otel.ReportSuccessNoContent(span)
 
 	return nil
 }
@@ -127,8 +125,6 @@ func (handler *RestHealth) reportJSONKeys(ctx context.Context) error {
 	if err != nil {
 		return otel.ReportError(span, err)
 	}
-
-	otel.ReportSuccessNoContent(span)
 
 	return nil
 }
@@ -154,5 +150,5 @@ func (handler *RestHealth) reportGenAI(ctx context.Context) (*RestHealthQueue, e
 		).String()
 	}
 
-	return otel.ReportSuccess(span, report), nil
+	return report, nil
 }

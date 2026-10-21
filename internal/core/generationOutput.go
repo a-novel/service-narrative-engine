@@ -68,7 +68,7 @@ func mapGeneration(
 		generation.Proposal = proposal
 	}
 
-	return otel.ReportSuccess(span, generation), nil
+	return generation, nil
 }
 
 // resolveGenerationProposal validates one bounded JSON value without applying a domain schema.
@@ -86,5 +86,5 @@ func resolveGenerationProposal(
 		return nil, otel.ReportError(span, ErrGenerationOutputInvalid)
 	}
 
-	return otel.ReportSuccess(span, []byte(output)), nil
+	return []byte(output), nil
 }

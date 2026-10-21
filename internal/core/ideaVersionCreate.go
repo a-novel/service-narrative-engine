@@ -112,7 +112,7 @@ func (service *IdeaVersionCreate) Exec(
 		return nil, otel.ReportError(span, fmt.Errorf("save Idea version: %w", err))
 	}
 
-	return otel.ReportSuccess(span, &Idea{
+	return &Idea{
 		ProjectID:        project.ID,
 		VersionID:        entity.ID,
 		OwnerID:          project.OwnerID,
@@ -121,5 +121,5 @@ func (service *IdeaVersionCreate) Exec(
 		Title:            entity.Title,
 		ProjectCreatedAt: project.CreatedAt,
 		CreatedAt:        entity.CreatedAt,
-	}), nil
+	}, nil
 }
