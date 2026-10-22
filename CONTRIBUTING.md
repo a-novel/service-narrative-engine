@@ -22,7 +22,14 @@ curl http://localhost:${SERVICE_NARRATIVE_ENGINE_REST_PORT}/ping          # REST
 curl http://localhost:${SERVICE_NARRATIVE_ENGINE_REST_PORT}/healthcheck   # REST dependency report
 ```
 
-Bringing up the generation dependency needs a provider key. `builds/podman-compose.yaml` passes `OPENAI_API_KEY` through with no fallback, so export it before starting the `genai` profile; an unset key starts the container and only surfaces on the first provider call. CI and the JavaScript integration topology substitute a dummy value, since neither reaches a provider yet.
+The server calls [service-genai](https://github.com/a-novel/service-genai) and [service-json-keys](https://github.com/a-novel/service-json-keys) over gRPC. Both run from their own repositories, and the daemon hands their addresses to this service, so start them before the paths that need them:
+
+```bash
+a-novel run start service-json-keys/grpc
+a-novel run start service-genai/grpc
+```
+
+service-genai's own guide covers its provider key. CI starts every dependency from `builds/compose.ci.yaml` instead, with a dummy key, since no test reaches a provider yet.
 
 ---
 
