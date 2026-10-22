@@ -22,9 +22,11 @@ COPY ./builds/database.sql /docker-entrypoint-initdb.d/init.sql
 # ======================================================================================================================
 EXPOSE 5432
 
-# Postgres does not provide a healthcheck by default.
+# Postgres does not provide a healthcheck by default. The probe names the configured role and
+# database: a role or database that does not exist makes the server log a failed connection on
+# every probe.
 HEALTHCHECK --interval=1s --timeout=5s --retries=10 --start-period=1s \
-  CMD ["pg_isready"]
+  CMD ["sh", "-c", "PGUSER=$POSTGRES_USER PGDATABASE=$POSTGRES_DB pg_isready"]
 
 ENTRYPOINT ["/usr/local/bin/database.entrypoint.sh"]
 
