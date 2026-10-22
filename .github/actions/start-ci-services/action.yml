@@ -31,15 +31,15 @@ inputs:
     description: Authentication REST image reference.
   genai_database_image:
     required: false
-    default: ghcr.io/a-novel/service-genai/database:v0.4.0@sha256:ad6e510afe9ac40050e30d17fbad59ec0b6695d8574725671305347ab3d2b5ff
+    default: ghcr.io/a-novel/service-genai/database:v0.6.0@sha256:f31800ea3c86e1d9d083ef736c4a301a2e7aeaa010e04bb152cba7963efb65c2
     description: GenAI database image reference.
   genai_migrations_image:
     required: false
-    default: ghcr.io/a-novel/service-genai/jobs/migrations:v0.4.0@sha256:7c4d62f75c9f0f8b52add93e93a6125ec1b7f94a13614c785e534250e83f3d10
+    default: ghcr.io/a-novel/service-genai/jobs/migrations:v0.6.0@sha256:38344cdaf66a8803a57510f9dbd5ff560aea1ee618c3dd7fc77f94364cd97a17
     description: GenAI migrations image reference.
   genai_grpc_image:
     required: false
-    default: ghcr.io/a-novel/service-genai/grpc:v0.4.0@sha256:2716eb5f4e9c93b00c5b092f2a62b070e966e52e49e0a3ce1e43596922ea3708
+    default: ghcr.io/a-novel/service-genai/grpc:v0.6.0@sha256:2cc5ecdad1966167a0b0ff295cb59344eaa6d164e69d5bad78019d803e5b9e30
     description: GenAI gRPC image reference.
   registry_login:
     required: false
