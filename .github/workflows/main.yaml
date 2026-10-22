@@ -170,6 +170,7 @@ jobs:
           coverage_artifact: gocover
           coverage_file: coverage.txt
           modfile: gotestsum.mod
+          race: "true"
 
   test-pkg-js:
     runs-on: ubuntu-latest
