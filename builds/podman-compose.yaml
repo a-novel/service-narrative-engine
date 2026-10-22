@@ -1,139 +1,5 @@
 services:
   # ====================================================================================================================
-  # EXTERNAL DEPENDENCIES
-  # ====================================================================================================================
-
-  mailserver:
-    profiles: ["auth"]
-    image: ghcr.io/axllent/mailpit:v1.31.6
-    ports:
-      - "${MAIL_UI_PORT}:8025"
-    networks:
-      - api
-    restart: unless-stopped
-    volumes:
-      - mailserver-data:/data
-    environment:
-      MP_SMTP_AUTH_ACCEPT_ANY: "true"
-      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
-      MP_DISABLE_WAL: "true"
-
-  postgres-json-keys:
-    profiles: ["auth"]
-    image: ghcr.io/a-novel/service-json-keys/database:v2.12.1@sha256:f1072d3e67f7c333eb84c35b1be9bdad6bb3beae362a6d808b39f2f2ec073c11
-    networks:
-      - api
-    environment:
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_USER: postgres
-      POSTGRES_DB: postgres
-      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
-      POSTGRES_INITDB_ARGS: --auth=scram-sha-256
-    volumes:
-      - json-keys-postgres-data:/var/lib/postgresql/
-
-  service-json-keys:
-    profiles: ["auth"]
-    image: ghcr.io/a-novel/service-json-keys/standalone-grpc:v2.12.1@sha256:e96f0d0918d2ae65025fd2a6b7b3f3fd9289c66c6dc19976353bac60b67432d1
-    depends_on:
-      postgres-json-keys:
-        condition: service_healthy
-    environment:
-      POSTGRES_DSN: postgres://postgres:postgres@postgres-json-keys:5432/postgres?sslmode=disable
-      # Local-only key for the standalone development stack.
-      APP_MASTER_KEY: 0000000000000000000000000000000000000000000000000000000000000001
-    networks:
-      - api
-
-  postgres-authentication:
-    profiles: ["auth"]
-    image: ghcr.io/a-novel/service-authentication/database:v2.15.0@sha256:c4d8cb051e88c721912037537e6546694736f8f0183cc59994c230369fbc593c
-    networks:
-      - api
-    environment:
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_USER: postgres
-      POSTGRES_DB: postgres
-      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
-      POSTGRES_INITDB_ARGS: --auth=scram-sha-256
-    volumes:
-      - authentication-postgres-data:/var/lib/postgresql/
-
-  service-authentication:
-    profiles: ["auth"]
-    image: ghcr.io/a-novel/service-authentication/standalone-rest:v2.15.0@sha256:985767a1a10de6b9c8d94a496191ad6a8138891d098900d5336701721df8fdb1
-    ports:
-      - "${SERVICE_AUTHENTICATION_PORT}:8080"
-    depends_on:
-      postgres-authentication:
-        condition: service_healthy
-      service-json-keys:
-        condition: service_healthy
-      mailserver:
-        condition: service_started
-    command:
-      - sh
-      - -c
-      - >-
-        /migrations &&
-        /maintenance account-role --email "$${SUPER_ADMIN_EMAIL}" --role auth:superadmin --lang en &&
-        exec /rest
-    environment:
-      POSTGRES_DSN: postgres://postgres:postgres@postgres-authentication:5432/postgres?sslmode=disable
-      SERVICE_JSON_KEYS_HOST: service-json-keys
-      SERVICE_JSON_KEYS_PORT: 8080
-      SUPER_ADMIN_EMAIL: noreply@agorastoryverse.com
-      PLATFORM_AUTH_URL: http://localhost
-      SMTP_SENDER_DOMAIN: mailserver
-      SMTP_ADDR: mailserver:1025
-      SMTP_SENDER_NAME: Narrative Engine local development
-      SMTP_SENDER_EMAIL: noreply@agorastoryverse.com
-      SMTP_SENDER_PASSWORD: local-only
-      SMTP_FORCE_UNENCRYPTED: "true"
-    networks:
-      - api
-  postgres-genai:
-    profiles: ["genai"]
-    image: ghcr.io/a-novel/service-genai/database:v0.4.0
-    networks:
-      - api
-    environment:
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_USER: postgres
-      POSTGRES_DB: postgres
-      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
-      POSTGRES_INITDB_ARGS: --auth=scram-sha-256
-    volumes:
-      - genai-postgres-data:/var/lib/postgresql/
-
-  service-genai-migrations:
-    profiles: ["genai"]
-    image: ghcr.io/a-novel/service-genai/jobs/migrations:v0.4.0
-    depends_on:
-      postgres-genai:
-        condition: service_healthy
-    environment:
-      POSTGRES_DSN: postgres://postgres:postgres@postgres-genai:5432/postgres?sslmode=disable
-    networks:
-      - api
-
-  service-genai:
-    profiles: ["genai"]
-    image: ghcr.io/a-novel/service-genai/grpc:v0.4.0
-    ports:
-      - "${SERVICE_GENAI_PORT}:8080"
-    depends_on:
-      postgres-genai:
-        condition: service_healthy
-      service-genai-migrations:
-        condition: service_completed_successfully
-    environment:
-      POSTGRES_DSN: postgres://postgres:postgres@postgres-genai:5432/postgres?sslmode=disable
-      OPENAI_API_KEY: "${OPENAI_API_KEY}"
-    networks:
-      - api
-
-  # ====================================================================================================================
   # DATABASE
   # ====================================================================================================================
 
@@ -182,17 +48,18 @@ services:
       dockerfile: ./builds/standalone.rest.Dockerfile
     ports:
       - "${REST_PORT}:8080"
+    # The standalone image applies the migrations at boot, so the target waits on its database only.
     depends_on:
       postgres-narrative-engine:
         condition: service_healthy
-      service-narrative-engine-migrations:
-        condition: service_completed_successfully
     environment:
       POSTGRES_DSN: postgres://postgres:postgres@postgres-narrative-engine:5432/postgres?sslmode=disable
-      SERVICE_GENAI_HOST: service-genai
-      SERVICE_GENAI_PORT: 8080
-      SERVICE_JSON_KEYS_HOST: service-json-keys
-      SERVICE_JSON_KEYS_PORT: 8080
+      # The Go config reads SERVICE_<NAME>_HOST/PORT; bridge them to the gRPC
+      # targets the daemon runs from each service's own repository.
+      SERVICE_GENAI_HOST: "${SERVICE_GENAI_GRPC_HOST}"
+      SERVICE_GENAI_PORT: "${SERVICE_GENAI_GRPC_PORT}"
+      SERVICE_JSON_KEYS_HOST: "${SERVICE_JSON_KEYS_GRPC_HOST}"
+      SERVICE_JSON_KEYS_PORT: "${SERVICE_JSON_KEYS_GRPC_PORT}"
     networks:
       - api
 
@@ -201,7 +68,3 @@ networks:
 
 volumes:
   narrative-engine-postgres-data:
-  genai-postgres-data:
-  json-keys-postgres-data:
-  authentication-postgres-data:
-  mailserver-data:
