@@ -3,7 +3,7 @@ module github.com/a-novel/service-narrative-engine
 go 1.27.3
 
 require (
-	github.com/a-novel-kit/golib v0.47.0
+	github.com/a-novel-kit/golib v0.47.1
 	github.com/a-novel/service-authentication/v2 v2.14.0
 	github.com/a-novel/service-genai v0.4.0
 	github.com/a-novel/service-json-keys/v2 v2.11.0
@@ -92,7 +92,7 @@ require (
 	golang.org/x/sync v0.24.0 // indirect
 	golang.org/x/sys v0.49.0 // indirect
 	golang.org/x/text v0.43.0 // indirect
-	google.golang.org/api v0.305.0 // indirect
+	google.golang.org/api v0.307.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260928230214-8a89bd6388cc // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20261019180522-ce908d29299b // indirect
 	mellium.im/sasl v0.3.2 // indirect
