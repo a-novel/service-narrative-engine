@@ -33,7 +33,7 @@ services:
       - narrative-engine-integration-rest-test
 
   postgres-authentication:
-    image: ghcr.io/a-novel/service-authentication/database:v2.15.0@sha256:c4d8cb051e88c721912037537e6546694736f8f0183cc59994c230369fbc593c
+    image: ghcr.io/a-novel/service-authentication/database:v2.15.1@sha256:c4d8cb051e88c721912037537e6546694736f8f0183cc59994c230369fbc593c
     networks:
       - narrative-engine-integration-rest-test
     environment:
@@ -44,7 +44,7 @@ services:
       POSTGRES_INITDB_ARGS: --auth=scram-sha-256
 
   service-authentication:
-    image: ghcr.io/a-novel/service-authentication/standalone-rest:v2.15.0@sha256:985767a1a10de6b9c8d94a496191ad6a8138891d098900d5336701721df8fdb1
+    image: ghcr.io/a-novel/service-authentication/standalone-rest:v2.15.1@sha256:7e0fdd17af1af2b812db7ff3075782027e41765f9bb6ffe3bdc38f638702dd77
     ports:
       - "${SERVICE_AUTHENTICATION_PORT}:8080"
     depends_on:
