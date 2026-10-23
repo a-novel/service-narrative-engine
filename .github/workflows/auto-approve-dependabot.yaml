@@ -20,9 +20,10 @@
 # the job skips all but that one.
 #
 # On a-novel/infra, whose merges deploy production, the approval runs strict. A
-# bot's pull request merges on its own only as a release pin, or as a version
-# update Renovate itself put on auto-merge. Anything else waits for a
-# maintainer's or an admin's review.
+# bot's pull request merges on its own only as a release pin, as a version update
+# Renovate itself put on auto-merge, or as a refresh of Google's service ranges
+# to exactly what Google publishes. Anything else waits for a maintainer's or an
+# admin's review.
 # Renovate arms auto-merge seconds after it opens its pull request, and that event
 # re-runs the job; the agent arming a pin does not.
 name: auto-approve dependencies
