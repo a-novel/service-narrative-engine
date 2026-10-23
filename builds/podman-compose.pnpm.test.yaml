@@ -27,7 +27,12 @@ services:
       postgres-json-keys:
         condition: service_healthy
     environment:
-      POSTGRES_DSN: postgres://postgres:postgres@postgres-json-keys:5432/postgres?sslmode=disable
+      POSTGRES_HOST: postgres-json-keys
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DATABASE: postgres
+      POSTGRES_TLS_ENABLED: "false"
       APP_MASTER_KEY: "${APP_MASTER_KEY}"
     networks:
       - narrative-engine-integration-rest-test
@@ -62,7 +67,12 @@ services:
         /maintenance account-role --email "$${SUPER_ADMIN_EMAIL}" --role auth:superadmin --lang en &&
         exec /rest
     environment:
-      POSTGRES_DSN: postgres://postgres:postgres@postgres-authentication:5432/postgres?sslmode=disable
+      POSTGRES_HOST: postgres-authentication
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DATABASE: postgres
+      POSTGRES_TLS_ENABLED: "false"
       SERVICE_JSON_KEYS_HOST: service-json-keys
       SERVICE_JSON_KEYS_PORT: 8080
       SUPER_ADMIN_EMAIL: "${SUPER_ADMIN_EMAIL:-noreply@agorastoryverse.com}"
