@@ -76,7 +76,7 @@ services:
     networks:
       - narrative-engine-integration-rest-test
   postgres-genai:
-    image: ghcr.io/a-novel/service-genai/database:v0.4.0
+    image: ghcr.io/a-novel/service-genai/database:v0.6.1@sha256:dc412d2e044f6016a1f71d5f879f8487cdbf43e8b614fa4805164cbb09ce4b9f
     networks:
       - narrative-engine-integration-rest-test
     environment:
@@ -87,7 +87,7 @@ services:
       POSTGRES_INITDB_ARGS: --auth=scram-sha-256
 
   service-genai-migrations:
-    image: ghcr.io/a-novel/service-genai/jobs/migrations:v0.4.0
+    image: ghcr.io/a-novel/service-genai/jobs/migrations:v0.6.1@sha256:16dd4ac6f099a4e896807819dd75e22a8c4d7970f06f7442a21b9e4b69af984e
     depends_on:
       postgres-genai:
         condition: service_healthy
@@ -97,7 +97,7 @@ services:
       - narrative-engine-integration-rest-test
 
   service-genai:
-    image: ghcr.io/a-novel/service-genai/grpc:v0.4.0
+    image: ghcr.io/a-novel/service-genai/grpc:v0.6.1@sha256:e0d758937c416694df291630853c9d5cf34ee2c4af95960445ac3694b4e0ce7b
     depends_on:
       postgres-genai:
         condition: service_healthy
