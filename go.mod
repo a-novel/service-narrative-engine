@@ -4,9 +4,9 @@ go 1.27.3
 
 require (
 	github.com/a-novel-kit/golib v0.48.0
-	github.com/a-novel/service-authentication/v2 v2.15.2
+	github.com/a-novel/service-authentication/v2 v2.15.3
 	github.com/a-novel/service-genai v0.4.0
-	github.com/a-novel/service-json-keys/v2 v2.12.2
+	github.com/a-novel/service-json-keys/v2 v2.12.3
 	github.com/go-chi/chi/v5 v5.5.0
 	github.com/go-chi/cors v1.2.2
 	github.com/go-playground/validator/v10 v10.30.5
@@ -27,7 +27,7 @@ require (
 	cloud.google.com/go/auth v0.24.1-0.20261001053825-dbc26066f70a // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.3.0 // indirect
 	cloud.google.com/go/compute/metadata v0.10.0 // indirect
-	github.com/a-novel-kit/jwt/v2 v2.4.5 // indirect
+	github.com/a-novel-kit/jwt/v2 v2.6.0 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/charmbracelet/colorprofile v0.4.3 // indirect
