@@ -240,8 +240,9 @@ jobs:
         with:
           persist-credentials: false
       - *start-local-database
-      - uses: a-novel-kit/workflows/build-actions/docker-job@v1.80.1
+      - uses: a-novel-kit/workflows/build-actions/docker@v1.80.1
         with:
+          mode: job
           file: builds/migrations.Dockerfile
           image_name: ${{ github.repository }}/jobs/migrations
           github_token: ${{ secrets.GITHUB_TOKEN }}
