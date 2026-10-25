@@ -22,6 +22,10 @@ export default defineConfig({
       {
         root: "pkg/js/test/rest",
         extends: true,
+        test: {
+          name: "rest-integration",
+          globalSetup: [resolve("./pkg/js/test/rest/src/setup.ts")],
+        },
       },
     ],
   },

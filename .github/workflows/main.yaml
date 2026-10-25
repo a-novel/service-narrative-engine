@@ -185,13 +185,15 @@ jobs:
       artifact-id: ${{ steps.test.outputs.artifact-id }}
     env:
       REST_URL: "http://localhost:8080"
+      SERVICE_AUTHENTICATION_URL: "http://localhost:4000"
+      MAIL_UI_URL: "http://localhost:8025"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: $/.github/actions/start-ci-services
         with:
-          services: standalone-rest
+          services: standalone-rest service-authentication
           database_image: ghcr.io/a-novel/service-narrative-engine/database@${{ needs.build-database.outputs.digest }}
           standalone_rest_image: ghcr.io/a-novel/service-narrative-engine/standalone-rest@${{ needs.build-standalone-rest.outputs.digest }}
           registry_login: "true"

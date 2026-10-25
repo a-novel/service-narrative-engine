@@ -3,3 +3,8 @@
  * schema-validated helpers for each resource it exposes.
  */
 export * from "./api";
+export * from "./cell";
+export * from "./content";
+export * from "./layer";
+export * from "./project";
+export * from "./scene";
