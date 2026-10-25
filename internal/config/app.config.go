@@ -23,6 +23,8 @@ type Main struct {
 type App struct {
 	// App holds the top-level application settings.
 	App Main `json:"app" yaml:"app"`
+	// Composer bounds the size of each project.
+	Composer Composer `json:"composer" yaml:"composer"`
 	// Rest configures the REST server.
 	Rest httpf.ServerConfig `json:"rest" yaml:"rest"`
 
