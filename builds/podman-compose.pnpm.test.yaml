@@ -7,6 +7,39 @@ x-postgres-healthcheck: &postgres-healthcheck
   retries: 10
 
 services:
+  postgres-json-keys:
+    image: ghcr.io/a-novel/service-json-keys/database:v2.13.9@sha256:a7fd1aa7ba4476c6775e391fd632e0e292ca0667a25bec07a0cc3fab57afad3a
+    networks:
+      - narrative-engine-integration-rest-test
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+      POSTGRES_INITDB_ARGS: --auth=scram-sha-256
+    healthcheck: *postgres-healthcheck
+
+  service-json-keys:
+    image: ghcr.io/a-novel/service-json-keys/standalone-grpc:v2.13.9@sha256:6d9399efff16eef324520c3abeac8ee4a085b1e31d278c67239ce6337d9e431c
+    depends_on:
+      postgres-json-keys:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres-json-keys
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DATABASE: postgres
+      POSTGRES_TLS_ENABLED: "false"
+      APP_MASTER_KEY: "0000000000000000000000000000000000000000000000000000000000000001"
+    healthcheck:
+      test: ["CMD", "grpcurl", "--plaintext", "-d", "", "localhost:8080", "grpc.health.v1.Health/Check"]
+      interval: 1s
+      timeout: 5s
+      retries: 30
+    networks:
+      - narrative-engine-integration-rest-test
+
   postgres-narrative-engine:
     build:
       context: ..
@@ -30,8 +63,12 @@ services:
     depends_on:
       postgres-narrative-engine:
         condition: service_healthy
+      service-json-keys:
+        condition: service_healthy
     environment:
       POSTGRES_DSN: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-narrative-engine:5432/${POSTGRES_DB}?sslmode=disable"
+      SERVICE_JSON_KEYS_HOST: service-json-keys
+      SERVICE_JSON_KEYS_PORT: 8080
       # The suite sends many requests per route within a second from one address.
       REST_RATE_LIMITS_ENABLED: false
     networks:

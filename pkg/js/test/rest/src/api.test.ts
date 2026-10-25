@@ -14,6 +14,7 @@ describe("health", () => {
   it("returns success", async () => {
     await expect(api.health()).resolves.toEqual({
       "client:postgres": { status: "up" },
+      "api:jsonKeys": { status: "up" },
     });
   });
 });

@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -15,6 +16,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/samber/lo"
 
+	serviceauthentication "github.com/a-novel/service-authentication/v2/pkg/go"
+	servicejsonkeys "github.com/a-novel/service-json-keys/v2/pkg/go"
+
 	"github.com/a-novel-kit/golib/downtime"
 	"github.com/a-novel-kit/golib/httpf"
 	"github.com/a-novel-kit/golib/otel"
@@ -23,6 +27,8 @@ import (
 
 	"github.com/a-novel/service-narrative-engine/internal/config"
 	"github.com/a-novel/service-narrative-engine/internal/config/env"
+	"github.com/a-novel/service-narrative-engine/internal/core"
+	"github.com/a-novel/service-narrative-engine/internal/dao"
 	"github.com/a-novel/service-narrative-engine/internal/handlers"
 )
 
@@ -54,11 +60,97 @@ func main() {
 	}
 
 	// =================================================================================================================
+	// CLIENTS
+	// =================================================================================================================
+
+	jsonKeysClient := lo.Must(servicejsonkeys.NewClient(
+		fmt.Sprintf("%s:%d", cfg.Dependencies.ServiceJsonKeysHost, cfg.Dependencies.ServiceJsonKeysPort),
+		lo.Must(cfg.Dependencies.ServiceJsonKeysCredentials.Options(ctx))...,
+	))
+	defer jsonKeysClient.Close()
+
+	claimsVerifier := lo.Must(servicejsonkeys.NewClaimsVerifier[serviceauthentication.Claims](jsonKeysClient))
+	withAuth := serviceauthentication.NewAuthHandler(claimsVerifier, cfg.Permissions, cfg.Logger)
+
+	// =================================================================================================================
+	// DAO
+	// =================================================================================================================
+
+	daoProjectInsert := dao.NewPgProjectInsert()
+	daoProjectSelect := dao.NewPgProjectSelect()
+	daoProjectLock := dao.NewPgProjectLock()
+	daoProjectList := dao.NewPgProjectList()
+	daoProjectUpdate := dao.NewPgProjectUpdate()
+	daoProjectDelete := dao.NewPgProjectDelete()
+	daoSceneInsert := dao.NewPgSceneInsert()
+	daoSceneSelect := dao.NewPgSceneSelect()
+	daoSceneList := dao.NewPgSceneList()
+	daoSceneUpdate := dao.NewPgSceneUpdate()
+	daoSceneDelete := dao.NewPgSceneDelete()
+	daoSceneReorder := dao.NewPgSceneReorder()
+	daoLayerInsert := dao.NewPgLayerInsert()
+	daoLayerSelect := dao.NewPgLayerSelect()
+	daoLayerList := dao.NewPgLayerList()
+	daoLayerUpdate := dao.NewPgLayerUpdate()
+	daoLayerDelete := dao.NewPgLayerDelete()
+	daoLayerReorder := dao.NewPgLayerReorder()
+	daoCellUpsert := dao.NewPgCellUpsert()
+	daoCellList := dao.NewPgCellList()
+	transactor := postgres.NewTransactor(nil)
+
+	// =================================================================================================================
+	// SERVICES
+	// =================================================================================================================
+
+	serviceProjectCreate := core.NewProjectCreate(
+		daoProjectInsert, daoLayerInsert, daoSceneInsert, transactor, cfg.Composer,
+	)
+	serviceProjectGet := core.NewProjectGet(daoProjectSelect, daoSceneList, daoLayerList, daoCellList, cfg.Composer)
+	serviceProjectList := core.NewProjectList(daoProjectList)
+	serviceProjectUpdate := core.NewProjectUpdate(daoProjectUpdate, daoProjectSelect)
+	serviceProjectDelete := core.NewProjectDelete(daoProjectDelete, daoProjectSelect)
+	serviceSceneCreate := core.NewSceneCreate(
+		daoProjectLock, daoSceneList, daoSceneInsert, daoSceneReorder, transactor, cfg.Composer,
+	)
+	serviceSceneUpdate := core.NewSceneUpdate(daoSceneUpdate, daoSceneSelect)
+	serviceSceneMove := core.NewSceneMove(
+		daoSceneSelect, daoProjectLock, daoSceneList, daoSceneReorder, transactor, cfg.Composer,
+	)
+	serviceSceneDelete := core.NewSceneDelete(
+		daoSceneSelect, daoProjectLock, daoSceneDelete, daoSceneList, daoSceneReorder, transactor, cfg.Composer,
+	)
+	serviceLayerCreate := core.NewLayerCreate(
+		daoProjectLock, daoLayerList, daoLayerInsert, daoLayerReorder, transactor, cfg.Composer,
+	)
+	serviceLayerUpdate := core.NewLayerUpdate(daoLayerUpdate, daoLayerSelect)
+	serviceLayerMove := core.NewLayerMove(
+		daoLayerSelect, daoProjectLock, daoLayerList, daoLayerReorder, transactor, cfg.Composer,
+	)
+	serviceLayerDelete := core.NewLayerDelete(
+		daoLayerSelect, daoProjectLock, daoLayerDelete, daoLayerList, daoLayerReorder, transactor, cfg.Composer,
+	)
+	serviceCellWrite := core.NewCellWrite(daoSceneSelect, daoLayerSelect, daoCellUpsert, cfg.Composer)
+
+	// =================================================================================================================
 	// HANDLERS
 	// =================================================================================================================
 
 	handlerPing := handlers.NewRestPing()
-	handlerHealth := handlers.NewRestHealth()
+	handlerHealth := handlers.NewRestHealth(jsonKeysClient)
+	handlerProjectCreate := handlers.NewRestProjectCreate(serviceProjectCreate, cfg.Logger)
+	handlerProjectGet := handlers.NewRestProjectGet(serviceProjectGet, cfg.Logger)
+	handlerProjectList := handlers.NewRestProjectList(serviceProjectList, cfg.Logger)
+	handlerProjectUpdate := handlers.NewRestProjectUpdate(serviceProjectUpdate, cfg.Logger)
+	handlerProjectDelete := handlers.NewRestProjectDelete(serviceProjectDelete, cfg.Logger)
+	handlerSceneCreate := handlers.NewRestSceneCreate(serviceSceneCreate, cfg.Logger)
+	handlerSceneUpdate := handlers.NewRestSceneUpdate(serviceSceneUpdate, cfg.Logger)
+	handlerSceneMove := handlers.NewRestSceneMove(serviceSceneMove, cfg.Logger)
+	handlerSceneDelete := handlers.NewRestSceneDelete(serviceSceneDelete, cfg.Logger)
+	handlerLayerCreate := handlers.NewRestLayerCreate(serviceLayerCreate, cfg.Logger)
+	handlerLayerUpdate := handlers.NewRestLayerUpdate(serviceLayerUpdate, cfg.Logger)
+	handlerLayerMove := handlers.NewRestLayerMove(serviceLayerMove, cfg.Logger)
+	handlerLayerDelete := handlers.NewRestLayerDelete(serviceLayerDelete, cfg.Logger)
+	handlerCellWrite := handlers.NewRestCellWrite(serviceCellWrite, cfg.Logger)
 
 	// =================================================================================================================
 	// ROUTER
@@ -69,6 +161,24 @@ func main() {
 	router.Route("/v1", func(api chi.Router) {
 		api.Get("/ping", handlerPing.ServeHTTP)
 		api.Get("/healthcheck", handlerHealth.ServeHTTP)
+
+		withAuth(api, config.PermissionProjectWrite).Post("/projects", handlerProjectCreate.ServeHTTP)
+		withAuth(api, config.PermissionProjectRead).Get("/projects", handlerProjectList.ServeHTTP)
+		withAuth(api, config.PermissionProjectRead).Get("/project", handlerProjectGet.ServeHTTP)
+		withAuth(api, config.PermissionProjectWrite).Put("/project", handlerProjectUpdate.ServeHTTP)
+		withAuth(api, config.PermissionProjectWrite).Delete("/project", handlerProjectDelete.ServeHTTP)
+
+		withAuth(api, config.PermissionProjectWrite).Post("/scenes", handlerSceneCreate.ServeHTTP)
+		withAuth(api, config.PermissionProjectWrite).Put("/scene", handlerSceneUpdate.ServeHTTP)
+		withAuth(api, config.PermissionProjectWrite).Post("/scene/move", handlerSceneMove.ServeHTTP)
+		withAuth(api, config.PermissionProjectWrite).Delete("/scene", handlerSceneDelete.ServeHTTP)
+
+		withAuth(api, config.PermissionProjectWrite).Post("/layers", handlerLayerCreate.ServeHTTP)
+		withAuth(api, config.PermissionProjectWrite).Put("/layer", handlerLayerUpdate.ServeHTTP)
+		withAuth(api, config.PermissionProjectWrite).Post("/layer/move", handlerLayerMove.ServeHTTP)
+		withAuth(api, config.PermissionProjectWrite).Delete("/layer", handlerLayerDelete.ServeHTTP)
+
+		withAuth(api, config.PermissionProjectWrite).Put("/cell", handlerCellWrite.ServeHTTP)
 	})
 
 	// =================================================================================================================

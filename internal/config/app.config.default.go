@@ -6,6 +6,7 @@ import (
 
 	"github.com/samber/lo"
 
+	"github.com/a-novel-kit/golib/grpcf"
 	"github.com/a-novel-kit/golib/logging"
 	loggingpresets "github.com/a-novel-kit/golib/logging/presets"
 	"github.com/a-novel-kit/golib/otel"
@@ -47,7 +48,17 @@ var AppPresetDefault = App{
 		Name:          env.AppName,
 		DowntimeStart: env.DowntimeStart,
 	},
-	Rest: env.Rest,
+	Dependencies: Dependencies{
+		ServiceJsonKeysHost: env.ServiceJsonKeysHost,
+		ServiceJsonKeysPort: env.ServiceJsonKeysPort,
+		ServiceJsonKeysCredentials: lo.Ternary[grpcf.CredentialsProvider](
+			env.GcloudProjectID == "",
+			&grpcf.LocalCredentialsProvider{},
+			&grpcf.GcloudCredentialsProvider{Host: env.ServiceJsonKeysHost},
+		),
+	},
+	Permissions: PermissionsConfigDefault,
+	Rest:        env.Rest,
 
 	Otel:   OtelPresetDefault,
 	Sentry: env.Sentry,

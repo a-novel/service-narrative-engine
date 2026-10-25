@@ -38,6 +38,15 @@ const (
 	PostgresPortDefault = 5432
 	// PostgresTLSEnabledDefault encrypts the connection unless a deployment turns it off.
 	PostgresTLSEnabledDefault = true
+
+	// ServiceJsonKeysHostDefault reaches a JSON Keys service on the same host.
+	ServiceJsonKeysHostDefault = "localhost"
+	// ServiceJsonKeysPortDefault is the JSON Keys service's default gRPC port.
+	ServiceJsonKeysPortDefault = 8080
+
+	// RestMaxRequestSizeDefault lets a request carry a whole manuscript cell, whose content the core
+	// caps at 256 KiB.
+	RestMaxRequestSizeDefault = 512 << 10
 )
 
 var (
@@ -64,6 +73,11 @@ var (
 	// PostgresMaxIdleConns is the maximum number of connections kept open while idle.
 	PostgresMaxIdleConns = config.LoadEnv(getEnv("POSTGRES_MAX_IDLE_CONNS"), PostgresMaxIdleConnsDefault, config.IntParser)
 
+	// ServiceJsonKeysHost is the hostname of the JSON Keys service, without scheme or port.
+	ServiceJsonKeysHost = config.LoadEnv(getEnv("SERVICE_JSON_KEYS_HOST"), ServiceJsonKeysHostDefault, config.StringParser)
+	// ServiceJsonKeysPort is the gRPC port of the JSON Keys service.
+	ServiceJsonKeysPort = config.LoadEnv(getEnv("SERVICE_JSON_KEYS_PORT"), ServiceJsonKeysPortDefault, config.IntParser)
+
 	// AppName is the name of the application, as it appears in logs and tracing.
 	AppName = config.LoadEnv(getEnv("APP_NAME"), AppNameDefault, config.StringParser)
 	// Otel enables OpenTelemetry tracing.
@@ -74,6 +88,10 @@ var (
 
 	// Rest configures the REST server from the REST_* variables.
 	Rest = httpf.LoadServerConfig(getEnv, restDefaults())
+
+	// GcloudProjectID is the Google Cloud project the service runs in. When set, the JSON Keys
+	// connection authenticates with Google ID tokens.
+	GcloudProjectID = getEnv("GCLOUD_PROJECT_ID")
 
 	// OTLPEndpoint is the standard OTEL_EXPORTER_OTLP_ENDPOINT. When set, traces and logs export
 	// over OTLP/HTTP, which the OTEL_EXPORTER_OTLP_* variables configure. When empty, they go to
@@ -86,11 +104,12 @@ var (
 	DowntimeStart = config.LoadEnv(getEnv("DOWNTIME_START"), nil, downtime.ParseStart)
 )
 
-// restDefaults keeps golib's REST defaults but for the versioned ping path.
+// restDefaults keeps golib's REST defaults but for the versioned ping path and the request size.
 func restDefaults() httpf.ServerConfig {
 	defaults := httpf.ServerConfigDefault
 	defaults.Liveness = "/v1/ping"
 	defaults.Timeouts.Shutdown = TimeoutShutdownDefault
+	defaults.MaxRequestSize = RestMaxRequestSizeDefault
 
 	return defaults
 }

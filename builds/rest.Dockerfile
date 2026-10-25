@@ -13,6 +13,7 @@ COPY ./cmd/rest ./cmd/rest
 COPY ./internal/handlers ./internal/handlers
 COPY ./internal/dao ./internal/dao
 COPY ./internal/core ./internal/core
+COPY ./internal/models/schemas ./internal/models/schemas
 COPY ./internal/config ./internal/config
 
 RUN --mount=type=cache,target=/go/pkg/mod \

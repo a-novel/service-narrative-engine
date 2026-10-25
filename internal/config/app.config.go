@@ -3,6 +3,9 @@ package config
 import (
 	"time"
 
+	serviceauthentication "github.com/a-novel/service-authentication/v2/pkg/go"
+
+	"github.com/a-novel-kit/golib/grpcf"
 	"github.com/a-novel-kit/golib/httpf"
 	"github.com/a-novel-kit/golib/logging"
 	"github.com/a-novel-kit/golib/otel"
@@ -19,10 +22,24 @@ type Main struct {
 	DowntimeStart *time.Time `json:"downtimeStart" yaml:"downtimeStart"`
 }
 
+// Dependencies configures how the service reaches the services it calls.
+type Dependencies struct {
+	// ServiceJsonKeysHost is the hostname of the JSON Keys service, which verifies access tokens.
+	ServiceJsonKeysHost string `json:"serviceJSONKeysHost" yaml:"serviceJSONKeysHost"`
+	// ServiceJsonKeysPort is the gRPC port of the JSON Keys service.
+	ServiceJsonKeysPort int `json:"serviceJSONKeysPort" yaml:"serviceJSONKeysPort"`
+	// ServiceJsonKeysCredentials authenticates the calls to the JSON Keys service.
+	ServiceJsonKeysCredentials grpcf.CredentialsProvider `json:"-" yaml:"-"`
+}
+
 // App is the complete configuration the service reads at startup.
 type App struct {
 	// App holds the top-level application settings.
 	App Main `json:"app" yaml:"app"`
+	// Dependencies configures the services the service calls.
+	Dependencies Dependencies `json:"dependencies" yaml:"dependencies"`
+	// Permissions maps each role to the permissions it grants.
+	Permissions serviceauthentication.Permissions `json:"permissions" yaml:"permissions"`
 	// Rest configures the REST server.
 	Rest httpf.ServerConfig `json:"rest" yaml:"rest"`
 

@@ -6,6 +6,35 @@ services:
     environment:
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
 
+  postgres-json-keys:
+    image: "${JSON_KEYS_DATABASE_IMAGE:?JSON_KEYS_DATABASE_IMAGE is required}"
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+      POSTGRES_INITDB_ARGS: --auth=scram-sha-256
+    healthcheck:
+      test: ["CMD", "pg_isready"]
+      interval: 1s
+      timeout: 5s
+      retries: 30
+
+  service-json-keys:
+    image: "${JSON_KEYS_GRPC_IMAGE:?JSON_KEYS_GRPC_IMAGE is required}"
+    restart: on-failure:10
+    depends_on:
+      postgres-json-keys:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres-json-keys
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DATABASE: postgres
+      POSTGRES_TLS_ENABLED: "false"
+      APP_MASTER_KEY: "0000000000000000000000000000000000000000000000000000000000000001"
+
   standalone-rest:
     profiles: ["rest"]
     image: "${STANDALONE_REST_IMAGE:-service-narrative-engine-standalone-rest:ci}"
@@ -14,7 +43,11 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      service-json-keys:
+        condition: service_healthy
     environment:
       POSTGRES_DSN: postgres://postgres:postgres@postgres:5432/postgres?sslmode=disable
+      SERVICE_JSON_KEYS_HOST: service-json-keys
+      SERVICE_JSON_KEYS_PORT: 8080
       # The suite sends many requests per route within a second from one address.
       REST_RATE_LIMITS_ENABLED: "false"
