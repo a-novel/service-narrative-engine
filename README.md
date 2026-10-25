@@ -18,7 +18,7 @@ The backend of the Narrative Engine, a workstation for writing narratives.
 
 ## What it does
 
-The service serves one public REST API (`cmd/rest`), for any HTTP client. It currently holds a placeholder `item` resource: records, each a name with an optional description, behind create, read, list, update and delete operations.
+The service serves one public REST API (`cmd/rest`), for any HTTP client.
 
 ## Deploying
 
@@ -28,7 +28,7 @@ Deploy the images with any container orchestrator. The composition below shows w
 
 | Image                                      | Role                                                                        |
 | ------------------------------------------ | --------------------------------------------------------------------------- |
-| `service-narrative-engine/rest`            | Public item CRUD + health API.                                              |
+| `service-narrative-engine/rest`            | Public REST API.                                                            |
 | `service-narrative-engine/jobs/migrations` | One-shot schema migration job; runs to completion before the server starts. |
 | `service-narrative-engine/database`        | PostgreSQL with pgBackRest, or bring your own Postgres.                     |
 
@@ -118,7 +118,7 @@ REST tuning (images `rest`, `standalone-rest`):
 | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
 | `REST_MAX_REQUEST_SIZE`       | Maximum request body size, in bytes.                                                                                         | `16384` (16KiB)                  |
 | `REST_CLIENT_IP_HEADER`       | Header a trusted proxy sets to the visitor IP. Set it only when every request comes through that proxy.                      | TCP peer                         |
-| `REST_LIVENESS_PATH`          | Ping path, which still answers during a planned downtime and skips the rate limit.                                           | `/v0/ping`                       |
+| `REST_LIVENESS_PATH`          | Ping path, which still answers during a planned downtime and skips the rate limit.                                           | `/v1/ping`                       |
 | `REST_RATE_LIMITS_ENABLED`    | Rate-limit each visitor on every route but the ping. Turn off only in test stacks.                                           | `true`                           |
 | `REST_RATE_LIMIT`             | Requests each visitor sends to each route, as `<requests>/<window>`.                                                         | `5/1s`                           |
 | `REST_TIMEOUT_READ`           | Read timeout.                                                                                                                | `15s`                            |
@@ -186,12 +186,11 @@ pnpm add @a-novel/service-narrative-engine-rest
 ```
 
 ```typescript
-import { NarrativeEngineApi, itemCreate, itemList } from "@a-novel/service-narrative-engine-rest";
+import { NarrativeEngineApi } from "@a-novel/service-narrative-engine-rest";
 
 const api = new NarrativeEngineApi("http://service-narrative-engine:8080");
 
-const created = await itemCreate(api, "My Item", "An optional description.");
-const items = await itemList(api, 10, 0);
+await api.ping();
 ```
 
 ## Running locally

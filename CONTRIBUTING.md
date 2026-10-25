@@ -17,13 +17,13 @@ Check that it answers:
 
 ```bash
 # Liveness
-curl "http://localhost:${REST_PORT}/v0/ping"
+curl "http://localhost:${REST_PORT}/v1/ping"
 
 # Dependency check (Postgres ping)
-curl "http://localhost:${REST_PORT}/v0/healthcheck"
+curl "http://localhost:${REST_PORT}/v1/healthcheck"
 ```
 
-The placeholder `item` routes are described in [`openapi.yaml`](./openapi.yaml).
+The routes are described in [`openapi.yaml`](./openapi.yaml).
 
 ---
 
@@ -45,8 +45,6 @@ err := service.transactor.WithinTx(ctx, func(ctx context.Context) error {
 // cmd
 service := core.NewSomeService(daoSomething, postgres.NewTransactor(nil))
 ```
-
-Each `item` operation writes once, so none of them takes a transactor.
 
 **Pass the callback's `ctx` down, never the outer one.** A data-access object resolves its database handle from the context, and the transaction lives on the context the callback receives. An inner call given the outer context runs on the connection pool and commits on its own, while the block still reports success.
 

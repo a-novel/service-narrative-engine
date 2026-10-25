@@ -1,5 +1,0 @@
-DELETE FROM items
-WHERE
-  id = ?0
-RETURNING
-  *;

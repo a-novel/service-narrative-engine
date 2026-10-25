@@ -35,7 +35,7 @@ func TestRestPing(t *testing.T) {
 			recorder := httptest.NewRecorder()
 
 			handlers.NewRestPing().ServeHTTP(
-				recorder, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/v0/ping", nil),
+				recorder, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/v1/ping", nil),
 			)
 
 			response := recorder.Result()
