@@ -11,7 +11,7 @@ services:
       MP_DISABLE_WAL: "true"
 
   postgres-json-keys:
-    image: ghcr.io/a-novel/service-json-keys/database:v2.13.0@sha256:8778711f5c9beb691b741b2edbbcccf4e5f857b0ff3380fbf2210dea194aab5a
+    image: ghcr.io/a-novel/service-json-keys/database:v2.13.1@sha256:8778711f5c9beb691b741b2edbbcccf4e5f857b0ff3380fbf2210dea194aab5a
     networks:
       - narrative-engine-integration-rest-test
     environment:
@@ -22,7 +22,7 @@ services:
       POSTGRES_INITDB_ARGS: --auth=scram-sha-256
 
   service-json-keys:
-    image: ghcr.io/a-novel/service-json-keys/standalone-grpc:v2.13.0@sha256:d7f32409705e44cbb5d1612b4921b5dc180a76e375fc79a354a684c0dbb23eb5
+    image: ghcr.io/a-novel/service-json-keys/standalone-grpc:v2.13.1@sha256:09dc91e21682f46b367cb12bfce9ed98a1291edd1b707ea1f1f1fe371fdf4771
     depends_on:
       postgres-json-keys:
         condition: service_healthy
