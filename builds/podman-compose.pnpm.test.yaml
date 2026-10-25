@@ -38,7 +38,7 @@ services:
       - narrative-engine-integration-rest-test
 
   postgres-authentication:
-    image: ghcr.io/a-novel/service-authentication/database:v2.15.3@sha256:6e8aab13a3f8a3cff10c39f87d8d50a3153dabe88d7da3b20786079239f68ae1
+    image: ghcr.io/a-novel/service-authentication/database:v2.16.0@sha256:6e8aab13a3f8a3cff10c39f87d8d50a3153dabe88d7da3b20786079239f68ae1
     networks:
       - narrative-engine-integration-rest-test
     environment:
