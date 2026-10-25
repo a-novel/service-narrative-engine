@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Block",
+  "description": "One unit of manuscript text: a narration or a dialogue.",
+  "oneOf": [{ "$ref": "#/$defs/narration" }, { "$ref": "#/$defs/dialogue" }],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "description": "Identifies the block within its cell, so edits and appendices can point at it.",
+      "pattern": "^[A-Za-z0-9_-]{1,32}$"
+    },
+    "narration": {
+      "type": "object",
+      "description": "Plain prose: action, description or exposition.",
+      "required": ["id", "kind", "text"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "kind": { "const": "narration" },
+        "text": { "type": "string", "maxLength": 20000 }
+      }
+    },
+    "dialogue": {
+      "type": "object",
+      "description": "One spoken line: a speaker and ordered parts, each a text or a tone.",
+      "required": ["id", "kind", "speaker", "parts"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "kind": { "const": "dialogue" },
+        "speaker": { "type": "string", "maxLength": 100 },
+        "parts": { "type": "array", "maxItems": 50, "items": { "$ref": "#/$defs/part" } }
+      }
+    },
+    "part": {
+      "oneOf": [
+        {
+          "type": "object",
+          "description": "Words the speaker says.",
+          "required": ["text"],
+          "additionalProperties": false,
+          "properties": { "text": { "type": "string", "maxLength": 5000 } }
+        },
+        {
+          "type": "object",
+          "description": "How the speaker says what follows, such as \"whispering\".",
+          "required": ["tone"],
+          "additionalProperties": false,
+          "properties": { "tone": { "type": "string", "maxLength": 100 } }
+        }
+      ]
+    }
+  }
+}

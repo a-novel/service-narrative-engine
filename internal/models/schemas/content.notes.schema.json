@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Notes content",
+  "description": "The content of a cell in a notes layer: free text.",
+  "type": "object",
+  "required": ["text"],
+  "additionalProperties": false,
+  "properties": {
+    "text": { "type": "string", "maxLength": 20000 }
+  }
+}
