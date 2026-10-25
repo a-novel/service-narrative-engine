@@ -634,13 +634,17 @@ components:
 
     badRequest:
       description: |
-        The request could not be parsed, or failed validation. A validation failure names each invalid
-        field and the rule it broke. Content that breaks its schema, and a move after an unknown or the
-        moved item, answer without a body.
+        The request could not be parsed, or failed validation. A field that breaks its rule answers a
+        problem naming each invalid field and the rule it broke. Malformed JSON, content that breaks its
+        schema, and a move after an unknown or the moved item answer the status text alone.
       content:
         application/problem+json:
           schema:
             $ref: "#/components/schemas/invalidRequest"
+        text/plain:
+          schema:
+            type: string
+            examples: [Bad Request]
 
     invalidToken:
       description: |
