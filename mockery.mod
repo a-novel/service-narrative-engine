@@ -1,4 +1,4 @@
-module github.com/a-novel/service-template/mockery
+module github.com/a-novel/service-narrative-engine/mockery
 
 go 1.26.5
 

@@ -5,14 +5,13 @@ import (
 
 	"github.com/a-novel-kit/golib/config"
 	"github.com/a-novel-kit/golib/downtime"
-	"github.com/a-novel-kit/golib/grpcf"
 	"github.com/a-novel-kit/golib/httpf"
 )
 
 // prefix is prepended to every configuration variable name that this package reads.
-// Set SERVICE_TEMPLATE_ENV_PREFIX when embedding the service in another project,
+// Set SERVICE_NARRATIVE_ENGINE_ENV_PREFIX when embedding the service in another project,
 // where unprefixed variable names could collide with the host project's own.
-var prefix = os.Getenv("SERVICE_TEMPLATE_ENV_PREFIX")
+var prefix = os.Getenv("SERVICE_NARRATIVE_ENGINE_ENV_PREFIX")
 
 func getEnv(name string) string {
 	return os.Getenv(prefix + name)
@@ -20,7 +19,7 @@ func getEnv(name string) string {
 
 const (
 	// AppNameDefault names the application in logs and traces when APP_NAME is unset.
-	AppNameDefault = "service-template"
+	AppNameDefault = "service-narrative-engine"
 
 	// PostgresMaxOpenConnsDefault caps the connections one instance opens. Multiplied by the replica
 	// count, the cap stays well under PostgreSQL's default max_connections of 100. That leaves room
@@ -64,11 +63,6 @@ var (
 	// Otel enables OpenTelemetry tracing.
 	Otel = config.LoadEnv(getEnv("OTEL"), false, config.BoolParser)
 
-	// GrpcURL is the address of the gRPC service, in the form <host>:<port>. The Go client tests
-	// dial it.
-	GrpcURL = getEnv("GRPC_URL")
-	// Grpc configures the gRPC server from the GRPC_* variables.
-	Grpc = grpcf.LoadServerConfig(getEnv, grpcf.ServerConfigDefault)
 	// Rest configures the REST server from the REST_* variables.
 	Rest = httpf.LoadServerConfig(getEnv, restDefaults())
 

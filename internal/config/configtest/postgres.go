@@ -1,7 +1,7 @@
 package configtest
 
 import (
-	"github.com/a-novel/service-template/internal/config"
+	"github.com/a-novel/service-narrative-engine/internal/config"
 )
 
 // PostgresPreset is the PostgreSQL configuration the integration tests connect with. It aliases the

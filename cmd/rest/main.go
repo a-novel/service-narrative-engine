@@ -1,5 +1,5 @@
-// Command rest serves the public REST API, for any HTTP client. cmd/grpc serves the same domain to
-// other services over gRPC, and cmd/migrations applies the database schema.
+// Command rest serves the public REST API, for any HTTP client. cmd/migrations applies the
+// database schema.
 package main
 
 import (
@@ -20,11 +20,11 @@ import (
 	"github.com/a-novel-kit/golib/otel"
 	"github.com/a-novel-kit/golib/postgres"
 
-	"github.com/a-novel/service-template/internal/config"
-	"github.com/a-novel/service-template/internal/config/env"
-	"github.com/a-novel/service-template/internal/core"
-	"github.com/a-novel/service-template/internal/dao"
-	"github.com/a-novel/service-template/internal/handlers"
+	"github.com/a-novel/service-narrative-engine/internal/config"
+	"github.com/a-novel/service-narrative-engine/internal/config/env"
+	"github.com/a-novel/service-narrative-engine/internal/core"
+	"github.com/a-novel/service-narrative-engine/internal/dao"
+	"github.com/a-novel/service-narrative-engine/internal/handlers"
 )
 
 func main() {

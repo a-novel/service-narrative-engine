@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/a-novel/service-template/internal/dao"
+	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
 // Item is the placeholder resource type.

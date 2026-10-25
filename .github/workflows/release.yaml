@@ -109,60 +109,12 @@ jobs:
         uses: $/.github/actions/start-ci-services
         with:
           services: postgres
-          database_image: ghcr.io/a-novel/service-template/database:${{ github.ref_name }}
+          database_image: ghcr.io/a-novel/service-narrative-engine/database:${{ github.ref_name }}
           registry_login: "true"
       - uses: a-novel-kit/workflows/build-actions/docker-job@v1.77.1
         with:
           file: builds/migrations.Dockerfile
           image_name: ${{ github.repository }}/jobs/migrations
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          run_args: -e POSTGRES_DSN="${POSTGRES_DSN}"
-
-  build-grpc:
-    needs: [build-database]
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-      attestations: write
-      id-token: write
-    env:
-      POSTGRES_DSN: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - *start-release-database
-      - uses: $/.github/actions/run-migrations
-      - uses: a-novel-kit/workflows/build-actions/docker@v1.77.1
-        with:
-          file: builds/grpc.Dockerfile
-          image_name: ${{ github.repository }}/grpc
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          run_args: -e POSTGRES_DSN="${POSTGRES_DSN}"
-
-  build-standalone-grpc:
-    needs: [build-database]
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-      attestations: write
-      id-token: write
-    env:
-      POSTGRES_DSN: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - *start-release-database
-      - uses: $/.github/actions/run-migrations
-      - uses: a-novel-kit/workflows/build-actions/docker@v1.77.1
-        with:
-          file: builds/standalone.grpc.Dockerfile
-          image_name: ${{ github.repository }}/standalone-grpc
           github_token: ${{ secrets.GITHUB_TOKEN }}
           run_args: -e POSTGRES_DSN="${POSTGRES_DSN}"
 
@@ -233,8 +185,6 @@ jobs:
     needs:
       - build-database
       - build-migrations
-      - build-grpc
-      - build-standalone-grpc
       - build-rest
       - build-standalone-rest
       - build-js
@@ -257,8 +207,6 @@ jobs:
     needs:
       - build-database
       - build-migrations
-      - build-grpc
-      - build-standalone-grpc
       - build-rest
       - build-standalone-rest
       - build-js

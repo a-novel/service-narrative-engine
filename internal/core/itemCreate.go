@@ -11,7 +11,7 @@ import (
 
 	"github.com/a-novel-kit/golib/otel"
 
-	"github.com/a-novel/service-template/internal/dao"
+	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
 // ItemCreateDao is the persistence dependency ItemCreate uses to insert an item.

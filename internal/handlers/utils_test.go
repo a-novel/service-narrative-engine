@@ -10,7 +10,7 @@ import (
 	"github.com/a-novel-kit/golib/postgres"
 	postgrespresets "github.com/a-novel-kit/golib/postgres/presets"
 
-	"github.com/a-novel/service-template/internal/config/configtest"
+	"github.com/a-novel/service-narrative-engine/internal/config/configtest"
 )
 
 // probeSetup selects the state of the PostgreSQL connection a health probe meets.

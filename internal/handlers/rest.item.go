@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/a-novel/service-template/internal/core"
+	"github.com/a-novel/service-narrative-engine/internal/core"
 )
 
 // Item is the REST representation of an item returned by the public endpoints.

@@ -11,7 +11,7 @@ import (
 	"github.com/a-novel-kit/golib/otel"
 	otelpresets "github.com/a-novel-kit/golib/otel/presets"
 
-	"github.com/a-novel/service-template/internal/config/env"
+	"github.com/a-novel/service-narrative-engine/internal/config/env"
 )
 
 // OtelFlushTimeout bounds how long the OpenTelemetry exporter waits to flush pending spans on
@@ -21,15 +21,6 @@ const OtelFlushTimeout = 2 * time.Second
 // OtelPresetDefault is the OpenTelemetry exporter of the servers. It exports nothing unless OTEL is
 // set, then exports to Google Cloud when GCLOUD_PROJECT_ID is set, and to standard output otherwise.
 var OtelPresetDefault = newOtelPreset()
-
-// LoggerProdGrpc sends gRPC request logs to Google Cloud Logging.
-var LoggerProdGrpc = loggingpresets.GRPCGcloud{
-	Component: env.AppName,
-	ProjectID: env.GcloudProjectID,
-}
-
-// LoggerDevGrpc prints gRPC request logs to the console for local development.
-var LoggerDevGrpc = loggingpresets.GRPCLocal{}
 
 // LoggerDev prints application and REST request logs to the console for local development.
 var LoggerDev = &loggingpresets.LogLocal{
@@ -48,12 +39,10 @@ var AppPresetDefault = App{
 		Name:          env.AppName,
 		DowntimeStart: env.DowntimeStart,
 	},
-	Grpc: env.Grpc,
 	Rest: env.Rest,
 
-	Otel:       OtelPresetDefault,
-	Logger:     lo.Ternary[logging.Log](env.GcloudProjectID == "", LoggerDev, LoggerProd),
-	GrpcLogger: lo.Ternary[logging.RPCConfig](env.GcloudProjectID == "", &LoggerDevGrpc, &LoggerProdGrpc),
+	Otel:   OtelPresetDefault,
+	Logger: lo.Ternary[logging.Log](env.GcloudProjectID == "", LoggerDev, LoggerProd),
 	RestLogger: lo.Ternary[logging.HTTPConfig](
 		env.GcloudProjectID == "",
 		&loggingpresets.HTTPLocal{BaseLogger: LoggerDev},

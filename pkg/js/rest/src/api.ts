@@ -16,10 +16,10 @@ export type HealthDependency = {
 };
 
 /**
- * A TemplateApi is the HTTP client for the template service. Construct it with
+ * A NarrativeEngineApi is the HTTP client for the Narrative Engine service. Construct it with
  * the service base URL, then pass it to the resource helpers to make requests.
  */
-export class TemplateApi {
+export class NarrativeEngineApi {
   private readonly _baseUrl: string;
 
   constructor(baseUrl: string) {

@@ -9,7 +9,7 @@ import (
 
 	postgrespresets "github.com/a-novel-kit/golib/postgres/presets"
 
-	"github.com/a-novel/service-template/internal/config"
+	"github.com/a-novel/service-narrative-engine/internal/config"
 )
 
 func TestNewPostgresPreset(t *testing.T) {

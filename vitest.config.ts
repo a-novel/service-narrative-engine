@@ -7,7 +7,7 @@ export default defineConfig({
     globals: true,
     environment: "jsdom",
     alias: {
-      "@a-novel/service-template-rest": resolve("./pkg/js/rest/src/index"),
+      "@a-novel/service-narrative-engine-rest": resolve("./pkg/js/rest/src/index"),
     },
     coverage: {
       enabled: true,

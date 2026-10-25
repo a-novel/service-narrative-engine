@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { TemplateApi } from "@a-novel/service-template-rest";
+import { NarrativeEngineApi } from "@a-novel/service-narrative-engine-rest";
 
-const api = new TemplateApi(process.env.REST_URL!);
+const api = new NarrativeEngineApi(process.env.REST_URL!);
 
 describe("ping", () => {
   it("returns success", async () => {

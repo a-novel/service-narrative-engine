@@ -3,7 +3,6 @@ package config
 import (
 	"time"
 
-	"github.com/a-novel-kit/golib/grpcf"
 	"github.com/a-novel-kit/golib/httpf"
 	"github.com/a-novel-kit/golib/logging"
 	"github.com/a-novel-kit/golib/otel"
@@ -23,8 +22,6 @@ type Main struct {
 type App struct {
 	// App holds the top-level application settings.
 	App Main `json:"app" yaml:"app"`
-	// Grpc configures the gRPC server.
-	Grpc grpcf.ServerConfig `json:"grpc" yaml:"grpc"`
 	// Rest configures the REST server.
 	Rest httpf.ServerConfig `json:"rest" yaml:"rest"`
 
@@ -32,8 +29,6 @@ type App struct {
 	Otel otel.Config `json:"otel" yaml:"otel"`
 	// Logger is the application logger the REST handlers report their errors to.
 	Logger logging.Log `json:"logger" yaml:"logger"`
-	// GrpcLogger configures the gRPC request logging middleware.
-	GrpcLogger logging.RPCConfig `json:"grpcLogger" yaml:"grpcLogger"`
 	// RestLogger configures the REST request logging middleware.
 	RestLogger logging.HTTPConfig `json:"restLogger" yaml:"restLogger"`
 	// Postgres configures the PostgreSQL connection.

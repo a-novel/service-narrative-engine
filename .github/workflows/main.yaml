@@ -54,7 +54,7 @@ jobs:
         uses: $/.github/actions/start-ci-services
         with:
           services: postgres
-          database_image: ghcr.io/a-novel/service-template/database@${{ needs.build-database.outputs.digest }}
+          database_image: ghcr.io/a-novel/service-narrative-engine/database@${{ needs.build-database.outputs.digest }}
           registry_login: "true"
       - uses: a-novel-kit/workflows/go-actions/generate-go@v1.77.1
 
@@ -64,22 +64,6 @@ jobs:
       contents: read
     steps:
       - uses: a-novel-kit/workflows/go-actions/lint-go@v1.77.1
-
-  lint-proto:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: bufbuild/buf-action@85aebf73123b5c15fd5528aaecbf9129cddf7fa7 # v1.6.0
-        with:
-          pr_comment: false
-          # The template changes its contract in place, as it does its migrations.
-          breaking: >-
-            ${{ github.event_name == 'pull_request' && !github.event.repository.is_template
-            && !contains(github.event.pull_request.labels.*.name, 'buf skip breaking') }}
 
   lint-js:
     runs-on: ubuntu-latest
@@ -191,37 +175,6 @@ jobs:
           modfile: gotestsum.mod
           race: "true"
 
-  test-pkg:
-    needs: [build-database, build-standalone-grpc]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: read
-    outputs:
-      artifact-id: ${{ steps.test.outputs.artifact-id }}
-    env:
-      GRPC_URL: "localhost:8080"
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: $/.github/actions/start-ci-services
-        with:
-          services: standalone-grpc
-          database_image: ghcr.io/a-novel/service-template/database@${{ needs.build-database.outputs.digest }}
-          standalone_grpc_image: ghcr.io/a-novel/service-template/standalone-grpc@${{ needs.build-standalone-grpc.outputs.digest }}
-          registry_login: "true"
-      - uses: a-novel-kit/workflows/go-actions/test-go@v1.77.1
-        id: test
-        with:
-          include: /pkg
-          skip_setup: true
-          test_artifact: gotestpkg
-          coverage_artifact: gocoverpkg
-          coverage_file: coverage_pkg.txt
-          modfile: gotestsum.mod
-          race: "true"
-
   test-pkg-js:
     needs: [build-database, build-standalone-rest]
     runs-on: ubuntu-latest
@@ -239,8 +192,8 @@ jobs:
       - uses: $/.github/actions/start-ci-services
         with:
           services: standalone-rest
-          database_image: ghcr.io/a-novel/service-template/database@${{ needs.build-database.outputs.digest }}
-          standalone_rest_image: ghcr.io/a-novel/service-template/standalone-rest@${{ needs.build-standalone-rest.outputs.digest }}
+          database_image: ghcr.io/a-novel/service-narrative-engine/database@${{ needs.build-database.outputs.digest }}
+          standalone_rest_image: ghcr.io/a-novel/service-narrative-engine/standalone-rest@${{ needs.build-standalone-rest.outputs.digest }}
           registry_login: "true"
       - uses: a-novel-kit/workflows/node-actions/test-node@v1.77.1
         id: test
@@ -324,49 +277,6 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           run_args: -e POSTGRES_DSN="${POSTGRES_DSN}"
 
-  build-grpc:
-    needs: [build-database]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-      attestations: write
-      id-token: write
-    env:
-      POSTGRES_DSN: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - *start-local-database
-      - uses: $/.github/actions/run-migrations
-      - uses: a-novel-kit/workflows/build-actions/docker@v1.77.1
-        with:
-          file: builds/grpc.Dockerfile
-          image_name: ${{ github.repository }}/grpc
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          run_args: -e POSTGRES_DSN="${POSTGRES_DSN}"
-
-  build-standalone-grpc:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-      attestations: write
-      id-token: write
-    outputs:
-      digest: ${{ steps.build.outputs.digest }}
-    # test-pkg boots this image and runs the client suite against it, so the job only builds and
-    # pushes it, without a smoke run.
-    steps:
-      - uses: a-novel-kit/workflows/build-actions/docker@v1.77.1
-        id: build
-        with:
-          file: builds/standalone.grpc.Dockerfile
-          image_name: ${{ github.repository }}/standalone-grpc
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          skip_healthcheck: true
-
   build-rest:
     needs: [build-database]
     runs-on: ubuntu-latest
@@ -423,15 +333,15 @@ jobs:
 
   report-codecov:
     runs-on: ubuntu-latest
-    needs: [test-go, test-pkg, test-pkg-js]
+    needs: [test-go, test-pkg-js]
     permissions:
       contents: read
     steps:
       - uses: a-novel-kit/workflows/generic-actions/codecov@v1.77.1
         with:
           codecov_token: ${{ secrets.CODECOV_TOKEN }}
-          coverage_files: coverage.txt,coverage_pkg.txt,coverage/*
-          coverage_artifact_ids: ${{ needs.test-go.outputs.artifact-id }},${{ needs.test-pkg.outputs.artifact-id }},${{ needs.test-pkg-js.outputs.artifact-id }}
+          coverage_files: coverage.txt,coverage/*
+          coverage_artifact_ids: ${{ needs.test-go.outputs.artifact-id }},${{ needs.test-pkg-js.outputs.artifact-id }}
 
   publish-docs:
     runs-on: ubuntu-latest

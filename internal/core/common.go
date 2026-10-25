@@ -1,7 +1,7 @@
 package core
 
 import (
-	"github.com/a-novel/service-template/internal/dao"
+	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
 var (

@@ -1,4 +1,4 @@
-module github.com/a-novel/service-template/golangci-lint
+module github.com/a-novel/service-narrative-engine/golangci-lint
 
 go 1.26.5
 

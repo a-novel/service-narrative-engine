@@ -5,7 +5,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/a-novel/service-template/internal/config"
+	"github.com/a-novel/service-narrative-engine/internal/config"
 )
 
 func main() {

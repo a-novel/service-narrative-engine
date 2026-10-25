@@ -10,7 +10,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/a-novel/service-template/internal/handlers"
+	"github.com/a-novel/service-narrative-engine/internal/handlers"
 )
 
 func TestRestHealth(t *testing.T) {

@@ -1,6 +1,6 @@
-# Service Template REST client
+# Service Narrative Engine REST client
 
-The TypeScript client for the template service's REST API.
+The TypeScript client for the Narrative Engine's REST API.
 
 ## Installation
 
@@ -15,7 +15,7 @@ GitHub Packages serves this package. It asks for a Personal Access Token with th
 Then install the package:
 
 ```bash
-pnpm add @a-novel/service-template-rest
+pnpm add @a-novel/service-narrative-engine-rest
 ```
 
-The service's [README](https://github.com/a-novel/service-template#javascript--typescript-rest) shows a first call.
+The service's [README](https://github.com/a-novel/service-narrative-engine#javascript--typescript-rest) shows a first call.

@@ -11,7 +11,7 @@ services:
   # DATABASE
   # ====================================================================================================================
 
-  postgres-template:
+  postgres-narrative-engine:
     build:
       context: ..
       dockerfile: ./builds/database.Dockerfile
@@ -26,23 +26,23 @@ services:
       POSTGRES_HOST_AUTH_METHOD: scram-sha-256
       POSTGRES_INITDB_ARGS: --auth=scram-sha-256
     volumes:
-      - template-postgres-data:/var/lib/postgresql/
+      - narrative-engine-postgres-data:/var/lib/postgresql/
     healthcheck: *postgres-healthcheck
 
   # ====================================================================================================================
   # ONE-SHOT TARGETS
   # ====================================================================================================================
 
-  service-template-migrations:
+  service-narrative-engine-migrations:
     profiles: ["migrations"]
     build:
       context: ..
       dockerfile: ./builds/migrations.Dockerfile
     depends_on:
-      postgres-template:
+      postgres-narrative-engine:
         condition: service_healthy
     environment:
-      POSTGRES_DSN: postgres://postgres:postgres@postgres-template:5432/postgres?sslmode=disable
+      POSTGRES_DSN: postgres://postgres:postgres@postgres-narrative-engine:5432/postgres?sslmode=disable
     networks:
       - api
 
@@ -50,22 +50,7 @@ services:
   # LONG-RUNNER TARGETS
   # ====================================================================================================================
 
-  service-template-grpc:
-    profiles: ["grpc"]
-    build:
-      context: ..
-      dockerfile: ./builds/standalone.grpc.Dockerfile
-    ports:
-      - "${GRPC_PORT}:8080"
-    depends_on:
-      postgres-template:
-        condition: service_healthy
-    environment:
-      POSTGRES_DSN: postgres://postgres:postgres@postgres-template:5432/postgres?sslmode=disable
-    networks:
-      - api
-
-  service-template-rest:
+  service-narrative-engine-rest:
     profiles: ["rest"]
     build:
       context: ..
@@ -73,10 +58,10 @@ services:
     ports:
       - "${REST_PORT}:8080"
     depends_on:
-      postgres-template:
+      postgres-narrative-engine:
         condition: service_healthy
     environment:
-      POSTGRES_DSN: postgres://postgres:postgres@postgres-template:5432/postgres?sslmode=disable
+      POSTGRES_DSN: postgres://postgres:postgres@postgres-narrative-engine:5432/postgres?sslmode=disable
     networks:
       - api
 
@@ -84,4 +69,4 @@ networks:
   api:
 
 volumes:
-  template-postgres-data:
+  narrative-engine-postgres-data:

@@ -7,15 +7,15 @@ servers:
         default: "8080"
 
 info:
-  title: Service Template API
-  summary: Generic CRUD service template.
+  title: Service Narrative Engine API
+  summary: The backend of the Narrative Engine.
   description: |
-    The public REST API of the service template, with CRUD operations on a placeholder `item`
-    resource. A fork replaces `item` with its own domain model.
+    The public REST API of the Narrative Engine, a workstation for writing narratives. It currently
+    serves CRUD operations on a placeholder `item` resource.
   version: v0.0.0
   license:
     name: AGPL-3.0
-    url: "https://raw.githubusercontent.com/a-novel/service-template/refs/heads/master/LICENSE"
+    url: "https://raw.githubusercontent.com/a-novel/service-narrative-engine/refs/heads/master/LICENSE"
 
 paths:
   /v0/ping:

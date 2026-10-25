@@ -1,25 +1,14 @@
 services:
   postgres:
-    image: "${DATABASE_IMAGE:-service-template-database:ci}"
+    image: "${DATABASE_IMAGE:-service-narrative-engine-database:ci}"
     ports:
       - "5432:5432"
     environment:
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
 
-  standalone-grpc:
-    profiles: ["grpc"]
-    image: "${STANDALONE_GRPC_IMAGE:-service-template-standalone-grpc:ci}"
-    ports:
-      - "8080:8080"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      POSTGRES_DSN: postgres://postgres:postgres@postgres:5432/postgres?sslmode=disable
-
   standalone-rest:
     profiles: ["rest"]
-    image: "${STANDALONE_REST_IMAGE:-service-template-standalone-rest:ci}"
+    image: "${STANDALONE_REST_IMAGE:-service-narrative-engine-standalone-rest:ci}"
     ports:
       - "8080:8080"
     depends_on:

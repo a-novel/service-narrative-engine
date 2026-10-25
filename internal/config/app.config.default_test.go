@@ -46,7 +46,7 @@ func TestAppPresetDefault(t *testing.T) {
 
 			command.Env = append(os.Environ(),
 				"GOWORK=off",
-				"SERVICE_TEMPLATE_ENV_PREFIX=TEST_",
+				"SERVICE_NARRATIVE_ENGINE_ENV_PREFIX=TEST_",
 				"REST_TIMEOUT_READ=invalid",
 				"TEST_REST_TIMEOUT_READ="+testCase.restTimeoutRead,
 			)

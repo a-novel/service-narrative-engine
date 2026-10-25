@@ -7,15 +7,11 @@ inputs:
     description: Space-separated Compose services to start.
   database_image:
     required: false
-    default: service-template-database:ci
+    default: service-narrative-engine-database:ci
     description: Database image reference used by the CI topology.
-  standalone_grpc_image:
-    required: false
-    default: service-template-standalone-grpc:ci
-    description: Standalone gRPC image reference used by the CI topology.
   standalone_rest_image:
     required: false
-    default: service-template-standalone-rest:ci
+    default: service-narrative-engine-standalone-rest:ci
     description: Standalone REST image reference used by the CI topology.
   registry_login:
     required: false
@@ -42,7 +38,6 @@ runs:
         COMPOSE_PROJECT_NAME: ci-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
         DATABASE_IMAGE: ${{ inputs.database_image }}
         POSTGRES_PASSWORD: postgres
-        STANDALONE_GRPC_IMAGE: ${{ inputs.standalone_grpc_image }}
         STANDALONE_REST_IMAGE: ${{ inputs.standalone_rest_image }}
       run: |
         set -euo pipefail

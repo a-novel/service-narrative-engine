@@ -11,9 +11,9 @@ import (
 	"github.com/a-novel-kit/golib/postgres"
 	"github.com/a-novel-kit/golib/postgres/postgrestest"
 
-	"github.com/a-novel/service-template/internal/config/configtest"
-	"github.com/a-novel/service-template/internal/dao"
-	"github.com/a-novel/service-template/internal/models/migrations"
+	"github.com/a-novel/service-narrative-engine/internal/config/configtest"
+	"github.com/a-novel/service-narrative-engine/internal/dao"
+	"github.com/a-novel/service-narrative-engine/internal/models/migrations"
 )
 
 func TestPgItemUpdate(t *testing.T) {

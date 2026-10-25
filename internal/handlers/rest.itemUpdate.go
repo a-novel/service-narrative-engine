@@ -10,7 +10,7 @@ import (
 	"github.com/a-novel-kit/golib/logging"
 	"github.com/a-novel-kit/golib/otel"
 
-	"github.com/a-novel/service-template/internal/core"
+	"github.com/a-novel/service-narrative-engine/internal/core"
 )
 
 // RestItemUpdateService is the core operation [RestItemUpdate] delegates to.
