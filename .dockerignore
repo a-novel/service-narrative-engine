@@ -1,0 +1,19 @@
+# Version control and CI — never needed in builds.
+.git
+.github
+.claude
+
+# Node toolchain — large and irrelevant to Go builds.
+node_modules
+
+# Test files — excluded from production images.
+**/*_test.go
+
+# Go client package — not part of any server build.
+pkg/
+
+# Docs and frontend files — not part of any server build.
+*.md
+**/*.ts
+**/*.js
+coverage/

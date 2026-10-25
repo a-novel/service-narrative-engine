@@ -1,0 +1,81 @@
+packages:
+  - pkg/js/rest
+  - pkg/js/test/rest
+
+allowBuilds:
+  "@swc/core": true
+  core-js: true
+  esbuild: true
+  msw: true
+  protobufjs: true
+
+autoInstallPeers: true
+
+gitChecks: false
+
+linkWorkspacePackages: true
+
+minimumReleaseAgeExclude:
+  - "@a-novel-kit/*"
+  - "@a-novel/*"
+  - "@typescript-eslint/types@8.60.1"
+  - svelte@5.55.7
+  - esbuild@0.28.1
+  - undici@7.28.0 || 7.29.0 || 8.5.0
+  - "@sveltejs/kit@2.60.1 || 2.70.2"
+  - brace-expansion@5.0.7 || 5.0.8 || 5.0.9
+  - nanoid@3.3.17 || 3.3.18
+
+onlyBuiltDependencies:
+  - core-js
+  - esbuild
+  - msw
+  - protobufjs
+
+overrides:
+  "@sveltejs/kit@<=2.57.0": ">=2.57.1"
+  "@sveltejs/kit@<=2.70.1": ^2.70.2
+  "@sveltejs/kit@>=2.19.0 <=2.49.4": ">=2.49.5"
+  "@sveltejs/kit@>=2.38.0 <=2.60.0": ^2.60.1
+  "@sveltejs/kit@>=2.49.0 <=2.49.4": ">=2.49.5"
+  "@sveltejs/kit@>=2.49.0 <=2.52.1": ">=2.52.2"
+  brace-expansion@<5.0.5: ">=5.0.5"
+  brace-expansion@<=5.0.7: ^5.0.8
+  brace-expansion@>=3.0.0 <5.0.7: ^5.0.7
+  brace-expansion@>=4.0.0 <5.0.12: ^5.0.12
+  brace-expansion@>=4.0.0 <5.0.9: ^5.0.9
+  cookie@<0.7.0: ">=0.7.0"
+  devalue@<5.9.1: ^5.9.1
+  dompurify@<=3.3.3: ">=3.4.0"
+  esbuild@>=0.27.3 <0.28.1: ^0.28.1
+  fast-xml-parser@>=4.0.0-beta.3 <=5.5.6: ">=5.5.7"
+  flatted@<=3.4.1: ">=3.4.2"
+  handlebars@>=4.0.0 <4.7.9: ">=4.7.9"
+  lodash-es@<=4.17.23: ">=4.18.0"
+  lodash-es@>=4.0.0 <=4.17.22: ">=4.17.23"
+  lodash-es@>=4.0.0 <=4.17.23: ">=4.18.0"
+  minimatch@>=10.0.0 <10.2.3: ">=10.2.3"
+  minimatch@>=9.0.0 <9.0.6: ">=9.0.6"
+  minimatch@>=9.0.0 <9.0.7: ">=9.0.7"
+  nanoid@<3.3.17: ^3.3.17
+  nanoid@<3.3.18: ^3.3.18
+  postcss@<8.5.10: ">=8.5.10"
+  protobufjs@<7.5.5: ">=7.5.5"
+  storybook@>=10.0.0 <10.1.10: ">=10.1.10"
+  storybook@>=10.0.0-beta.0 <10.2.10: ">=10.2.10"
+  svelte@<=5.51.4: ">=5.51.5"
+  svelte@<=5.53.4: ">=5.53.5"
+  svelte@<=5.55.6: ^5.55.7
+  svelte@>=5.39.3 <5.51.5: ">=5.51.5"
+  svelte@>=5.46.0 <=5.55.6: ^5.55.7
+  svelte@>=5.51.5 <=5.55.6: ^5.55.7
+  undici@<6.24.0: ">=6.24.0"
+  undici@>=6.0.0 <6.24.0: ">=6.24.0"
+  undici@>=7.0.0 <7.24.0: ">=7.24.0"
+  undici@>=7.0.0 <7.28.0: ^8.0.0
+  undici@>=7.0.0 <7.29.0: ^7.29.0
+  undici@>=7.17.0 <7.24.0: ">=7.24.0"
+  undici@>=7.23.0 <7.28.0: ^7.28.0
+  undici@>=8.0.0 <8.5.0: ^8.5.0
+
+strictPeerDependencies: false

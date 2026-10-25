@@ -1,0 +1,37 @@
+# Managed by `a-novel repo update` — edit the template in stack, not this copy.
+#
+# Records the approval a pull request's author cannot give themselves. A repo
+# admin, core included, dispatches this with the number of a pull request they
+# opened. The action refuses anyone else, and anyone else's pull request, so an
+# open workflow_dispatch is safe.
+name: approve-pr
+
+on:
+  workflow_dispatch:
+    inputs:
+      pull_request:
+        description: PR number or URL to approve (after reviewing it).
+        required: true
+        type: string
+
+run-name: "✅ approve-pr ${{ inputs.pull_request }} by @${{ github.actor }}"
+
+jobs:
+  approve:
+    runs-on: ubuntu-latest
+    # The Agent key is a secret of the governance environment, which no feature branch opens.
+    environment:
+      name: governance
+      deployment: false
+    # The default token serves only the role check. The approval uses an [Agent]
+    # token the action mints, with pull request write alone.
+    permissions:
+      contents: read
+    steps:
+      - uses: a-novel-kit/workflows/generic-actions/approve-pr@v1.77.1
+        with:
+          pull_request: ${{ inputs.pull_request }}
+          client_id: ${{ vars.AGENT_BOT_CLIENT_ID }}
+          app_private_key: ${{ secrets.AGENT_BOT_PRIVATE_KEY }}
+          # The org-wide halt. Engaged, the action fails before the role check.
+          kill_switch: ${{ vars.AGENT_KILL_SWITCH }}

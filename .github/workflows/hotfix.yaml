@@ -1,0 +1,102 @@
+# Managed by `a-novel repo update` — edit the template in stack, not this copy.
+#
+# Ships a patch on a release line, holding reviewed and tested fixes only. A fix
+# lands on the default branch first. The dispatch then opens one backport pull
+# request per fix into the line's release/vX.Y branch, which it cuts from the
+# line's latest tag on first use. Merging a backport cuts the next patch as the
+# release App, behind the protected `release` environment, and the patch's tag
+# runs the line's publishing jobs. The kill switch halts neither path, so an
+# emergency patch can always ship. The backport-run and release-line-run
+# workflows hold the logic.
+#
+# The cut triggers on pull_request_target, so GitHub runs the default branch's
+# copy of this file and checks the `release` environment against that branch.
+# The cut never checks out pull request code.
+name: hotfix
+
+on:
+  workflow_dispatch:
+    inputs:
+      line:
+        description: 'X.Y line to patch (e.g. "1.4") — its release line branches from the latest vX.Y.* tag'
+        required: true
+        type: string
+      fix_refs:
+        description: "Space-separated commit SHAs already on the default branch, oldest first, each backported as its own pull request; empty = prepare the release line only"
+        required: false
+        type: string
+        default: ""
+      severity:
+        description: Escalation severity if the backport or the cut fails
+        required: false
+        type: choice
+        options:
+          - sev2
+          - sev1
+        default: sev2
+      dry_run:
+        description: Report what would be created without pushing a branch or opening a pull request
+        required: false
+        type: boolean
+        default: true
+  pull_request_target: # zizmor: ignore[dangerous-triggers] Cuts the merged release line by name; never checks out PR code.
+    types: [closed]
+    branches: ["release/**"]
+
+run-name: "🚑 ${{ github.event_name == 'workflow_dispatch' && format('backport v{0}.x{1}', inputs.line, inputs.dry_run && ' (dry-run)' || '') || format('release {0}', github.event.pull_request.base.ref) }}"
+
+jobs:
+  # Backports run one at a time per repo: a second dispatch queues behind the one
+  # in flight.
+  backport:
+    if: github.event_name == 'workflow_dispatch'
+    concurrency:
+      group: hotfix-${{ github.repository }}
+      cancel-in-progress: false
+    # The callee mints its own App tokens for its writes; the default token only
+    # reads the dispatcher's permission. The Dependencies App opens each clean
+    # backport, so the agent can approve it.
+    permissions:
+      contents: read
+    uses: a-novel-kit/workflows/.github/workflows/backport-run.yaml@v1.77.1
+    with:
+      line: ${{ inputs.line }}
+      fix_refs: ${{ inputs.fix_refs }}
+      severity: ${{ inputs.severity }}
+      dry_run: ${{ inputs.dry_run }}
+      client_id: ${{ vars.AGENT_BOT_CLIENT_ID }}
+      release_client_id: ${{ vars.RELEASE_BOT_CLIENT_ID }}
+      dependency_client_id: ${{ vars.DEPENDENCY_BOT_CLIENT_ID }}
+      project_id: ${{ github.repository_owner == 'a-novel' && 'PVT_kwDOB9MxdM4BMh8r' || 'PVT_kwDOCy-nAM4BbtKH' }}
+      mention: ${{ vars.SEV1_MENTION }}
+    secrets:
+      app_private_key: ${{ secrets.AGENT_BOT_PRIVATE_KEY }}
+      # Creates a missing release line; it exists only in the `release` environment.
+      release_private_key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
+      dependency_private_key: ${{ secrets.DEPENDENCY_BOT_PRIVATE_KEY }}
+      push_webhook: ${{ secrets.ESCALATE_PUSH_WEBHOOK }}
+
+  # Cuts run one at a time per line. The concurrency sits on the job, so a pull
+  # request closed without merging, whose job is skipped, never takes a queued
+  # cut's place.
+  cut:
+    if: github.event_name == 'pull_request_target' && github.event.pull_request.merged
+    concurrency:
+      group: release-line-${{ github.repository }}-${{ github.event.pull_request.base.ref }}
+      cancel-in-progress: false
+    # The callee reads in-flight release runs; its writes use its own App token.
+    permissions:
+      contents: read
+      actions: read
+    uses: a-novel-kit/workflows/.github/workflows/release-line-run.yaml@v1.77.1
+    with:
+      branch: ${{ github.event.pull_request.base.ref }}
+      client_id: ${{ vars.AGENT_BOT_CLIENT_ID }}
+      release_client_id: ${{ vars.RELEASE_BOT_CLIENT_ID }}
+      project_id: ${{ github.repository_owner == 'a-novel' && 'PVT_kwDOB9MxdM4BMh8r' || 'PVT_kwDOCy-nAM4BbtKH' }}
+      mention: ${{ vars.SEV1_MENTION }}
+    secrets:
+      app_private_key: ${{ secrets.AGENT_BOT_PRIVATE_KEY }}
+      # Exists only in the `release` environment, which the callee's cut job names.
+      release_private_key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
+      push_webhook: ${{ secrets.ESCALATE_PUSH_WEBHOOK }}

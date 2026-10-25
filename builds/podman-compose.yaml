@@ -1,0 +1,87 @@
+# Podman drops a Dockerfile's HEALTHCHECK from OCI images, the format it builds by default and the
+# one images are published in: a service the others wait for declares its check here.
+x-postgres-healthcheck: &postgres-healthcheck
+  test: ["CMD", "pg_isready"]
+  interval: 1s
+  timeout: 5s
+  retries: 10
+
+services:
+  # ====================================================================================================================
+  # DATABASE
+  # ====================================================================================================================
+
+  postgres-template:
+    build:
+      context: ..
+      dockerfile: ./builds/database.Dockerfile
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    networks:
+      - api
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+      POSTGRES_INITDB_ARGS: --auth=scram-sha-256
+    volumes:
+      - template-postgres-data:/var/lib/postgresql/
+    healthcheck: *postgres-healthcheck
+
+  # ====================================================================================================================
+  # ONE-SHOT TARGETS
+  # ====================================================================================================================
+
+  service-template-migrations:
+    profiles: ["migrations"]
+    build:
+      context: ..
+      dockerfile: ./builds/migrations.Dockerfile
+    depends_on:
+      postgres-template:
+        condition: service_healthy
+    environment:
+      POSTGRES_DSN: postgres://postgres:postgres@postgres-template:5432/postgres?sslmode=disable
+    networks:
+      - api
+
+  # ====================================================================================================================
+  # LONG-RUNNER TARGETS
+  # ====================================================================================================================
+
+  service-template-grpc:
+    profiles: ["grpc"]
+    build:
+      context: ..
+      dockerfile: ./builds/standalone.grpc.Dockerfile
+    ports:
+      - "${GRPC_PORT}:8080"
+    depends_on:
+      postgres-template:
+        condition: service_healthy
+    environment:
+      POSTGRES_DSN: postgres://postgres:postgres@postgres-template:5432/postgres?sslmode=disable
+    networks:
+      - api
+
+  service-template-rest:
+    profiles: ["rest"]
+    build:
+      context: ..
+      dockerfile: ./builds/standalone.rest.Dockerfile
+    ports:
+      - "${REST_PORT}:8080"
+    depends_on:
+      postgres-template:
+        condition: service_healthy
+    environment:
+      POSTGRES_DSN: postgres://postgres:postgres@postgres-template:5432/postgres?sslmode=disable
+    networks:
+      - api
+
+networks:
+  api:
+
+volumes:
+  template-postgres-data:

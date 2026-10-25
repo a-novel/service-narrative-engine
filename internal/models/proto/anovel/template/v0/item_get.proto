@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package anovel.template.v0;
+
+import "anovel/template/v0/item.proto";
+
+// ItemGetService retrieves a single item by its ID.
+service ItemGetService {
+  // Returns the item with the given ID. Returns INVALID_ARGUMENT for a malformed ID, and NOT_FOUND
+  // when no item has it.
+  rpc ItemGet(ItemGetRequest) returns (ItemGetResponse);
+}
+
+// ItemGetRequest identifies the item to retrieve.
+message ItemGetRequest {
+  // ID of the item to retrieve, formatted as a UUID.
+  string id = 1;
+}
+
+// ItemGetResponse returns the requested item.
+message ItemGetResponse {
+  // The requested item.
+  Item item = 1;
+}

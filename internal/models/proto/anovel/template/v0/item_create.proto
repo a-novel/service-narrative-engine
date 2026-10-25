@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package anovel.template.v0;
+
+import "anovel/template/v0/item.proto";
+
+// ItemCreateService creates a new item from the supplied attributes.
+service ItemCreateService {
+  // Creates an item and returns it. Returns INVALID_ARGUMENT when the name is blank, or a field
+  // exceeds its length limit.
+  rpc ItemCreate(ItemCreateRequest) returns (ItemCreateResponse);
+}
+
+// ItemCreateRequest carries the attributes of the item to create. The server assigns the ID and timestamps.
+message ItemCreateRequest {
+  // Name of the item: required, not blank, 256 characters at most.
+  string name = 1;
+  // Optional description of the item, 1024 characters at most.
+  string description = 2;
+}
+
+// ItemCreateResponse returns the newly created item, including its server-assigned fields.
+message ItemCreateResponse {
+  // The created item.
+  Item item = 1;
+}

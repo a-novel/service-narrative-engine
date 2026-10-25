@@ -1,0 +1,15 @@
+name: run-migrations
+description: Apply the schema migrations to the database POSTGRES_DSN names.
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      with:
+        go-version-file: "go.mod"
+    - name: Download Go packages
+      shell: bash
+      run: go mod download
+    - name: Run migrations
+      shell: bash
+      run: go run cmd/migrations/main.go

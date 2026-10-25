@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package anovel.template.v0;
+
+import "anovel/template/v0/item.proto";
+
+// ItemListService returns a page of items.
+service ItemListService {
+  // Returns a page of items, newest first. Returns INVALID_ARGUMENT for a limit above 100 or an
+  // after value that is not an item ID.
+  rpc ItemList(ItemListRequest) returns (ItemListResponse);
+}
+
+// ItemListRequest bounds the page of items to return.
+message ItemListRequest {
+  reserved 2;
+  reserved "offset";
+
+  // Maximum number of items to return, 100 at most. Zero or a negative value selects 20.
+  int32 limit = 1;
+  // ID of the last item of the previous page. The page starts with the next older item. Empty
+  // starts at the newest item.
+  string after = 3;
+}
+
+// ItemListResponse returns the requested page of items, empty when none match.
+message ItemListResponse {
+  // The items of the page.
+  repeated Item items = 1;
+}

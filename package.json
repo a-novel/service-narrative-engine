@@ -1,0 +1,78 @@
+{
+  "name": "service-template-project",
+  "version": "0.0.0",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/a-novel/service-template.git"
+  },
+  "license": "AGPL-3.0",
+  "type": "module",
+  "workspaces": [
+    ".",
+    "pkg/js/rest",
+    "pkg/js/test/rest"
+  ],
+  "scripts": {
+    "build": "pnpm build:rest",
+    "build:rest": "vite build -c pkg/js/rest/vite.config.ts && tsc -p pkg/js/rest/tsconfig.build.json",
+    "format": "pnpm format:go && pnpm format:proto && pnpm format:js",
+    "format:go": "go mod tidy && go tool -modfile=golangci-lint.mod golangci-lint run ./... --fix",
+    "format:js": "prettier --write . --config prettier.config.ts",
+    "format:proto": "go tool -modfile=buf.mod buf format -w && go tool -modfile=buf.mod buf dep update",
+    "generate": "pnpm run generate:go",
+    "generate:go": "go generate ./...",
+    "preinstall": "npx only-allow pnpm",
+    "lint": "pnpm lint:go && pnpm lint:proto && pnpm lint:js",
+    "lint:ci": "pnpm build && pnpm i && pnpm lint:js",
+    "lint:eslint": "eslint .",
+    "lint:go": "go tool -modfile=golangci-lint.mod golangci-lint run ./...",
+    "lint:js": "pnpm lint:stylecheck && pnpm lint:typecheck && pnpm lint:eslint && pnpm run lint:openapi",
+    "lint:openapi": "pnpm redocly lint openapi.yaml",
+    "lint:proto": "go tool -modfile=buf.mod buf lint",
+    "lint:stylecheck": "prettier --check . --config prettier.config.ts",
+    "lint:typecheck": "pnpm lint:typecheck:base && pnpm lint:typecheck:rest && pnpm lint:typecheck:test:rest",
+    "lint:typecheck:base": "tsc --noEmit",
+    "lint:typecheck:rest": "tsc -p pkg/js/rest/tsconfig.json --noEmit",
+    "lint:typecheck:test:rest": "tsc -p pkg/js/test/rest/tsconfig.json --noEmit",
+    "prepublish:doc": "pnpm prepublish:doc:readme && pnpm prepublish:doc:openapi",
+    "prepublish:doc:openapi": "a-novel publish stamp 'version: ' openapi.yaml",
+    "prepublish:doc:readme": "a-novel publish stamp 'a-novel/service-template/[a-z0-9/-]+:' README.md",
+    "sync": "pnpm build && pnpm i",
+    "test": "vitest run -c vitest.config.ts",
+    "test:ci": "pnpm build && pnpm i && pnpm test"
+  },
+  "devDependencies": {
+    "@a-novel-kit/nodelib-browser": "^2.0.0",
+    "@a-novel-kit/nodelib-config": "^2.0.0",
+    "@a-novel-kit/nodelib-test": "^2.0.0",
+    "@eslint/js": "^10.0.1",
+    "@redocly/cli": "^2.20.4",
+    "@trivago/prettier-plugin-sort-imports": "^6.0.2",
+    "@types/node": "^24.10.1",
+    "@vitest/coverage-v8": "^5.0.0",
+    "eslint": "^10.0.2",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "eslint-plugin-storybook": "^10.2.8",
+    "eslint-plugin-svelte": "^3.19.0",
+    "globals": "^17.0.0",
+    "jiti": "^2.6.1",
+    "jsdom": "^30.0.0",
+    "prettier": "^3.6.2",
+    "prettier-plugin-packagejson": "^3.0.0",
+    "prettier-plugin-sql": "^0.20.0",
+    "typescript": "^6.0.0",
+    "typescript-eslint": "^8.46.4",
+    "vite": "^8.0.16",
+    "vitest": "^5.0.0"
+  },
+  "packageManager": "pnpm@12.15.0",
+  "engines": {
+    "node": ">=23.11.0",
+    "npm": ">=10.9.2"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  }
+}

@@ -1,0 +1,461 @@
+name: main
+
+on:
+  push:
+    tags-ignore:
+      - "**"
+    branches:
+      - master
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+  merge_group:
+
+jobs:
+  # The template deploys nothing, so it edits its migrations in place. A fork is no template
+  # repository, so the guard runs there.
+  check-migration-snapshots:
+    if: github.event_name == 'pull_request' && !github.event.repository.is_template
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # The job removes append-only-override once a push makes it stale.
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check schema snapshots
+        uses: a-novel-kit/workflows/generic-actions/check-append-only@v1.77.1
+        with:
+          path: internal/models/migrations/testdata/schema
+          base: ${{ github.event.pull_request.base.sha }}
+          github_token: ${{ github.token }}
+      - name: Check migration SQL
+        uses: a-novel-kit/workflows/generic-actions/check-append-only@v1.77.1
+        with:
+          path: ":(glob)internal/models/migrations/*.sql"
+          base: ${{ github.event.pull_request.base.sha }}
+          github_token: ${{ github.token }}
+
+  generated-go:
+    needs: [build-database]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    env:
+      POSTGRES_DSN: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - &start-local-database
+        uses: $/.github/actions/start-ci-services
+        with:
+          services: postgres
+          database_image: ghcr.io/a-novel/service-template/database@${{ needs.build-database.outputs.digest }}
+          registry_login: "true"
+      - uses: a-novel-kit/workflows/go-actions/generate-go@v1.77.1
+
+  lint-go:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: a-novel-kit/workflows/go-actions/lint-go@v1.77.1
+
+  lint-proto:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: bufbuild/buf-action@85aebf73123b5c15fd5528aaecbf9129cddf7fa7 # v1.6.0
+        with:
+          pr_comment: false
+          # The template changes its contract in place, as it does its migrations.
+          breaking: >-
+            ${{ github.event_name == 'pull_request' && !github.event.repository.is_template
+            && !contains(github.event.pull_request.labels.*.name, 'buf skip breaking') }}
+
+  lint-js:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: a-novel-kit/workflows/node-actions/lint-node@v1.77.1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          lint_action: "lint:ci"
+
+  lint-shell:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: a-novel-kit/workflows/generic-actions/lint-shell@v1.77.1
+        with:
+          # renovate: datasource=custom.shellcheck depName=koalaman/shellcheck
+          version: "0.11.0"
+          sha256: "8c3be12b05d5c177a04c29e3c78ce89ac86f1595681cab149b65b97c4e227198"
+          run_steps: .github/actions/*/action.yml .github/workflows/*.yaml
+
+  lint-dockerfile:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: a-novel-kit/workflows/generic-actions/lint-dockerfile@v1.77.1
+        with:
+          # renovate: datasource=custom.hadolint depName=hadolint/hadolint
+          version: "2.15.1"
+          sha256: "c7187db94eeeeca956519a6af171adc31453941a1e777961f6e680f697c8c507"
+
+  # The service ruleset checks the structural conventions golangci-lint cannot express.
+  lint-semgrep:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: a-novel-kit/workflows/security-actions/lint-semgrep@v1.77.1
+        with:
+          ruleset: service
+          # renovate: datasource=docker depName=semgrep/semgrep
+          version: "1.182.1@sha256:451b3d875c00dac7ed5db5293e584a07de11449a409c10b3c2d2652f429630b6"
+
+  # gitleaks scans for secrets offline, so no hosted service can block a merge.
+  scan-secrets:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: a-novel-kit/workflows/security-actions/scan-secrets@v1.77.1
+        with:
+          # renovate: datasource=github-releases depName=gitleaks/gitleaks
+          version: "8.30.1"
+
+  # zizmor audits the workflows, excessive job permissions included.
+  lint-workflows:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: a-novel-kit/workflows/security-actions/lint-workflows@v1.77.1
+        with:
+          # renovate: datasource=docker depName=ghcr.io/zizmorcore/zizmor
+          version: "1.31.1@sha256:42d409dbb851d4c5d35a058cf042b828bea1e3f2884378c526eb0974780e18d9"
+
+  test-go:
+    needs: [build-database]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    outputs:
+      artifact-id: ${{ steps.test.outputs.artifact-id }}
+    env:
+      POSTGRES_DSN: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - *start-local-database
+      - uses: $/.github/actions/run-migrations
+      - uses: a-novel-kit/workflows/go-actions/test-go@v1.77.1
+        id: test
+        with:
+          include: /internal
+          skip_setup: true
+          test_artifact: gotest
+          coverage_artifact: gocover
+          coverage_file: coverage.txt
+          modfile: gotestsum.mod
+          race: "true"
+
+  test-pkg:
+    needs: [build-database, build-standalone-grpc]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    outputs:
+      artifact-id: ${{ steps.test.outputs.artifact-id }}
+    env:
+      GRPC_URL: "localhost:8080"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: $/.github/actions/start-ci-services
+        with:
+          services: standalone-grpc
+          database_image: ghcr.io/a-novel/service-template/database@${{ needs.build-database.outputs.digest }}
+          standalone_grpc_image: ghcr.io/a-novel/service-template/standalone-grpc@${{ needs.build-standalone-grpc.outputs.digest }}
+          registry_login: "true"
+      - uses: a-novel-kit/workflows/go-actions/test-go@v1.77.1
+        id: test
+        with:
+          include: /pkg
+          skip_setup: true
+          test_artifact: gotestpkg
+          coverage_artifact: gocoverpkg
+          coverage_file: coverage_pkg.txt
+          modfile: gotestsum.mod
+          race: "true"
+
+  test-pkg-js:
+    needs: [build-database, build-standalone-rest]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    outputs:
+      artifact-id: ${{ steps.test.outputs.artifact-id }}
+    env:
+      REST_URL: "http://localhost:8080"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: $/.github/actions/start-ci-services
+        with:
+          services: standalone-rest
+          database_image: ghcr.io/a-novel/service-template/database@${{ needs.build-database.outputs.digest }}
+          standalone_rest_image: ghcr.io/a-novel/service-template/standalone-rest@${{ needs.build-standalone-rest.outputs.digest }}
+          registry_login: "true"
+      - uses: a-novel-kit/workflows/node-actions/test-node@v1.77.1
+        id: test
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          coverage_artifact: jscover
+          test_action: "test:ci"
+
+  build-database:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - uses: a-novel-kit/workflows/build-actions/docker@v1.77.1
+        id: build
+        with:
+          file: builds/database.Dockerfile
+          image_name: ${{ github.repository }}/database
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          run_args: -e POSTGRES_PASSWORD=postgres
+
+  # Infra tells a real database change from a version bump by digest alone, so the image must
+  # rebuild to the same digest. The two builds run at once, each on a fresh builder: both start
+  # cold, as a release does, and a shared builder would run their common steps only once.
+  test-reproducible-database:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build the database image twice
+        shell: bash
+        env:
+          SOURCE_DATE_EPOCH: "0"
+        run: |
+          set -euo pipefail
+          build() {
+            docker buildx create --name "$1" --driver docker-container --bootstrap >/dev/null
+            docker buildx build --builder "$1" --provenance=false --file builds/database.Dockerfile \
+              --output "type=oci,dest=$RUNNER_TEMP/$1.tar,rewrite-timestamp=true" \
+              --metadata-file "$RUNNER_TEMP/$1.json" . 2>&1 | sed -u "s/^/[$1] /"
+          }
+          build first &
+          pid=$!
+          build second
+          wait "$pid"
+          first="$(jq -r '."containerimage.digest"' "$RUNNER_TEMP/first.json")"
+          second="$(jq -r '."containerimage.digest"' "$RUNNER_TEMP/second.json")"
+          if [ "$first" != "$second" ]; then
+            echo "::error::The database image rebuilt to $second instead of $first."
+            exit 1
+          fi
+          echo "The database image reproduces as $first." >>"$GITHUB_STEP_SUMMARY"
+
+  build-migrations:
+    needs: [build-database]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    env:
+      POSTGRES_DSN: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - *start-local-database
+      - uses: a-novel-kit/workflows/build-actions/docker-job@v1.77.1
+        with:
+          file: builds/migrations.Dockerfile
+          image_name: ${{ github.repository }}/jobs/migrations
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          run_args: -e POSTGRES_DSN="${POSTGRES_DSN}"
+
+  build-grpc:
+    needs: [build-database]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    env:
+      POSTGRES_DSN: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - *start-local-database
+      - uses: $/.github/actions/run-migrations
+      - uses: a-novel-kit/workflows/build-actions/docker@v1.77.1
+        with:
+          file: builds/grpc.Dockerfile
+          image_name: ${{ github.repository }}/grpc
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          run_args: -e POSTGRES_DSN="${POSTGRES_DSN}"
+
+  build-standalone-grpc:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+    # test-pkg boots this image and runs the client suite against it, so the job only builds and
+    # pushes it, without a smoke run.
+    steps:
+      - uses: a-novel-kit/workflows/build-actions/docker@v1.77.1
+        id: build
+        with:
+          file: builds/standalone.grpc.Dockerfile
+          image_name: ${{ github.repository }}/standalone-grpc
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          skip_healthcheck: true
+
+  build-rest:
+    needs: [build-database]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    env:
+      POSTGRES_DSN: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - *start-local-database
+      - uses: $/.github/actions/run-migrations
+      - uses: a-novel-kit/workflows/build-actions/docker@v1.77.1
+        with:
+          file: builds/rest.Dockerfile
+          image_name: ${{ github.repository }}/rest
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          run_args: -e POSTGRES_DSN="${POSTGRES_DSN}"
+
+  build-standalone-rest:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+    # test-pkg-js boots this image and runs the JS client suite against it, so the job only builds
+    # and pushes it, without a smoke run.
+    steps:
+      - uses: a-novel-kit/workflows/build-actions/docker@v1.77.1
+        id: build
+        with:
+          file: builds/standalone.rest.Dockerfile
+          image_name: ${{ github.repository }}/standalone-rest
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          skip_healthcheck: true
+
+  build-js:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: a-novel-kit/workflows/node-actions/build-node@v1.77.1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          build_action: "build:rest"
+
+  report-codecov:
+    runs-on: ubuntu-latest
+    needs: [test-go, test-pkg, test-pkg-js]
+    permissions:
+      contents: read
+    steps:
+      - uses: a-novel-kit/workflows/generic-actions/codecov@v1.77.1
+        with:
+          codecov_token: ${{ secrets.CODECOV_TOKEN }}
+          coverage_files: coverage.txt,coverage_pkg.txt,coverage/*
+          coverage_artifact_ids: ${{ needs.test-go.outputs.artifact-id }},${{ needs.test-pkg.outputs.artifact-id }},${{ needs.test-pkg-js.outputs.artifact-id }}
+
+  publish-docs:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master' && success()
+    # lint-js checks the openapi files this job deploys.
+    needs: [lint-js]
+    # GitHub Pages allows one deployment in flight per site. The group serializes concurrent
+    # master runs.
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: |
+          mkdir _site
+          mv openapi.html _site/index.html
+          mv openapi.yaml _site/openapi.yaml
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

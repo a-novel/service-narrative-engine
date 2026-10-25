@@ -1,0 +1,19 @@
+packages:
+  github.com/a-novel/service-template/internal/core:
+    config:
+      all: true
+      pkgname: coremocks
+      dir: internal/core/mocks
+      filename: mocks.go
+  github.com/a-novel/service-template/internal/handlers:
+    config:
+      all: true
+      pkgname: handlersmocks
+      dir: internal/handlers/mocks
+      filename: mocks.go
+  github.com/a-novel/service-template/pkg/go:
+    config:
+      all: true
+      pkgname: pkgmocks
+      dir: pkg/go/mocks
+      filename: mocks.go

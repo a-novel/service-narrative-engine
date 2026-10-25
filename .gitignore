@@ -1,0 +1,9 @@
+.idea
+
+.envrc
+
+node_modules
+dist/
+coverage/
+
+.claude/*.local.*

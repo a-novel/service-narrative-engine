@@ -1,0 +1,5 @@
+extends: [recommended]
+
+rules:
+  # /v0/ping accepts no input and skips the rate limit, so it answers no 4xx.
+  operation-4xx-response: off
