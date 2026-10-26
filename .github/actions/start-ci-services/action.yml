@@ -23,11 +23,11 @@ inputs:
     description: JSON keys gRPC image reference.
   authentication_database_image:
     required: false
-    default: ghcr.io/a-novel/service-authentication/database:v2.17.0@sha256:6e8aab13a3f8a3cff10c39f87d8d50a3153dabe88d7da3b20786079239f68ae1
+    default: ghcr.io/a-novel/service-authentication/database:v2.17.1@sha256:6e8aab13a3f8a3cff10c39f87d8d50a3153dabe88d7da3b20786079239f68ae1
     description: Authentication database image reference.
   authentication_rest_image:
     required: false
-    default: ghcr.io/a-novel/service-authentication/standalone-rest:v2.17.0@sha256:3951cd70179b105fdaa2885a73d87b1077e571b7c9014433cca697916467ad80
+    default: ghcr.io/a-novel/service-authentication/standalone-rest:v2.17.1@sha256:ca70c8697412c58c48e9e57f3ffcaaa071c96db5d367aa97fcfa3638d8b10c55
     description: Authentication REST image reference.
   genai_database_image:
     required: false
