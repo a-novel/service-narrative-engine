@@ -10,8 +10,8 @@ github.com/a-novel-kit/golib v0.52.0 h1:X7cxAK5SfxDGmqDQCykDOUm2u5kGofGhDwH51Faz
 github.com/a-novel-kit/golib v0.52.0/go.mod h1:nPiIx7kuUGYDsMI7YBscAFzd8KOSoWNnFPOs2Jbi4fc=
 github.com/a-novel-kit/jwt/v2 v2.6.0 h1:jTPqbdG/gSlcPCSmp8o7gBHHtLZcIPpLVG5jqSjlF6U=
 github.com/a-novel-kit/jwt/v2 v2.6.0/go.mod h1:pkDVhDrwshhk8U2FJiZciPHVh8zq5WYDJCMBKOmd1PQ=
-github.com/a-novel/service-authentication/v2 v2.17.1 h1:BAHzZT+APeil48KD8Pb1r1JRITWFQgBeVF6fyFHhdrA=
-github.com/a-novel/service-authentication/v2 v2.17.1/go.mod h1:xLflGG/k7iOMg/mmwD3zcefD4Ce0Z59XlHkt0QD4iIE=
+github.com/a-novel/service-authentication/v2 v2.18.2 h1:UWQKOulxHDSHpIA03gYBGT5vvThhq/4x4GqYTtBaI0M=
+github.com/a-novel/service-authentication/v2 v2.18.2/go.mod h1:E8+M4SjaPGCBe9qg/ULbmbvjBDM3rJM8DYnYZQ/koOQ=
 github.com/a-novel/service-genai v0.4.0 h1:D/sbD5r5MzGUr9dPnZ8L8BGQyPqTU0UVhUv/5oEiPno=
 github.com/a-novel/service-genai v0.4.0/go.mod h1:PGtZNYfcVq74/EB67U4EUdx+AusO0IowMriU2Yha0Ek=
 github.com/a-novel/service-json-keys/v2 v2.13.6 h1:bxV4d6qU1gmwppnxnfoHagqdHLF0Dz25rbbLXomJAT4=
