@@ -20,8 +20,7 @@ type RestSceneDeleteService interface {
 
 // RestSceneDeleteRequest is the query parameters the delete-scene endpoint accepts.
 type RestSceneDeleteRequest struct {
-	ID       uuid.UUID `schema:"id"`
-	Revision int       `schema:"revision"`
+	ID uuid.UUID `schema:"id"`
 }
 
 // RestSceneDelete is the HTTP handler for the delete-scene endpoint. It responds with the deleted
@@ -56,9 +55,8 @@ func (handler *RestSceneDelete) ServeHTTP(w http.ResponseWriter, r *http.Request
 	}
 
 	serviceRequest := &core.SceneDeleteRequest{
-		OwnerID:  ownerID,
-		ID:       request.ID,
-		Revision: request.Revision,
+		OwnerID: ownerID,
+		ID:      request.ID,
 	}
 
 	result, err := handler.service.Exec(ctx, serviceRequest)

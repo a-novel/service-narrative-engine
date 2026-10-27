@@ -24,7 +24,6 @@ func TestRestProjectUpdate(t *testing.T) {
 
 		return newRequest(t, http.MethodPut, "/v1/project", map[string]any{
 			"id":       projectID,
-			"revision": 1,
 			"title":    "Les Heures claires",
 			"premise":  "Marie attend.",
 			"language": "fr",
@@ -85,16 +84,6 @@ func TestRestProjectUpdate(t *testing.T) {
 			expectStatus: http.StatusNotFound,
 		},
 		{
-			name: "Error/RevisionConflict",
-
-			request: validRequest,
-
-			serviceCalled: true,
-			serviceErr:    core.ErrRevisionConflict,
-
-			expectStatus: http.StatusConflict,
-		},
-		{
 			name: "Error/Internal",
 
 			request: validRequest,
@@ -122,7 +111,6 @@ func TestRestProjectUpdate(t *testing.T) {
 					Exec(mock.Anything, &core.ProjectUpdateRequest{
 						OwnerID:  ownerID,
 						ID:       projectID,
-						Revision: 1,
 						Title:    "Les Heures claires",
 						Premise:  "Marie attend.",
 						Language: "fr",

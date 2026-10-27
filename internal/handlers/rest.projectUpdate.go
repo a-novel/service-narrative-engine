@@ -21,7 +21,6 @@ type RestProjectUpdateService interface {
 // RestProjectUpdateRequest is the JSON body the update-project endpoint accepts.
 type RestProjectUpdateRequest struct {
 	ID       uuid.UUID `json:"id"`
-	Revision int       `json:"revision"`
 	Title    string    `json:"title"`
 	Premise  string    `json:"premise"`
 	Language string    `json:"language"`
@@ -61,7 +60,6 @@ func (handler *RestProjectUpdate) ServeHTTP(w http.ResponseWriter, r *http.Reque
 	serviceRequest := &core.ProjectUpdateRequest{
 		OwnerID:  ownerID,
 		ID:       request.ID,
-		Revision: request.Revision,
 		Title:    request.Title,
 		Premise:  request.Premise,
 		Language: request.Language,

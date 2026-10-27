@@ -20,8 +20,7 @@ type RestProjectDeleteService interface {
 
 // RestProjectDeleteRequest is the query parameters the delete-project endpoint accepts.
 type RestProjectDeleteRequest struct {
-	ID       uuid.UUID `schema:"id"`
-	Revision int       `schema:"revision"`
+	ID uuid.UUID `schema:"id"`
 }
 
 // RestProjectDelete is the HTTP handler for the delete-project endpoint. It responds with the deleted
@@ -56,9 +55,8 @@ func (handler *RestProjectDelete) ServeHTTP(w http.ResponseWriter, r *http.Reque
 	}
 
 	serviceRequest := &core.ProjectDeleteRequest{
-		OwnerID:  ownerID,
-		ID:       request.ID,
-		Revision: request.Revision,
+		OwnerID: ownerID,
+		ID:      request.ID,
 	}
 
 	result, err := handler.service.Exec(ctx, serviceRequest)

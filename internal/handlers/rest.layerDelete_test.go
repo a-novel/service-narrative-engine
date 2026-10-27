@@ -22,7 +22,7 @@ func TestRestLayerDelete(t *testing.T) {
 	validRequest := func(t *testing.T) *http.Request {
 		t.Helper()
 
-		return newRequest(t, http.MethodDelete, "/v1/layer?revision=1&id="+layerID.String(), nil)
+		return newRequest(t, http.MethodDelete, "/v1/layer?id="+layerID.String(), nil)
 	}
 
 	testCases := []struct {
@@ -79,16 +79,6 @@ func TestRestLayerDelete(t *testing.T) {
 			expectStatus: http.StatusUnprocessableEntity,
 		},
 		{
-			name: "Error/RevisionConflict",
-
-			request: validRequest,
-
-			serviceCalled: true,
-			serviceErr:    core.ErrRevisionConflict,
-
-			expectStatus: http.StatusConflict,
-		},
-		{
 			name: "Error/Internal",
 
 			request: validRequest,
@@ -113,7 +103,7 @@ func TestRestLayerDelete(t *testing.T) {
 				}
 
 				service.EXPECT().
-					Exec(mock.Anything, &core.LayerDeleteRequest{OwnerID: ownerID, ID: layerID, Revision: 1}).
+					Exec(mock.Anything, &core.LayerDeleteRequest{OwnerID: ownerID, ID: layerID}).
 					Return(resp, testCase.serviceErr)
 			}
 

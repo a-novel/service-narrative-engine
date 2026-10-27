@@ -21,10 +21,9 @@ type RestCellWriteService interface {
 
 // RestCellWriteRequest is the JSON body the write-cell endpoint accepts.
 type RestCellWriteRequest struct {
-	SceneID  uuid.UUID       `json:"sceneID"`
-	LayerID  uuid.UUID       `json:"layerID"`
-	Revision int             `json:"revision"`
-	Content  json.RawMessage `json:"content"`
+	SceneID uuid.UUID       `json:"sceneID"`
+	LayerID uuid.UUID       `json:"layerID"`
+	Content json.RawMessage `json:"content"`
 }
 
 // RestCellWrite is the HTTP handler for the write-cell endpoint. It responds with the written cell.
@@ -58,11 +57,10 @@ func (handler *RestCellWrite) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	}
 
 	serviceRequest := &core.CellWriteRequest{
-		OwnerID:  ownerID,
-		SceneID:  request.SceneID,
-		LayerID:  request.LayerID,
-		Revision: request.Revision,
-		Content:  request.Content,
+		OwnerID: ownerID,
+		SceneID: request.SceneID,
+		LayerID: request.LayerID,
+		Content: request.Content,
 	}
 
 	result, err := handler.service.Exec(ctx, serviceRequest)

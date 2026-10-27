@@ -44,9 +44,9 @@ const (
 	// ServiceJsonKeysPortDefault is the JSON Keys service's default gRPC port.
 	ServiceJsonKeysPortDefault = 8080
 
-	// RestMaxRequestSizeDefault lets a request carry a whole manuscript cell, whose content the core
-	// caps at 256 KiB.
-	RestMaxRequestSizeDefault = 512 << 10
+	// RestMaxRequestSizeDefault lets a request carry a whole cell, whose content the core caps at 2 MiB,
+	// with room for the rest of the body.
+	RestMaxRequestSizeDefault = 4 << 20
 )
 
 var (

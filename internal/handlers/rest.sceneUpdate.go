@@ -20,10 +20,11 @@ type RestSceneUpdateService interface {
 
 // RestSceneUpdateRequest is the JSON body the update-scene endpoint accepts.
 type RestSceneUpdateRequest struct {
-	ID       uuid.UUID `json:"id"`
-	Revision int       `json:"revision"`
-	Title    string    `json:"title"`
-	Synopsis string    `json:"synopsis"`
+	ID          uuid.UUID `json:"id"`
+	Title       string    `json:"title"`
+	Color       string    `json:"color"`
+	Description string    `json:"description"`
+	Prompt      string    `json:"prompt"`
 }
 
 // RestSceneUpdate is the HTTP handler for the update-scene endpoint. It responds with the updated
@@ -58,11 +59,12 @@ func (handler *RestSceneUpdate) ServeHTTP(w http.ResponseWriter, r *http.Request
 	}
 
 	serviceRequest := &core.SceneUpdateRequest{
-		OwnerID:  ownerID,
-		ID:       request.ID,
-		Revision: request.Revision,
-		Title:    request.Title,
-		Synopsis: request.Synopsis,
+		OwnerID:     ownerID,
+		ID:          request.ID,
+		Title:       request.Title,
+		Color:       request.Color,
+		Description: request.Description,
+		Prompt:      request.Prompt,
 	}
 
 	result, err := handler.service.Exec(ctx, serviceRequest)

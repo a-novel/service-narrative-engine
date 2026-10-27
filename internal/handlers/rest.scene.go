@@ -10,24 +10,26 @@ import (
 
 // Scene is the REST representation of a scene.
 type Scene struct {
-	ID        uuid.UUID `json:"id"`
-	ProjectID uuid.UUID `json:"projectID"`
-	Position  int       `json:"position"`
-	Title     string    `json:"title"`
-	Synopsis  string    `json:"synopsis"`
-	Revision  int       `json:"revision"`
-	UpdatedAt time.Time `json:"updatedAt"`
+	ID          uuid.UUID `json:"id"`
+	ProjectID   uuid.UUID `json:"projectID"`
+	Position    int       `json:"position"`
+	Title       string    `json:"title"`
+	Color       string    `json:"color"`
+	Description string    `json:"description"`
+	Prompt      string    `json:"prompt"`
+	UpdatedAt   time.Time `json:"updatedAt"`
 }
 
 func loadScene(scene *core.Scene) Scene {
 	return Scene{
-		ID:        scene.ID,
-		ProjectID: scene.ProjectID,
-		Position:  scene.Position,
-		Title:     scene.Title,
-		Synopsis:  scene.Synopsis,
-		Revision:  scene.Revision,
-		UpdatedAt: scene.UpdatedAt,
+		ID:          scene.ID,
+		ProjectID:   scene.ProjectID,
+		Position:    scene.Position,
+		Title:       scene.Title,
+		Color:       scene.Color,
+		Description: scene.Description,
+		Prompt:      scene.Prompt,
+		UpdatedAt:   scene.UpdatedAt,
 	}
 }
 

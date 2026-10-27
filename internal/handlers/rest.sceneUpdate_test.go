@@ -23,10 +23,11 @@ func TestRestSceneUpdate(t *testing.T) {
 		t.Helper()
 
 		return newRequest(t, http.MethodPut, "/v1/scene", map[string]any{
-			"id":       sceneID,
-			"revision": 1,
-			"title":    "Ouverture",
-			"synopsis": "Marie attend.",
+			"id":          sceneID,
+			"title":       "Ouverture",
+			"color":       "#e0457b",
+			"description": "Marie attend.",
+			"prompt":      "Lent.",
 		})
 	}
 
@@ -84,16 +85,6 @@ func TestRestSceneUpdate(t *testing.T) {
 			expectStatus: http.StatusNotFound,
 		},
 		{
-			name: "Error/RevisionConflict",
-
-			request: validRequest,
-
-			serviceCalled: true,
-			serviceErr:    core.ErrRevisionConflict,
-
-			expectStatus: http.StatusConflict,
-		},
-		{
 			name: "Error/Internal",
 
 			request: validRequest,
@@ -119,11 +110,12 @@ func TestRestSceneUpdate(t *testing.T) {
 
 				service.EXPECT().
 					Exec(mock.Anything, &core.SceneUpdateRequest{
-						OwnerID:  ownerID,
-						ID:       sceneID,
-						Revision: 1,
-						Title:    "Ouverture",
-						Synopsis: "Marie attend.",
+						OwnerID:     ownerID,
+						ID:          sceneID,
+						Title:       "Ouverture",
+						Color:       "#e0457b",
+						Description: "Marie attend.",
+						Prompt:      "Lent.",
 					}).
 					Return(resp, testCase.serviceErr)
 			}

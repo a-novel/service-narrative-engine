@@ -20,10 +20,12 @@ type RestSceneCreateService interface {
 
 // RestSceneCreateRequest is the JSON body the create-scene endpoint accepts.
 type RestSceneCreateRequest struct {
-	ProjectID uuid.UUID `json:"projectID"`
-	After     uuid.UUID `json:"after"`
-	Title     string    `json:"title"`
-	Synopsis  string    `json:"synopsis"`
+	ProjectID   uuid.UUID `json:"projectID"`
+	After       uuid.UUID `json:"after"`
+	Title       string    `json:"title"`
+	Color       string    `json:"color"`
+	Description string    `json:"description"`
+	Prompt      string    `json:"prompt"`
 }
 
 // RestSceneCreate is the HTTP handler for the create-scene endpoint. It responds 201 with the scene at
@@ -58,11 +60,13 @@ func (handler *RestSceneCreate) ServeHTTP(w http.ResponseWriter, r *http.Request
 	}
 
 	serviceRequest := &core.SceneCreateRequest{
-		OwnerID:   ownerID,
-		ProjectID: request.ProjectID,
-		After:     request.After,
-		Title:     request.Title,
-		Synopsis:  request.Synopsis,
+		OwnerID:     ownerID,
+		ProjectID:   request.ProjectID,
+		After:       request.After,
+		Title:       request.Title,
+		Color:       request.Color,
+		Description: request.Description,
+		Prompt:      request.Prompt,
 	}
 
 	result, err := handler.service.Exec(ctx, serviceRequest)

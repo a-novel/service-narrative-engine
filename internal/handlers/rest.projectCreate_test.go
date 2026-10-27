@@ -26,7 +26,7 @@ func TestRestProjectCreate(t *testing.T) {
 			"title":    "Les Heures claires",
 			"premise":  "Marie attend.",
 			"language": "fr",
-			"scenes":   []any{map[string]any{"title": "Ouverture"}},
+			"scenes":   []any{map[string]any{"title": "Ouverture", "color": "#e0457b"}},
 		})
 	}
 
@@ -115,7 +115,7 @@ func TestRestProjectCreate(t *testing.T) {
 						Title:    "Les Heures claires",
 						Premise:  "Marie attend.",
 						Language: "fr",
-						Scenes:   []core.ProjectCreateScene{{Title: "Ouverture"}},
+						Scenes:   []core.ProjectCreateScene{{Title: "Ouverture", Color: "#e0457b"}},
 					}).
 					Return(resp, testCase.serviceErr)
 			}

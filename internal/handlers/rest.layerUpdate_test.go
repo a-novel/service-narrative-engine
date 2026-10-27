@@ -24,7 +24,6 @@ func TestRestLayerUpdate(t *testing.T) {
 
 		return newRequest(t, http.MethodPut, "/v1/layer", map[string]any{
 			"id":          layerID,
-			"revision":    1,
 			"name":        "Characters",
 			"description": "Who appears",
 		})
@@ -84,16 +83,6 @@ func TestRestLayerUpdate(t *testing.T) {
 			expectStatus: http.StatusNotFound,
 		},
 		{
-			name: "Error/RevisionConflict",
-
-			request: validRequest,
-
-			serviceCalled: true,
-			serviceErr:    core.ErrRevisionConflict,
-
-			expectStatus: http.StatusConflict,
-		},
-		{
 			name: "Error/Internal",
 
 			request: validRequest,
@@ -121,7 +110,6 @@ func TestRestLayerUpdate(t *testing.T) {
 					Exec(mock.Anything, &core.LayerUpdateRequest{
 						OwnerID:     ownerID,
 						ID:          layerID,
-						Revision:    1,
 						Name:        "Characters",
 						Description: "Who appears",
 					}).

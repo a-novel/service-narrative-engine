@@ -14,7 +14,6 @@ type Project struct {
 	Title     string    `json:"title"`
 	Premise   string    `json:"premise"`
 	Language  string    `json:"language"`
-	Revision  int       `json:"revision"`
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
 }
@@ -25,7 +24,6 @@ func loadProject(project *core.Project) Project {
 		Title:     project.Title,
 		Premise:   project.Premise,
 		Language:  project.Language,
-		Revision:  project.Revision,
 		CreatedAt: project.CreatedAt,
 		UpdatedAt: project.UpdatedAt,
 	}

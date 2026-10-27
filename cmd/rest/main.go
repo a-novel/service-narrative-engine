@@ -107,12 +107,12 @@ func main() {
 	)
 	serviceProjectGet := core.NewProjectGet(daoProjectSelect, daoSceneList, daoLayerList, daoCellList, cfg.Composer)
 	serviceProjectList := core.NewProjectList(daoProjectList)
-	serviceProjectUpdate := core.NewProjectUpdate(daoProjectUpdate, daoProjectSelect)
-	serviceProjectDelete := core.NewProjectDelete(daoProjectDelete, daoProjectSelect)
+	serviceProjectUpdate := core.NewProjectUpdate(daoProjectUpdate)
+	serviceProjectDelete := core.NewProjectDelete(daoProjectDelete)
 	serviceSceneCreate := core.NewSceneCreate(
 		daoProjectLock, daoSceneList, daoSceneInsert, daoSceneReorder, transactor, cfg.Composer,
 	)
-	serviceSceneUpdate := core.NewSceneUpdate(daoSceneUpdate, daoSceneSelect)
+	serviceSceneUpdate := core.NewSceneUpdate(daoSceneUpdate)
 	serviceSceneMove := core.NewSceneMove(
 		daoSceneSelect, daoProjectLock, daoSceneList, daoSceneReorder, transactor, cfg.Composer,
 	)
@@ -122,7 +122,7 @@ func main() {
 	serviceLayerCreate := core.NewLayerCreate(
 		daoProjectLock, daoLayerList, daoLayerInsert, daoLayerReorder, transactor, cfg.Composer,
 	)
-	serviceLayerUpdate := core.NewLayerUpdate(daoLayerUpdate, daoLayerSelect)
+	serviceLayerUpdate := core.NewLayerUpdate(daoLayerUpdate)
 	serviceLayerMove := core.NewLayerMove(
 		daoLayerSelect, daoProjectLock, daoLayerList, daoLayerReorder, transactor, cfg.Composer,
 	)

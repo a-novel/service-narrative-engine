@@ -77,11 +77,15 @@ func (handler *RestProjectCreate) ServeHTTP(w http.ResponseWriter, r *http.Reque
 
 // RestProjectCreateScene is a scene a new project starts with, such as one a preset seeds.
 type RestProjectCreateScene struct {
-	Title    string `json:"title"`
-	Synopsis string `json:"synopsis"`
+	Title       string `json:"title"`
+	Color       string `json:"color"`
+	Description string `json:"description"`
+	Prompt      string `json:"prompt"`
 }
 
 // loadProjectCreateScene adapts a seed scene of the request to lo.Map.
 func loadProjectCreateScene(scene RestProjectCreateScene, _ int) core.ProjectCreateScene {
-	return core.ProjectCreateScene{Title: scene.Title, Synopsis: scene.Synopsis}
+	return core.ProjectCreateScene{
+		Title: scene.Title, Color: scene.Color, Description: scene.Description, Prompt: scene.Prompt,
+	}
 }

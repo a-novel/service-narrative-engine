@@ -21,7 +21,6 @@ type RestLayerUpdateService interface {
 // RestLayerUpdateRequest is the JSON body the update-layer endpoint accepts.
 type RestLayerUpdateRequest struct {
 	ID          uuid.UUID `json:"id"`
-	Revision    int       `json:"revision"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
 }
@@ -60,7 +59,6 @@ func (handler *RestLayerUpdate) ServeHTTP(w http.ResponseWriter, r *http.Request
 	serviceRequest := &core.LayerUpdateRequest{
 		OwnerID:     ownerID,
 		ID:          request.ID,
-		Revision:    request.Revision,
 		Name:        request.Name,
 		Description: request.Description,
 	}

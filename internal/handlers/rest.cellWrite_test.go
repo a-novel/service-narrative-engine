@@ -23,10 +23,9 @@ func TestRestCellWrite(t *testing.T) {
 		t.Helper()
 
 		return newRequest(t, http.MethodPut, "/v1/cell", map[string]any{
-			"sceneID":  sceneID,
-			"layerID":  layerID,
-			"revision": 2,
-			"content":  coreCell.Content,
+			"sceneID": sceneID,
+			"layerID": layerID,
+			"content": coreCell.Content,
 		})
 	}
 
@@ -94,16 +93,6 @@ func TestRestCellWrite(t *testing.T) {
 			expectStatus: http.StatusNotFound,
 		},
 		{
-			name: "Error/RevisionConflict",
-
-			request: validRequest,
-
-			serviceCalled: true,
-			serviceErr:    core.ErrRevisionConflict,
-
-			expectStatus: http.StatusConflict,
-		},
-		{
 			name: "Error/Internal",
 
 			request: validRequest,
@@ -129,11 +118,10 @@ func TestRestCellWrite(t *testing.T) {
 
 				service.EXPECT().
 					Exec(mock.Anything, &core.CellWriteRequest{
-						OwnerID:  ownerID,
-						SceneID:  sceneID,
-						LayerID:  layerID,
-						Revision: 2,
-						Content:  coreCell.Content,
+						OwnerID: ownerID,
+						SceneID: sceneID,
+						LayerID: layerID,
+						Content: coreCell.Content,
 					}).
 					Return(resp, testCase.serviceErr)
 			}

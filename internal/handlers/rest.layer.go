@@ -16,7 +16,6 @@ type Layer struct {
 	Kind        string    `json:"kind"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
-	Revision    int       `json:"revision"`
 	UpdatedAt   time.Time `json:"updatedAt"`
 }
 
@@ -28,7 +27,6 @@ func loadLayer(layer *core.Layer) Layer {
 		Kind:        layer.Kind,
 		Name:        layer.Name,
 		Description: layer.Description,
-		Revision:    layer.Revision,
 		UpdatedAt:   layer.UpdatedAt,
 	}
 }

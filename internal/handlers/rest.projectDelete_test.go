@@ -22,7 +22,7 @@ func TestRestProjectDelete(t *testing.T) {
 	validRequest := func(t *testing.T) *http.Request {
 		t.Helper()
 
-		return newRequest(t, http.MethodDelete, "/v1/project?revision=1&id="+projectID.String(), nil)
+		return newRequest(t, http.MethodDelete, "/v1/project?id="+projectID.String(), nil)
 	}
 
 	testCases := []struct {
@@ -79,16 +79,6 @@ func TestRestProjectDelete(t *testing.T) {
 			expectStatus: http.StatusNotFound,
 		},
 		{
-			name: "Error/RevisionConflict",
-
-			request: validRequest,
-
-			serviceCalled: true,
-			serviceErr:    core.ErrRevisionConflict,
-
-			expectStatus: http.StatusConflict,
-		},
-		{
 			name: "Error/Internal",
 
 			request: validRequest,
@@ -113,7 +103,7 @@ func TestRestProjectDelete(t *testing.T) {
 				}
 
 				service.EXPECT().
-					Exec(mock.Anything, &core.ProjectDeleteRequest{OwnerID: ownerID, ID: projectID, Revision: 1}).
+					Exec(mock.Anything, &core.ProjectDeleteRequest{OwnerID: ownerID, ID: projectID}).
 					Return(resp, testCase.serviceErr)
 			}
 

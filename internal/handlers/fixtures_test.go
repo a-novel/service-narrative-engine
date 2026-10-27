@@ -32,38 +32,38 @@ var (
 
 	coreProject = &core.Project{
 		ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Premise: "Marie attend.", Language: "fr",
-		Revision: 1, CreatedAt: createdAt, UpdatedAt: updatedAt,
+		CreatedAt: createdAt, UpdatedAt: updatedAt,
 	}
 	jsonProject = map[string]any{
 		"id": projectID.String(), "title": "Les Heures claires", "premise": "Marie attend.", "language": "fr",
-		"revision": 1.0, "createdAt": "2021-01-01T00:00:00Z", "updatedAt": "2021-01-02T00:00:00Z",
+		"createdAt": "2021-01-01T00:00:00Z", "updatedAt": "2021-01-02T00:00:00Z",
 	}
 
 	coreScene = &core.Scene{
-		ID: sceneID, ProjectID: projectID, Position: 1, Title: "Ouverture", Synopsis: "Marie attend.",
-		Revision: 2, UpdatedAt: updatedAt,
+		ID: sceneID, ProjectID: projectID, Position: 1, Title: "Ouverture", Color: "#e0457b",
+		Description: "Marie attend.", Prompt: "Lent.", UpdatedAt: updatedAt,
 	}
 	jsonScene = map[string]any{
 		"id": sceneID.String(), "projectID": projectID.String(), "position": 1.0, "title": "Ouverture",
-		"synopsis": "Marie attend.", "revision": 2.0, "updatedAt": "2021-01-02T00:00:00Z",
+		"color": "#e0457b", "description": "Marie attend.", "prompt": "Lent.", "updatedAt": "2021-01-02T00:00:00Z",
 	}
 
 	coreLayer = &core.Layer{
 		ID: layerID, ProjectID: projectID, Position: 1, Kind: core.LayerKindNotes, Name: "Characters",
-		Description: "Who appears", Revision: 2, UpdatedAt: updatedAt,
+		Description: "Who appears", UpdatedAt: updatedAt,
 	}
 	jsonLayer = map[string]any{
 		"id": layerID.String(), "projectID": projectID.String(), "position": 1.0, "kind": "notes",
-		"name": "Characters", "description": "Who appears", "revision": 2.0, "updatedAt": "2021-01-02T00:00:00Z",
+		"name": "Characters", "description": "Who appears", "updatedAt": "2021-01-02T00:00:00Z",
 	}
 
 	coreCell = &core.Cell{
-		SceneID: sceneID, LayerID: layerID, Content: json.RawMessage(`{"text":"Marie"}`), Revision: 3,
+		SceneID: sceneID, LayerID: layerID, Content: json.RawMessage(`{"text":"Marie"}`),
 		UpdatedAt: updatedAt,
 	}
 	jsonCell = map[string]any{
 		"sceneID": sceneID.String(), "layerID": layerID.String(), "content": map[string]any{"text": "Marie"},
-		"revision": 3.0, "updatedAt": "2021-01-02T00:00:00Z",
+		"updatedAt": "2021-01-02T00:00:00Z",
 	}
 )
 

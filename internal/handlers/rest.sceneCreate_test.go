@@ -23,10 +23,12 @@ func TestRestSceneCreate(t *testing.T) {
 		t.Helper()
 
 		return newRequest(t, http.MethodPost, "/v1/scenes", map[string]any{
-			"projectID": projectID,
-			"after":     anchorID,
-			"title":     "Ouverture",
-			"synopsis":  "Marie attend.",
+			"projectID":   projectID,
+			"after":       anchorID,
+			"title":       "Ouverture",
+			"color":       "#e0457b",
+			"description": "Marie attend.",
+			"prompt":      "Lent.",
 		})
 	}
 
@@ -119,11 +121,13 @@ func TestRestSceneCreate(t *testing.T) {
 
 				service.EXPECT().
 					Exec(mock.Anything, &core.SceneCreateRequest{
-						OwnerID:   ownerID,
-						ProjectID: projectID,
-						After:     anchorID,
-						Title:     "Ouverture",
-						Synopsis:  "Marie attend.",
+						OwnerID:     ownerID,
+						ProjectID:   projectID,
+						After:       anchorID,
+						Title:       "Ouverture",
+						Color:       "#e0457b",
+						Description: "Marie attend.",
+						Prompt:      "Lent.",
 					}).
 					Return(resp, testCase.serviceErr)
 			}
