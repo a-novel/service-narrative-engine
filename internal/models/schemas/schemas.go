@@ -14,6 +14,8 @@ import (
 	"github.com/google/jsonschema-go/jsonschema"
 )
 
+// files holds every schema of the package, read from the files beside this one at build time.
+//
 //go:embed *.schema.json
 var files embed.FS
 
@@ -33,13 +35,15 @@ type Schema struct {
 	resolve func() (*jsonschema.Resolved, error)
 }
 
+// newSchema returns the schema in the embedded file name, compiled on its first use.
 func newSchema(name string) *Schema {
 	return &Schema{resolve: sync.OnceValues(func() (*jsonschema.Resolved, error) {
 		return resolve(name)
 	})}
 }
 
-// contentSchemas maps each layer kind to the schema of its cells.
+// contentSchemas maps each layer kind to the schema of its cells. The kind is the file name between
+// content. and .schema.json.
 var contentSchemas = loadContentSchemas()
 
 // Content returns the content schema of a layer kind.
@@ -74,6 +78,7 @@ func (schema *Schema) Validate(document json.RawMessage) error {
 	return nil
 }
 
+// loadContentSchemas finds every content schema among the embedded files, keyed by layer kind.
 func loadContentSchemas() map[string]*Schema {
 	names, err := fs.Glob(files, "content.*.schema.json")
 	if err != nil {
@@ -89,6 +94,8 @@ func loadContentSchemas() map[string]*Schema {
 	return loaded
 }
 
+// resolve compiles the schema in the embedded file name. A reference to another schema file loads it
+// from the embedded files too, by its name relative to [baseURI].
 func resolve(name string) (*jsonschema.Resolved, error) {
 	schema, err := load(name)
 	if err != nil {
@@ -103,6 +110,7 @@ func resolve(name string) (*jsonschema.Resolved, error) {
 	})
 }
 
+// load decodes the embedded file name as a JSON Schema, without resolving its references.
 func load(name string) (*jsonschema.Schema, error) {
 	data, err := files.ReadFile(name)
 	if err != nil {
