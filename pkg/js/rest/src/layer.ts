@@ -23,7 +23,6 @@ export const LayerSchema = z.object({
   kind: z.string(),
   name: z.string(),
   description: z.string(),
-  revision: z.int().positive(),
   updatedAt: z.iso.datetime().transform((value) => new Date(value)),
 });
 
@@ -34,7 +33,7 @@ export type Layer = z.infer<typeof LayerSchema>;
 export const LayerNameSchema = z.string().max(100).regex(/\S/);
 
 /** What a layer records, which may be empty. */
-export const LayerDescriptionSchema = z.string().max(1000);
+export const LayerDescriptionSchema = z.string().max(20000);
 
 /** The notes layer to add, after the layer `after` names, or first without it. */
 export const LayerCreateRequestSchema = z.object({
@@ -47,10 +46,9 @@ export const LayerCreateRequestSchema = z.object({
 /** The value {@link LayerCreateRequestSchema} validates. */
 export type LayerCreateRequest = z.infer<typeof LayerCreateRequestSchema>;
 
-/** The new fields of a layer, with the revision the caller read. An omitted description is cleared. */
+/** The new fields of a layer. An omitted description is cleared. */
 export const LayerUpdateRequestSchema = z.object({
   id: z.uuid(),
-  revision: z.int().positive(),
   name: LayerNameSchema,
   description: LayerDescriptionSchema.optional(),
 });
@@ -67,10 +65,9 @@ export const LayerMoveRequestSchema = z.object({
 /** The value {@link LayerMoveRequestSchema} validates. */
 export type LayerMoveRequest = z.infer<typeof LayerMoveRequestSchema>;
 
-/** The notes layer to delete, with the revision the caller read. */
+/** The notes layer to delete. */
 export const LayerDeleteRequestSchema = z.object({
   id: z.uuid(),
-  revision: z.int().positive(),
 });
 
 /** The value {@link LayerDeleteRequestSchema} validates. */
@@ -93,7 +90,7 @@ export async function layerCreate(
   });
 }
 
-/** Replaces the name and description of a layer. Throws on HTTP 404 for an unknown layer, 409 on a stale revision. */
+/** Replaces the name and description of a layer. Throws on HTTP 404 for an unknown layer. */
 export async function layerUpdate(
   api: NarrativeEngineApi,
   accessToken: string,
@@ -107,9 +104,8 @@ export async function layerUpdate(
 }
 
 /**
- * Moves a layer and returns every layer of its project in their new order, revisions unchanged.
- * Throws on HTTP 400 when `after` names the moved layer or none of the project, and 404 for an
- * unknown layer.
+ * Moves a layer and returns every layer of its project in their new order. Throws on HTTP 400 when
+ * `after` names the moved layer or none of the project, and 404 for an unknown layer.
  */
 export async function layerMove(
   api: NarrativeEngineApi,
@@ -125,15 +121,15 @@ export async function layerMove(
 
 /**
  * Deletes a notes layer with its cells and returns it as it was; the layers after it move up one
- * place. Throws on HTTP 404 for an unknown layer, 409 on a stale revision, and 422 for the manuscript
- * layer, which stays for the life of its project.
+ * place. Throws on HTTP 404 for an unknown layer, and 422 for the manuscript layer, which stays for
+ * the life of its project.
  */
 export async function layerDelete(
   api: NarrativeEngineApi,
   accessToken: string,
   request: LayerDeleteRequest
 ): Promise<Layer> {
-  const params = new URLSearchParams({ id: request.id, revision: `${request.revision}` });
+  const params = new URLSearchParams({ id: request.id });
   return await api.fetch(`/v1/layer?${params.toString()}`, LayerSchema, {
     method: "DELETE",
     headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },

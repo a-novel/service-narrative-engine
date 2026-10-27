@@ -1,7 +1,7 @@
 import type { NarrativeEngineApi } from "./api";
 import { CellSchema } from "./cell";
 import { LayerSchema } from "./layer";
-import { SceneSchema, SceneSynopsisSchema, SceneTitleSchema } from "./scene";
+import { SceneFieldsSchema, SceneSchema } from "./scene";
 
 import { HTTP_HEADERS } from "@a-novel-kit/nodelib-browser/http";
 
@@ -24,7 +24,6 @@ export const ProjectSchema = z.object({
   title: z.string(),
   premise: z.string(),
   language: LanguageSchema,
-  revision: z.int().positive(),
   createdAt: z.iso.datetime().transform((value) => new Date(value)),
   updatedAt: z.iso.datetime().transform((value) => new Date(value)),
 });
@@ -46,17 +45,14 @@ export type ProjectComposer = z.infer<typeof ProjectComposerSchema>;
 export const ProjectTitleSchema = z.string().max(200).regex(/\S/);
 
 /** What a project's narrative is about, which may be empty. */
-export const ProjectPremiseSchema = z.string().max(4000);
+export const ProjectPremiseSchema = z.string().max(20000);
 
 /** The project to create, with the scenes it starts with, in order. */
 export const ProjectCreateRequestSchema = z.object({
   title: ProjectTitleSchema,
   premise: ProjectPremiseSchema.optional(),
   language: LanguageSchema,
-  scenes: z
-    .array(z.object({ title: SceneTitleSchema.optional(), synopsis: SceneSynopsisSchema.optional() }))
-    .max(100)
-    .optional(),
+  scenes: z.array(SceneFieldsSchema).max(100).optional(),
 });
 
 /** The value {@link ProjectCreateRequestSchema} validates. */
@@ -79,10 +75,9 @@ export const ProjectListRequestSchema = z.object({
 /** The value {@link ProjectListRequestSchema} validates. */
 export type ProjectListRequest = z.infer<typeof ProjectListRequestSchema>;
 
-/** The new fields of a project, with the revision the caller read. An omitted premise is cleared. */
+/** The new fields of a project. An omitted premise is cleared. */
 export const ProjectUpdateRequestSchema = z.object({
   id: z.uuid(),
-  revision: z.int().positive(),
   title: ProjectTitleSchema,
   premise: ProjectPremiseSchema.optional(),
   language: LanguageSchema,
@@ -91,10 +86,9 @@ export const ProjectUpdateRequestSchema = z.object({
 /** The value {@link ProjectUpdateRequestSchema} validates. */
 export type ProjectUpdateRequest = z.infer<typeof ProjectUpdateRequestSchema>;
 
-/** The project to delete, with the revision the caller read. */
+/** The project to delete. */
 export const ProjectDeleteRequestSchema = z.object({
   id: z.uuid(),
-  revision: z.int().positive(),
 });
 
 /** The value {@link ProjectDeleteRequestSchema} validates. */
@@ -143,8 +137,7 @@ export async function projectList(
 }
 
 /**
- * Replaces the title, premise and language of a project. Throws on HTTP 404 for an unknown project,
- * 409 on a stale revision.
+ * Replaces the title, premise and language of a project. Throws on HTTP 404 for an unknown project.
  */
 export async function projectUpdate(
   api: NarrativeEngineApi,
@@ -160,14 +153,14 @@ export async function projectUpdate(
 
 /**
  * Deletes a project with its scenes, layers and cells, and returns it as it was. Throws on HTTP 404
- * for an unknown project, 409 on a stale revision.
+ * for an unknown project.
  */
 export async function projectDelete(
   api: NarrativeEngineApi,
   accessToken: string,
   request: ProjectDeleteRequest
 ): Promise<Project> {
-  const params = new URLSearchParams({ id: request.id, revision: `${request.revision}` });
+  const params = new URLSearchParams({ id: request.id });
   return await api.fetch(`/v1/project?${params.toString()}`, ProjectSchema, {
     method: "DELETE",
     headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },

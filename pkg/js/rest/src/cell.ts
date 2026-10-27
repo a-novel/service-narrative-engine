@@ -14,18 +14,16 @@ export const CellSchema = z.object({
   sceneID: z.uuid(),
   layerID: z.uuid(),
   content: z.record(z.string(), z.unknown()),
-  revision: z.int().positive(),
   updatedAt: z.iso.datetime().transform((value) => new Date(value)),
 });
 
 /** The value {@link CellSchema} validates. */
 export type Cell = z.infer<typeof CellSchema>;
 
-/** The content of a cell, with the revision the caller read: 0 for a cell nobody wrote yet. */
+/** The new content of a cell. */
 export const CellWriteRequestSchema = z.object({
   sceneID: z.uuid(),
   layerID: z.uuid(),
-  revision: z.int().min(0),
   content: z.union([ManuscriptContentSchema, NotesContentSchema]),
 });
 
@@ -33,9 +31,9 @@ export const CellWriteRequestSchema = z.object({
 export type CellWriteRequest = z.infer<typeof CellWriteRequestSchema>;
 
 /**
- * Writes a cell where a scene and a layer of the same project cross, and returns it. Throws on HTTP
- * 400 when the content breaks the schema of the layer's kind or weighs over 256 KiB, 404 when the
- * scene and the layer share no cell, and 409 when the cell moved past the revision read.
+ * Writes a cell where a scene and a layer of the same project cross, and returns it. The first write
+ * creates the cell. Throws on HTTP 400 when the content breaks the schema of the layer's kind or
+ * weighs over 2 MiB, and 404 when the scene and the layer share no cell.
  */
 export async function cellWrite(
   api: NarrativeEngineApi,

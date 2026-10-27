@@ -58,7 +58,7 @@ describe("layerCreate", () => {
     });
     const places = await layerCreate(api, accessToken, { projectID: project.id, name: "Places" });
 
-    expect(characters).toMatchObject({ kind: LayerKind.Notes, position: 1, description: "Who appears", revision: 1 });
+    expect(characters).toMatchObject({ kind: LayerKind.Notes, position: 1, description: "Who appears" });
     expect(places.position).toBe(0);
     await expect(layerNames()).resolves.toEqual(["Places", manuscript.name, "Characters"]);
 
@@ -77,43 +77,32 @@ describe("layerCreate", () => {
 });
 
 describe("layerUpdate", () => {
-  it("replaces the fields and raises the revision", async () => {
+  it("replaces the fields", async () => {
     const created = await layerCreate(api, accessToken, { projectID: project.id, after: manuscript.id, name: "Draft" });
 
     const layer = await layerUpdate(api, accessToken, {
       id: created.id,
-      revision: created.revision,
       name: "Characters",
       description: "Who appears",
     });
-    expect(layer).toMatchObject({ name: "Characters", description: "Who appears", revision: 2 });
+    expect(layer).toMatchObject({ name: "Characters", description: "Who appears" });
 
     await deleteLayers(layer);
   });
 
-  it("returns 409 for a stale revision", async () => {
-    const created = await layerCreate(api, accessToken, { projectID: project.id, after: manuscript.id, name: "Draft" });
-    const request = { id: created.id, revision: created.revision, name: "Renamed" };
-    await layerUpdate(api, accessToken, request);
-
-    await expectStatus(layerUpdate(api, accessToken, request), 409);
-
-    await deleteLayers(created);
-  });
-
   it("returns 404 for an absent layer", async () => {
-    await expectStatus(layerUpdate(api, accessToken, { id: ABSENT_ID, revision: 1, name: "Renamed" }), 404);
+    await expectStatus(layerUpdate(api, accessToken, { id: ABSENT_ID, name: "Renamed" }), 404);
   });
 });
 
 describe("layerMove", () => {
-  it("moves a layer and leaves the revisions alone", async () => {
+  it("moves a layer", async () => {
     const notes = await layerCreate(api, accessToken, { projectID: project.id, after: manuscript.id, name: "Notes" });
 
     const layers = await layerMove(api, accessToken, { id: notes.id });
-    expect(layers.map((layer) => [layer.position, layer.name, layer.revision])).toEqual([
-      [0, "Notes", 1],
-      [1, manuscript.name, 1],
+    expect(layers.map((layer) => [layer.position, layer.name])).toEqual([
+      [0, "Notes"],
+      [1, manuscript.name],
     ]);
 
     await deleteLayers(notes);
@@ -136,14 +125,5 @@ describe("layerDelete", () => {
 
   it("returns 422 for the manuscript layer", async () => {
     await expectStatus(layerDelete(api, accessToken, manuscript), 422);
-  });
-
-  it("returns 409 for a stale revision", async () => {
-    const created = await layerCreate(api, accessToken, { projectID: project.id, after: manuscript.id, name: "Draft" });
-    await layerUpdate(api, accessToken, { id: created.id, revision: created.revision, name: "Renamed" });
-
-    await expectStatus(layerDelete(api, accessToken, created), 409);
-
-    await deleteLayers(created);
   });
 });

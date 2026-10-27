@@ -26,18 +26,20 @@ describe("projectCreate", () => {
       title: "Les Heures claires",
       premise: "Marie attend.",
       language: Language.Fr,
-      scenes: [{ title: "Ouverture" }, { title: "Le thème", synopsis: "Paul ment." }],
+      scenes: [
+        { title: "Ouverture", color: "#4a90d9" },
+        { title: "Le thème", color: "#E0457B", description: "Paul ment.", prompt: "Lent." },
+      ],
     });
 
     expect(project).toMatchObject({
       title: "Les Heures claires",
       premise: "Marie attend.",
       language: "fr",
-      revision: 1,
     });
-    expect(project.scenes.map((scene) => [scene.position, scene.title, scene.synopsis])).toEqual([
-      [0, "Ouverture", ""],
-      [1, "Le thème", "Paul ment."],
+    expect(project.scenes.map((scene) => [scene.position, scene.title, scene.color, scene.description])).toEqual([
+      [0, "Ouverture", "#4a90d9", ""],
+      [1, "Le thème", "#e0457b", "Paul ment."],
     ]);
     expect(project.layers.map((layer) => layer.kind)).toEqual([LayerKind.Manuscript]);
     expect(project.cells).toEqual([]);
@@ -66,12 +68,11 @@ describe("projectGet", () => {
     const created = await projectCreate(api, accessToken, {
       title: "Clear Hours",
       language: Language.En,
-      scenes: [{ title: "Opening" }],
+      scenes: [{ title: "Opening", color: "#4a90d9" }],
     });
     const cell = await cellWrite(api, accessToken, {
       sceneID: created.scenes[0].id,
       layerID: created.layers[0].id,
-      revision: 0,
       content: { blocks: [{ id: "b1", kind: "narration", text: "It rained." }] },
     });
 
@@ -120,12 +121,11 @@ describe("projectList", () => {
 });
 
 describe("projectUpdate", () => {
-  it("replaces the fields and raises the revision", async () => {
+  it("replaces the fields", async () => {
     const created = await projectCreate(api, accessToken, { title: "Draft", language: Language.En });
 
     const project = await projectUpdate(api, accessToken, {
       id: created.id,
-      revision: created.revision,
       title: "Les Heures claires",
       premise: "Marie attend.",
       language: Language.Fr,
@@ -134,24 +134,13 @@ describe("projectUpdate", () => {
       title: "Les Heures claires",
       premise: "Marie attend.",
       language: "fr",
-      revision: 2,
     });
 
     await projectDelete(api, accessToken, project);
   });
 
-  it("returns 409 for a stale revision", async () => {
-    const created = await projectCreate(api, accessToken, { title: "Draft", language: Language.En });
-    const request = { id: created.id, revision: created.revision, title: "Renamed", language: Language.En };
-    const project = await projectUpdate(api, accessToken, request);
-
-    await expectStatus(projectUpdate(api, accessToken, request), 409);
-
-    await projectDelete(api, accessToken, project);
-  });
-
   it("returns 404 for an absent project", async () => {
-    const request = { id: ABSENT_ID, revision: 1, title: "Renamed", language: Language.En };
+    const request = { id: ABSENT_ID, title: "Renamed", language: Language.En };
     await expectStatus(projectUpdate(api, accessToken, request), 404);
   });
 });
@@ -162,19 +151,5 @@ describe("projectDelete", () => {
 
     await expect(projectDelete(api, accessToken, created)).resolves.toMatchObject({ id: created.id });
     await expectStatus(projectGet(api, accessToken, { id: created.id }), 404);
-  });
-
-  it("returns 409 for a stale revision", async () => {
-    const created = await projectCreate(api, accessToken, { title: "Draft", language: Language.En });
-    const project = await projectUpdate(api, accessToken, {
-      id: created.id,
-      revision: created.revision,
-      title: "Renamed",
-      language: Language.En,
-    });
-
-    await expectStatus(projectDelete(api, accessToken, created), 409);
-
-    await projectDelete(api, accessToken, project);
   });
 });

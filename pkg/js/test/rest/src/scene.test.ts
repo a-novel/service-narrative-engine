@@ -21,6 +21,7 @@ const api = new NarrativeEngineApi(process.env.REST_URL!);
 const accessToken = await superAdminAccessToken();
 
 const ABSENT_ID = "01920000-0000-7000-8000-000000000000";
+const COLOR = "#4a90d9";
 
 let project: ProjectComposer;
 
@@ -47,9 +48,14 @@ async function deleteScenes(...scenes: Scene[]): Promise<void> {
 
 describe("sceneCreate", () => {
   it("places a scene first, or after the scene it names", async () => {
-    const second = await sceneCreate(api, accessToken, { projectID: project.id, title: "Second" });
-    const first = await sceneCreate(api, accessToken, { projectID: project.id, title: "First" });
-    const third = await sceneCreate(api, accessToken, { projectID: project.id, after: second.id, title: "Third" });
+    const second = await sceneCreate(api, accessToken, { projectID: project.id, title: "Second", color: COLOR });
+    const first = await sceneCreate(api, accessToken, { projectID: project.id, title: "First", color: COLOR });
+    const third = await sceneCreate(api, accessToken, {
+      projectID: project.id,
+      after: second.id,
+      title: "Third",
+      color: COLOR,
+    });
 
     expect(first.position).toBe(0);
     expect(third.position).toBe(2);
@@ -59,52 +65,57 @@ describe("sceneCreate", () => {
   });
 
   it("returns 400 for an anchor outside the project", async () => {
-    await expectStatus(sceneCreate(api, accessToken, { projectID: project.id, after: ABSENT_ID }), 400);
+    await expectStatus(
+      sceneCreate(api, accessToken, { projectID: project.id, after: ABSENT_ID, title: "Scene", color: COLOR }),
+      400
+    );
   });
 
   it("returns 404 for an absent project", async () => {
-    await expectStatus(sceneCreate(api, accessToken, { projectID: ABSENT_ID }), 404);
+    await expectStatus(sceneCreate(api, accessToken, { projectID: ABSENT_ID, title: "Scene", color: COLOR }), 404);
   });
 });
 
 describe("sceneUpdate", () => {
-  it("replaces the fields and raises the revision", async () => {
-    const created = await sceneCreate(api, accessToken, { projectID: project.id, title: "Draft" });
+  it("replaces the fields", async () => {
+    const created = await sceneCreate(api, accessToken, { projectID: project.id, title: "Draft", color: COLOR });
 
     const scene = await sceneUpdate(api, accessToken, {
       id: created.id,
-      revision: created.revision,
       title: "Ouverture",
-      synopsis: "Marie attend.",
+      color: "#E0457B",
+      description: "Marie attend.",
+      prompt: "Lent.",
     });
-    expect(scene).toMatchObject({ title: "Ouverture", synopsis: "Marie attend.", revision: 2 });
+    expect(scene).toMatchObject({
+      title: "Ouverture",
+      color: "#e0457b",
+      description: "Marie attend.",
+      prompt: "Lent.",
+    });
 
     await deleteScenes(scene);
   });
 
-  it("returns 409 for a stale revision", async () => {
-    const created = await sceneCreate(api, accessToken, { projectID: project.id });
-    await sceneUpdate(api, accessToken, { id: created.id, revision: created.revision, title: "Renamed" });
-
-    await expectStatus(sceneUpdate(api, accessToken, { id: created.id, revision: created.revision }), 409);
-
-    await deleteScenes(created);
-  });
-
   it("returns 404 for an absent scene", async () => {
-    await expectStatus(sceneUpdate(api, accessToken, { id: ABSENT_ID, revision: 1 }), 404);
+    await expectStatus(sceneUpdate(api, accessToken, { id: ABSENT_ID, title: "Renamed", color: COLOR }), 404);
   });
 });
 
 describe("sceneMove", () => {
-  it("moves a scene and leaves the revisions alone", async () => {
-    const first = await sceneCreate(api, accessToken, { projectID: project.id, title: "First" });
-    const second = await sceneCreate(api, accessToken, { projectID: project.id, after: first.id, title: "Second" });
+  it("moves a scene", async () => {
+    const first = await sceneCreate(api, accessToken, { projectID: project.id, title: "First", color: COLOR });
+    const second = await sceneCreate(api, accessToken, {
+      projectID: project.id,
+      after: first.id,
+      title: "Second",
+      color: COLOR,
+    });
 
     const scenes = await sceneMove(api, accessToken, { id: first.id, after: second.id });
-    expect(scenes.map((scene) => [scene.position, scene.title, scene.revision])).toEqual([
-      [0, "Second", 1],
-      [1, "First", 1],
+    expect(scenes.map((scene) => [scene.position, scene.title])).toEqual([
+      [0, "Second"],
+      [1, "First"],
     ]);
 
     const back = await sceneMove(api, accessToken, { id: first.id });
@@ -116,7 +127,14 @@ describe("sceneMove", () => {
   it("keeps positions contiguous under concurrent moves", async () => {
     const scenes: Scene[] = [];
     for (let i = 0; i < 6; i++) {
-      scenes.push(await sceneCreate(api, accessToken, { projectID: project.id, after: scenes.at(-1)?.id }));
+      scenes.push(
+        await sceneCreate(api, accessToken, {
+          projectID: project.id,
+          after: scenes.at(-1)?.id,
+          title: "Scene",
+          color: COLOR,
+        })
+      );
     }
 
     await Promise.all(scenes.map((scene) => sceneMove(api, accessToken, { id: scene.id })));
@@ -129,7 +147,7 @@ describe("sceneMove", () => {
   });
 
   it("returns 400 for a scene placed after itself", async () => {
-    const scene = await sceneCreate(api, accessToken, { projectID: project.id });
+    const scene = await sceneCreate(api, accessToken, { projectID: project.id, title: "Scene", color: COLOR });
 
     await expectStatus(sceneMove(api, accessToken, { id: scene.id, after: scene.id }), 400);
 
@@ -143,8 +161,13 @@ describe("sceneMove", () => {
 
 describe("sceneDelete", () => {
   it("deletes the scene and closes the gap", async () => {
-    const first = await sceneCreate(api, accessToken, { projectID: project.id, title: "First" });
-    const second = await sceneCreate(api, accessToken, { projectID: project.id, after: first.id, title: "Second" });
+    const first = await sceneCreate(api, accessToken, { projectID: project.id, title: "First", color: COLOR });
+    const second = await sceneCreate(api, accessToken, {
+      projectID: project.id,
+      after: first.id,
+      title: "Second",
+      color: COLOR,
+    });
 
     await expect(sceneDelete(api, accessToken, first)).resolves.toMatchObject({ id: first.id });
 
@@ -154,16 +177,7 @@ describe("sceneDelete", () => {
     await deleteScenes(second);
   });
 
-  it("returns 409 for a stale revision", async () => {
-    const created = await sceneCreate(api, accessToken, { projectID: project.id });
-    await sceneUpdate(api, accessToken, { id: created.id, revision: created.revision, title: "Renamed" });
-
-    await expectStatus(sceneDelete(api, accessToken, created), 409);
-
-    await deleteScenes(created);
-  });
-
   it("returns 404 for an absent scene", async () => {
-    await expectStatus(sceneDelete(api, accessToken, { id: ABSENT_ID, revision: 1 }), 404);
+    await expectStatus(sceneDelete(api, accessToken, { id: ABSENT_ID }), 404);
   });
 });

@@ -10,37 +10,47 @@ export const SceneSchema = z.object({
   projectID: z.uuid(),
   position: z.int().min(0),
   title: z.string(),
-  synopsis: z.string(),
-  revision: z.int().positive(),
+  color: z.string(),
+  description: z.string(),
+  prompt: z.string(),
   updatedAt: z.iso.datetime().transform((value) => new Date(value)),
 });
 
 /** The value {@link SceneSchema} validates. */
 export type Scene = z.infer<typeof SceneSchema>;
 
-/** The title of a scene, which may be empty. */
-export const SceneTitleSchema = z.string().max(200);
+/** The title of a scene, which is not blank. */
+export const SceneTitleSchema = z.string().max(200).regex(/\S/);
 
-/** What happens in a scene, which may be empty. */
-export const SceneSynopsisSchema = z.string().max(4000);
+/** The color of a scene in the composer, as a `#rrggbb` hex code in either case. */
+export const SceneColorSchema = z.string().regex(/^#[0-9A-Fa-f]{6}$/);
+
+/** What a scene is for, written for the author. */
+export const SceneDescriptionSchema = z.string().max(20000);
+
+/** Extra instructions for the model when it writes about a scene. */
+export const ScenePromptSchema = z.string().max(20000);
+
+/** The fields of a scene: a required title and color, and an optional description and prompt. */
+export const SceneFieldsSchema = z.object({
+  title: SceneTitleSchema,
+  color: SceneColorSchema,
+  description: SceneDescriptionSchema.optional(),
+  prompt: ScenePromptSchema.optional(),
+});
 
 /** The scene to add, after the scene `after` names, or first without it. */
-export const SceneCreateRequestSchema = z.object({
+export const SceneCreateRequestSchema = SceneFieldsSchema.extend({
   projectID: z.uuid(),
   after: z.uuid().optional(),
-  title: SceneTitleSchema.optional(),
-  synopsis: SceneSynopsisSchema.optional(),
 });
 
 /** The value {@link SceneCreateRequestSchema} validates. */
 export type SceneCreateRequest = z.infer<typeof SceneCreateRequestSchema>;
 
-/** The new fields of a scene, with the revision the caller read. An omitted field is cleared. */
-export const SceneUpdateRequestSchema = z.object({
+/** The new fields of a scene. An omitted description or prompt is cleared. */
+export const SceneUpdateRequestSchema = SceneFieldsSchema.extend({
   id: z.uuid(),
-  revision: z.int().positive(),
-  title: SceneTitleSchema.optional(),
-  synopsis: SceneSynopsisSchema.optional(),
 });
 
 /** The value {@link SceneUpdateRequestSchema} validates. */
@@ -55,10 +65,9 @@ export const SceneMoveRequestSchema = z.object({
 /** The value {@link SceneMoveRequestSchema} validates. */
 export type SceneMoveRequest = z.infer<typeof SceneMoveRequestSchema>;
 
-/** The scene to delete, with the revision the caller read. */
+/** The scene to delete. */
 export const SceneDeleteRequestSchema = z.object({
   id: z.uuid(),
-  revision: z.int().positive(),
 });
 
 /** The value {@link SceneDeleteRequestSchema} validates. */
@@ -81,7 +90,7 @@ export async function sceneCreate(
   });
 }
 
-/** Replaces the title and synopsis of a scene. Throws on HTTP 404 for an unknown scene, 409 on a stale revision. */
+/** Replaces the title, color, description and prompt of a scene. Throws on HTTP 404 for an unknown scene. */
 export async function sceneUpdate(
   api: NarrativeEngineApi,
   accessToken: string,
@@ -95,9 +104,8 @@ export async function sceneUpdate(
 }
 
 /**
- * Moves a scene and returns every scene of its project in their new order, revisions unchanged.
- * Throws on HTTP 400 when `after` names the moved scene or none of the project, and 404 for an
- * unknown scene.
+ * Moves a scene and returns every scene of its project in their new order. Throws on HTTP 400 when
+ * `after` names the moved scene or none of the project, and 404 for an unknown scene.
  */
 export async function sceneMove(
   api: NarrativeEngineApi,
@@ -113,14 +121,14 @@ export async function sceneMove(
 
 /**
  * Deletes a scene with its cells and returns it as it was; the scenes after it move up one place.
- * Throws on HTTP 404 for an unknown scene, 409 on a stale revision.
+ * Throws on HTTP 404 for an unknown scene.
  */
 export async function sceneDelete(
   api: NarrativeEngineApi,
   accessToken: string,
   request: SceneDeleteRequest
 ): Promise<Scene> {
-  const params = new URLSearchParams({ id: request.id, revision: `${request.revision}` });
+  const params = new URLSearchParams({ id: request.id });
   return await api.fetch(`/v1/scene?${params.toString()}`, SceneSchema, {
     method: "DELETE",
     headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
