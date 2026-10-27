@@ -21,7 +21,7 @@ func TestSceneDelete(t *testing.T) {
 
 	errFoo := errors.New("foo")
 
-	validRequest := &core.SceneDeleteRequest{OwnerID: ownerID, ID: sceneID1, Revision: 1}
+	validRequest := &core.SceneDeleteRequest{OwnerID: ownerID, ID: sceneID1}
 
 	testCases := []struct {
 		name string
@@ -52,7 +52,7 @@ func TestSceneDelete(t *testing.T) {
 			reorderOrder: []uuid.UUID{sceneID2, sceneID3},
 			reorderMock:  &daoMock[[]*dao.Scene]{},
 
-			expect: &core.Scene{ID: sceneID1, ProjectID: projectID, Title: "Scene", Revision: 1, UpdatedAt: updatedAt},
+			expect: &core.Scene{ID: sceneID1, ProjectID: projectID, Title: "Scene", Color: sceneColor, UpdatedAt: updatedAt},
 		},
 		{
 			name: "Success/LastScene",
@@ -64,14 +64,7 @@ func TestSceneDelete(t *testing.T) {
 			deleteMock: &daoMock[*dao.Scene]{resp: daoScene(sceneID1, 0)},
 			listMock:   &daoMock[[]*dao.Scene]{},
 
-			expect: &core.Scene{ID: sceneID1, ProjectID: projectID, Title: "Scene", Revision: 1, UpdatedAt: updatedAt},
-		},
-		{
-			name: "Error/MissingRevision",
-
-			request: &core.SceneDeleteRequest{OwnerID: ownerID, ID: sceneID1},
-
-			expectErr: core.ErrInvalidRequest,
+			expect: &core.Scene{ID: sceneID1, ProjectID: projectID, Title: "Scene", Color: sceneColor, UpdatedAt: updatedAt},
 		},
 		{
 			name: "Error/NotFound",
@@ -81,17 +74,6 @@ func TestSceneDelete(t *testing.T) {
 			selectMock: &daoMock[*dao.Scene]{err: dao.ErrSceneSelectNotFound},
 
 			expectErr: core.ErrSceneNotFound,
-		},
-		{
-			name: "Error/RevisionConflict",
-
-			request: validRequest,
-
-			selectMock: &daoMock[*dao.Scene]{resp: daoScene(sceneID1, 0)},
-			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
-			deleteMock: &daoMock[*dao.Scene]{err: dao.ErrSceneDeleteNotFound},
-
-			expectErr: core.ErrRevisionConflict,
 		},
 		{
 			name: "Error/List",
@@ -153,7 +135,7 @@ func TestSceneDelete(t *testing.T) {
 
 			if testCase.deleteMock != nil {
 				mockDelete.EXPECT().
-					Exec(mock.Anything, &dao.SceneDeleteRequest{ID: sceneID1, OwnerID: ownerID, Revision: 1}).
+					Exec(mock.Anything, &dao.SceneDeleteRequest{ID: sceneID1, OwnerID: ownerID}).
 					Return(testCase.deleteMock.resp, testCase.deleteMock.err)
 			}
 

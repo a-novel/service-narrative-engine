@@ -16,6 +16,6 @@ const (
 	ComposerMaxLayersDefault = 20
 	// ComposerMaxSeedScenesDefault is the default of [Composer.MaxSeedScenes].
 	ComposerMaxSeedScenesDefault = 100
-	// ComposerMaxCellBytesDefault is the default of [Composer.MaxCellBytes], 256 KiB.
-	ComposerMaxCellBytesDefault = 256 << 10
+	// ComposerMaxCellBytesDefault is the default of [Composer.MaxCellBytes], 2 MiB.
+	ComposerMaxCellBytesDefault = 2 << 20
 )

@@ -41,16 +41,14 @@ type LayerDeleteDaoReorder interface {
 	Exec(ctx context.Context, request *dao.LayerReorderRequest) ([]*dao.Layer, error)
 }
 
-// LayerDeleteRequest names the layer to delete and the revision the caller read.
+// LayerDeleteRequest names the layer to delete.
 type LayerDeleteRequest struct {
-	OwnerID  uuid.UUID `validate:"required"`
-	ID       uuid.UUID `validate:"required"`
-	Revision int       `validate:"min=1"`
+	OwnerID uuid.UUID `validate:"required"`
+	ID      uuid.UUID `validate:"required"`
 }
 
 // LayerDelete deletes a notes layer with its cells, and closes the gap in the order. It refuses the
-// manuscript layer with [ErrManuscriptLayer], and answers [ErrRevisionConflict] when the layer
-// changed since the caller read it.
+// manuscript layer with [ErrManuscriptLayer].
 type LayerDelete struct {
 	daoSelect  LayerDeleteDaoSelect
 	daoLock    LayerDeleteDaoLock
@@ -88,7 +86,6 @@ func (service *LayerDelete) Exec(ctx context.Context, request *LayerDeleteReques
 	span.SetAttributes(
 		attribute.String("layer.id", request.ID.String()),
 		attribute.String("project.owner_id", request.OwnerID.String()),
-		attribute.Int("layer.revision", request.Revision),
 	)
 
 	err := validate.Struct(request)
@@ -117,14 +114,10 @@ func (service *LayerDelete) Exec(ctx context.Context, request *LayerDeleteReques
 			return fmt.Errorf("lock project: %w", err)
 		}
 
-		// The layer existed when selected, so a miss means its revision moved on.
-		deleted, err := service.dao.Exec(ctx, &dao.LayerDeleteRequest{
-			ID:       request.ID,
-			OwnerID:  request.OwnerID,
-			Revision: request.Revision,
-		})
+		// The lock serializes deletes, so a miss means a concurrent delete won.
+		deleted, err := service.dao.Exec(ctx, &dao.LayerDeleteRequest{ID: request.ID, OwnerID: request.OwnerID})
 		if errors.Is(err, dao.ErrLayerDeleteNotFound) {
-			err = errors.Join(err, ErrRevisionConflict)
+			err = errors.Join(err, ErrLayerNotFound)
 		}
 
 		if err != nil {

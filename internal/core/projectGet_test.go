@@ -19,7 +19,7 @@ func TestProjectGet(t *testing.T) {
 	errFoo := errors.New("foo")
 
 	content := json.RawMessage(`{"text":"Marie"}`)
-	cell := &dao.Cell{SceneID: sceneID1, LayerID: layerID2, Content: content, Revision: 1, UpdatedAt: updatedAt}
+	cell := &dao.Cell{SceneID: sceneID1, LayerID: layerID2, Content: content, UpdatedAt: updatedAt}
 
 	testCases := []struct {
 		name string
@@ -47,19 +47,19 @@ func TestProjectGet(t *testing.T) {
 			expect: &core.ProjectComposer{
 				Project: &core.Project{
 					ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr",
-					Revision: 1, CreatedAt: createdAt, UpdatedAt: updatedAt,
+					CreatedAt: createdAt, UpdatedAt: updatedAt,
 				},
 				Scenes: []*core.Scene{
-					{ID: sceneID1, ProjectID: projectID, Title: "Scene", Revision: 1, UpdatedAt: updatedAt},
+					{ID: sceneID1, ProjectID: projectID, Title: "Scene", Color: sceneColor, UpdatedAt: updatedAt},
 				},
 				Layers: []*core.Layer{
 					{
 						ID: layerID2, ProjectID: projectID, Kind: core.LayerKindNotes, Name: "Layer",
-						Revision: 1, UpdatedAt: updatedAt,
+						UpdatedAt: updatedAt,
 					},
 				},
 				Cells: []*core.Cell{
-					{SceneID: sceneID1, LayerID: layerID2, Content: content, Revision: 1, UpdatedAt: updatedAt},
+					{SceneID: sceneID1, LayerID: layerID2, Content: content, UpdatedAt: updatedAt},
 				},
 			},
 		},

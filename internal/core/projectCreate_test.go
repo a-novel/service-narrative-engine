@@ -27,7 +27,10 @@ func TestProjectCreate(t *testing.T) {
 		OwnerID:  ownerID,
 		Title:    "Les Heures claires",
 		Language: "fr",
-		Scenes:   []core.ProjectCreateScene{{Title: "Ouverture"}, {Title: "Le thème", Synopsis: "Paul ment."}},
+		Scenes: []core.ProjectCreateScene{
+			{Title: "Ouverture", Color: "#4A90D9"},
+			{Title: "Le thème", Color: "#e0457b", Description: "Paul ment.", Prompt: "Lent."},
+		},
 	}
 
 	testCases := []struct {
@@ -56,16 +59,16 @@ func TestProjectCreate(t *testing.T) {
 			expect: &core.ProjectComposer{
 				Project: &core.Project{
 					ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr",
-					Revision: 1, CreatedAt: createdAt, UpdatedAt: updatedAt,
+					CreatedAt: createdAt, UpdatedAt: updatedAt,
 				},
 				Scenes: []*core.Scene{
-					{ID: sceneID1, ProjectID: projectID, Position: 0, Title: "Scene", Revision: 1, UpdatedAt: updatedAt},
-					{ID: sceneID2, ProjectID: projectID, Position: 1, Title: "Scene", Revision: 1, UpdatedAt: updatedAt},
+					{ID: sceneID1, ProjectID: projectID, Position: 0, Title: "Scene", Color: sceneColor, UpdatedAt: updatedAt},
+					{ID: sceneID2, ProjectID: projectID, Position: 1, Title: "Scene", Color: sceneColor, UpdatedAt: updatedAt},
 				},
 				Layers: []*core.Layer{
 					{
 						ID: layerID1, ProjectID: projectID, Kind: core.LayerKindManuscript, Name: "Manuscript",
-						Revision: 1, UpdatedAt: updatedAt,
+						UpdatedAt: updatedAt,
 					},
 				},
 			},
@@ -81,12 +84,12 @@ func TestProjectCreate(t *testing.T) {
 			expect: &core.ProjectComposer{
 				Project: &core.Project{
 					ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr",
-					Revision: 1, CreatedAt: createdAt, UpdatedAt: updatedAt,
+					CreatedAt: createdAt, UpdatedAt: updatedAt,
 				},
 				Layers: []*core.Layer{
 					{
 						ID: layerID1, ProjectID: projectID, Kind: core.LayerKindManuscript, Name: "Manuscript",
-						Revision: 1, UpdatedAt: updatedAt,
+						UpdatedAt: updatedAt,
 					},
 				},
 			},
@@ -110,7 +113,9 @@ func TestProjectCreate(t *testing.T) {
 
 			request: &core.ProjectCreateRequest{
 				OwnerID: ownerID, Title: "Clear Hours", Language: "en",
-				Scenes: []core.ProjectCreateScene{{}, {}, {}},
+				Scenes: []core.ProjectCreateScene{
+					{Title: "Un", Color: sceneColor}, {Title: "Deux", Color: sceneColor}, {Title: "Trois", Color: sceneColor},
+				},
 			},
 
 			expectErr: core.ErrInvalidRequest,
@@ -185,7 +190,8 @@ func TestProjectCreate(t *testing.T) {
 					Exec(mock.Anything, mock.MatchedBy(func(req *dao.SceneInsertRequest) bool {
 						return req.ProjectID == projectID && req.Position == 0 &&
 							len(req.Scenes) == len(testCase.request.Scenes) &&
-							req.Scenes[1].Synopsis == testCase.request.Scenes[1].Synopsis
+							req.Scenes[0].Color == sceneColor &&
+							req.Scenes[1].Description == testCase.request.Scenes[1].Description
 					})).
 					Return(testCase.scenesMock.resp, testCase.scenesMock.err)
 			}

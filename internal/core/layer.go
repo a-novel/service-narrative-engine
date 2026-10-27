@@ -25,9 +25,7 @@ type Layer struct {
 	Kind        string
 	Name        string
 	Description string
-	// Revision counts the writes to the layer's own fields. A move leaves it unchanged.
-	Revision  int
-	UpdatedAt time.Time
+	UpdatedAt   time.Time
 }
 
 func newLayer(entity *dao.Layer, _ int) *Layer {
@@ -38,7 +36,6 @@ func newLayer(entity *dao.Layer, _ int) *Layer {
 		Kind:        entity.Kind,
 		Name:        entity.Name,
 		Description: entity.Description,
-		Revision:    entity.Revision,
 		UpdatedAt:   entity.UpdatedAt,
 	}
 }

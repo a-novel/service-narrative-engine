@@ -45,7 +45,7 @@ type LayerCreateRequest struct {
 	// After is the layer the new one follows. uuid.Nil places it first.
 	After       uuid.UUID
 	Name        string `validate:"required,notblank,max=100"`
-	Description string `validate:"max=1000"`
+	Description string `validate:"max=20000"`
 }
 
 // LayerCreate adds a notes layer to a project, at the place the caller names.

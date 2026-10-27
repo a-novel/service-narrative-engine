@@ -40,7 +40,7 @@ func TestProjectList(t *testing.T) {
 			expect: []*core.Project{
 				{
 					ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr",
-					Revision: 1, CreatedAt: createdAt, UpdatedAt: updatedAt,
+					CreatedAt: createdAt, UpdatedAt: updatedAt,
 				},
 			},
 		},

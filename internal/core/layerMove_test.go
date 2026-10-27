@@ -26,7 +26,7 @@ func TestLayerMove(t *testing.T) {
 	coreLayer := func(id uuid.UUID, position int) *core.Layer {
 		return &core.Layer{
 			ID: id, ProjectID: projectID, Position: position, Kind: core.LayerKindNotes, Name: "Layer",
-			Revision: 1, UpdatedAt: updatedAt,
+			UpdatedAt: updatedAt,
 		}
 	}
 

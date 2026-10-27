@@ -47,7 +47,7 @@ type SceneMoveRequest struct {
 }
 
 // SceneMove moves a scene within its project. It returns every scene of the project in their new
-// order. A move leaves the revisions unchanged.
+// order.
 type SceneMove struct {
 	daoSelect  SceneMoveDaoSelect
 	daoLock    SceneMoveDaoLock

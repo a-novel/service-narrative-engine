@@ -47,7 +47,7 @@ type LayerMoveRequest struct {
 }
 
 // LayerMove moves a layer within its project. It returns every layer of the project in their new
-// order. A move leaves the revisions unchanged.
+// order.
 type LayerMove struct {
 	daoSelect  LayerMoveDaoSelect
 	daoLock    LayerMoveDaoLock

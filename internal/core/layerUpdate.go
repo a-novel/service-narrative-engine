@@ -19,30 +19,21 @@ type LayerUpdateDao interface {
 	Exec(ctx context.Context, request *dao.LayerUpdateRequest) (*dao.Layer, error)
 }
 
-// LayerUpdateDaoSelect reads the layer when the write missed, to tell a deleted layer from a stale
-// revision.
-type LayerUpdateDaoSelect interface {
-	Exec(ctx context.Context, request *dao.LayerSelectRequest) (*dao.Layer, error)
-}
-
-// LayerUpdateRequest carries a layer's new fields and the revision the caller read.
+// LayerUpdateRequest carries a layer's new fields.
 type LayerUpdateRequest struct {
 	OwnerID     uuid.UUID `validate:"required"`
 	ID          uuid.UUID `validate:"required"`
-	Revision    int       `validate:"min=1"`
 	Name        string    `validate:"required,notblank,max=100"`
-	Description string    `validate:"max=1000"`
+	Description string    `validate:"max=20000"`
 }
 
-// LayerUpdate replaces a layer's name and description. It answers [ErrRevisionConflict] when the layer
-// changed since the caller read it.
+// LayerUpdate replaces a layer's name and description.
 type LayerUpdate struct {
-	dao       LayerUpdateDao
-	daoSelect LayerUpdateDaoSelect
+	dao LayerUpdateDao
 }
 
-func NewLayerUpdate(dao LayerUpdateDao, daoSelect LayerUpdateDaoSelect) *LayerUpdate {
-	return &LayerUpdate{dao: dao, daoSelect: daoSelect}
+func NewLayerUpdate(dao LayerUpdateDao) *LayerUpdate {
+	return &LayerUpdate{dao: dao}
 }
 
 func (service *LayerUpdate) Exec(ctx context.Context, request *LayerUpdateRequest) (*Layer, error) {
@@ -52,7 +43,6 @@ func (service *LayerUpdate) Exec(ctx context.Context, request *LayerUpdateReques
 	span.SetAttributes(
 		attribute.String("layer.id", request.ID.String()),
 		attribute.String("project.owner_id", request.OwnerID.String()),
-		attribute.Int("layer.revision", request.Revision),
 	)
 
 	err := validate.Struct(request)
@@ -63,13 +53,12 @@ func (service *LayerUpdate) Exec(ctx context.Context, request *LayerUpdateReques
 	entity, err := service.dao.Exec(ctx, &dao.LayerUpdateRequest{
 		ID:          request.ID,
 		OwnerID:     request.OwnerID,
-		Revision:    request.Revision,
 		Name:        request.Name,
 		Description: request.Description,
 		Now:         time.Now(),
 	})
 	if errors.Is(err, dao.ErrLayerUpdateNotFound) {
-		err = service.missed(ctx, request.ID, request.OwnerID, err)
+		err = errors.Join(err, ErrLayerNotFound)
 	}
 
 	if err != nil {
@@ -77,21 +66,4 @@ func (service *LayerUpdate) Exec(ctx context.Context, request *LayerUpdateReques
 	}
 
 	return newLayer(entity, 0), nil
-}
-
-// missed tells why the write matched no row: the layer is gone, or its revision moved on.
-func (service *LayerUpdate) missed(ctx context.Context, id, ownerID uuid.UUID, err error) error {
-	ctx, span := otel.Tracer().Start(ctx, "core.LayerUpdate(missed)")
-	defer span.End()
-
-	_, selectErr := service.daoSelect.Exec(ctx, &dao.LayerSelectRequest{ID: id, OwnerID: ownerID})
-	if errors.Is(selectErr, dao.ErrLayerSelectNotFound) {
-		return otel.ReportError(span, errors.Join(err, ErrLayerNotFound))
-	}
-
-	if selectErr != nil {
-		return otel.ReportError(span, fmt.Errorf("select layer: %w", selectErr))
-	}
-
-	return otel.ReportError(span, errors.Join(err, ErrRevisionConflict))
 }

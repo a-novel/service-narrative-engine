@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -44,15 +45,18 @@ type ProjectCreateDaoScenes interface {
 
 // ProjectCreateScene is a scene a new project starts with, such as one a preset seeds.
 type ProjectCreateScene struct {
-	Title    string `validate:"max=200"`
-	Synopsis string `validate:"max=4000"`
+	Title string `validate:"required,notblank,max=200"`
+	// Color is the scene's color in the composer, as a #rrggbb hex code in either case.
+	Color       string `validate:"required,len=7,hexcolor"`
+	Description string `validate:"max=20000"`
+	Prompt      string `validate:"max=20000"`
 }
 
 // ProjectCreateRequest carries a new project and the scenes it starts with.
 type ProjectCreateRequest struct {
 	OwnerID uuid.UUID `validate:"required"`
 	Title   string    `validate:"required,notblank,max=200"`
-	Premise string    `validate:"max=4000"`
+	Premise string    `validate:"max=20000"`
 	// Language is the language the project is written in.
 	Language string `validate:"required,oneof=en fr"`
 	// Scenes are the scenes the project starts with, in order.
@@ -172,6 +176,9 @@ func (service *ProjectCreate) Exec(ctx context.Context, request *ProjectCreateRe
 // seedScene adapts the scenes of a request to lo.Map, giving each the ID at its index.
 func seedScene(ids []uuid.UUID) func(scene ProjectCreateScene, index int) dao.SceneInsertItem {
 	return func(scene ProjectCreateScene, index int) dao.SceneInsertItem {
-		return dao.SceneInsertItem{ID: ids[index], Title: scene.Title, Synopsis: scene.Synopsis}
+		return dao.SceneInsertItem{
+			ID: ids[index], Title: scene.Title, Color: strings.ToLower(scene.Color),
+			Description: scene.Description, Prompt: scene.Prompt,
+		}
 	}
 }

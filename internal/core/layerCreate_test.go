@@ -56,7 +56,7 @@ func TestLayerCreate(t *testing.T) {
 
 			expect: &core.Layer{
 				ID: layerID3, ProjectID: projectID, Position: 2, Kind: core.LayerKindNotes, Name: "Layer",
-				Revision: 1, UpdatedAt: updatedAt,
+				UpdatedAt: updatedAt,
 			},
 		},
 		{
@@ -72,7 +72,7 @@ func TestLayerCreate(t *testing.T) {
 
 			expect: &core.Layer{
 				ID: layerID3, ProjectID: projectID, Position: 1, Kind: core.LayerKindNotes, Name: "Layer",
-				Revision: 1, UpdatedAt: updatedAt,
+				UpdatedAt: updatedAt,
 			},
 		},
 		{
@@ -88,7 +88,7 @@ func TestLayerCreate(t *testing.T) {
 
 			expect: &core.Layer{
 				ID: layerID3, ProjectID: projectID, Position: 0, Kind: core.LayerKindNotes, Name: "Layer",
-				Revision: 1, UpdatedAt: updatedAt,
+				UpdatedAt: updatedAt,
 			},
 		},
 		{

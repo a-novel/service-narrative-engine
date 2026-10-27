@@ -25,7 +25,7 @@ func TestSceneMove(t *testing.T) {
 
 	coreScene := func(id uuid.UUID, position int) *core.Scene {
 		return &core.Scene{
-			ID: id, ProjectID: projectID, Position: position, Title: "Scene", Revision: 1, UpdatedAt: updatedAt,
+			ID: id, ProjectID: projectID, Position: position, Title: "Scene", Color: sceneColor, UpdatedAt: updatedAt,
 		}
 	}
 

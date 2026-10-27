@@ -18,9 +18,6 @@ var (
 	// ErrCellNotFound is returned when the scene and the layer of a cell belong to different
 	// projects.
 	ErrCellNotFound = errors.New("cell not found")
-	// ErrRevisionConflict is returned by a write that names a revision the stored data has moved
-	// past. The caller reads the data again before it retries.
-	ErrRevisionConflict = errors.New("revision conflict")
 	// ErrProjectFull is returned when a project already holds as many scenes or layers as it may.
 	ErrProjectFull = errors.New("project full")
 	// ErrManuscriptLayer is returned by a write the manuscript layer refuses: it is unique and

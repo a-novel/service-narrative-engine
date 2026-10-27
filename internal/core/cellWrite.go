@@ -32,19 +32,17 @@ type CellWriteDao interface {
 	Exec(ctx context.Context, request *dao.CellUpsertRequest) (*dao.Cell, error)
 }
 
-// CellWriteRequest carries a cell's new content and the revision the caller read.
+// CellWriteRequest carries a cell's new content.
 type CellWriteRequest struct {
 	OwnerID uuid.UUID `validate:"required"`
 	SceneID uuid.UUID `validate:"required"`
 	LayerID uuid.UUID `validate:"required"`
-	// Revision is the revision the caller read, 0 for a cell it has never seen.
-	Revision int `validate:"min=0"`
 	// Content is a JSON document that follows the content schema of the layer's kind.
 	Content json.RawMessage `validate:"required"`
 }
 
 // CellWrite writes the content of a cell, which it validates against the content schema of the
-// layer's kind. It answers [ErrRevisionConflict] when the cell changed since the caller read it.
+// layer's kind. The first write creates the cell.
 type CellWrite struct {
 	daoScene CellWriteDaoScene
 	daoLayer CellWriteDaoLayer
@@ -66,7 +64,6 @@ func (service *CellWrite) Exec(ctx context.Context, request *CellWriteRequest) (
 		attribute.String("cell.scene_id", request.SceneID.String()),
 		attribute.String("cell.layer_id", request.LayerID.String()),
 		attribute.String("project.owner_id", request.OwnerID.String()),
-		attribute.Int("cell.revision", request.Revision),
 		attribute.Int("cell.size", len(request.Content)),
 	)
 
@@ -109,16 +106,11 @@ func (service *CellWrite) Exec(ctx context.Context, request *CellWriteRequest) (
 	}
 
 	entity, err := service.dao.Exec(ctx, &dao.CellUpsertRequest{
-		SceneID:  request.SceneID,
-		LayerID:  request.LayerID,
-		Revision: request.Revision,
-		Content:  request.Content,
-		Now:      time.Now(),
+		SceneID: request.SceneID,
+		LayerID: request.LayerID,
+		Content: request.Content,
+		Now:     time.Now(),
 	})
-	if errors.Is(err, dao.ErrCellUpsertNotFound) {
-		err = errors.Join(err, ErrRevisionConflict)
-	}
-
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("write cell: %w", err))
 	}

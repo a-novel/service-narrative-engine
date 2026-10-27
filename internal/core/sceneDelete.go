@@ -41,15 +41,13 @@ type SceneDeleteDaoReorder interface {
 	Exec(ctx context.Context, request *dao.SceneReorderRequest) ([]*dao.Scene, error)
 }
 
-// SceneDeleteRequest names the scene to delete and the revision the caller read.
+// SceneDeleteRequest names the scene to delete.
 type SceneDeleteRequest struct {
-	OwnerID  uuid.UUID `validate:"required"`
-	ID       uuid.UUID `validate:"required"`
-	Revision int       `validate:"min=1"`
+	OwnerID uuid.UUID `validate:"required"`
+	ID      uuid.UUID `validate:"required"`
 }
 
-// SceneDelete deletes a scene with its cells, and closes the gap in the order. It answers
-// [ErrRevisionConflict] when the scene changed since the caller read it.
+// SceneDelete deletes a scene with its cells, and closes the gap in the order.
 type SceneDelete struct {
 	daoSelect  SceneDeleteDaoSelect
 	daoLock    SceneDeleteDaoLock
@@ -87,7 +85,6 @@ func (service *SceneDelete) Exec(ctx context.Context, request *SceneDeleteReques
 	span.SetAttributes(
 		attribute.String("scene.id", request.ID.String()),
 		attribute.String("project.owner_id", request.OwnerID.String()),
-		attribute.Int("scene.revision", request.Revision),
 	)
 
 	err := validate.Struct(request)
@@ -112,14 +109,10 @@ func (service *SceneDelete) Exec(ctx context.Context, request *SceneDeleteReques
 			return fmt.Errorf("lock project: %w", err)
 		}
 
-		// The scene existed when selected, so a miss means its revision moved on.
-		deleted, err := service.dao.Exec(ctx, &dao.SceneDeleteRequest{
-			ID:       request.ID,
-			OwnerID:  request.OwnerID,
-			Revision: request.Revision,
-		})
+		// The lock serializes deletes, so a miss means a concurrent delete won.
+		deleted, err := service.dao.Exec(ctx, &dao.SceneDeleteRequest{ID: request.ID, OwnerID: request.OwnerID})
 		if errors.Is(err, dao.ErrSceneDeleteNotFound) {
-			err = errors.Join(err, ErrRevisionConflict)
+			err = errors.Join(err, ErrSceneNotFound)
 		}
 
 		if err != nil {

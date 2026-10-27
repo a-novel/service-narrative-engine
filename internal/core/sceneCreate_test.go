@@ -48,20 +48,24 @@ func TestSceneCreate(t *testing.T) {
 		{
 			name: "Success/Last",
 
-			request: &core.SceneCreateRequest{OwnerID: ownerID, ProjectID: projectID, After: sceneID2, Title: "Scene"},
+			request: &core.SceneCreateRequest{
+				OwnerID: ownerID, ProjectID: projectID, After: sceneID2, Title: "Scene", Color: "#4A90D9",
+			},
 
 			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
 			listMock:   &daoMock[[]*dao.Scene]{resp: existing},
 			insertMock: &daoMock[[]*dao.Scene]{resp: []*dao.Scene{daoScene(sceneID3, 2)}},
 
 			expect: &core.Scene{
-				ID: sceneID3, ProjectID: projectID, Position: 2, Title: "Scene", Revision: 1, UpdatedAt: updatedAt,
+				ID: sceneID3, ProjectID: projectID, Position: 2, Title: "Scene", Color: sceneColor, UpdatedAt: updatedAt,
 			},
 		},
 		{
 			name: "Success/Between",
 
-			request: &core.SceneCreateRequest{OwnerID: ownerID, ProjectID: projectID, After: sceneID1, Title: "Scene"},
+			request: &core.SceneCreateRequest{
+				OwnerID: ownerID, ProjectID: projectID, After: sceneID1, Title: "Scene", Color: "#4A90D9",
+			},
 
 			lockMock:    &daoMock[*dao.Project]{resp: daoProject()},
 			listMock:    &daoMock[[]*dao.Scene]{resp: existing},
@@ -70,13 +74,13 @@ func TestSceneCreate(t *testing.T) {
 			reorderedBy: newBetween,
 
 			expect: &core.Scene{
-				ID: sceneID3, ProjectID: projectID, Position: 1, Title: "Scene", Revision: 1, UpdatedAt: updatedAt,
+				ID: sceneID3, ProjectID: projectID, Position: 1, Title: "Scene", Color: sceneColor, UpdatedAt: updatedAt,
 			},
 		},
 		{
 			name: "Success/First",
 
-			request: &core.SceneCreateRequest{OwnerID: ownerID, ProjectID: projectID, Title: "Scene"},
+			request: &core.SceneCreateRequest{OwnerID: ownerID, ProjectID: projectID, Title: "Scene", Color: "#4A90D9"},
 
 			lockMock:    &daoMock[*dao.Project]{resp: daoProject()},
 			listMock:    &daoMock[[]*dao.Scene]{resp: existing},
@@ -85,7 +89,7 @@ func TestSceneCreate(t *testing.T) {
 			reorderedBy: newFirst,
 
 			expect: &core.Scene{
-				ID: sceneID3, ProjectID: projectID, Position: 0, Title: "Scene", Revision: 1, UpdatedAt: updatedAt,
+				ID: sceneID3, ProjectID: projectID, Position: 0, Title: "Scene", Color: sceneColor, UpdatedAt: updatedAt,
 			},
 		},
 		{
@@ -98,7 +102,7 @@ func TestSceneCreate(t *testing.T) {
 		{
 			name: "Error/ProjectNotFound",
 
-			request: &core.SceneCreateRequest{OwnerID: ownerID, ProjectID: projectID},
+			request: &core.SceneCreateRequest{OwnerID: ownerID, ProjectID: projectID, Title: "Scene", Color: "#4A90D9"},
 
 			lockMock: &daoMock[*dao.Project]{err: dao.ErrProjectLockNotFound},
 
@@ -107,7 +111,7 @@ func TestSceneCreate(t *testing.T) {
 		{
 			name: "Error/ProjectFull",
 
-			request: &core.SceneCreateRequest{OwnerID: ownerID, ProjectID: projectID},
+			request: &core.SceneCreateRequest{OwnerID: ownerID, ProjectID: projectID, Title: "Scene", Color: "#4A90D9"},
 
 			lockMock: &daoMock[*dao.Project]{resp: daoProject()},
 			listMock: &daoMock[[]*dao.Scene]{resp: append(existing, daoScene(sceneID3, 2))},
@@ -117,7 +121,9 @@ func TestSceneCreate(t *testing.T) {
 		{
 			name: "Error/UnknownAnchor",
 
-			request: &core.SceneCreateRequest{OwnerID: ownerID, ProjectID: projectID, After: sceneID3},
+			request: &core.SceneCreateRequest{
+				OwnerID: ownerID, ProjectID: projectID, After: sceneID3, Title: "Scene", Color: "#4A90D9",
+			},
 
 			lockMock: &daoMock[*dao.Project]{resp: daoProject()},
 			listMock: &daoMock[[]*dao.Scene]{resp: existing},
@@ -127,7 +133,9 @@ func TestSceneCreate(t *testing.T) {
 		{
 			name: "Error/Insert",
 
-			request: &core.SceneCreateRequest{OwnerID: ownerID, ProjectID: projectID, After: sceneID2},
+			request: &core.SceneCreateRequest{
+				OwnerID: ownerID, ProjectID: projectID, After: sceneID2, Title: "Scene", Color: "#4A90D9",
+			},
 
 			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
 			listMock:   &daoMock[[]*dao.Scene]{resp: existing},
@@ -138,7 +146,7 @@ func TestSceneCreate(t *testing.T) {
 		{
 			name: "Error/Reorder",
 
-			request: &core.SceneCreateRequest{OwnerID: ownerID, ProjectID: projectID},
+			request: &core.SceneCreateRequest{OwnerID: ownerID, ProjectID: projectID, Title: "Scene", Color: "#4A90D9"},
 
 			lockMock:    &daoMock[*dao.Project]{resp: daoProject()},
 			listMock:    &daoMock[[]*dao.Scene]{resp: existing},
@@ -151,7 +159,7 @@ func TestSceneCreate(t *testing.T) {
 		{
 			name: "Error/Transaction",
 
-			request:    &core.SceneCreateRequest{OwnerID: ownerID, ProjectID: projectID},
+			request:    &core.SceneCreateRequest{OwnerID: ownerID, ProjectID: projectID, Title: "Scene", Color: "#4A90D9"},
 			transactor: transactiontest.NewFailingTransactor(errFoo),
 
 			expectErr: errFoo,
@@ -183,7 +191,8 @@ func TestSceneCreate(t *testing.T) {
 				mockInsert.EXPECT().
 					Exec(mock.Anything, mock.MatchedBy(func(req *dao.SceneInsertRequest) bool {
 						return req.ProjectID == projectID && req.Position == len(existing) &&
-							len(req.Scenes) == 1 && req.Scenes[0].Title == testCase.request.Title && recent(req.Now)
+							len(req.Scenes) == 1 && req.Scenes[0].Title == testCase.request.Title &&
+							req.Scenes[0].Color == sceneColor && recent(req.Now)
 					})).
 					Return(testCase.insertMock.resp, testCase.insertMock.err)
 			}

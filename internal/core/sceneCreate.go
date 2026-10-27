@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -43,9 +44,12 @@ type SceneCreateRequest struct {
 	OwnerID   uuid.UUID `validate:"required"`
 	ProjectID uuid.UUID `validate:"required"`
 	// After is the scene the new one follows. uuid.Nil places it first.
-	After    uuid.UUID
-	Title    string `validate:"max=200"`
-	Synopsis string `validate:"max=4000"`
+	After uuid.UUID
+	Title string `validate:"required,notblank,max=200"`
+	// Color is the scene's color in the composer, as a #rrggbb hex code in either case.
+	Color       string `validate:"required,len=7,hexcolor"`
+	Description string `validate:"max=20000"`
+	Prompt      string `validate:"max=20000"`
 }
 
 // SceneCreate adds a scene to a project, at the place the caller names.
@@ -130,8 +134,11 @@ func (service *SceneCreate) Exec(ctx context.Context, request *SceneCreateReques
 		inserted, err := service.daoInsert.Exec(ctx, &dao.SceneInsertRequest{
 			ProjectID: request.ProjectID,
 			Position:  len(scenes),
-			Scenes:    []dao.SceneInsertItem{{ID: id, Title: request.Title, Synopsis: request.Synopsis}},
-			Now:       time.Now(),
+			Scenes: []dao.SceneInsertItem{{
+				ID: id, Title: request.Title, Color: strings.ToLower(request.Color),
+				Description: request.Description, Prompt: request.Prompt,
+			}},
+			Now: time.Now(),
 		})
 		if err != nil {
 			return fmt.Errorf("insert scene: %w", err)

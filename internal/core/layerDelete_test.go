@@ -21,7 +21,7 @@ func TestLayerDelete(t *testing.T) {
 
 	errFoo := errors.New("foo")
 
-	validRequest := &core.LayerDeleteRequest{OwnerID: ownerID, ID: layerID1, Revision: 1}
+	validRequest := &core.LayerDeleteRequest{OwnerID: ownerID, ID: layerID1}
 
 	testCases := []struct {
 		name string
@@ -53,7 +53,7 @@ func TestLayerDelete(t *testing.T) {
 			reorderMock:  &daoMock[[]*dao.Layer]{},
 
 			expect: &core.Layer{
-				ID: layerID1, ProjectID: projectID, Kind: core.LayerKindNotes, Name: "Layer", Revision: 1,
+				ID: layerID1, ProjectID: projectID, Kind: core.LayerKindNotes, Name: "Layer",
 				UpdatedAt: updatedAt,
 			},
 		},
@@ -68,16 +68,9 @@ func TestLayerDelete(t *testing.T) {
 			listMock:   &daoMock[[]*dao.Layer]{},
 
 			expect: &core.Layer{
-				ID: layerID1, ProjectID: projectID, Kind: core.LayerKindNotes, Name: "Layer", Revision: 1,
+				ID: layerID1, ProjectID: projectID, Kind: core.LayerKindNotes, Name: "Layer",
 				UpdatedAt: updatedAt,
 			},
-		},
-		{
-			name: "Error/MissingRevision",
-
-			request: &core.LayerDeleteRequest{OwnerID: ownerID, ID: layerID1},
-
-			expectErr: core.ErrInvalidRequest,
 		},
 		{
 			name: "Error/ManuscriptLayer",
@@ -96,17 +89,6 @@ func TestLayerDelete(t *testing.T) {
 			selectMock: &daoMock[*dao.Layer]{err: dao.ErrLayerSelectNotFound},
 
 			expectErr: core.ErrLayerNotFound,
-		},
-		{
-			name: "Error/RevisionConflict",
-
-			request: validRequest,
-
-			selectMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID1, 0)},
-			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
-			deleteMock: &daoMock[*dao.Layer]{err: dao.ErrLayerDeleteNotFound},
-
-			expectErr: core.ErrRevisionConflict,
 		},
 		{
 			name: "Error/List",
@@ -168,7 +150,7 @@ func TestLayerDelete(t *testing.T) {
 
 			if testCase.deleteMock != nil {
 				mockDelete.EXPECT().
-					Exec(mock.Anything, &dao.LayerDeleteRequest{ID: layerID1, OwnerID: ownerID, Revision: 1}).
+					Exec(mock.Anything, &dao.LayerDeleteRequest{ID: layerID1, OwnerID: ownerID}).
 					Return(testCase.deleteMock.resp, testCase.deleteMock.err)
 			}
 

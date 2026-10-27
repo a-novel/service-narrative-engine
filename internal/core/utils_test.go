@@ -19,6 +19,9 @@ var (
 	layerID2  = uuid.MustParse("00000000-0000-0000-0000-000000000022")
 	layerID3  = uuid.MustParse("00000000-0000-0000-0000-000000000023")
 
+	// sceneColor is the color of every test scene.
+	sceneColor = "#4a90d9"
+
 	createdAt = time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
 	updatedAt = time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC)
 )
@@ -39,12 +42,14 @@ func recent(instant time.Time) bool {
 }
 
 func daoScene(id uuid.UUID, position int) *dao.Scene {
-	return &dao.Scene{ID: id, ProjectID: projectID, Position: position, Title: "Scene", Revision: 1, UpdatedAt: updatedAt}
+	return &dao.Scene{
+		ID: id, ProjectID: projectID, Position: position, Title: "Scene", Color: sceneColor, UpdatedAt: updatedAt,
+	}
 }
 
 func daoLayer(id uuid.UUID, position int, kind string) *dao.Layer {
 	return &dao.Layer{
-		ID: id, ProjectID: projectID, Position: position, Kind: kind, Name: "Layer", Revision: 1, UpdatedAt: updatedAt,
+		ID: id, ProjectID: projectID, Position: position, Kind: kind, Name: "Layer", UpdatedAt: updatedAt,
 	}
 }
 
@@ -55,6 +60,6 @@ func notesLayer(id uuid.UUID, position int) *dao.Layer {
 func daoProject() *dao.Project {
 	return &dao.Project{
 		ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr",
-		Revision: 1, CreatedAt: createdAt, UpdatedAt: updatedAt,
+		CreatedAt: createdAt, UpdatedAt: updatedAt,
 	}
 }
