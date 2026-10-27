@@ -10,22 +10,21 @@ info:
   title: Service Narrative Engine API
   summary: The backend of the Narrative Engine.
   description: |
-    The public REST API of the Narrative Engine, a workstation for writing narratives. It currently
-    serves CRUD operations on a placeholder `item` resource.
+    The public REST API of the Narrative Engine, a workstation for writing narratives.
   version: v0.0.0
   license:
     name: AGPL-3.0
     url: "https://raw.githubusercontent.com/a-novel/service-narrative-engine/refs/heads/master/LICENSE"
 
 paths:
-  /v0/ping:
+  /v1/ping:
     get:
       operationId: ping
       summary: Ping the server.
       description: |
         Checks whether the server is up and running. It always returns the same response.
 
-        Dependency health lives on the `/v0/healthcheck` endpoint.
+        Dependency health lives on the `/v1/healthcheck` endpoint.
       tags: [health]
       security: []
       responses:
@@ -34,13 +33,13 @@ paths:
         default:
           $ref: "#/components/responses/internalError"
 
-  /v0/healthcheck:
+  /v1/healthcheck:
     get:
       operationId: healthcheck
       summary: Health diagnosis of the server.
       description: |
         Probes every server dependency and reports whether each one answered. Returns HTTP 200
-        when every dependency is up, and HTTP 503 with the same report otherwise. `/v0/ping`
+        when every dependency is up, and HTTP 503 with the same report otherwise. `/v1/ping`
         checks the process alone.
       tags: [health]
       security: []
@@ -51,129 +50,6 @@ paths:
           $ref: "#/components/responses/tooManyRequests"
         "503":
           $ref: "#/components/responses/healthUnavailable"
-        default:
-          $ref: "#/components/responses/internalError"
-
-  /v0/items:
-    post:
-      operationId: itemCreate
-      summary: Create a new item.
-      description: |
-        Creates a new item with the given name and optional description.
-      tags: [item]
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/itemCreateRequest"
-      responses:
-        "201":
-          $ref: "#/components/responses/item"
-        "400":
-          $ref: "#/components/responses/badRequest"
-        "429":
-          $ref: "#/components/responses/tooManyRequests"
-        "503":
-          $ref: "#/components/responses/plannedDowntime"
-        default:
-          $ref: "#/components/responses/internalError"
-
-    get:
-      operationId: itemList
-      summary: List items.
-      description: |
-        Returns a page of items, newest first. To read the next page, pass the ID of the last item
-        received as `after`.
-      tags: [item]
-      security: []
-      parameters:
-        - $ref: "#/components/parameters/limit"
-        - $ref: "#/components/parameters/after"
-      responses:
-        "200":
-          $ref: "#/components/responses/itemList"
-        "400":
-          $ref: "#/components/responses/badRequest"
-        "429":
-          $ref: "#/components/responses/tooManyRequests"
-        "503":
-          $ref: "#/components/responses/plannedDowntime"
-        default:
-          $ref: "#/components/responses/internalError"
-
-  /v0/item:
-    get:
-      operationId: itemGet
-      summary: Get an item by ID.
-      description: |
-        Returns a single item by its unique identifier.
-      tags: [item]
-      security: []
-      parameters:
-        - $ref: "#/components/parameters/itemID"
-      responses:
-        "200":
-          $ref: "#/components/responses/item"
-        "400":
-          $ref: "#/components/responses/badRequest"
-        "404":
-          $ref: "#/components/responses/notFound"
-        "429":
-          $ref: "#/components/responses/tooManyRequests"
-        "503":
-          $ref: "#/components/responses/plannedDowntime"
-        default:
-          $ref: "#/components/responses/internalError"
-
-    put:
-      operationId: itemUpdate
-      summary: Update an item.
-      description: |
-        Updates the name and description of an existing item.
-      tags: [item]
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/itemUpdateRequest"
-      responses:
-        "200":
-          $ref: "#/components/responses/item"
-        "400":
-          $ref: "#/components/responses/badRequest"
-        "404":
-          $ref: "#/components/responses/notFound"
-        "429":
-          $ref: "#/components/responses/tooManyRequests"
-        "503":
-          $ref: "#/components/responses/plannedDowntime"
-        default:
-          $ref: "#/components/responses/internalError"
-
-    delete:
-      operationId: itemDelete
-      summary: Delete an item.
-      description: |
-        Permanently deletes an item by its unique identifier. Returns the deleted item.
-      tags: [item]
-      security: []
-      parameters:
-        - $ref: "#/components/parameters/itemID"
-      responses:
-        "200":
-          $ref: "#/components/responses/item"
-        "400":
-          $ref: "#/components/responses/badRequest"
-        "404":
-          $ref: "#/components/responses/notFound"
-        "429":
-          $ref: "#/components/responses/tooManyRequests"
-        "503":
-          $ref: "#/components/responses/plannedDowntime"
         default:
           $ref: "#/components/responses/internalError"
 
@@ -212,44 +88,6 @@ components:
             degraded:
               value: { "client:postgres": { "status": "down" } }
 
-    plannedDowntime:
-      description: |
-        The service is in a planned downtime and refuses work until operators end it. The platform
-        reads the announced window from the downtime document infra publishes.
-      content:
-        application/problem+json:
-          schema:
-            $ref: "#/components/schemas/plannedDowntimeProblem"
-
-    item:
-      description: An item resource.
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/item"
-
-    itemList:
-      description: A list of items.
-      content:
-        application/json:
-          schema:
-            type: array
-            items:
-              $ref: "#/components/schemas/item"
-
-    notFound:
-      description: |
-        The requested data was not found on the server.
-
-    badRequest:
-      description: |
-        The request sent to the server could not be parsed, or failed validation. A validation failure names
-        each invalid field and the rule it broke.
-      content:
-        application/problem+json:
-          schema:
-            $ref: "#/components/schemas/invalidRequest"
-
     tooManyRequests:
       description: |
         The caller sent too many requests to this route. Retry once `Retry-After` has elapsed.
@@ -263,42 +101,6 @@ components:
       description: Something unexpected happened.
 
   schemas:
-    invalidRequest:
-      type: object
-      description: |
-        An RFC 9457 problem details body whose tags name the request fields that failed validation. Field
-        paths and rule codes come from the API definition, never from the submitted values.
-      required: [type, title, status, tags]
-      additionalProperties: false
-      properties:
-        type:
-          type: string
-          description: The problem type; about:blank makes the title the HTTP status text.
-          const: about:blank
-        title:
-          type: string
-          description: The HTTP status text.
-          examples: [Bad Request]
-        status:
-          type: integer
-          description: The HTTP status code.
-          const: 400
-        tags:
-          type: object
-          description: Public details about the failure. Clients ignore tags they do not know.
-          required: [invalidFields]
-          additionalProperties: true
-          properties:
-            invalidFields:
-              type: object
-              description: |
-                Maps the path of each invalid field, in lower camel case with `.` for nesting and `[i]` for a
-                list item, to the validation rule it broke. Standard rules carry their usual name (required,
-                max); service rules name a domain check (notblank).
-              additionalProperties:
-                type: string
-              examples:
-                - { "name": "notblank" }
     plannedDowntimeProblem:
       type: object
       description: |
@@ -346,122 +148,3 @@ components:
           type: string
           description: Whether the server reached the dependency.
           enum: [up, down]
-
-    item:
-      type: object
-      description: A placeholder item resource.
-      required: [id, name, createdAt, updatedAt]
-      additionalProperties: false
-      examples:
-        - {
-            "id": "00000000-0000-0000-0000-000000000001",
-            "name": "My Item",
-            "description": "A short description.",
-            "createdAt": "2021-01-01T00:00:00Z",
-            "updatedAt": "2021-01-02T00:00:00Z",
-          }
-      properties:
-        id:
-          type: string
-          description: The unique identifier of the item.
-          format: uuid
-          examples:
-            - "00000000-0000-0000-0000-000000000001"
-        name:
-          type: string
-          description: The name of the item.
-          examples: ["My Item"]
-        description:
-          type: string
-          description: An optional description of the item.
-          examples: ["A short description."]
-        createdAt:
-          type: string
-          description: The timestamp at which the item was created.
-          format: date-time
-          examples: ["2021-01-01T00:00:00Z"]
-        updatedAt:
-          type: string
-          description: The timestamp at which the item was last updated.
-          format: date-time
-          examples: ["2021-01-02T00:00:00Z"]
-
-    itemCreateRequest:
-      type: object
-      description: Request body for creating a new item.
-      required: [name]
-      additionalProperties: false
-      examples:
-        - { "name": "My Item", "description": "A short description." }
-      properties:
-        name:
-          type: string
-          description: The name of the item.
-          examples: ["My Item"]
-        description:
-          type: string
-          description: An optional description of the item.
-          examples: ["A short description."]
-
-    itemUpdateRequest:
-      type: object
-      description: Request body for updating an existing item.
-      required: [id, name]
-      additionalProperties: false
-      examples:
-        - { "id": "00000000-0000-0000-0000-000000000001", "name": "Updated Item", "description": "New description." }
-      properties:
-        id:
-          type: string
-          description: The unique identifier of the item to update.
-          format: uuid
-          examples:
-            - "00000000-0000-0000-0000-000000000001"
-        name:
-          type: string
-          description: The new name of the item.
-          examples: ["Updated Item"]
-        description:
-          type: string
-          description: The new description of the item.
-          examples: ["New description."]
-
-    itemID:
-      type: string
-      description: The unique identifier of an item.
-      format: uuid
-      examples:
-        - "00000000-0000-0000-0000-000000000001"
-
-  parameters:
-    itemID:
-      name: id
-      in: query
-      description: The unique identifier of the item.
-      required: true
-      schema:
-        $ref: "#/components/schemas/itemID"
-
-    limit:
-      name: limit
-      in: query
-      description: >
-        Maximum number of items to return, between 1 and 100. When omitted, the
-        default page size (20) is used.
-      required: false
-      schema:
-        type: integer
-        minimum: 1
-        maximum: 100
-        default: 20
-        examples: [10]
-
-    after:
-      name: after
-      in: query
-      description: >
-        ID of the last item of the previous page. The page starts with the next older item, even
-        when that item was deleted since. When omitted, the page starts at the newest item.
-      required: false
-      schema:
-        $ref: "#/components/schemas/itemID"

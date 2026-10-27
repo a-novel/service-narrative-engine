@@ -89,7 +89,7 @@ var (
 // restDefaults keeps golib's REST defaults but for the versioned ping path.
 func restDefaults() httpf.ServerConfig {
 	defaults := httpf.ServerConfigDefault
-	defaults.Liveness = "/v0/ping"
+	defaults.Liveness = "/v1/ping"
 	defaults.Timeouts.Shutdown = TimeoutShutdownDefault
 
 	return defaults

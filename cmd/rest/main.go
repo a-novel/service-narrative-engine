@@ -23,8 +23,6 @@ import (
 
 	"github.com/a-novel/service-narrative-engine/internal/config"
 	"github.com/a-novel/service-narrative-engine/internal/config/env"
-	"github.com/a-novel/service-narrative-engine/internal/core"
-	"github.com/a-novel/service-narrative-engine/internal/dao"
 	"github.com/a-novel/service-narrative-engine/internal/handlers"
 )
 
@@ -56,36 +54,11 @@ func main() {
 	}
 
 	// =================================================================================================================
-	// DAO
-	// =================================================================================================================
-
-	daoItemCreate := dao.NewPgItemCreate()
-	daoItemGet := dao.NewPgItemGet()
-	daoItemList := dao.NewPgItemList()
-	daoItemUpdate := dao.NewPgItemUpdate()
-	daoItemDelete := dao.NewPgItemDelete()
-
-	// =================================================================================================================
-	// SERVICES
-	// =================================================================================================================
-
-	serviceItemCreate := core.NewItemCreate(daoItemCreate)
-	serviceItemGet := core.NewItemGet(daoItemGet)
-	serviceItemList := core.NewItemList(daoItemList)
-	serviceItemUpdate := core.NewItemUpdate(daoItemUpdate)
-	serviceItemDelete := core.NewItemDelete(daoItemDelete)
-
-	// =================================================================================================================
 	// HANDLERS
 	// =================================================================================================================
 
 	handlerPing := handlers.NewRestPing()
 	handlerHealth := handlers.NewRestHealth()
-	handlerItemCreate := handlers.NewRestItemCreate(serviceItemCreate, cfg.Logger)
-	handlerItemGet := handlers.NewRestItemGet(serviceItemGet, cfg.Logger)
-	handlerItemList := handlers.NewRestItemList(serviceItemList, cfg.Logger)
-	handlerItemUpdate := handlers.NewRestItemUpdate(serviceItemUpdate, cfg.Logger)
-	handlerItemDelete := handlers.NewRestItemDelete(serviceItemDelete, cfg.Logger)
 
 	// =================================================================================================================
 	// ROUTER
@@ -93,14 +66,9 @@ func main() {
 
 	router := httpf.NewRouter(cfg.Rest, cfg.Otel, cfg.RestLogger, cfg.App.DowntimeStart)
 
-	router.Route("/v0", func(api chi.Router) {
+	router.Route("/v1", func(api chi.Router) {
 		api.Get("/ping", handlerPing.ServeHTTP)
 		api.Get("/healthcheck", handlerHealth.ServeHTTP)
-		api.Post("/items", handlerItemCreate.ServeHTTP)
-		api.Get("/items", handlerItemList.ServeHTTP)
-		api.Get("/item", handlerItemGet.ServeHTTP)
-		api.Put("/item", handlerItemUpdate.ServeHTTP)
-		api.Delete("/item", handlerItemDelete.ServeHTTP)
 	})
 
 	// =================================================================================================================

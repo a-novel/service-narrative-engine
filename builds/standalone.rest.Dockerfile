@@ -30,7 +30,7 @@ COPY --from=builder /migrations /migrations
 
 # The healthcheck uses the wget of Alpine's BusyBox.
 HEALTHCHECK --interval=1s --timeout=5s --retries=10 --start-period=1s \
-  CMD ["wget", "-qO", "/dev/null", "http://localhost:8080/v0/ping"]
+  CMD ["wget", "-qO", "/dev/null", "http://localhost:8080/v1/ping"]
 
 ENV REST_PORT=8080
 
