@@ -18,15 +18,13 @@ import (
 var projectUpdateQuery string
 
 // ErrProjectUpdateNotFound is returned by [PgProjectUpdate.Exec] when no project with the ID belongs
-// to the owner at the revision.
-var ErrProjectUpdateNotFound = errors.New("project not found at this revision")
+// to the owner.
+var ErrProjectUpdateNotFound = errors.New("project not found")
 
 // ProjectUpdateRequest is the input to [PgProjectUpdate.Exec].
 type ProjectUpdateRequest struct {
-	ID      uuid.UUID
-	OwnerID uuid.UUID
-	// Revision is the revision the caller read.
-	Revision int
+	ID       uuid.UUID
+	OwnerID  uuid.UUID
 	Title    string
 	Premise  string
 	Language string
@@ -34,7 +32,7 @@ type ProjectUpdateRequest struct {
 	Now time.Time
 }
 
-// PgProjectUpdate replaces a project's own fields when the stored revision is the one the caller read.
+// PgProjectUpdate replaces a project's own fields.
 type PgProjectUpdate struct{}
 
 func NewPgProjectUpdate() *PgProjectUpdate {
@@ -54,8 +52,7 @@ func (dao *PgProjectUpdate) Exec(ctx context.Context, request *ProjectUpdateRequ
 
 	err = db.NewRaw(
 		projectUpdateQuery,
-		request.ID, request.OwnerID, request.Revision, request.Title,
-		request.Premise, request.Language, request.Now,
+		request.ID, request.OwnerID, request.Title, request.Premise, request.Language, request.Now,
 	).Scan(ctx, entity)
 	if errors.Is(err, sql.ErrNoRows) {
 		err = errors.Join(err, ErrProjectUpdateNotFound)

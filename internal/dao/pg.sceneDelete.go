@@ -17,18 +17,16 @@ import (
 var sceneDeleteQuery string
 
 // ErrSceneDeleteNotFound is returned by [PgSceneDelete.Exec] when no scene with the ID belongs to a
-// project of the owner at the revision.
-var ErrSceneDeleteNotFound = errors.New("scene not found at this revision")
+// project of the owner.
+var ErrSceneDeleteNotFound = errors.New("scene not found")
 
 // SceneDeleteRequest is the input to [PgSceneDelete.Exec].
 type SceneDeleteRequest struct {
 	ID      uuid.UUID
 	OwnerID uuid.UUID
-	// Revision is the revision the caller read.
-	Revision int
 }
 
-// PgSceneDelete removes a scene with its cells when the stored revision is the one the caller read.
+// PgSceneDelete removes a scene with its cells.
 type PgSceneDelete struct{}
 
 func NewPgSceneDelete() *PgSceneDelete {
@@ -46,7 +44,7 @@ func (dao *PgSceneDelete) Exec(ctx context.Context, request *SceneDeleteRequest)
 
 	entity := &Scene{}
 
-	err = db.NewRaw(sceneDeleteQuery, request.ID, request.OwnerID, request.Revision).Scan(ctx, entity)
+	err = db.NewRaw(sceneDeleteQuery, request.ID, request.OwnerID).Scan(ctx, entity)
 	if errors.Is(err, sql.ErrNoRows) {
 		err = errors.Join(err, ErrSceneDeleteNotFound)
 	}

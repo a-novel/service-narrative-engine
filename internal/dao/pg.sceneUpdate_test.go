@@ -28,25 +28,21 @@ func TestPgSceneUpdate(t *testing.T) {
 			name: "Success",
 
 			request: &dao.SceneUpdateRequest{
-				ID: sceneID2, OwnerID: ownerID, Revision: 1, Title: "Le mensonge", Synopsis: "Paul ment.", Now: now,
+				ID: sceneID2, OwnerID: ownerID, Title: "Le mensonge", Color: "#e0457b", Description: "Paul ment.",
+				Prompt: "Garder le suspense.", Now: now,
 			},
 
 			expect: &dao.Scene{
-				ID: sceneID2, ProjectID: projectID, Position: 1, Title: "Le mensonge", Synopsis: "Paul ment.",
-				Revision: 2, UpdatedAt: now,
+				ID: sceneID2, ProjectID: projectID, Position: 1, Title: "Le mensonge", Color: "#e0457b",
+				Description: "Paul ment.", Prompt: "Garder le suspense.", UpdatedAt: now,
 			},
-		},
-		{
-			name: "Error/StaleRevision",
-
-			request: &dao.SceneUpdateRequest{ID: sceneID2, OwnerID: ownerID, Revision: 2, Title: "Le mensonge", Now: now},
-
-			expectErr: dao.ErrSceneUpdateNotFound,
 		},
 		{
 			name: "Error/OtherOwner",
 
-			request: &dao.SceneUpdateRequest{ID: sceneID2, OwnerID: otherOwnerID, Revision: 1, Title: "Le mensonge", Now: now},
+			request: &dao.SceneUpdateRequest{
+				ID: sceneID2, OwnerID: otherOwnerID, Title: "Le mensonge", Color: "#e0457b", Now: now,
+			},
 
 			expectErr: dao.ErrSceneUpdateNotFound,
 		},

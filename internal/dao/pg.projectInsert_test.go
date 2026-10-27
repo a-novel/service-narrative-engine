@@ -42,7 +42,6 @@ func TestPgProjectInsert(t *testing.T) {
 				Title:     "Les Heures claires",
 				Premise:   "Marie attend.",
 				Language:  "fr",
-				Revision:  1,
 				CreatedAt: now,
 				UpdatedAt: now,
 			},

@@ -37,7 +37,7 @@ func TestPgLayerInsert(t *testing.T) {
 
 			expect: &dao.Layer{
 				ID: newLayerID, ProjectID: projectID, Position: 2, Kind: "notes", Name: "Places",
-				Description: "Where it happens", Revision: 1, UpdatedAt: now,
+				Description: "Where it happens", UpdatedAt: now,
 			},
 		},
 		{

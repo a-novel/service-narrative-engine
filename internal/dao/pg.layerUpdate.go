@@ -18,22 +18,20 @@ import (
 var layerUpdateQuery string
 
 // ErrLayerUpdateNotFound is returned by [PgLayerUpdate.Exec] when no layer with the ID belongs to a
-// project of the owner at the revision.
-var ErrLayerUpdateNotFound = errors.New("layer not found at this revision")
+// project of the owner.
+var ErrLayerUpdateNotFound = errors.New("layer not found")
 
 // LayerUpdateRequest is the input to [PgLayerUpdate.Exec].
 type LayerUpdateRequest struct {
-	ID      uuid.UUID
-	OwnerID uuid.UUID
-	// Revision is the revision the caller read.
-	Revision    int
+	ID          uuid.UUID
+	OwnerID     uuid.UUID
 	Name        string
 	Description string
 	// Now is the instant stored as updated_at.
 	Now time.Time
 }
 
-// PgLayerUpdate replaces a layer's own fields when the stored revision is the one the caller read.
+// PgLayerUpdate replaces a layer's own fields.
 type PgLayerUpdate struct{}
 
 func NewPgLayerUpdate() *PgLayerUpdate {
@@ -52,7 +50,7 @@ func (dao *PgLayerUpdate) Exec(ctx context.Context, request *LayerUpdateRequest)
 	entity := &Layer{}
 
 	err = db.NewRaw(
-		layerUpdateQuery, request.ID, request.OwnerID, request.Revision, request.Name, request.Description, request.Now,
+		layerUpdateQuery, request.ID, request.OwnerID, request.Name, request.Description, request.Now,
 	).Scan(ctx, entity)
 	if errors.Is(err, sql.ErrNoRows) {
 		err = errors.Join(err, ErrLayerUpdateNotFound)

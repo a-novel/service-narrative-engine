@@ -17,18 +17,16 @@ import (
 var layerDeleteQuery string
 
 // ErrLayerDeleteNotFound is returned by [PgLayerDelete.Exec] when no layer with the ID belongs to a
-// project of the owner at the revision.
-var ErrLayerDeleteNotFound = errors.New("layer not found at this revision")
+// project of the owner.
+var ErrLayerDeleteNotFound = errors.New("layer not found")
 
 // LayerDeleteRequest is the input to [PgLayerDelete.Exec].
 type LayerDeleteRequest struct {
 	ID      uuid.UUID
 	OwnerID uuid.UUID
-	// Revision is the revision the caller read.
-	Revision int
 }
 
-// PgLayerDelete removes a layer with its cells when the stored revision is the one the caller read.
+// PgLayerDelete removes a layer with its cells.
 type PgLayerDelete struct{}
 
 func NewPgLayerDelete() *PgLayerDelete {
@@ -46,7 +44,7 @@ func (dao *PgLayerDelete) Exec(ctx context.Context, request *LayerDeleteRequest)
 
 	entity := &Layer{}
 
-	err = db.NewRaw(layerDeleteQuery, request.ID, request.OwnerID, request.Revision).Scan(ctx, entity)
+	err = db.NewRaw(layerDeleteQuery, request.ID, request.OwnerID).Scan(ctx, entity)
 	if errors.Is(err, sql.ErrNoRows) {
 		err = errors.Join(err, ErrLayerDeleteNotFound)
 	}

@@ -28,22 +28,14 @@ func TestPgProjectDelete(t *testing.T) {
 		{
 			name: "Success",
 
-			request: &dao.ProjectDeleteRequest{ID: projectID, OwnerID: ownerID, Revision: 1},
+			request: &dao.ProjectDeleteRequest{ID: projectID, OwnerID: ownerID},
 
 			expect: composerFixtures().projects[0],
 		},
 		{
-			name: "Error/StaleRevision",
-
-			request: &dao.ProjectDeleteRequest{ID: projectID, OwnerID: ownerID, Revision: 2},
-
-			expectScenes: composerFixtures().scenes[:3],
-			expectErr:    dao.ErrProjectDeleteNotFound,
-		},
-		{
 			name: "Error/OtherOwner",
 
-			request: &dao.ProjectDeleteRequest{ID: projectID, OwnerID: otherOwnerID, Revision: 1},
+			request: &dao.ProjectDeleteRequest{ID: projectID, OwnerID: otherOwnerID},
 
 			expectScenes: composerFixtures().scenes[:3],
 			expectErr:    dao.ErrProjectDeleteNotFound,

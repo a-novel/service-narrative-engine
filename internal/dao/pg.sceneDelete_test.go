@@ -28,23 +28,15 @@ func TestPgSceneDelete(t *testing.T) {
 		{
 			name: "Success",
 
-			request: &dao.SceneDeleteRequest{ID: sceneID1, OwnerID: ownerID, Revision: 1},
+			request: &dao.SceneDeleteRequest{ID: sceneID1, OwnerID: ownerID},
 
 			expect:      composerFixtures().scenes[0],
 			expectCells: []*dao.Cell{},
 		},
 		{
-			name: "Error/StaleRevision",
-
-			request: &dao.SceneDeleteRequest{ID: sceneID1, OwnerID: ownerID, Revision: 2},
-
-			expectCells: composerFixtures().cells,
-			expectErr:   dao.ErrSceneDeleteNotFound,
-		},
-		{
 			name: "Error/OtherOwner",
 
-			request: &dao.SceneDeleteRequest{ID: sceneID1, OwnerID: otherOwnerID, Revision: 1},
+			request: &dao.SceneDeleteRequest{ID: sceneID1, OwnerID: otherOwnerID},
 
 			expectCells: composerFixtures().cells,
 			expectErr:   dao.ErrSceneDeleteNotFound,

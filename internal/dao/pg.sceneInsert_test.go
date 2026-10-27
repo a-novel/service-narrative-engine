@@ -37,18 +37,18 @@ func TestPgSceneInsert(t *testing.T) {
 				ProjectID: projectID,
 				Position:  3,
 				Scenes: []dao.SceneInsertItem{
-					{ID: newSceneID1, Title: "Le débat", Synopsis: "Marie hésite."},
-					{ID: newSceneID2, Title: "Le passage"},
+					{ID: newSceneID1, Title: "Le débat", Color: "#e0457b", Description: "Marie hésite.", Prompt: "Lent."},
+					{ID: newSceneID2, Title: "Le passage", Color: "#2bb673"},
 				},
 				Now: now,
 			},
 
 			expect: []*dao.Scene{
 				{
-					ID: newSceneID1, ProjectID: projectID, Position: 3, Title: "Le débat", Synopsis: "Marie hésite.",
-					Revision: 1, UpdatedAt: now,
+					ID: newSceneID1, ProjectID: projectID, Position: 3, Title: "Le débat", Color: "#e0457b",
+					Description: "Marie hésite.", Prompt: "Lent.", UpdatedAt: now,
 				},
-				{ID: newSceneID2, ProjectID: projectID, Position: 4, Title: "Le passage", Revision: 1, UpdatedAt: now},
+				{ID: newSceneID2, ProjectID: projectID, Position: 4, Title: "Le passage", Color: "#2bb673", UpdatedAt: now},
 			},
 		},
 		{
@@ -57,7 +57,7 @@ func TestPgSceneInsert(t *testing.T) {
 			request: &dao.SceneInsertRequest{
 				ProjectID: projectID,
 				Position:  2,
-				Scenes:    []dao.SceneInsertItem{{ID: newSceneID1, Title: "Le débat"}},
+				Scenes:    []dao.SceneInsertItem{{ID: newSceneID1, Title: "Le débat", Color: "#e0457b"}},
 				Now:       now,
 			},
 

@@ -17,19 +17,16 @@ import (
 var projectDeleteQuery string
 
 // ErrProjectDeleteNotFound is returned by [PgProjectDelete.Exec] when no project with the ID belongs
-// to the owner at the revision.
-var ErrProjectDeleteNotFound = errors.New("project not found at this revision")
+// to the owner.
+var ErrProjectDeleteNotFound = errors.New("project not found")
 
 // ProjectDeleteRequest is the input to [PgProjectDelete.Exec].
 type ProjectDeleteRequest struct {
 	ID      uuid.UUID
 	OwnerID uuid.UUID
-	// Revision is the revision the caller read.
-	Revision int
 }
 
-// PgProjectDelete removes a project with its scenes, layers and cells when the stored revision is the
-// one the caller read.
+// PgProjectDelete removes a project with its scenes, layers and cells.
 type PgProjectDelete struct{}
 
 func NewPgProjectDelete() *PgProjectDelete {
@@ -47,7 +44,7 @@ func (dao *PgProjectDelete) Exec(ctx context.Context, request *ProjectDeleteRequ
 
 	entity := &Project{}
 
-	err = db.NewRaw(projectDeleteQuery, request.ID, request.OwnerID, request.Revision).Scan(ctx, entity)
+	err = db.NewRaw(projectDeleteQuery, request.ID, request.OwnerID).Scan(ctx, entity)
 	if errors.Is(err, sql.ErrNoRows) {
 		err = errors.Join(err, ErrProjectDeleteNotFound)
 	}

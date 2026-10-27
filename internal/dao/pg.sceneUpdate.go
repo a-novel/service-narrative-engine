@@ -18,22 +18,22 @@ import (
 var sceneUpdateQuery string
 
 // ErrSceneUpdateNotFound is returned by [PgSceneUpdate.Exec] when no scene with the ID belongs to a
-// project of the owner at the revision.
-var ErrSceneUpdateNotFound = errors.New("scene not found at this revision")
+// project of the owner.
+var ErrSceneUpdateNotFound = errors.New("scene not found")
 
 // SceneUpdateRequest is the input to [PgSceneUpdate.Exec].
 type SceneUpdateRequest struct {
-	ID      uuid.UUID
-	OwnerID uuid.UUID
-	// Revision is the revision the caller read.
-	Revision int
-	Title    string
-	Synopsis string
+	ID          uuid.UUID
+	OwnerID     uuid.UUID
+	Title       string
+	Color       string
+	Description string
+	Prompt      string
 	// Now is the instant stored as updated_at.
 	Now time.Time
 }
 
-// PgSceneUpdate replaces a scene's own fields when the stored revision is the one the caller read.
+// PgSceneUpdate replaces a scene's own fields.
 type PgSceneUpdate struct{}
 
 func NewPgSceneUpdate() *PgSceneUpdate {
@@ -52,7 +52,8 @@ func (dao *PgSceneUpdate) Exec(ctx context.Context, request *SceneUpdateRequest)
 	entity := &Scene{}
 
 	err = db.NewRaw(
-		sceneUpdateQuery, request.ID, request.OwnerID, request.Revision, request.Title, request.Synopsis, request.Now,
+		sceneUpdateQuery, request.ID, request.OwnerID,
+		request.Title, request.Color, request.Description, request.Prompt, request.Now,
 	).Scan(ctx, entity)
 	if errors.Is(err, sql.ErrNoRows) {
 		err = errors.Join(err, ErrSceneUpdateNotFound)

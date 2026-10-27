@@ -16,8 +16,11 @@ type Scene struct {
 	// Position orders the project's scenes, from 0.
 	Position int    `bun:"position"`
 	Title    string `bun:"title"`
-	Synopsis string `bun:"synopsis"`
-	// Revision counts the writes to the scene's own fields. A move leaves it unchanged.
-	Revision  int       `bun:"revision"`
+	// Color is the scene's color in the composer, as a lowercase #rrggbb hex code.
+	Color string `bun:"color"`
+	// Description says what the scene is for, written for the author.
+	Description string `bun:"description"`
+	// Prompt holds extra instructions for the model when it writes about the scene.
+	Prompt    string    `bun:"prompt"`
 	UpdatedAt time.Time `bun:"updated_at"`
 }

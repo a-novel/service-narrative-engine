@@ -15,8 +15,6 @@ type Cell struct {
 	SceneID uuid.UUID `bun:"scene_id,pk,type:uuid"`
 	LayerID uuid.UUID `bun:"layer_id,pk,type:uuid"`
 	// Content is a JSON document that follows the content schema of the layer's kind.
-	Content json.RawMessage `bun:"content,type:jsonb"`
-	// Revision counts the writes to the cell.
-	Revision  int       `bun:"revision"`
-	UpdatedAt time.Time `bun:"updated_at"`
+	Content   json.RawMessage `bun:"content,type:jsonb"`
+	UpdatedAt time.Time       `bun:"updated_at"`
 }

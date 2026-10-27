@@ -20,9 +20,11 @@ var sceneInsertQuery string
 
 // SceneInsertItem is one scene of a [SceneInsertRequest].
 type SceneInsertItem struct {
-	ID       uuid.UUID
-	Title    string
-	Synopsis string
+	ID          uuid.UUID
+	Title       string
+	Color       string
+	Description string
+	Prompt      string
 }
 
 // SceneInsertRequest is the input to [PgSceneInsert.Exec].
@@ -54,13 +56,16 @@ func (dao *PgSceneInsert) Exec(ctx context.Context, request *SceneInsertRequest)
 
 	ids := lo.Map(request.Scenes, func(item SceneInsertItem, _ int) uuid.UUID { return item.ID })
 	titles := lo.Map(request.Scenes, func(item SceneInsertItem, _ int) string { return item.Title })
-	synopses := lo.Map(request.Scenes, func(item SceneInsertItem, _ int) string { return item.Synopsis })
+	colors := lo.Map(request.Scenes, func(item SceneInsertItem, _ int) string { return item.Color })
+	descriptions := lo.Map(request.Scenes, func(item SceneInsertItem, _ int) string { return item.Description })
+	prompts := lo.Map(request.Scenes, func(item SceneInsertItem, _ int) string { return item.Prompt })
 
 	var entities []*Scene
 
 	err = db.NewRaw(
 		sceneInsertQuery,
-		request.ProjectID, request.Position, bun.List(ids), bun.List(titles), bun.List(synopses), request.Now,
+		request.ProjectID, request.Position, bun.List(ids), bun.List(titles), bun.List(colors),
+		bun.List(descriptions), bun.List(prompts), request.Now,
 	).Scan(ctx, &entities)
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("execute query: %w", err))

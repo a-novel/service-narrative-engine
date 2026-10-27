@@ -30,6 +30,9 @@ var (
 	notesLayerID      = uuid.MustParse("00000000-0000-0000-0000-000000000022")
 	otherLayerID      = uuid.MustParse("00000000-0000-0000-0000-000000000029")
 
+	// sceneColor is the color of every fixture scene.
+	sceneColor = "#4a90d9"
+
 	createdAt = time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
 	updatedAt = time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC)
 	now       = time.Date(2021, 1, 3, 0, 0, 0, 0, time.UTC)
@@ -50,41 +53,41 @@ func composerFixtures() fixtures {
 		projects: []*dao.Project{
 			{
 				ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Premise: "Marie attend.",
-				Language: "fr", Revision: 1, CreatedAt: createdAt, UpdatedAt: updatedAt,
+				Language: "fr", CreatedAt: createdAt, UpdatedAt: updatedAt,
 			},
 			{
 				ID: otherProjectID, OwnerID: otherOwnerID, Title: "Other", Language: "en",
-				Revision: 1, CreatedAt: createdAt, UpdatedAt: updatedAt,
+				CreatedAt: createdAt, UpdatedAt: updatedAt,
 			},
 		},
 		scenes: []*dao.Scene{
-			{ID: sceneID1, ProjectID: projectID, Position: 0, Title: "Ouverture", Revision: 1, UpdatedAt: updatedAt},
-			{ID: sceneID2, ProjectID: projectID, Position: 1, Title: "Le thème", Revision: 1, UpdatedAt: updatedAt},
-			{ID: sceneID3, ProjectID: projectID, Position: 2, Title: "Le déclencheur", Revision: 1, UpdatedAt: updatedAt},
-			{ID: otherSceneID, ProjectID: otherProjectID, Position: 0, Title: "Other", Revision: 1, UpdatedAt: updatedAt},
+			{ID: sceneID1, ProjectID: projectID, Position: 0, Title: "Ouverture", Color: sceneColor, UpdatedAt: updatedAt},
+			{ID: sceneID2, ProjectID: projectID, Position: 1, Title: "Le thème", Color: sceneColor, UpdatedAt: updatedAt},
+			{ID: sceneID3, ProjectID: projectID, Position: 2, Title: "Le déclencheur", Color: sceneColor, UpdatedAt: updatedAt},
+			{ID: otherSceneID, ProjectID: otherProjectID, Position: 0, Title: "Other", Color: sceneColor, UpdatedAt: updatedAt},
 		},
 		layers: []*dao.Layer{
 			{
 				ID: manuscriptLayerID, ProjectID: projectID, Position: 0, Kind: "manuscript", Name: "Manuscript",
-				Revision: 1, UpdatedAt: updatedAt,
+				UpdatedAt: updatedAt,
 			},
 			{
 				ID: notesLayerID, ProjectID: projectID, Position: 1, Kind: "notes", Name: "Characters",
-				Description: "Who appears", Revision: 1, UpdatedAt: updatedAt,
+				Description: "Who appears", UpdatedAt: updatedAt,
 			},
 			{
 				ID: otherLayerID, ProjectID: otherProjectID, Position: 0, Kind: "manuscript", Name: "Manuscript",
-				Revision: 1, UpdatedAt: updatedAt,
+				UpdatedAt: updatedAt,
 			},
 		},
 		cells: []*dao.Cell{
 			{
 				SceneID: sceneID1, LayerID: manuscriptLayerID, Content: json.RawMessage(`{"blocks": []}`),
-				Revision: 1, UpdatedAt: updatedAt,
+				UpdatedAt: updatedAt,
 			},
 			{
 				SceneID: sceneID1, LayerID: notesLayerID, Content: json.RawMessage(`{"text": "Marie"}`),
-				Revision: 2, UpdatedAt: updatedAt,
+				UpdatedAt: updatedAt,
 			},
 		},
 	}
@@ -128,7 +131,6 @@ func requireCellsEqual(t *testing.T, expect, actual []*dao.Cell) {
 	for i := range expect {
 		require.Equal(t, expect[i].SceneID, actual[i].SceneID)
 		require.Equal(t, expect[i].LayerID, actual[i].LayerID)
-		require.Equal(t, expect[i].Revision, actual[i].Revision)
 		require.Equal(t, expect[i].UpdatedAt, actual[i].UpdatedAt)
 		require.JSONEq(t, string(expect[i].Content), string(actual[i].Content))
 	}

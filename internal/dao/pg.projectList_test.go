@@ -20,7 +20,7 @@ func TestPgProjectList(t *testing.T) {
 	project := func(id string, owner uuid.UUID) *dao.Project {
 		return &dao.Project{
 			ID: uuid.MustParse(id), OwnerID: owner, Title: "Project " + id[len(id)-1:], Language: "en",
-			Revision: 1, CreatedAt: createdAt, UpdatedAt: updatedAt,
+			CreatedAt: createdAt, UpdatedAt: updatedAt,
 		}
 	}
 

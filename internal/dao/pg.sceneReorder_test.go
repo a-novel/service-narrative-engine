@@ -20,7 +20,10 @@ func TestPgSceneReorder(t *testing.T) {
 	t.Parallel()
 
 	scene := func(id uuid.UUID, position int, title string) *dao.Scene {
-		return &dao.Scene{ID: id, ProjectID: projectID, Position: position, Title: title, Revision: 1, UpdatedAt: updatedAt}
+		return &dao.Scene{
+			ID: id, ProjectID: projectID, Position: position, Title: title, Color: sceneColor,
+			UpdatedAt: updatedAt,
+		}
 	}
 
 	testCases := []struct {

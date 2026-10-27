@@ -28,23 +28,15 @@ func TestPgLayerDelete(t *testing.T) {
 		{
 			name: "Success",
 
-			request: &dao.LayerDeleteRequest{ID: notesLayerID, OwnerID: ownerID, Revision: 1},
+			request: &dao.LayerDeleteRequest{ID: notesLayerID, OwnerID: ownerID},
 
 			expect:      composerFixtures().layers[1],
 			expectCells: composerFixtures().cells[:1],
 		},
 		{
-			name: "Error/StaleRevision",
-
-			request: &dao.LayerDeleteRequest{ID: notesLayerID, OwnerID: ownerID, Revision: 2},
-
-			expectCells: composerFixtures().cells,
-			expectErr:   dao.ErrLayerDeleteNotFound,
-		},
-		{
 			name: "Error/OtherOwner",
 
-			request: &dao.LayerDeleteRequest{ID: notesLayerID, OwnerID: otherOwnerID, Revision: 1},
+			request: &dao.LayerDeleteRequest{ID: notesLayerID, OwnerID: otherOwnerID},
 
 			expectCells: composerFixtures().cells,
 			expectErr:   dao.ErrLayerDeleteNotFound,
