@@ -1,14 +1,14 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Manuscript content",
-  "description": "The content of a cell in the manuscript layer: the scene's text, as ordered blocks.",
+  "description": "The text of one scene, as the manuscript exports it: blocks in reading order.",
   "type": "object",
   "required": ["blocks"],
   "additionalProperties": false,
   "properties": {
     "blocks": {
       "type": "array",
-      "maxItems": 1000,
+      "maxItems": 10000,
       "items": { "$ref": "block.schema.json" }
     }
   }
