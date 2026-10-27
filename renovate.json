@@ -1,4 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>a-novel-kit/workflows//renovate/service#v1.80.1"]
+  "description": "Renovate updates the v1 rebuild instead of master until v1 replaces master, whose own renovate.json then applies.",
+  "extends": ["github>a-novel-kit/workflows//renovate/service#v1.80.1"],
+  "baseBranchPatterns": ["v1"]
 }
