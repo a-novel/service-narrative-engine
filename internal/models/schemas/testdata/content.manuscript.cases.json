@@ -1,0 +1,197 @@
+[
+  {
+    "name": "Success",
+    "valid": true,
+    "document": {
+      "blocks": [
+        {
+          "id": "b1",
+          "kind": "narration",
+          "text": "La pluie battait les vitres."
+        },
+        {
+          "id": "b2",
+          "kind": "dialogue",
+          "speaker": "Marie",
+          "parts": [
+            {
+              "tone": "à voix basse"
+            },
+            {
+              "text": "Tu es venu."
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "Success/Empty",
+    "valid": true,
+    "document": {
+      "blocks": []
+    }
+  },
+  {
+    "name": "Success/EmptyDialogue",
+    "valid": true,
+    "document": {
+      "blocks": [
+        {
+          "id": "b1",
+          "kind": "dialogue",
+          "speaker": "",
+          "parts": []
+        }
+      ]
+    }
+  },
+  {
+    "name": "Error/MissingBlocks",
+    "valid": false,
+    "document": {}
+  },
+  {
+    "name": "Error/UnknownKind",
+    "valid": false,
+    "document": {
+      "blocks": [
+        {
+          "id": "b1",
+          "kind": "letter",
+          "text": "Chère Marie"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Error/MissingID",
+    "valid": false,
+    "document": {
+      "blocks": [
+        {
+          "kind": "narration",
+          "text": "Il pleuvait."
+        }
+      ]
+    }
+  },
+  {
+    "name": "Error/InvalidID",
+    "valid": false,
+    "document": {
+      "blocks": [
+        {
+          "id": "b 1",
+          "kind": "narration",
+          "text": "Il pleuvait."
+        }
+      ]
+    }
+  },
+  {
+    "name": "Error/NarrationWithSpeaker",
+    "valid": false,
+    "document": {
+      "blocks": [
+        {
+          "id": "b1",
+          "kind": "narration",
+          "text": "Il pleuvait.",
+          "speaker": "Marie"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Error/PartWithTextAndTone",
+    "valid": false,
+    "document": {
+      "blocks": [
+        {
+          "id": "b1",
+          "kind": "dialogue",
+          "speaker": "Marie",
+          "parts": [
+            {
+              "text": "Oui.",
+              "tone": "bas"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "Error/EmptyPart",
+    "valid": false,
+    "document": {
+      "blocks": [
+        {
+          "id": "b1",
+          "kind": "dialogue",
+          "speaker": "Marie",
+          "parts": [{}]
+        }
+      ]
+    }
+  },
+  {
+    "name": "Error/SpeakerTooLong",
+    "valid": false,
+    "document": {
+      "blocks": [
+        {
+          "id": "b1",
+          "kind": "dialogue",
+          "speaker": "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
+          "parts": []
+        }
+      ]
+    }
+  },
+  {
+    "name": "Success/LongTone",
+    "valid": true,
+    "document": {
+      "blocks": [
+        {
+          "id": "b1",
+          "kind": "dialogue",
+          "speaker": "Marie",
+          "parts": [
+            {
+              "tone": "tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "Error/ToneTooLong",
+    "valid": false,
+    "document": {
+      "blocks": [
+        {
+          "id": "b1",
+          "kind": "dialogue",
+          "speaker": "Marie",
+          "parts": [
+            {
+              "tone": "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "Error/UnknownField",
+    "valid": false,
+    "document": {
+      "blocks": [],
+      "title": "Ouverture"
+    }
+  }
+]

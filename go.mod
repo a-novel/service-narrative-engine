@@ -6,6 +6,7 @@ require (
 	github.com/a-novel-kit/golib v0.54.0
 	github.com/go-chi/chi/v5 v5.5.0
 	github.com/go-playground/validator/v10 v10.30.5
+	github.com/google/jsonschema-go v0.4.3
 	github.com/samber/lo v1.53.0
 	github.com/stretchr/testify v1.12.1
 	github.com/uptrace/bun v1.3.0

@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Notes content",
+  "description": "What one notes layer records about one scene, such as who appears or what changes, as free text the author keeps beside the manuscript.",
+  "type": "object",
+  "required": ["text"],
+  "additionalProperties": false,
+  "properties": {
+    "text": { "type": "string", "description": "The note, as plain text.", "maxLength": 200000 }
+  }
+}
