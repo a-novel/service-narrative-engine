@@ -7,6 +7,7 @@ import (
 	"github.com/a-novel-kit/golib/logging"
 	"github.com/a-novel-kit/golib/otel"
 	"github.com/a-novel-kit/golib/postgres"
+	"github.com/a-novel-kit/golib/sentryf"
 )
 
 // Main holds the top-level application settings.
@@ -27,6 +28,8 @@ type App struct {
 
 	// Otel configures the OpenTelemetry exporter.
 	Otel otel.Config `json:"otel" yaml:"otel"`
+	// Sentry configures the reporter that sends server faults to Sentry.
+	Sentry sentryf.Config `json:"sentry" yaml:"sentry"`
 	// Logger is the application logger the REST handlers report their errors to.
 	Logger logging.Log `json:"logger" yaml:"logger"`
 	// RestLogger configures the REST request logging middleware.

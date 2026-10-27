@@ -110,28 +110,28 @@ Every variable is read from the process environment. `SERVICE_NARRATIVE_ENGINE_E
 | `POSTGRES_DSN`         | Connection-URL fallback, read only when `POSTGRES_HOST` is empty.                                                             | all    |
 
 <details>
-<summary>Optional configuration (server tuning, OpenTelemetry)</summary>
+<summary>Optional configuration (server tuning, OpenTelemetry, Sentry)</summary>
 
 REST tuning (images `rest`, `standalone-rest`):
 
-| Name                          | Description                                                                                             | Default                          |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------- |
-| `REST_MAX_REQUEST_SIZE`       | Maximum request body size, in bytes.                                                                    | `16384` (16KiB)                  |
-| `REST_CLIENT_IP_HEADER`       | Header a trusted proxy sets to the visitor IP. Set it only when every request comes through that proxy. | TCP peer                         |
-| `REST_LIVENESS_PATH`          | Ping path, which still answers during a planned downtime and skips the rate limit.                      | `/v0/ping`                       |
-| `REST_RATE_LIMITS_ENABLED`    | Rate-limit each visitor on every route but the ping. Turn off only in test stacks.                      | `true`                           |
-| `REST_RATE_LIMIT`             | Requests each visitor sends to each route, as `<requests>/<window>`.                                    | `5/1s`                           |
-| `REST_TIMEOUT_READ`           | Read timeout.                                                                                           | `15s`                            |
-| `REST_TIMEOUT_READ_HEADER`    | Header read timeout.                                                                                    | `3s`                             |
-| `REST_TIMEOUT_WRITE`          | Write timeout.                                                                                          | `30s`                            |
-| `REST_TIMEOUT_IDLE`           | Idle keep-alive timeout.                                                                                | `60s`                            |
-| `REST_TIMEOUT_REQUEST`        | Per-request timeout.                                                                                    | `60s`                            |
-| `REST_TIMEOUT_SHUTDOWN`       | Graceful shutdown budget.                                                                               | `30s`                            |
-| `REST_CORS_ALLOWED_ORIGINS`   | CORS allowed origins.                                                                                   | `*`                              |
-| `REST_CORS_ALLOWED_HEADERS`   | CORS allowed headers.                                                                                   | `*`                              |
-| `REST_CORS_ALLOWED_METHODS`   | CORS allowed methods, comma-separated.                                                                  | `HEAD,GET,POST,PUT,PATCH,DELETE` |
-| `REST_CORS_ALLOW_CREDENTIALS` | CORS allow-credentials flag.                                                                            | `false`                          |
-| `REST_CORS_MAX_AGE`           | CORS max-age, in seconds.                                                                               | `3600`                           |
+| Name                          | Description                                                                                                                  | Default                          |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| `REST_MAX_REQUEST_SIZE`       | Maximum request body size, in bytes.                                                                                         | `16384` (16KiB)                  |
+| `REST_CLIENT_IP_HEADER`       | Header a trusted proxy sets to the visitor IP. Set it only when every request comes through that proxy.                      | TCP peer                         |
+| `REST_LIVENESS_PATH`          | Ping path, which still answers during a planned downtime and skips the rate limit.                                           | `/v0/ping`                       |
+| `REST_RATE_LIMITS_ENABLED`    | Rate-limit each visitor on every route but the ping. Turn off only in test stacks.                                           | `true`                           |
+| `REST_RATE_LIMIT`             | Requests each visitor sends to each route, as `<requests>/<window>`.                                                         | `5/1s`                           |
+| `REST_TIMEOUT_READ`           | Read timeout.                                                                                                                | `15s`                            |
+| `REST_TIMEOUT_READ_HEADER`    | Header read timeout.                                                                                                         | `3s`                             |
+| `REST_TIMEOUT_WRITE`          | Write timeout.                                                                                                               | `30s`                            |
+| `REST_TIMEOUT_IDLE`           | Idle keep-alive timeout.                                                                                                     | `60s`                            |
+| `REST_TIMEOUT_REQUEST`        | Per-request timeout.                                                                                                         | `60s`                            |
+| `REST_TIMEOUT_SHUTDOWN`       | Graceful shutdown budget. With the 4 seconds of telemetry flushes after it, it fits Cloud Run's 10 seconds before `SIGKILL`. | `6s`                             |
+| `REST_CORS_ALLOWED_ORIGINS`   | CORS allowed origins.                                                                                                        | `*`                              |
+| `REST_CORS_ALLOWED_HEADERS`   | CORS allowed headers.                                                                                                        | `*`                              |
+| `REST_CORS_ALLOWED_METHODS`   | CORS allowed methods, comma-separated.                                                                                       | `HEAD,GET,POST,PUT,PATCH,DELETE` |
+| `REST_CORS_ALLOW_CREDENTIALS` | CORS allow-credentials flag.                                                                                                 | `false`                          |
+| `REST_CORS_MAX_AGE`           | CORS max-age, in seconds.                                                                                                    | `3600`                           |
 
 Database connection pool (server images). The limits are **per process**. The database's `max_connections` has to cover every replica plus the migration job; the stock `postgres` default is 100.
 
@@ -146,13 +146,24 @@ Planned downtime (server images):
 | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
 | `DOWNTIME_START` | When a planned downtime starts, in RFC 3339. From then until it is removed, even past the announced end, the server answers `503` except for the ping, and starts without the database. |         |
 
-Logs and tracing — OpenTelemetry supports a stdout and a Google Cloud exporter (all server images):
+Logs and tracing — OpenTelemetry exports to standard output, or over OTLP/HTTP once an endpoint is set (all server images):
 
-| Name                | Description                                                           | Default                    |
-| ------------------- | --------------------------------------------------------------------- | -------------------------- |
-| `OTEL`              | Enable OTel tracing; the variables below pick the exporter.           | `false`                    |
-| `GCLOUD_PROJECT_ID` | Google Cloud project ID. When set, switches the OTel exporter to GCP. |                            |
-| `APP_NAME`          | Application name attached to traces and logs.                         | `service-narrative-engine` |
+| Name                             | Description                                                                                                      | Default                    |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| `OTEL`                           | Enable OTel tracing; the variables below pick the exporter.                                                      | `false`                    |
+| `OTEL_EXPORTER_OTLP_ENDPOINT`    | Base URL of the OTLP/HTTP backend. When set, traces and logs export there, and the servers write no request log. |                            |
+| `OTEL_EXPORTER_OTLP_HEADERS`     | Headers each export sends, such as the backend's key. Inject it as a secret.                                     |                            |
+| `OTEL_EXPORTER_OTLP_COMPRESSION` | `gzip` compresses each export.                                                                                   |                            |
+| `OTEL_SERVICE_NAME`              | Service name every span and log record carries.                                                                  |                            |
+| `APP_NAME`                       | Application name attached to traces and logs.                                                                    | `service-narrative-engine` |
+
+Fault reporting — Sentry receives each server fault, tagged with its release (server images). Without `SENTRY_DSN`, the servers report nothing:
+
+| Name                 | Description                                                                                                               | Default |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------- |
+| `SENTRY_DSN`         | Client key of the service's Sentry project. Inject it as a secret.                                                        |         |
+| `SENTRY_RELEASE`     | Deployed build, as `service-narrative-engine@<version>`: the name release CI gives it in Sentry. **Required with a DSN.** |         |
+| `SENTRY_ENVIRONMENT` | Deployment name, such as `production`. **Required with a DSN.**                                                           |         |
 
 </details>
 

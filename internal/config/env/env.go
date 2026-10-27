@@ -2,10 +2,12 @@ package env
 
 import (
 	"os"
+	"time"
 
 	"github.com/a-novel-kit/golib/config"
 	"github.com/a-novel-kit/golib/downtime"
 	"github.com/a-novel-kit/golib/httpf"
+	"github.com/a-novel-kit/golib/sentryf"
 )
 
 // prefix is prepended to every configuration variable name that this package reads.
@@ -20,6 +22,10 @@ func getEnv(name string) string {
 const (
 	// AppNameDefault names the application in logs and traces when APP_NAME is unset.
 	AppNameDefault = "service-narrative-engine"
+
+	// TimeoutShutdownDefault ends a server's drain 6 seconds after SIGTERM, so its Sentry and
+	// OpenTelemetry flushes, up to 2 seconds each, finish before Cloud Run kills it at 10 seconds.
+	TimeoutShutdownDefault = 6 * time.Second
 
 	// PostgresMaxOpenConnsDefault caps the connections one instance opens. Multiplied by the replica
 	// count, the cap stays well under PostgreSQL's default max_connections of 100. That leaves room
@@ -62,13 +68,18 @@ var (
 	AppName = config.LoadEnv(getEnv("APP_NAME"), AppNameDefault, config.StringParser)
 	// Otel enables OpenTelemetry tracing.
 	Otel = config.LoadEnv(getEnv("OTEL"), false, config.BoolParser)
+	// Sentry configures the fault reporter from the SENTRY_* variables. The reporter sends nothing
+	// without SENTRY_DSN.
+	Sentry = sentryf.LoadConfig(getEnv)
 
 	// Rest configures the REST server from the REST_* variables.
 	Rest = httpf.LoadServerConfig(getEnv, restDefaults())
 
-	// GcloudProjectID is the Google Cloud project the service runs in. When set, logs and traces
-	// go to Google Cloud. When empty, they go to standard output.
-	GcloudProjectID = getEnv("GCLOUD_PROJECT_ID")
+	// OTLPEndpoint is the standard OTEL_EXPORTER_OTLP_ENDPOINT. When set, traces and logs export
+	// over OTLP/HTTP, which the OTEL_EXPORTER_OTLP_* variables configure. When empty, they go to
+	// standard output. The OpenTelemetry SDK reads these variables without the prefix, so this one
+	// is read without it too.
+	OTLPEndpoint = os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
 
 	// DowntimeStart is when a planned downtime of this service starts, in RFC 3339. From then
 	// until it is removed, the service refuses work. Nil when none is planned.
@@ -79,6 +90,7 @@ var (
 func restDefaults() httpf.ServerConfig {
 	defaults := httpf.ServerConfigDefault
 	defaults.Liveness = "/v0/ping"
+	defaults.Timeouts.Shutdown = TimeoutShutdownDefault
 
 	return defaults
 }
