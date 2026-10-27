@@ -1,7 +1,6 @@
-migration-history	sha256:f0c465c27005edba5234df02cfd0047b454624674c04092a4fd8bb61ba92dcff
+migration-history	sha256:19f17b714295a248d8975845ae7a917b12334636e34780d215b8a0dceee4cf4b
 column	cells.content	jsonb NOT NULL
 column	cells.layer_id	uuid NOT NULL
-column	cells.revision	integer NOT NULL DEFAULT 1
 column	cells.scene_id	uuid NOT NULL
 column	cells.updated_at	timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
 column	layers.description	text NOT NULL DEFAULT ''::text
@@ -10,36 +9,33 @@ column	layers.kind	text NOT NULL
 column	layers.name	text NOT NULL
 column	layers.position	integer NOT NULL
 column	layers.project_id	uuid NOT NULL
-column	layers.revision	integer NOT NULL DEFAULT 1
 column	layers.updated_at	timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
 column	projects.created_at	timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
 column	projects.id	uuid NOT NULL DEFAULT uuidv7()
-column	projects.language	text NOT NULL
+column	projects.language	project_language NOT NULL
 column	projects.owner_id	uuid NOT NULL
 column	projects.premise	text NOT NULL DEFAULT ''::text
-column	projects.revision	integer NOT NULL DEFAULT 1
 column	projects.title	text NOT NULL
 column	projects.updated_at	timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
+column	scenes.color	text NOT NULL
+column	scenes.description	text NOT NULL DEFAULT ''::text
 column	scenes.id	uuid NOT NULL DEFAULT uuidv7()
 column	scenes.position	integer NOT NULL
 column	scenes.project_id	uuid NOT NULL
-column	scenes.revision	integer NOT NULL DEFAULT 1
-column	scenes.synopsis	text NOT NULL DEFAULT ''::text
-column	scenes.title	text NOT NULL DEFAULT ''::text
+column	scenes.prompt	text NOT NULL DEFAULT ''::text
+column	scenes.title	text NOT NULL
 column	scenes.updated_at	timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
 comment	schema public	standard public schema
 constraint	cells.cells_content_not_null	NOT NULL content
 constraint	cells.cells_layer_id_fkey	FOREIGN KEY (layer_id) REFERENCES layers(id) ON DELETE CASCADE
 constraint	cells.cells_layer_id_not_null	NOT NULL layer_id
 constraint	cells.cells_pkey	PRIMARY KEY (scene_id, layer_id)
-constraint	cells.cells_revision_check	CHECK ((revision > 0))
-constraint	cells.cells_revision_not_null	NOT NULL revision
 constraint	cells.cells_scene_id_fkey	FOREIGN KEY (scene_id) REFERENCES scenes(id) ON DELETE CASCADE
 constraint	cells.cells_scene_id_not_null	NOT NULL scene_id
 constraint	cells.cells_updated_at_not_null	NOT NULL updated_at
 constraint	layers.layers_description_not_null	NOT NULL description
 constraint	layers.layers_id_not_null	NOT NULL id
-constraint	layers.layers_kind_check	CHECK ((kind <> ''::text))
+constraint	layers.layers_kind_check	CHECK ((kind ~ '^[a-z][a-z0-9]*(-[a-z0-9]+)*$'::text))
 constraint	layers.layers_kind_not_null	NOT NULL kind
 constraint	layers.layers_name_check	CHECK ((name <> ''::text))
 constraint	layers.layers_name_not_null	NOT NULL name
@@ -49,21 +45,19 @@ constraint	layers.layers_position_not_null	NOT NULL "position"
 constraint	layers.layers_project_id_fkey	FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 constraint	layers.layers_project_id_not_null	NOT NULL project_id
 constraint	layers.layers_project_id_position_key	UNIQUE (project_id, "position") DEFERRABLE INITIALLY DEFERRED
-constraint	layers.layers_revision_check	CHECK ((revision > 0))
-constraint	layers.layers_revision_not_null	NOT NULL revision
 constraint	layers.layers_updated_at_not_null	NOT NULL updated_at
 constraint	projects.projects_created_at_not_null	NOT NULL created_at
 constraint	projects.projects_id_not_null	NOT NULL id
-constraint	projects.projects_language_check	CHECK ((language <> ''::text))
 constraint	projects.projects_language_not_null	NOT NULL language
 constraint	projects.projects_owner_id_not_null	NOT NULL owner_id
 constraint	projects.projects_pkey	PRIMARY KEY (id)
 constraint	projects.projects_premise_not_null	NOT NULL premise
-constraint	projects.projects_revision_check	CHECK ((revision > 0))
-constraint	projects.projects_revision_not_null	NOT NULL revision
 constraint	projects.projects_title_check	CHECK ((title <> ''::text))
 constraint	projects.projects_title_not_null	NOT NULL title
 constraint	projects.projects_updated_at_not_null	NOT NULL updated_at
+constraint	scenes.scenes_color_check	CHECK ((color ~ '^#[0-9a-f]{6}$'::text))
+constraint	scenes.scenes_color_not_null	NOT NULL color
+constraint	scenes.scenes_description_not_null	NOT NULL description
 constraint	scenes.scenes_id_not_null	NOT NULL id
 constraint	scenes.scenes_pkey	PRIMARY KEY (id)
 constraint	scenes.scenes_position_check	CHECK (("position" >= 0))
@@ -71,9 +65,8 @@ constraint	scenes.scenes_position_not_null	NOT NULL "position"
 constraint	scenes.scenes_project_id_fkey	FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 constraint	scenes.scenes_project_id_not_null	NOT NULL project_id
 constraint	scenes.scenes_project_id_position_key	UNIQUE (project_id, "position") DEFERRABLE INITIALLY DEFERRED
-constraint	scenes.scenes_revision_check	CHECK ((revision > 0))
-constraint	scenes.scenes_revision_not_null	NOT NULL revision
-constraint	scenes.scenes_synopsis_not_null	NOT NULL synopsis
+constraint	scenes.scenes_prompt_not_null	NOT NULL prompt
+constraint	scenes.scenes_title_check	CHECK ((title <> ''::text))
 constraint	scenes.scenes_title_not_null	NOT NULL title
 constraint	scenes.scenes_updated_at_not_null	NOT NULL updated_at
 extension	plpgsql	1.0
@@ -91,3 +84,4 @@ relation	layers	r
 relation	projects	r
 relation	scenes	r
 schema	public	pg_database_owner=UC/pg_database_owner,=U/pg_database_owner
+type	project_language	e en,fr

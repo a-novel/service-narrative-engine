@@ -1,3 +1,6 @@
+-- The languages a project can be written in.
+CREATE TYPE project_language AS ENUM('en', 'fr');
+
 CREATE TABLE projects (
   -- A UUIDv7 sorts by creation time, so the primary key also orders pages.
   id uuid PRIMARY KEY NOT NULL DEFAULT uuidv7(),
@@ -5,10 +8,7 @@ CREATE TABLE projects (
   owner_id uuid NOT NULL,
   title text NOT NULL CHECK (title <> ''),
   premise text NOT NULL DEFAULT '',
-  /* The language the project is written in, as a BCP 47 tag. */
-  language text NOT NULL CHECK (language <> ''),
-  /* Raised by every write; a write names the revision it read. */
-  revision integer NOT NULL DEFAULT 1 CHECK (revision > 0),
+  language project_language NOT NULL,
   -- Full precision lets updated_at distinguish two updates made within the same second.
   created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -22,9 +22,13 @@ CREATE TABLE scenes (
   project_id uuid NOT NULL REFERENCES projects (id) ON DELETE CASCADE,
   /* The scene's place in narrative order, from 0. */
   position integer NOT NULL CHECK (position >= 0),
-  title text NOT NULL DEFAULT '',
-  synopsis text NOT NULL DEFAULT '',
-  revision integer NOT NULL DEFAULT 1 CHECK (revision > 0),
+  title text NOT NULL CHECK (title <> ''),
+  /* The scene's color in the composer, as a lowercase #rrggbb hex code. */
+  color text NOT NULL CHECK (color ~ '^#[0-9a-f]{6}$'),
+  /* What the scene is for, written for the author. */
+  description text NOT NULL DEFAULT '',
+  /* Extra instructions for the model when it writes about the scene. */
+  prompt text NOT NULL DEFAULT '',
   updated_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
   -- A reorder rewrites every position in one statement, so uniqueness is checked at commit.
   CONSTRAINT scenes_project_id_position_key UNIQUE (project_id, position)
@@ -36,11 +40,10 @@ CREATE TABLE layers (
   project_id uuid NOT NULL REFERENCES projects (id) ON DELETE CASCADE,
   /* The layer's place among the project's rows, from 0. */
   position integer NOT NULL CHECK (position >= 0),
-  /* Names the content schema the layer's cells follow. */
-  kind text NOT NULL CHECK (kind <> ''),
+  /* Names the content schema the layer's cells follow, as a lowercase kebab-case label. */
+  kind text NOT NULL CHECK (kind ~ '^[a-z][a-z0-9]*(-[a-z0-9]+)*$'),
   name text NOT NULL CHECK (name <> ''),
   description text NOT NULL DEFAULT '',
-  revision integer NOT NULL DEFAULT 1 CHECK (revision > 0),
   updated_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT layers_project_id_position_key UNIQUE (project_id, position)
   DEFERRABLE INITIALLY DEFERRED
@@ -56,7 +59,6 @@ CREATE TABLE cells (
   layer_id uuid NOT NULL REFERENCES layers (id) ON DELETE CASCADE,
   /* A JSON document that follows the content schema of the layer's kind. */
   content jsonb NOT NULL,
-  revision integer NOT NULL DEFAULT 1 CHECK (revision > 0),
   updated_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (scene_id, layer_id)
 );

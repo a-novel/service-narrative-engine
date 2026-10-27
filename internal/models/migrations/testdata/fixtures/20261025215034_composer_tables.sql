@@ -10,13 +10,14 @@ VALUES
   );
 
 INSERT INTO
-  scenes (id, project_id, position, title)
+  scenes (id, project_id, position, title, color)
 VALUES
   (
     '00000000-0000-0000-0000-000000000011',
     '00000000-0000-0000-0000-000000000001',
     0,
-    'fixture scene'
+    'fixture scene',
+    '#4a90d9'
   );
 
 INSERT INTO
