@@ -227,8 +227,8 @@ paths:
       operationId: sceneCreate
       summary: Create a scene.
       description: |
-        Adds a scene to a project, right after the scene `after` names, or first without it. A project holds
-        at most 500 scenes.
+        Adds a scene to a project at `position`, and moves the scenes from there on down one place. A
+        position past the last scene appends the new one. A project holds at most 500 scenes.
       tags: [scene]
       requestBody:
         required: true
@@ -349,8 +349,8 @@ paths:
       operationId: sceneMove
       summary: Move a scene.
       description: |
-        Moves a scene right after the scene `after` names, or first without it, and returns it at its new
-        position. The scenes between its old and new position shift by one.
+        Moves a scene to `position`, and returns it there. The scenes between its old and new position shift
+        by one. A position past the last scene moves it last.
       tags: [scene]
       requestBody:
         required: true
@@ -381,8 +381,8 @@ paths:
       operationId: layerCreate
       summary: Create a notes layer.
       description: |
-        Adds a notes layer to a project, right after the layer `after` names, or first without it. A project
-        holds at most 1000 layers.
+        Adds a notes layer to a project at `position`, and moves the layers from there on down one place. A
+        position past the last layer appends the new one. A project holds at most 1000 layers.
       tags: [layer]
       requestBody:
         required: true
@@ -475,7 +475,7 @@ paths:
       summary: Delete a notes layer.
       description: |
         Deletes a notes layer with its cells, and returns the layer as it was. The layers after it move up
-        one place. The manuscript layer stays for the life of its project.
+        one place. A required layer, such as the manuscript, stays for the life of its project.
       tags: [layer]
       parameters:
         - $ref: "#/components/parameters/parentProjectID"
@@ -492,7 +492,7 @@ paths:
         "404":
           $ref: "#/components/responses/notFound"
         "422":
-          $ref: "#/components/responses/manuscriptLayer"
+          $ref: "#/components/responses/requiredLayer"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -505,8 +505,8 @@ paths:
       operationId: layerMove
       summary: Move a layer.
       description: |
-        Moves a layer right after the layer `after` names, or first without it, and returns it at its new
-        position. The layers between its old and new position shift by one.
+        Moves a layer to `position`, and returns it there. The layers between its old and new position shift
+        by one. A position past the last layer moves it last.
       tags: [layer]
       requestBody:
         required: true
@@ -707,7 +707,7 @@ components:
       description: |
         The request could not be parsed, or failed validation. A field that breaks its rule answers a
         problem naming each invalid field and the rule it broke. Malformed JSON, content that breaks its
-        schema, and a move after an unknown or the moved item answer the status text alone.
+        schema answer the status text alone.
       content:
         application/problem+json:
           schema:
@@ -734,9 +734,9 @@ components:
       description: |
         The project already holds as many scenes or layers as it may.
 
-    manuscriptLayer:
+    requiredLayer:
       description: |
-        The manuscript layer stays for the life of its project.
+        A required layer, such as the manuscript, stays for the life of its project.
 
     tooManyRequests:
       description: |
@@ -1124,9 +1124,12 @@ components:
       properties:
         projectID:
           $ref: "#/components/schemas/projectID"
-        after:
-          $ref: "#/components/schemas/sceneID"
-          description: The scene the new one follows. Omit it to place the new scene first.
+        position:
+          type: integer
+          description: The scene's place in narrative order, from 0. A position past the last scene appends the new one.
+          minimum: 0
+          default: 0
+          examples: [2]
         title:
           $ref: "#/components/schemas/projectCreateScene/properties/title"
         color:
@@ -1158,16 +1161,18 @@ components:
     sceneMoveRequest:
       type: object
       description: The scene to move, and where.
-      required: [projectID, id]
+      required: [projectID, id, position]
       additionalProperties: false
       properties:
         projectID:
           $ref: "#/components/schemas/projectID"
         id:
           $ref: "#/components/schemas/sceneID"
-        after:
-          $ref: "#/components/schemas/sceneID"
-          description: The scene the moved one follows. Omit it to move the scene first.
+        position:
+          type: integer
+          description: The scene's place in narrative order after the move, from 0. A position past the last scene moves it last.
+          minimum: 0
+          examples: [2]
 
     layerCreateRequest:
       type: object
@@ -1177,9 +1182,12 @@ components:
       properties:
         projectID:
           $ref: "#/components/schemas/projectID"
-        after:
-          $ref: "#/components/schemas/layerID"
-          description: The layer the new one follows. Omit it to place the new layer first.
+        position:
+          type: integer
+          description: The layer's place among the project's rows, from 0. A position past the last layer appends the new one.
+          minimum: 0
+          default: 0
+          examples: [2]
         name:
           type: string
           description: The name of the layer. Not blank.
@@ -1209,16 +1217,18 @@ components:
     layerMoveRequest:
       type: object
       description: The layer to move, and where.
-      required: [projectID, id]
+      required: [projectID, id, position]
       additionalProperties: false
       properties:
         projectID:
           $ref: "#/components/schemas/projectID"
         id:
           $ref: "#/components/schemas/layerID"
-        after:
-          $ref: "#/components/schemas/layerID"
-          description: The layer the moved one follows. Omit it to move the layer first.
+        position:
+          type: integer
+          description: The layer's place among the project's rows after the move, from 0. A position past the last layer moves it last.
+          minimum: 0
+          examples: [2]
 
     cellWriteRequest:
       type: object

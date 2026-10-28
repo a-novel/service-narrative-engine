@@ -40,7 +40,7 @@ beforeAll(async () => {
     language: Language.En,
     scenes: [{ title: "Only", color: "#4a90d9" }],
   });
-  notes = await layerCreate(api, accessToken, { projectID: project.id, after: project.layers[0].id, name: "Notes" });
+  notes = await layerCreate(api, accessToken, { projectID: project.id, position: 1, name: "Notes" });
 });
 
 afterAll(async () => {

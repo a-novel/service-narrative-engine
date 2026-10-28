@@ -39,10 +39,10 @@ export const SceneFieldsSchema = z.object({
   prompt: ScenePromptSchema.optional(),
 });
 
-/** The scene to add, after the scene `after` names, or first without it. */
+/** The scene to add at `position`, first when omitted. A position past the last scene appends it. */
 export const SceneCreateRequestSchema = SceneFieldsSchema.extend({
   projectID: z.uuid(),
-  after: z.uuid().optional(),
+  position: z.int().min(0).optional(),
 });
 
 /** The value {@link SceneCreateRequestSchema} validates. */
@@ -57,11 +57,11 @@ export const SceneUpdateRequestSchema = SceneFieldsSchema.extend({
 /** The value {@link SceneUpdateRequestSchema} validates. */
 export type SceneUpdateRequest = z.infer<typeof SceneUpdateRequestSchema>;
 
-/** The scene to move, after the scene `after` names, or first without it. */
+/** The scene to move, and its new position. A position past the last scene moves it last. */
 export const SceneMoveRequestSchema = z.object({
   projectID: z.uuid(),
   id: z.uuid(),
-  after: z.uuid().optional(),
+  position: z.int().min(0),
 });
 
 /** The value {@link SceneMoveRequestSchema} validates. */
@@ -96,9 +96,9 @@ export const SceneListRequestSchema = z.object({
 export type SceneListRequest = z.infer<typeof SceneListRequestSchema>;
 
 /**
- * Adds a scene to a project and returns it at its place. Throws on HTTP 400 when `after` names no
- * scene of the project, 404 when the caller owns no such project, and 422 when the project holds 500
- * scenes already.
+ * Adds a scene to a project and returns it at its place; the scenes from there on move down one place.
+ * Throws on HTTP 404 when the caller owns no such project, and 422 when the project holds 500 scenes
+ * already.
  */
 export async function sceneCreate(
   api: NarrativeEngineApi,
@@ -130,8 +130,7 @@ export async function sceneUpdate(
 
 /**
  * Moves a scene and returns it at its new position. The scenes between its old and new position shift by
- * one. Throws on HTTP 400 when `after` names the moved scene or none of the project, and 404 when the caller
- * owns no such project, or the project holds no such scene.
+ * one. Throws on HTTP 404 when the caller owns no such project, or the project holds no such scene.
  */
 export async function sceneMove(
   api: NarrativeEngineApi,

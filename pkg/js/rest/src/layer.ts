@@ -35,10 +35,10 @@ export const LayerNameSchema = z.string().max(100).regex(/\S/);
 /** What a layer records, which may be empty. */
 export const LayerDescriptionSchema = z.string().max(20000);
 
-/** The notes layer to add, after the layer `after` names, or first without it. */
+/** The notes layer to add at `position`, first when omitted. A position past the last layer appends it. */
 export const LayerCreateRequestSchema = z.object({
   projectID: z.uuid(),
-  after: z.uuid().optional(),
+  position: z.int().min(0).optional(),
   name: LayerNameSchema,
   description: LayerDescriptionSchema.optional(),
 });
@@ -57,11 +57,11 @@ export const LayerUpdateRequestSchema = z.object({
 /** The value {@link LayerUpdateRequestSchema} validates. */
 export type LayerUpdateRequest = z.infer<typeof LayerUpdateRequestSchema>;
 
-/** The layer to move, after the layer `after` names, or first without it. */
+/** The layer to move, and its new position. A position past the last layer moves it last. */
 export const LayerMoveRequestSchema = z.object({
   projectID: z.uuid(),
   id: z.uuid(),
-  after: z.uuid().optional(),
+  position: z.int().min(0),
 });
 
 /** The value {@link LayerMoveRequestSchema} validates. */
@@ -96,9 +96,9 @@ export const LayerListRequestSchema = z.object({
 export type LayerListRequest = z.infer<typeof LayerListRequestSchema>;
 
 /**
- * Adds a notes layer to a project and returns it at its place. Throws on HTTP 400 when `after` names
- * no layer of the project, 404 when the caller owns no such project, and 422 when the project holds
- * 1000 layers already.
+ * Adds a notes layer to a project and returns it at its place; the layers from there on move down one
+ * place. Throws on HTTP 404 when the caller owns no such project, and 422 when the project holds 1000
+ * layers already.
  */
 export async function layerCreate(
   api: NarrativeEngineApi,
@@ -130,8 +130,7 @@ export async function layerUpdate(
 
 /**
  * Moves a layer and returns it at its new position. The layers between its old and new position shift by
- * one. Throws on HTTP 400 when `after` names the moved layer or none of the project, and 404 when the
- * caller owns no such project, or the project holds no such layer.
+ * one. Throws on HTTP 404 when the caller owns no such project, or the project holds no such layer.
  */
 export async function layerMove(
   api: NarrativeEngineApi,
@@ -148,8 +147,7 @@ export async function layerMove(
 /**
  * Deletes a notes layer with its cells and returns it as it was; the layers after it move up one
  * place. Throws on HTTP 404 when the caller owns no such project, or the project holds no such
- * layer, and 422 for the manuscript layer, which stays for
- * the life of its project.
+ * layer, and 422 for a required layer, such as the manuscript, which stays for the life of its project.
  */
 export async function layerDelete(
   api: NarrativeEngineApi,

@@ -54,10 +54,10 @@ async function deleteLayers(...layers: Layer[]): Promise<void> {
 }
 
 describe("layerCreate", () => {
-  it("places a notes layer first, or after the layer it names", async () => {
+  it("places a notes layer at its position, and appends one past the end", async () => {
     const characters = await layerCreate(api, accessToken, {
       projectID: project.id,
-      after: manuscript.id,
+      position: 99,
       name: "Characters",
       description: "Who appears",
     });
@@ -83,7 +83,7 @@ describe("layerCreate", () => {
 
 describe("layerUpdate", () => {
   it("replaces the fields", async () => {
-    const created = await layerCreate(api, accessToken, { projectID: project.id, after: manuscript.id, name: "Draft" });
+    const created = await layerCreate(api, accessToken, { projectID: project.id, position: 1, name: "Draft" });
 
     const layer = await layerUpdate(api, accessToken, {
       projectID: project.id,
@@ -103,17 +103,21 @@ describe("layerUpdate", () => {
 
 describe("layerMove", () => {
   it("moves a layer", async () => {
-    const notes = await layerCreate(api, accessToken, { projectID: project.id, after: manuscript.id, name: "Notes" });
+    const notes = await layerCreate(api, accessToken, { projectID: project.id, position: 1, name: "Notes" });
 
-    const moved = await layerMove(api, accessToken, { projectID: project.id, id: notes.id });
+    const moved = await layerMove(api, accessToken, { projectID: project.id, id: notes.id, position: 0 });
     expect(moved).toMatchObject({ id: notes.id, position: 0 });
     await expect(layerNames()).resolves.toEqual(["Notes", manuscript.name]);
+
+    const last = await layerMove(api, accessToken, { projectID: project.id, id: notes.id, position: 99 });
+    expect(last).toMatchObject({ id: notes.id, position: 1 });
+    await expect(layerNames()).resolves.toEqual([manuscript.name, "Notes"]);
 
     await deleteLayers(notes);
   });
 
   it("returns 404 for an absent layer", async () => {
-    await expectStatus(layerMove(api, accessToken, { projectID: project.id, id: ABSENT_ID }), 404);
+    await expectStatus(layerMove(api, accessToken, { projectID: project.id, id: ABSENT_ID, position: 0 }), 404);
   });
 });
 
@@ -127,14 +131,14 @@ describe("layerDelete", () => {
     expect(layers.map((layer) => [layer.position, layer.kind])).toEqual([[0, LayerKind.Manuscript]]);
   });
 
-  it("returns 422 for the manuscript layer", async () => {
+  it("returns 422 for a required layer", async () => {
     await expectStatus(layerDelete(api, accessToken, manuscript), 422);
   });
 });
 
 describe("layerList", () => {
   it("pages through the layers in order, with their total", async () => {
-    const notes = await layerCreate(api, accessToken, { projectID: project.id, after: manuscript.id, name: "Notes" });
+    const notes = await layerCreate(api, accessToken, { projectID: project.id, position: 1, name: "Notes" });
 
     const first = await layerList(api, accessToken, { projectID: project.id, limit: 1 });
     expect(first).toEqual({ layers: [expect.objectContaining({ id: manuscript.id })], total: 2 });
