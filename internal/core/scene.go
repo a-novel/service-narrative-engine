@@ -7,6 +7,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel/attribute"
+
+	"github.com/a-novel-kit/golib/otel"
 
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
@@ -43,13 +46,18 @@ func newScene(entity *dao.Scene, _ int) *Scene {
 
 // sceneAnchor reads the scene another one follows, which must belong to the project.
 func sceneAnchor(ctx context.Context, daoSelect SceneCreateDaoSelect, projectID, id uuid.UUID) (*dao.Scene, error) {
+	ctx, span := otel.Tracer().Start(ctx, "core.sceneAnchor")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("scene.anchor", id.String()))
+
 	anchor, err := daoSelect.Exec(ctx, &dao.SceneSelectRequest{ID: id})
 	if errors.Is(err, dao.ErrSceneSelectNotFound) || (err == nil && anchor.ProjectID != projectID) {
-		return nil, fmt.Errorf("%w: unknown anchor %s", ErrInvalidRequest, id)
+		return nil, otel.ReportError(span, fmt.Errorf("%w: unknown anchor %s", ErrInvalidRequest, id))
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("select anchor: %w", err)
+		return nil, otel.ReportError(span, fmt.Errorf("select anchor: %w", err))
 	}
 
 	return anchor, nil

@@ -7,6 +7,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel/attribute"
+
+	"github.com/a-novel-kit/golib/otel"
 
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
@@ -45,13 +48,18 @@ func newLayer(entity *dao.Layer, _ int) *Layer {
 
 // layerAnchor reads the layer another one follows, which must belong to the project.
 func layerAnchor(ctx context.Context, daoSelect LayerCreateDaoSelect, projectID, id uuid.UUID) (*dao.Layer, error) {
+	ctx, span := otel.Tracer().Start(ctx, "core.layerAnchor")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("layer.anchor", id.String()))
+
 	anchor, err := daoSelect.Exec(ctx, &dao.LayerSelectRequest{ID: id})
 	if errors.Is(err, dao.ErrLayerSelectNotFound) || (err == nil && anchor.ProjectID != projectID) {
-		return nil, fmt.Errorf("%w: unknown anchor %s", ErrInvalidRequest, id)
+		return nil, otel.ReportError(span, fmt.Errorf("%w: unknown anchor %s", ErrInvalidRequest, id))
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("select anchor: %w", err)
+		return nil, otel.ReportError(span, fmt.Errorf("select anchor: %w", err))
 	}
 
 	return anchor, nil
