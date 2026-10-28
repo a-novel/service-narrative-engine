@@ -24,8 +24,8 @@ type SceneMoveRequest struct {
 	ProjectID uuid.UUID
 	ID        uuid.UUID
 
-	// To is the scene's position after the move.
-	To int
+	// Position is the scene's position after the move. A position past the last scene moves it last.
+	Position int
 }
 
 // PgSceneMove moves a scene to another position, and shifts the scenes between its old and new
@@ -47,7 +47,7 @@ func (dao *PgSceneMove) Exec(ctx context.Context, request *SceneMoveRequest) (*S
 
 	entity := &Scene{}
 
-	err = db.NewRaw(sceneMoveQuery, request.ProjectID, request.ID, request.To).Scan(ctx, entity)
+	err = db.NewRaw(sceneMoveQuery, request.ProjectID, request.ID, request.Position).Scan(ctx, entity)
 	if errors.Is(err, sql.ErrNoRows) {
 		err = errors.Join(err, ErrSceneMoveNotFound)
 	}

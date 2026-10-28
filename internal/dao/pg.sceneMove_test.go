@@ -30,7 +30,7 @@ func TestPgSceneMove(t *testing.T) {
 		{
 			name: "Success/Up",
 
-			request: &dao.SceneMoveRequest{ProjectID: projectID, ID: sceneID3, To: 0},
+			request: &dao.SceneMoveRequest{ProjectID: projectID, ID: sceneID3, Position: 0},
 
 			expect:       sceneAt(scenes[2], 0),
 			expectScenes: []*dao.Scene{sceneAt(scenes[2], 0), sceneAt(scenes[0], 1), sceneAt(scenes[1], 2)},
@@ -38,22 +38,38 @@ func TestPgSceneMove(t *testing.T) {
 		{
 			name: "Success/Down",
 
-			request: &dao.SceneMoveRequest{ProjectID: projectID, ID: sceneID1, To: 1},
+			request: &dao.SceneMoveRequest{ProjectID: projectID, ID: sceneID1, Position: 1},
 
 			expect:       sceneAt(scenes[0], 1),
 			expectScenes: []*dao.Scene{sceneAt(scenes[1], 0), sceneAt(scenes[0], 1), scenes[2]},
 		},
 		{
+			name: "Success/PastTheEnd",
+
+			request: &dao.SceneMoveRequest{ProjectID: projectID, ID: sceneID1, Position: 99},
+
+			expect:       sceneAt(scenes[0], 2),
+			expectScenes: []*dao.Scene{sceneAt(scenes[1], 0), sceneAt(scenes[2], 1), sceneAt(scenes[0], 2)},
+		},
+		{
+			name: "Success/SamePosition",
+
+			request: &dao.SceneMoveRequest{ProjectID: projectID, ID: sceneID2, Position: 1},
+
+			expect:       scenes[1],
+			expectScenes: scenes[:3],
+		},
+		{
 			name: "Error/NotFound",
 
-			request: &dao.SceneMoveRequest{ProjectID: projectID, ID: absentID, To: 0},
+			request: &dao.SceneMoveRequest{ProjectID: projectID, ID: absentID, Position: 0},
 
 			expectErr: dao.ErrSceneMoveNotFound,
 		},
 		{
 			name: "Error/OtherProject",
 
-			request: &dao.SceneMoveRequest{ProjectID: projectID, ID: otherSceneID, To: 0},
+			request: &dao.SceneMoveRequest{ProjectID: projectID, ID: otherSceneID, Position: 0},
 
 			expectErr: dao.ErrSceneMoveNotFound,
 		},

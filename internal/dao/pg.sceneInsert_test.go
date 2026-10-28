@@ -30,7 +30,9 @@ func TestPgSceneInsert(t *testing.T) {
 		expect []*dao.Scene
 		// expectScenes is the project's order after the insert, when the case checks it.
 		expectScenes []*dao.Scene
-		expectErr    error
+		// full fills the project up to its last position before the insert.
+		full      bool
+		expectErr error
 	}{
 		{
 			name: "Success",
@@ -54,7 +56,7 @@ func TestPgSceneInsert(t *testing.T) {
 			},
 		},
 		{
-			name: "Success/LastPosition",
+			name: "Success/PastTheEnd",
 
 			request: &dao.SceneInsertRequest{
 				ProjectID: projectID,
@@ -64,7 +66,7 @@ func TestPgSceneInsert(t *testing.T) {
 			},
 
 			expect: []*dao.Scene{
-				{ID: newSceneID1, ProjectID: projectID, Position: 499, Title: "Le débat", Color: "#e0457b", UpdatedAt: now},
+				{ID: newSceneID1, ProjectID: projectID, Position: 3, Title: "Le débat", Color: "#e0457b", UpdatedAt: now},
 			},
 		},
 		{
@@ -72,14 +74,12 @@ func TestPgSceneInsert(t *testing.T) {
 
 			request: &dao.SceneInsertRequest{
 				ProjectID: projectID,
-				Position:  499,
-				Scenes: []dao.SceneInsertItem{
-					{ID: newSceneID1, Title: "Le débat", Color: "#e0457b"},
-					{ID: newSceneID2, Title: "Le passage", Color: "#2bb673"},
-				},
-				Now: now,
+				Position:  0,
+				Scenes:    []dao.SceneInsertItem{{ID: newSceneID1, Title: "Le débat", Color: "#e0457b"}},
+				Now:       now,
 			},
 
+			full:      true,
 			expectErr: dao.ErrSceneInsertFull,
 		},
 		{
@@ -118,7 +118,12 @@ func TestPgSceneInsert(t *testing.T) {
 			postgrestest.RunDBTest(t, configtest.PostgresPreset, migrations.Migrations, func(ctx context.Context, t *testing.T) {
 				t.Helper()
 
-				insertFixtures(ctx, t, composerFixtures())
+				data := composerFixtures()
+				if testCase.full {
+					data.scenes = append(data.scenes, fillerScenes()...)
+				}
+
+				insertFixtures(ctx, t, data)
 
 				result, err := daoSceneInsert.Exec(ctx, testCase.request)
 				require.ErrorIs(t, err, testCase.expectErr)

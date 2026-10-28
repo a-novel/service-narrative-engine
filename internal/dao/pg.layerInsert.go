@@ -26,7 +26,8 @@ type LayerInsertRequest struct {
 	// ProjectID is the project the layer joins.
 	ProjectID uuid.UUID
 
-	// Position is the layer's place among the project's rows, from 0.
+	// Position is the layer's place among the project's rows, from 0. A position past the last layer
+	// appends.
 	Position int
 	// Kind names the content schema the layer's cells follow.
 	Kind string

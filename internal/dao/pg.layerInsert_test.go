@@ -27,6 +27,8 @@ func TestPgLayerInsert(t *testing.T) {
 		expect *dao.Layer
 		// expectLayers is the project's order after the insert, when the case checks it.
 		expectLayers []*dao.Layer
+		// full fills the project up to its last position before the insert.
+		full         bool
 		expectErr    error
 		expectFailed bool
 	}{
@@ -44,23 +46,24 @@ func TestPgLayerInsert(t *testing.T) {
 			},
 		},
 		{
-			name: "Success/LastPosition",
+			name: "Success/PastTheEnd",
 
 			request: &dao.LayerInsertRequest{
 				ID: newLayerID, ProjectID: projectID, Position: 999, Kind: "notes", Name: "Places", Now: now,
 			},
 
 			expect: &dao.Layer{
-				ID: newLayerID, ProjectID: projectID, Position: 999, Kind: "notes", Name: "Places", UpdatedAt: now,
+				ID: newLayerID, ProjectID: projectID, Position: 2, Kind: "notes", Name: "Places", UpdatedAt: now,
 			},
 		},
 		{
 			name: "Error/ProjectFull",
 
 			request: &dao.LayerInsertRequest{
-				ID: newLayerID, ProjectID: projectID, Position: 1000, Kind: "notes", Name: "Places", Now: now,
+				ID: newLayerID, ProjectID: projectID, Position: 0, Kind: "notes", Name: "Places", Now: now,
 			},
 
+			full:      true,
 			expectErr: dao.ErrLayerInsertFull,
 		},
 		{
@@ -99,7 +102,12 @@ func TestPgLayerInsert(t *testing.T) {
 			postgrestest.RunDBTest(t, configtest.PostgresPreset, migrations.Migrations, func(ctx context.Context, t *testing.T) {
 				t.Helper()
 
-				insertFixtures(ctx, t, composerFixtures())
+				data := composerFixtures()
+				if testCase.full {
+					data.layers = append(data.layers, fillerLayers()...)
+				}
+
+				insertFixtures(ctx, t, data)
 
 				result, err := daoLayerInsert.Exec(ctx, testCase.request)
 				if testCase.expectFailed {

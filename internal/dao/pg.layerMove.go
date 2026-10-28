@@ -24,8 +24,8 @@ type LayerMoveRequest struct {
 	ProjectID uuid.UUID
 	ID        uuid.UUID
 
-	// To is the layer's position after the move.
-	To int
+	// Position is the layer's position after the move. A position past the last layer moves it last.
+	Position int
 }
 
 // PgLayerMove moves a layer to another position, and shifts the layers between its old and new
@@ -47,7 +47,7 @@ func (dao *PgLayerMove) Exec(ctx context.Context, request *LayerMoveRequest) (*L
 
 	entity := &Layer{}
 
-	err = db.NewRaw(layerMoveQuery, request.ProjectID, request.ID, request.To).Scan(ctx, entity)
+	err = db.NewRaw(layerMoveQuery, request.ProjectID, request.ID, request.Position).Scan(ctx, entity)
 	if errors.Is(err, sql.ErrNoRows) {
 		err = errors.Join(err, ErrLayerMoveNotFound)
 	}

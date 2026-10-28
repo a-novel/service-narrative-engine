@@ -3,6 +3,7 @@ package dao_test
 import (
 	"context"
 	"encoding/json"
+	"strconv"
 	"testing"
 	"time"
 
@@ -95,6 +96,37 @@ func composerFixtures() fixtures {
 			},
 		},
 	}
+}
+
+// fillerID derives a stable ID from a filler row's position.
+func fillerID(kind string, position int) uuid.UUID {
+	return uuid.NewSHA1(uuid.NameSpaceOID, []byte(kind+strconv.Itoa(position)))
+}
+
+// fillerScenes returns the scenes that fill the test project up to its last position, 499.
+func fillerScenes() []*dao.Scene {
+	scenes := make([]*dao.Scene, 0, 497)
+	for position := 3; position < 500; position++ {
+		scenes = append(scenes, &dao.Scene{
+			ID: fillerID("scene", position), ProjectID: projectID, Position: position, Title: "Filler",
+			Color: sceneColor, UpdatedAt: updatedAt,
+		})
+	}
+
+	return scenes
+}
+
+// fillerLayers returns the layers that fill the test project up to its last position, 999.
+func fillerLayers() []*dao.Layer {
+	layers := make([]*dao.Layer, 0, 998)
+	for position := 2; position < 1000; position++ {
+		layers = append(layers, &dao.Layer{
+			ID: fillerID("layer", position), ProjectID: projectID, Position: position, Kind: "notes", Name: "Filler",
+			UpdatedAt: updatedAt,
+		})
+	}
+
+	return layers
 }
 
 // insertFixtures seeds data in the order its foreign keys need.

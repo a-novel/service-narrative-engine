@@ -42,7 +42,8 @@ type SceneInsertRequest struct {
 	// ProjectID is the project the scenes join.
 	ProjectID uuid.UUID
 
-	// Position is the position of the first scene. The others follow it in order.
+	// Position is the position of the first scene, and the others follow it in order. A position past the
+	// last scene appends.
 	Position int
 	// Scenes lists the scenes to create, in narrative order.
 	Scenes []SceneInsertItem
