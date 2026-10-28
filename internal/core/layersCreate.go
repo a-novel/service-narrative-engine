@@ -18,18 +18,18 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// LayerCreateDaoLock locks the project its owner names, so changes to its order run one at a time.
-type LayerCreateDaoLock interface {
+// LayersCreateDaoLock locks the project its owner names, so changes to its order run one at a time.
+type LayersCreateDaoLock interface {
 	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
 }
 
-// LayerCreateDaoInsert inserts the layers, and moves the layers at or after their position down.
-type LayerCreateDaoInsert interface {
-	Exec(ctx context.Context, request *dao.LayerInsertRequest) ([]*dao.Layer, error)
+// LayersCreateDaoInsert inserts the layers, and moves the layers at or after their position down.
+type LayersCreateDaoInsert interface {
+	Exec(ctx context.Context, request *dao.LayersInsertRequest) ([]*dao.Layer, error)
 }
 
-// LayerCreateItem is one layer of a [LayerCreateRequest].
-type LayerCreateItem struct {
+// LayersCreateItem is one layer of a [LayersCreateRequest].
+type LayersCreateItem struct {
 	// Kind names the content schema the layer's cells follow, such as manuscript or notes.
 	Kind string `validate:"required,layerkind"`
 
@@ -39,8 +39,8 @@ type LayerCreateItem struct {
 	Description string `validate:"max=20000"`
 }
 
-// LayerCreateRequest carries new layers and their place in the project.
-type LayerCreateRequest struct {
+// LayersCreateRequest carries new layers and their place in the project.
+type LayersCreateRequest struct {
 	OwnerID   uuid.UUID `validate:"required"`
 	ProjectID uuid.UUID `validate:"required"`
 
@@ -48,27 +48,27 @@ type LayerCreateRequest struct {
 	// follow it. A position past the last layer appends them.
 	Position int `validate:"min=0"`
 	// Layers lists the layers to add, in order, at most 100.
-	Layers []LayerCreateItem `validate:"required,min=1,max=100,dive"`
+	Layers []LayersCreateItem `validate:"required,min=1,max=100,dive"`
 }
 
-// LayerCreate adds layers to a project at the position the caller names. The layers from that
+// LayersCreate adds layers to a project at the position the caller names. The layers from that
 // position on move down to make room.
-type LayerCreate struct {
-	daoLock    LayerCreateDaoLock
-	daoInsert  LayerCreateDaoInsert
+type LayersCreate struct {
+	daoLock    LayersCreateDaoLock
+	daoInsert  LayersCreateDaoInsert
 	transactor transaction.Transactor
 }
 
-func NewLayerCreate(
-	daoLock LayerCreateDaoLock,
-	daoInsert LayerCreateDaoInsert,
+func NewLayersCreate(
+	daoLock LayersCreateDaoLock,
+	daoInsert LayersCreateDaoInsert,
 	transactor transaction.Transactor,
-) *LayerCreate {
-	return &LayerCreate{daoLock: daoLock, daoInsert: daoInsert, transactor: transactor}
+) *LayersCreate {
+	return &LayersCreate{daoLock: daoLock, daoInsert: daoInsert, transactor: transactor}
 }
 
-func (service *LayerCreate) Exec(ctx context.Context, request *LayerCreateRequest) ([]*Layer, error) {
-	ctx, span := otel.Tracer().Start(ctx, "core.LayerCreate")
+func (service *LayersCreate) Exec(ctx context.Context, request *LayersCreateRequest) ([]*Layer, error) {
+	ctx, span := otel.Tracer().Start(ctx, "core.LayersCreate")
 	defer span.End()
 
 	span.SetAttributes(
@@ -99,15 +99,15 @@ func (service *LayerCreate) Exec(ctx context.Context, request *LayerCreateReques
 			return fmt.Errorf("lock project: %w", err)
 		}
 
-		inserted, err := service.daoInsert.Exec(ctx, &dao.LayerInsertRequest{
+		inserted, err := service.daoInsert.Exec(ctx, &dao.LayersInsertRequest{
 			ProjectID: request.ProjectID,
 			Position:  request.Position,
-			Layers: lo.Map(request.Layers, func(item LayerCreateItem, index int) dao.LayerInsertItem {
-				return dao.LayerInsertItem{ID: ids[index], Kind: item.Kind, Name: item.Name, Description: item.Description}
+			Layers: lo.Map(request.Layers, func(item LayersCreateItem, index int) dao.LayersInsertItem {
+				return dao.LayersInsertItem{ID: ids[index], Kind: item.Kind, Name: item.Name, Description: item.Description}
 			}),
 			Now: time.Now(),
 		})
-		if errors.Is(err, dao.ErrLayerInsertFull) {
+		if errors.Is(err, dao.ErrLayersInsertFull) {
 			err = errors.Join(err, ErrProjectFull)
 		}
 

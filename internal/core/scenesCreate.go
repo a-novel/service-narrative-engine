@@ -19,18 +19,18 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// SceneCreateDaoLock locks the project its owner names, so changes to its order run one at a time.
-type SceneCreateDaoLock interface {
+// ScenesCreateDaoLock locks the project its owner names, so changes to its order run one at a time.
+type ScenesCreateDaoLock interface {
 	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
 }
 
-// SceneCreateDaoInsert inserts the scenes, and moves the scenes at or after their position down.
-type SceneCreateDaoInsert interface {
-	Exec(ctx context.Context, request *dao.SceneInsertRequest) ([]*dao.Scene, error)
+// ScenesCreateDaoInsert inserts the scenes, and moves the scenes at or after their position down.
+type ScenesCreateDaoInsert interface {
+	Exec(ctx context.Context, request *dao.ScenesInsertRequest) ([]*dao.Scene, error)
 }
 
-// SceneCreateItem is one scene of a [SceneCreateRequest].
-type SceneCreateItem struct {
+// ScenesCreateItem is one scene of a [ScenesCreateRequest].
+type ScenesCreateItem struct {
 	// Title names the scene in the composer.
 	Title string `validate:"required,notblank,max=200"`
 	// Color is the scene's color in the composer, as a #rrggbb hex code in either case.
@@ -41,8 +41,8 @@ type SceneCreateItem struct {
 	Prompt string `validate:"max=20000"`
 }
 
-// SceneCreateRequest carries new scenes and their place in the project.
-type SceneCreateRequest struct {
+// ScenesCreateRequest carries new scenes and their place in the project.
+type ScenesCreateRequest struct {
 	OwnerID   uuid.UUID `validate:"required"`
 	ProjectID uuid.UUID `validate:"required"`
 
@@ -50,27 +50,27 @@ type SceneCreateRequest struct {
 	// A position past the last scene appends them.
 	Position int `validate:"min=0"`
 	// Scenes lists the scenes to add, in narrative order, at most 100.
-	Scenes []SceneCreateItem `validate:"required,min=1,max=100,dive"`
+	Scenes []ScenesCreateItem `validate:"required,min=1,max=100,dive"`
 }
 
-// SceneCreate adds scenes to a project at the position the caller names. The scenes from that
+// ScenesCreate adds scenes to a project at the position the caller names. The scenes from that
 // position on move down to make room.
-type SceneCreate struct {
-	daoLock    SceneCreateDaoLock
-	daoInsert  SceneCreateDaoInsert
+type ScenesCreate struct {
+	daoLock    ScenesCreateDaoLock
+	daoInsert  ScenesCreateDaoInsert
 	transactor transaction.Transactor
 }
 
-func NewSceneCreate(
-	daoLock SceneCreateDaoLock,
-	daoInsert SceneCreateDaoInsert,
+func NewScenesCreate(
+	daoLock ScenesCreateDaoLock,
+	daoInsert ScenesCreateDaoInsert,
 	transactor transaction.Transactor,
-) *SceneCreate {
-	return &SceneCreate{daoLock: daoLock, daoInsert: daoInsert, transactor: transactor}
+) *ScenesCreate {
+	return &ScenesCreate{daoLock: daoLock, daoInsert: daoInsert, transactor: transactor}
 }
 
-func (service *SceneCreate) Exec(ctx context.Context, request *SceneCreateRequest) ([]*Scene, error) {
-	ctx, span := otel.Tracer().Start(ctx, "core.SceneCreate")
+func (service *ScenesCreate) Exec(ctx context.Context, request *ScenesCreateRequest) ([]*Scene, error) {
+	ctx, span := otel.Tracer().Start(ctx, "core.ScenesCreate")
 	defer span.End()
 
 	span.SetAttributes(
@@ -101,18 +101,18 @@ func (service *SceneCreate) Exec(ctx context.Context, request *SceneCreateReques
 			return fmt.Errorf("lock project: %w", err)
 		}
 
-		inserted, err := service.daoInsert.Exec(ctx, &dao.SceneInsertRequest{
+		inserted, err := service.daoInsert.Exec(ctx, &dao.ScenesInsertRequest{
 			ProjectID: request.ProjectID,
 			Position:  request.Position,
-			Scenes: lo.Map(request.Scenes, func(item SceneCreateItem, index int) dao.SceneInsertItem {
-				return dao.SceneInsertItem{
+			Scenes: lo.Map(request.Scenes, func(item ScenesCreateItem, index int) dao.ScenesInsertItem {
+				return dao.ScenesInsertItem{
 					ID: ids[index], Title: item.Title, Color: strings.ToLower(item.Color),
 					Description: item.Description, Prompt: item.Prompt,
 				}
 			}),
 			Now: time.Now(),
 		})
-		if errors.Is(err, dao.ErrSceneInsertFull) {
+		if errors.Is(err, dao.ErrScenesInsertFull) {
 			err = errors.Join(err, ErrProjectFull)
 		}
 

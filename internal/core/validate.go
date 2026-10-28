@@ -36,10 +36,10 @@ func ValidateLayerKind(fl validator.FieldLevel) bool {
 	return err == nil
 }
 
-// ValidateUniqueCells reports whether a list of [CellWriteItem] names each pair of a scene and a layer
+// ValidateUniqueCells reports whether a list of [CellsWriteItem] names each pair of a scene and a layer
 // once. The package registers it as the "uniquecells" struct tag.
 func ValidateUniqueCells(fl validator.FieldLevel) bool {
-	cells, ok := fl.Field().Interface().([]CellWriteItem)
+	cells, ok := fl.Field().Interface().([]CellsWriteItem)
 	if !ok {
 		return false
 	}

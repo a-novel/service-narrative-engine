@@ -17,23 +17,23 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/models/schemas"
 )
 
-// CellWriteDaoOwner checks that the user owns the project.
-type CellWriteDaoOwner interface {
+// CellsWriteDaoOwner checks that the user owns the project.
+type CellsWriteDaoOwner interface {
 	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
 }
 
-// CellWriteDaoKind reads the kinds of the cells' layers, which name their content schemas.
-type CellWriteDaoKind interface {
+// CellsWriteDaoKind reads the kinds of the cells' layers, which name their content schemas.
+type CellsWriteDaoKind interface {
 	Exec(ctx context.Context, request *dao.LayerKindRequest) ([]*dao.LayerKind, error)
 }
 
-// CellWriteDao writes the cells. It refuses a scene or a layer of another project.
-type CellWriteDao interface {
-	Exec(ctx context.Context, request *dao.CellUpsertRequest) ([]*dao.CellUpsertRow, error)
+// CellsWriteDao writes the cells. It refuses a scene or a layer of another project.
+type CellsWriteDao interface {
+	Exec(ctx context.Context, request *dao.CellsUpsertRequest) ([]*dao.CellUpsertRow, error)
 }
 
-// CellWriteItem is one cell of a [CellWriteRequest].
-type CellWriteItem struct {
+// CellsWriteItem is one cell of a [CellsWriteRequest].
+type CellsWriteItem struct {
 	// SceneID is the scene whose column holds the cell.
 	SceneID uuid.UUID `validate:"required"`
 	// LayerID is the layer whose row holds the cell.
@@ -43,29 +43,29 @@ type CellWriteItem struct {
 	Content json.RawMessage `validate:"required,max=2097152"`
 }
 
-// CellWriteRequest carries the new content of cells.
-type CellWriteRequest struct {
+// CellsWriteRequest carries the new content of cells.
+type CellsWriteRequest struct {
 	OwnerID   uuid.UUID `validate:"required"`
 	ProjectID uuid.UUID `validate:"required"`
 	// Cells lists the cells to write, at most 100. A scene and a layer meet in at most one of them.
-	Cells []CellWriteItem `validate:"required,min=1,max=100,uniquecells,dive"`
+	Cells []CellsWriteItem `validate:"required,min=1,max=100,uniquecells,dive"`
 }
 
-// CellWrite writes the content of cells, which it validates against the content schema of each
+// CellsWrite writes the content of cells, which it validates against the content schema of each
 // layer's kind, and returns the written cells in the order of the request, without their content. The
 // first write of a cell creates it, and it writes all of them or none.
-type CellWrite struct {
-	daoOwner CellWriteDaoOwner
-	daoKind  CellWriteDaoKind
-	dao      CellWriteDao
+type CellsWrite struct {
+	daoOwner CellsWriteDaoOwner
+	daoKind  CellsWriteDaoKind
+	dao      CellsWriteDao
 }
 
-func NewCellWrite(daoOwner CellWriteDaoOwner, daoKind CellWriteDaoKind, dao CellWriteDao) *CellWrite {
-	return &CellWrite{daoOwner: daoOwner, daoKind: daoKind, dao: dao}
+func NewCellsWrite(daoOwner CellsWriteDaoOwner, daoKind CellsWriteDaoKind, dao CellsWriteDao) *CellsWrite {
+	return &CellsWrite{daoOwner: daoOwner, daoKind: daoKind, dao: dao}
 }
 
-func (service *CellWrite) Exec(ctx context.Context, request *CellWriteRequest) ([]*WrittenCell, error) {
-	ctx, span := otel.Tracer().Start(ctx, "core.CellWrite")
+func (service *CellsWrite) Exec(ctx context.Context, request *CellsWriteRequest) ([]*WrittenCell, error) {
+	ctx, span := otel.Tracer().Start(ctx, "core.CellsWrite")
 	defer span.End()
 
 	span.SetAttributes(
@@ -87,7 +87,7 @@ func (service *CellWrite) Exec(ctx context.Context, request *CellWriteRequest) (
 		return nil, otel.ReportError(span, fmt.Errorf("check owner: %w", err))
 	}
 
-	layerIDs := lo.Uniq(lo.Map(request.Cells, func(cell CellWriteItem, _ int) uuid.UUID { return cell.LayerID }))
+	layerIDs := lo.Uniq(lo.Map(request.Cells, func(cell CellsWriteItem, _ int) uuid.UUID { return cell.LayerID }))
 
 	kinds, err := service.daoKind.Exec(ctx, &dao.LayerKindRequest{ProjectID: request.ProjectID, IDs: layerIDs})
 	if err != nil {
@@ -114,18 +114,18 @@ func (service *CellWrite) Exec(ctx context.Context, request *CellWriteRequest) (
 		}
 	}
 
-	entities, err := service.dao.Exec(ctx, &dao.CellUpsertRequest{
+	entities, err := service.dao.Exec(ctx, &dao.CellsUpsertRequest{
 		ProjectID: request.ProjectID,
-		Cells: lo.Map(request.Cells, func(cell CellWriteItem, _ int) dao.CellUpsertItem {
-			return dao.CellUpsertItem{SceneID: cell.SceneID, LayerID: cell.LayerID, Content: cell.Content}
+		Cells: lo.Map(request.Cells, func(cell CellsWriteItem, _ int) dao.CellsUpsertItem {
+			return dao.CellsUpsertItem{SceneID: cell.SceneID, LayerID: cell.LayerID, Content: cell.Content}
 		}),
 		Now: time.Now(),
 	})
 
 	switch {
-	case errors.Is(err, dao.ErrCellUpsertSceneNotFound):
+	case errors.Is(err, dao.ErrCellsUpsertSceneNotFound):
 		err = errors.Join(err, ErrSceneNotFound)
-	case errors.Is(err, dao.ErrCellUpsertLayerNotFound):
+	case errors.Is(err, dao.ErrCellsUpsertLayerNotFound):
 		err = errors.Join(err, ErrLayerNotFound)
 	}
 
@@ -137,7 +137,7 @@ func (service *CellWrite) Exec(ctx context.Context, request *CellWriteRequest) (
 		return [2]uuid.UUID{row.SceneID, row.LayerID}
 	})
 
-	return lo.Map(request.Cells, func(cell CellWriteItem, _ int) *WrittenCell {
+	return lo.Map(request.Cells, func(cell CellsWriteItem, _ int) *WrittenCell {
 		return newWrittenCell(written[[2]uuid.UUID{cell.SceneID, cell.LayerID}])
 	}), nil
 }

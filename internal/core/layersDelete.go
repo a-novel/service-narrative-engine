@@ -17,50 +17,50 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// LayerDeleteDaoLock locks the project its owner names, so changes to its order run one at a time.
-type LayerDeleteDaoLock interface {
+// LayersDeleteDaoLock locks the project its owner names, so changes to its order run one at a time.
+type LayersDeleteDaoLock interface {
 	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
 }
 
-// LayerDeleteDaoKind reads the kinds of the layers to delete, and how many layers share each.
-type LayerDeleteDaoKind interface {
+// LayersDeleteDaoKind reads the kinds of the layers to delete, and how many layers share each.
+type LayersDeleteDaoKind interface {
 	Exec(ctx context.Context, request *dao.LayerKindRequest) ([]*dao.LayerKind, error)
 }
 
-// LayerDeleteDao removes the layers, and moves the layers after them up.
-type LayerDeleteDao interface {
-	Exec(ctx context.Context, request *dao.LayerDeleteRequest) ([]*dao.Layer, error)
+// LayersDeleteDao removes the layers, and moves the layers after them up.
+type LayersDeleteDao interface {
+	Exec(ctx context.Context, request *dao.LayersDeleteRequest) ([]*dao.Layer, error)
 }
 
-// LayerDeleteRequest names the layers to delete.
-type LayerDeleteRequest struct {
+// LayersDeleteRequest names the layers to delete.
+type LayersDeleteRequest struct {
 	OwnerID   uuid.UUID `validate:"required"`
 	ProjectID uuid.UUID `validate:"required"`
 	// IDs lists the layers to delete, each once, at most 100.
 	IDs []uuid.UUID `validate:"required,min=1,max=100,unique,dive,required"`
 }
 
-// LayerDelete deletes layers with their cells, and moves the layers after them up to close the gaps. It
+// LayersDelete deletes layers with their cells, and moves the layers after them up to close the gaps. It
 // deletes all of them or none, and refuses with [ErrRequiredLayer] to remove the last layer of a
 // required kind, such as the manuscript.
-type LayerDelete struct {
-	daoLock    LayerDeleteDaoLock
-	daoKind    LayerDeleteDaoKind
-	dao        LayerDeleteDao
+type LayersDelete struct {
+	daoLock    LayersDeleteDaoLock
+	daoKind    LayersDeleteDaoKind
+	dao        LayersDeleteDao
 	transactor transaction.Transactor
 }
 
-func NewLayerDelete(
-	daoLock LayerDeleteDaoLock,
-	daoKind LayerDeleteDaoKind,
-	dao LayerDeleteDao,
+func NewLayersDelete(
+	daoLock LayersDeleteDaoLock,
+	daoKind LayersDeleteDaoKind,
+	dao LayersDeleteDao,
 	transactor transaction.Transactor,
-) *LayerDelete {
-	return &LayerDelete{daoLock: daoLock, daoKind: daoKind, dao: dao, transactor: transactor}
+) *LayersDelete {
+	return &LayersDelete{daoLock: daoLock, daoKind: daoKind, dao: dao, transactor: transactor}
 }
 
-func (service *LayerDelete) Exec(ctx context.Context, request *LayerDeleteRequest) ([]*Layer, error) {
-	ctx, span := otel.Tracer().Start(ctx, "core.LayerDelete")
+func (service *LayersDelete) Exec(ctx context.Context, request *LayersDeleteRequest) ([]*Layer, error) {
+	ctx, span := otel.Tracer().Start(ctx, "core.LayersDelete")
 	defer span.End()
 
 	span.SetAttributes(
@@ -100,7 +100,7 @@ func (service *LayerDelete) Exec(ctx context.Context, request *LayerDeleteReques
 			return err
 		}
 
-		deleted, err := service.dao.Exec(ctx, &dao.LayerDeleteRequest{ProjectID: request.ProjectID, IDs: request.IDs})
+		deleted, err := service.dao.Exec(ctx, &dao.LayersDeleteRequest{ProjectID: request.ProjectID, IDs: request.IDs})
 		if err != nil {
 			return fmt.Errorf("delete layers: %w", err)
 		}

@@ -17,42 +17,42 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// SceneDeleteDaoLock locks the project its owner names, so changes to its order run one at a time.
-type SceneDeleteDaoLock interface {
+// ScenesDeleteDaoLock locks the project its owner names, so changes to its order run one at a time.
+type ScenesDeleteDaoLock interface {
 	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
 }
 
-// SceneDeleteDao removes the scenes, and moves the scenes after them up.
-type SceneDeleteDao interface {
-	Exec(ctx context.Context, request *dao.SceneDeleteRequest) ([]*dao.Scene, error)
+// ScenesDeleteDao removes the scenes, and moves the scenes after them up.
+type ScenesDeleteDao interface {
+	Exec(ctx context.Context, request *dao.ScenesDeleteRequest) ([]*dao.Scene, error)
 }
 
-// SceneDeleteRequest names the scenes to delete.
-type SceneDeleteRequest struct {
+// ScenesDeleteRequest names the scenes to delete.
+type ScenesDeleteRequest struct {
 	OwnerID   uuid.UUID `validate:"required"`
 	ProjectID uuid.UUID `validate:"required"`
 	// IDs lists the scenes to delete, each once, at most 100.
 	IDs []uuid.UUID `validate:"required,min=1,max=100,unique,dive,required"`
 }
 
-// SceneDelete deletes scenes with their cells, and moves the scenes after them up to close the gaps. It
+// ScenesDelete deletes scenes with their cells, and moves the scenes after them up to close the gaps. It
 // deletes all of them or none.
-type SceneDelete struct {
-	daoLock    SceneDeleteDaoLock
-	dao        SceneDeleteDao
+type ScenesDelete struct {
+	daoLock    ScenesDeleteDaoLock
+	dao        ScenesDeleteDao
 	transactor transaction.Transactor
 }
 
-func NewSceneDelete(
-	daoLock SceneDeleteDaoLock,
-	dao SceneDeleteDao,
+func NewScenesDelete(
+	daoLock ScenesDeleteDaoLock,
+	dao ScenesDeleteDao,
 	transactor transaction.Transactor,
-) *SceneDelete {
-	return &SceneDelete{daoLock: daoLock, dao: dao, transactor: transactor}
+) *ScenesDelete {
+	return &ScenesDelete{daoLock: daoLock, dao: dao, transactor: transactor}
 }
 
-func (service *SceneDelete) Exec(ctx context.Context, request *SceneDeleteRequest) ([]*Scene, error) {
-	ctx, span := otel.Tracer().Start(ctx, "core.SceneDelete")
+func (service *ScenesDelete) Exec(ctx context.Context, request *ScenesDeleteRequest) ([]*Scene, error) {
+	ctx, span := otel.Tracer().Start(ctx, "core.ScenesDelete")
 	defer span.End()
 
 	span.SetAttributes(
@@ -77,7 +77,7 @@ func (service *SceneDelete) Exec(ctx context.Context, request *SceneDeleteReques
 			return fmt.Errorf("lock project: %w", err)
 		}
 
-		deleted, err := service.dao.Exec(ctx, &dao.SceneDeleteRequest{ProjectID: request.ProjectID, IDs: request.IDs})
+		deleted, err := service.dao.Exec(ctx, &dao.ScenesDeleteRequest{ProjectID: request.ProjectID, IDs: request.IDs})
 		if err != nil {
 			return fmt.Errorf("delete scenes: %w", err)
 		}

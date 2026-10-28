@@ -17,13 +17,13 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-func TestLayerDelete(t *testing.T) {
+func TestLayersDelete(t *testing.T) {
 	t.Parallel()
 
 	errFoo := errors.New("foo")
 
-	request := func(ids ...uuid.UUID) *core.LayerDeleteRequest {
-		return &core.LayerDeleteRequest{OwnerID: ownerID, ProjectID: projectID, IDs: ids}
+	request := func(ids ...uuid.UUID) *core.LayersDeleteRequest {
+		return &core.LayersDeleteRequest{OwnerID: ownerID, ProjectID: projectID, IDs: ids}
 	}
 
 	// kinds is what the kind read returns for layers of one kind, of which the project holds count.
@@ -39,7 +39,7 @@ func TestLayerDelete(t *testing.T) {
 	testCases := []struct {
 		name string
 
-		request *core.LayerDeleteRequest
+		request *core.LayersDeleteRequest
 
 		lockMock   *daoMock[bool]
 		kindMock   *daoMock[[]*dao.LayerKind]
@@ -195,9 +195,9 @@ func TestLayerDelete(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockLock := coremocks.NewMockLayerDeleteDaoLock(t)
-			mockKind := coremocks.NewMockLayerDeleteDaoKind(t)
-			mockDelete := coremocks.NewMockLayerDeleteDao(t)
+			mockLock := coremocks.NewMockLayersDeleteDaoLock(t)
+			mockKind := coremocks.NewMockLayersDeleteDaoKind(t)
+			mockDelete := coremocks.NewMockLayersDeleteDao(t)
 
 			if testCase.lockMock != nil {
 				mockLock.EXPECT().
@@ -213,7 +213,7 @@ func TestLayerDelete(t *testing.T) {
 
 			if testCase.deleteMock != nil {
 				mockDelete.EXPECT().
-					Exec(mock.Anything, &dao.LayerDeleteRequest{ProjectID: projectID, IDs: testCase.request.IDs}).
+					Exec(mock.Anything, &dao.LayersDeleteRequest{ProjectID: projectID, IDs: testCase.request.IDs}).
 					Return(testCase.deleteMock.resp, testCase.deleteMock.err)
 			}
 
@@ -222,7 +222,7 @@ func TestLayerDelete(t *testing.T) {
 				transactor = transactiontest.NewTransactor()
 			}
 
-			service := core.NewLayerDelete(mockLock, mockKind, mockDelete, transactor)
+			service := core.NewLayersDelete(mockLock, mockKind, mockDelete, transactor)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)

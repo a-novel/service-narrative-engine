@@ -26,7 +26,7 @@ type ProjectCreateDaoProject interface {
 
 // ProjectCreateDaoLayers inserts the project's required layers.
 type ProjectCreateDaoLayers interface {
-	Exec(ctx context.Context, request *dao.LayerInsertRequest) ([]*dao.Layer, error)
+	Exec(ctx context.Context, request *dao.LayersInsertRequest) ([]*dao.Layer, error)
 }
 
 // ProjectCreateRequest carries a new project.
@@ -92,11 +92,11 @@ func (service *ProjectCreate) Exec(ctx context.Context, request *ProjectCreateRe
 
 		kinds := slices.Sorted(maps.Keys(requiredLayers))
 
-		layers, err := service.daoLayers.Exec(ctx, &dao.LayerInsertRequest{
+		layers, err := service.daoLayers.Exec(ctx, &dao.LayersInsertRequest{
 			ProjectID: project.ID,
 			Position:  0,
-			Layers: lo.Map(kinds, func(kind string, index int) dao.LayerInsertItem {
-				return dao.LayerInsertItem{ID: ids[1+index], Kind: kind, Name: requiredLayers[kind]}
+			Layers: lo.Map(kinds, func(kind string, index int) dao.LayersInsertItem {
+				return dao.LayersInsertItem{ID: ids[1+index], Kind: kind, Name: requiredLayers[kind]}
 			}),
 			Now: now,
 		})

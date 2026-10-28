@@ -18,7 +18,7 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-func TestCellWrite(t *testing.T) {
+func TestCellsWrite(t *testing.T) {
 	t.Parallel()
 
 	errFoo := errors.New("foo")
@@ -29,28 +29,28 @@ func TestCellWrite(t *testing.T) {
 	oversize := json.RawMessage(`"` + strings.Repeat("a", 2<<20-1) + `"`)
 
 	// layerID2 holds notes and layerID1 the manuscript.
-	notesCell := core.CellWriteItem{SceneID: sceneID1, LayerID: layerID2, Content: notes}
-	manuscriptCell := core.CellWriteItem{SceneID: sceneID1, LayerID: layerID1, Content: manuscript}
-	nextNotesCell := core.CellWriteItem{SceneID: sceneID2, LayerID: layerID2, Content: notes}
+	notesCell := core.CellsWriteItem{SceneID: sceneID1, LayerID: layerID2, Content: notes}
+	manuscriptCell := core.CellsWriteItem{SceneID: sceneID1, LayerID: layerID1, Content: manuscript}
+	nextNotesCell := core.CellsWriteItem{SceneID: sceneID2, LayerID: layerID2, Content: notes}
 	notesKind := &dao.LayerKind{ID: layerID2, Kind: core.LayerKindNotes, Count: 1}
 	manuscriptKind := &dao.LayerKind{ID: layerID1, Kind: core.LayerKindManuscript, Count: 1}
 
-	request := func(cells ...core.CellWriteItem) *core.CellWriteRequest {
-		return &core.CellWriteRequest{OwnerID: ownerID, ProjectID: projectID, Cells: cells}
+	request := func(cells ...core.CellsWriteItem) *core.CellsWriteRequest {
+		return &core.CellsWriteRequest{OwnerID: ownerID, ProjectID: projectID, Cells: cells}
 	}
 
-	daoRow := func(cell core.CellWriteItem) *dao.CellUpsertRow {
+	daoRow := func(cell core.CellsWriteItem) *dao.CellUpsertRow {
 		return &dao.CellUpsertRow{SceneID: cell.SceneID, LayerID: cell.LayerID, UpdatedAt: updatedAt}
 	}
 
-	writtenCell := func(cell core.CellWriteItem) *core.WrittenCell {
+	writtenCell := func(cell core.CellsWriteItem) *core.WrittenCell {
 		return &core.WrittenCell{SceneID: cell.SceneID, LayerID: cell.LayerID, UpdatedAt: updatedAt}
 	}
 
 	testCases := []struct {
 		name string
 
-		request *core.CellWriteRequest
+		request *core.CellsWriteRequest
 
 		ownerMock *daoMock[bool]
 		kindMock  *daoMock[[]*dao.LayerKind]
@@ -98,14 +98,14 @@ func TestCellWrite(t *testing.T) {
 		{
 			name: "Error/MissingContent",
 
-			request: request(core.CellWriteItem{SceneID: sceneID1, LayerID: layerID2}),
+			request: request(core.CellsWriteItem{SceneID: sceneID1, LayerID: layerID2}),
 
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
 			name: "Error/TooLarge",
 
-			request: request(core.CellWriteItem{SceneID: sceneID1, LayerID: layerID2, Content: oversize}),
+			request: request(core.CellsWriteItem{SceneID: sceneID1, LayerID: layerID2, Content: oversize}),
 
 			expectErr: core.ErrInvalidRequest,
 		},
@@ -119,8 +119,8 @@ func TestCellWrite(t *testing.T) {
 		{
 			name: "Error/TooManyCells",
 
-			request: request(lo.Times(101, func(int) core.CellWriteItem {
-				return core.CellWriteItem{SceneID: uuid.New(), LayerID: layerID2, Content: notes}
+			request: request(lo.Times(101, func(int) core.CellsWriteItem {
+				return core.CellsWriteItem{SceneID: uuid.New(), LayerID: layerID2, Content: notes}
 			})...),
 
 			expectErr: core.ErrInvalidRequest,
@@ -174,7 +174,7 @@ func TestCellWrite(t *testing.T) {
 			// One cell holds notes on the manuscript layer, so no cell is written.
 			name: "Error/ContentOfAnotherKind",
 
-			request: request(notesCell, core.CellWriteItem{SceneID: sceneID1, LayerID: layerID1, Content: notes}),
+			request: request(notesCell, core.CellsWriteItem{SceneID: sceneID1, LayerID: layerID1, Content: notes}),
 
 			ownerMock: &daoMock[bool]{resp: true},
 			kindMock:  &daoMock[[]*dao.LayerKind]{resp: []*dao.LayerKind{notesKind, manuscriptKind}},
@@ -188,7 +188,7 @@ func TestCellWrite(t *testing.T) {
 
 			ownerMock: &daoMock[bool]{resp: true},
 			kindMock:  &daoMock[[]*dao.LayerKind]{resp: []*dao.LayerKind{notesKind}},
-			daoMock:   &daoMock[[]*dao.CellUpsertRow]{err: dao.ErrCellUpsertSceneNotFound},
+			daoMock:   &daoMock[[]*dao.CellUpsertRow]{err: dao.ErrCellsUpsertSceneNotFound},
 
 			expectErr: core.ErrSceneNotFound,
 		},
@@ -199,7 +199,7 @@ func TestCellWrite(t *testing.T) {
 
 			ownerMock: &daoMock[bool]{resp: true},
 			kindMock:  &daoMock[[]*dao.LayerKind]{resp: []*dao.LayerKind{notesKind}},
-			daoMock:   &daoMock[[]*dao.CellUpsertRow]{err: dao.ErrCellUpsertLayerNotFound},
+			daoMock:   &daoMock[[]*dao.CellUpsertRow]{err: dao.ErrCellsUpsertLayerNotFound},
 
 			expectErr: core.ErrLayerNotFound,
 		},
@@ -220,9 +220,9 @@ func TestCellWrite(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockOwner := coremocks.NewMockCellWriteDaoOwner(t)
-			mockKind := coremocks.NewMockCellWriteDaoKind(t)
-			mockDao := coremocks.NewMockCellWriteDao(t)
+			mockOwner := coremocks.NewMockCellsWriteDaoOwner(t)
+			mockKind := coremocks.NewMockCellsWriteDaoKind(t)
+			mockDao := coremocks.NewMockCellsWriteDao(t)
 
 			if testCase.ownerMock != nil {
 				mockOwner.EXPECT().
@@ -232,7 +232,7 @@ func TestCellWrite(t *testing.T) {
 
 			if testCase.kindMock != nil {
 				// One read names each layer once.
-				layerIDs := lo.Uniq(lo.Map(testCase.request.Cells, func(cell core.CellWriteItem, _ int) uuid.UUID {
+				layerIDs := lo.Uniq(lo.Map(testCase.request.Cells, func(cell core.CellsWriteItem, _ int) uuid.UUID {
 					return cell.LayerID
 				}))
 
@@ -243,9 +243,9 @@ func TestCellWrite(t *testing.T) {
 
 			if testCase.daoMock != nil {
 				mockDao.EXPECT().
-					Exec(mock.Anything, mock.MatchedBy(func(req *dao.CellUpsertRequest) bool {
+					Exec(mock.Anything, mock.MatchedBy(func(req *dao.CellsUpsertRequest) bool {
 						return req.ProjectID == projectID && recent(req.Now) && slices.EqualFunc(
-							req.Cells, testCase.request.Cells, func(item dao.CellUpsertItem, cell core.CellWriteItem) bool {
+							req.Cells, testCase.request.Cells, func(item dao.CellsUpsertItem, cell core.CellsWriteItem) bool {
 								return item.SceneID == cell.SceneID && item.LayerID == cell.LayerID &&
 									bytes.Equal(item.Content, cell.Content)
 							},
@@ -254,7 +254,7 @@ func TestCellWrite(t *testing.T) {
 					Return(testCase.daoMock.resp, testCase.daoMock.err)
 			}
 
-			service := core.NewCellWrite(mockOwner, mockKind, mockDao)
+			service := core.NewCellsWrite(mockOwner, mockKind, mockDao)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)

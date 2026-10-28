@@ -17,19 +17,19 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-func TestSceneDelete(t *testing.T) {
+func TestScenesDelete(t *testing.T) {
 	t.Parallel()
 
 	errFoo := errors.New("foo")
 
-	request := func(ids ...uuid.UUID) *core.SceneDeleteRequest {
-		return &core.SceneDeleteRequest{OwnerID: ownerID, ProjectID: projectID, IDs: ids}
+	request := func(ids ...uuid.UUID) *core.ScenesDeleteRequest {
+		return &core.ScenesDeleteRequest{OwnerID: ownerID, ProjectID: projectID, IDs: ids}
 	}
 
 	testCases := []struct {
 		name string
 
-		request *core.SceneDeleteRequest
+		request *core.ScenesDeleteRequest
 
 		lockMock   *daoMock[bool]
 		deleteMock *daoMock[[]*dao.Scene]
@@ -134,8 +134,8 @@ func TestSceneDelete(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockLock := coremocks.NewMockSceneDeleteDaoLock(t)
-			mockDelete := coremocks.NewMockSceneDeleteDao(t)
+			mockLock := coremocks.NewMockScenesDeleteDaoLock(t)
+			mockDelete := coremocks.NewMockScenesDeleteDao(t)
 
 			if testCase.lockMock != nil {
 				mockLock.EXPECT().
@@ -145,7 +145,7 @@ func TestSceneDelete(t *testing.T) {
 
 			if testCase.deleteMock != nil {
 				mockDelete.EXPECT().
-					Exec(mock.Anything, &dao.SceneDeleteRequest{ProjectID: projectID, IDs: testCase.request.IDs}).
+					Exec(mock.Anything, &dao.ScenesDeleteRequest{ProjectID: projectID, IDs: testCase.request.IDs}).
 					Return(testCase.deleteMock.resp, testCase.deleteMock.err)
 			}
 
@@ -154,7 +154,7 @@ func TestSceneDelete(t *testing.T) {
 				transactor = transactiontest.NewTransactor()
 			}
 
-			service := core.NewSceneDelete(mockLock, mockDelete, transactor)
+			service := core.NewScenesDelete(mockLock, mockDelete, transactor)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)

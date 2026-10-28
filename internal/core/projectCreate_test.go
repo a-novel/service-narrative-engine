@@ -125,16 +125,16 @@ func TestProjectCreate(t *testing.T) {
 
 			if testCase.layersMock != nil {
 				daoLayersMock.EXPECT().
-					Exec(mock.Anything, mock.MatchedBy(func(req *dao.LayerInsertRequest) bool {
-						ids := lo.Map(req.Layers, func(item dao.LayerInsertItem, _ int) uuid.UUID { return item.ID })
-						layers := lo.Map(req.Layers, func(item dao.LayerInsertItem, _ int) dao.LayerInsertItem {
+					Exec(mock.Anything, mock.MatchedBy(func(req *dao.LayersInsertRequest) bool {
+						ids := lo.Map(req.Layers, func(item dao.LayersInsertItem, _ int) uuid.UUID { return item.ID })
+						layers := lo.Map(req.Layers, func(item dao.LayersInsertItem, _ int) dao.LayersInsertItem {
 							item.ID = uuid.Nil
 
 							return item
 						})
 
 						return req.ProjectID == projectID && req.Position == 0 && recent(req.Now) && freshIDs(ids) &&
-							slices.Equal(layers, []dao.LayerInsertItem{{Kind: core.LayerKindManuscript, Name: "Manuscript"}})
+							slices.Equal(layers, []dao.LayersInsertItem{{Kind: core.LayerKindManuscript, Name: "Manuscript"}})
 					})).
 					Return(testCase.layersMock.resp, testCase.layersMock.err)
 			}
