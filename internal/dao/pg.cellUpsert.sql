@@ -6,8 +6,18 @@ INSERT INTO
     content,
     updated_at
   )
-VALUES
-  (?0, ?1, ?2, ?3::jsonb, ?4)
+SELECT
+  ?0,
+  data.scene_id,
+  data.layer_id,
+  data.content::jsonb,
+  ?4
+FROM
+  unnest(
+    ARRAY[?1]::uuid[],
+    ARRAY[?2]::uuid[],
+    ARRAY[?3]::text[]
+  ) AS data (scene_id, layer_id, content)
 ON CONFLICT (scene_id, layer_id) DO UPDATE
 SET
   content = EXCLUDED.content,

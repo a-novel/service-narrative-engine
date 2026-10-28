@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
 	"github.com/a-novel-kit/golib/postgres/postgrestest"
@@ -16,34 +17,49 @@ import (
 func TestPgLayerKind(t *testing.T) {
 	t.Parallel()
 
+	// A second manuscript layer in the test project, so the manuscript kind counts two layers there.
+	draft := &dao.Layer{
+		ID: uuid.MustParse("00000000-0000-0000-0000-000000000023"), ProjectID: projectID, Position: 2,
+		Kind: "manuscript", Name: "Draft", UpdatedAt: updatedAt,
+	}
+
 	testCases := []struct {
 		name string
 
 		request *dao.LayerKindRequest
 
-		expect    string
-		expectErr error
+		expect []*dao.LayerKind
 	}{
 		{
 			name: "Success",
 
-			request: &dao.LayerKindRequest{ProjectID: projectID, ID: notesLayerID},
+			request: &dao.LayerKindRequest{ProjectID: projectID, IDs: []uuid.UUID{manuscriptLayerID, notesLayerID}},
 
-			expect: "notes",
+			// The draft counts though it is not requested, and the other project's manuscript does not.
+			expect: []*dao.LayerKind{
+				{ID: manuscriptLayerID, Kind: "manuscript", Count: 2},
+				{ID: notesLayerID, Kind: "notes", Count: 1},
+			},
 		},
 		{
-			name: "Error/NotFound",
+			name: "Success/SharedKind",
 
-			request: &dao.LayerKindRequest{ProjectID: projectID, ID: absentID},
+			request: &dao.LayerKindRequest{ProjectID: projectID, IDs: []uuid.UUID{manuscriptLayerID, draft.ID}},
 
-			expectErr: dao.ErrLayerKindNotFound,
+			expect: []*dao.LayerKind{
+				{ID: manuscriptLayerID, Kind: "manuscript", Count: 2},
+				{ID: draft.ID, Kind: "manuscript", Count: 2},
+			},
 		},
 		{
-			name: "Error/OtherProject",
+			name: "Success/NotFound",
 
-			request: &dao.LayerKindRequest{ProjectID: projectID, ID: otherLayerID},
+			request: &dao.LayerKindRequest{ProjectID: projectID, IDs: []uuid.UUID{absentID}},
+		},
+		{
+			name: "Success/OtherProject",
 
-			expectErr: dao.ErrLayerKindNotFound,
+			request: &dao.LayerKindRequest{ProjectID: projectID, IDs: []uuid.UUID{otherLayerID}},
 		},
 	}
 
@@ -56,11 +72,14 @@ func TestPgLayerKind(t *testing.T) {
 			postgrestest.RunDBTest(t, configtest.PostgresPreset, migrations.Migrations, func(ctx context.Context, t *testing.T) {
 				t.Helper()
 
-				insertFixtures(ctx, t, composerFixtures())
+				data := composerFixtures()
+				data.layers = append(data.layers, draft)
+
+				insertFixtures(ctx, t, data)
 
 				result, err := daoLayerKind.Exec(ctx, testCase.request)
-				require.ErrorIs(t, err, testCase.expectErr)
-				require.Equal(t, testCase.expect, result)
+				require.NoError(t, err)
+				require.ElementsMatch(t, testCase.expect, result)
 			})
 		})
 	}
