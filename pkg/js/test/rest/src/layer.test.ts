@@ -35,6 +35,17 @@ afterAll(async () => {
   await projectDelete(api, accessToken, project);
 });
 
+/** Adds one notes layer to the test project, at position or first. */
+async function createNotes(name: string, position?: number): Promise<Layer> {
+  const [layer] = await layerCreate(api, accessToken, {
+    projectID: project.id,
+    position,
+    layers: [{ kind: LayerKind.Notes, name }],
+  });
+
+  return layer;
+}
+
 /** Returns every layer of the test project, in order. */
 async function storedLayers(): Promise<Layer[]> {
   return (await layerList(api, accessToken, { projectID: project.id, limit: 500 })).layers;
@@ -45,45 +56,56 @@ async function layerNames(): Promise<string[]> {
   return (await storedLayers()).map((layer) => layer.name);
 }
 
-/** Deletes every layer the test created. */
-async function deleteLayers(...layers: Layer[]): Promise<void> {
-  for (const layer of layers) {
-    const stored = (await storedLayers()).find((item) => item.id === layer.id);
-    if (stored) await layerDelete(api, accessToken, stored);
+/** Deletes every layer of the test project but its first manuscript. */
+async function deleteLayers(): Promise<void> {
+  const ids = (await storedLayers()).filter((layer) => layer.id !== manuscript.id).map((layer) => layer.id);
+  if (ids.length > 0) {
+    await layerDelete(api, accessToken, { projectID: project.id, ids });
   }
 }
 
 describe("layerCreate", () => {
-  it("places a notes layer at its position, and appends one past the end", async () => {
-    const characters = await layerCreate(api, accessToken, {
+  it("places layers of any kind at their position, in order, and appends past the end", async () => {
+    const [characters, draft] = await layerCreate(api, accessToken, {
       projectID: project.id,
       position: 99,
-      name: "Characters",
-      description: "Who appears",
+      layers: [
+        { kind: LayerKind.Notes, name: "Characters", description: "Who appears" },
+        { kind: LayerKind.Manuscript, name: "Draft" },
+      ],
     });
-    const places = await layerCreate(api, accessToken, { projectID: project.id, name: "Places" });
+    const places = await createNotes("Places");
 
     expect(characters).toMatchObject({ kind: LayerKind.Notes, position: 1, description: "Who appears" });
+    expect(draft).toMatchObject({ kind: LayerKind.Manuscript, position: 2 });
     expect(places.position).toBe(0);
-    await expect(layerNames()).resolves.toEqual(["Places", manuscript.name, "Characters"]);
+    await expect(layerNames()).resolves.toEqual(["Places", manuscript.name, "Characters", "Draft"]);
 
-    await deleteLayers(characters, places);
+    await deleteLayers();
   });
 
   it("names the invalid field of a blank name", async () => {
-    await expect(layerCreate(api, accessToken, { projectID: project.id, name: " " })).rejects.toThrow(
-      '"invalidFields":{"name":"notblank"}'
+    await expect(createNotes(" ")).rejects.toThrow('"notblank"');
+  });
+
+  it("returns 400 for a kind with no content schema", async () => {
+    await expectStatus(
+      layerCreate(api, accessToken, { projectID: project.id, layers: [{ kind: "chapter", name: "Chapters" }] }),
+      400
     );
   });
 
   it("returns 404 for an absent project", async () => {
-    await expectStatus(layerCreate(api, accessToken, { projectID: ABSENT_ID, name: "Characters" }), 404);
+    await expectStatus(
+      layerCreate(api, accessToken, { projectID: ABSENT_ID, layers: [{ kind: LayerKind.Notes, name: "Characters" }] }),
+      404
+    );
   });
 });
 
 describe("layerUpdate", () => {
   it("replaces the fields", async () => {
-    const created = await layerCreate(api, accessToken, { projectID: project.id, position: 1, name: "Draft" });
+    const created = await createNotes("Draft", 1);
 
     const layer = await layerUpdate(api, accessToken, {
       projectID: project.id,
@@ -93,7 +115,7 @@ describe("layerUpdate", () => {
     });
     expect(layer).toMatchObject({ name: "Characters", description: "Who appears" });
 
-    await deleteLayers(layer);
+    await deleteLayers();
   });
 
   it("returns 404 for an absent layer", async () => {
@@ -103,7 +125,7 @@ describe("layerUpdate", () => {
 
 describe("layerMove", () => {
   it("moves a layer", async () => {
-    const notes = await layerCreate(api, accessToken, { projectID: project.id, position: 1, name: "Notes" });
+    const notes = await createNotes("Notes", 1);
 
     const moved = await layerMove(api, accessToken, { projectID: project.id, id: notes.id, position: 0 });
     expect(moved).toMatchObject({ id: notes.id, position: 0 });
@@ -113,7 +135,7 @@ describe("layerMove", () => {
     expect(last).toMatchObject({ id: notes.id, position: 1 });
     await expect(layerNames()).resolves.toEqual([manuscript.name, "Notes"]);
 
-    await deleteLayers(notes);
+    await deleteLayers();
   });
 
   it("returns 404 for an absent layer", async () => {
@@ -122,23 +144,51 @@ describe("layerMove", () => {
 });
 
 describe("layerDelete", () => {
-  it("deletes a notes layer and closes the gap", async () => {
-    const notes = await layerCreate(api, accessToken, { projectID: project.id, name: "Notes" });
+  it("deletes layers and closes the gaps", async () => {
+    const [first, , third] = await layerCreate(api, accessToken, {
+      projectID: project.id,
+      position: 1,
+      layers: ["One", "Two", "Three"].map((name) => ({ kind: LayerKind.Notes, name })),
+    });
 
-    await expect(layerDelete(api, accessToken, notes)).resolves.toMatchObject({ id: notes.id });
+    const deleted = await layerDelete(api, accessToken, { projectID: project.id, ids: [first.id, third.id] });
+    expect(deleted.map((layer) => layer.name)).toEqual(["One", "Three"]);
+    await expect(layerNames()).resolves.toEqual([manuscript.name, "Two"]);
 
-    const layers = await storedLayers();
-    expect(layers.map((layer) => [layer.position, layer.kind])).toEqual([[0, LayerKind.Manuscript]]);
+    await deleteLayers();
   });
 
-  it("returns 422 for a required layer", async () => {
-    await expectStatus(layerDelete(api, accessToken, manuscript), 422);
+  it("deletes a manuscript layer while another remains", async () => {
+    const draft = (
+      await layerCreate(api, accessToken, {
+        projectID: project.id,
+        position: 1,
+        layers: [{ kind: LayerKind.Manuscript, name: "Draft" }],
+      })
+    )[0];
+
+    await expect(layerDelete(api, accessToken, { projectID: project.id, ids: [draft.id] })).resolves.toEqual([
+      expect.objectContaining({ id: draft.id }),
+    ]);
+  });
+
+  it("returns 422 for the last layer of a required kind", async () => {
+    await expectStatus(layerDelete(api, accessToken, { projectID: project.id, ids: [manuscript.id] }), 422);
+  });
+
+  it("deletes none of the layers when one is absent", async () => {
+    const notes = await createNotes("Kept", 1);
+
+    await expectStatus(layerDelete(api, accessToken, { projectID: project.id, ids: [notes.id, ABSENT_ID] }), 404);
+    await expect(layerNames()).resolves.toEqual([manuscript.name, "Kept"]);
+
+    await deleteLayers();
   });
 });
 
 describe("layerList", () => {
   it("pages through the layers in order, with their total", async () => {
-    const notes = await layerCreate(api, accessToken, { projectID: project.id, position: 1, name: "Notes" });
+    const notes = await createNotes("Notes", 1);
 
     const first = await layerList(api, accessToken, { projectID: project.id, limit: 1 });
     expect(first).toEqual({ layers: [expect.objectContaining({ id: manuscript.id })], total: 2 });
@@ -146,7 +196,7 @@ describe("layerList", () => {
     const second = await layerList(api, accessToken, { projectID: project.id, limit: 1, offset: 1 });
     expect(second).toEqual({ layers: [expect.objectContaining({ id: notes.id })], total: 2 });
 
-    await deleteLayers(notes);
+    await deleteLayers();
   });
 
   it("returns 400 for a page over 500 layers", async () => {

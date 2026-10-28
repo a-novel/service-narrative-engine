@@ -20,15 +20,11 @@ const accessToken = await superAdminAccessToken();
 const ABSENT_ID = "01920000-0000-7000-8000-000000000000";
 
 describe("projectCreate", () => {
-  it("creates a project with its manuscript layer and first scenes", async () => {
+  it("creates a project with its required layers", async () => {
     const project = await projectCreate(api, accessToken, {
       title: "Les Heures claires",
       premise: "Marie attend.",
       language: Language.Fr,
-      scenes: [
-        { title: "Ouverture", color: "#4a90d9" },
-        { title: "Le thème", color: "#E0457B", description: "Paul ment.", prompt: "Lent." },
-      ],
     });
 
     expect(project).toMatchObject({
@@ -36,11 +32,7 @@ describe("projectCreate", () => {
       premise: "Marie attend.",
       language: "fr",
     });
-    expect(project.scenes.map((scene) => [scene.position, scene.title, scene.color, scene.description])).toEqual([
-      [0, "Ouverture", "#4a90d9", ""],
-      [1, "Le thème", "#e0457b", "Paul ment."],
-    ]);
-    expect(project.layers.map((layer) => layer.kind)).toEqual([LayerKind.Manuscript]);
+    expect(project.layers.map((layer) => [layer.position, layer.kind])).toEqual([[0, LayerKind.Manuscript]]);
 
     await projectDelete(api, accessToken, project);
   });
@@ -67,7 +59,6 @@ describe("projectGet", () => {
       title: "Clear Hours",
       premise: "Marie waits.",
       language: Language.En,
-      scenes: [{ title: "Opening", color: "#4a90d9" }],
     });
 
     const project = await projectGet(api, accessToken, { id: created.id });

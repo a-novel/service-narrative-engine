@@ -43,29 +43,37 @@ export const CellListRequestSchema = z.object({
 /** The value {@link CellListRequestSchema} validates. */
 export type CellListRequest = z.infer<typeof CellListRequestSchema>;
 
-/** The new content of a cell. */
-export const CellWriteRequestSchema = z.object({
-  projectID: z.uuid(),
+/** The new content of one cell. */
+export const CellWriteItemSchema = z.object({
   sceneID: z.uuid(),
   layerID: z.uuid(),
   content: z.union([ManuscriptContentSchema, NotesContentSchema]),
+});
+
+/** The value {@link CellWriteItemSchema} validates. */
+export type CellWriteItem = z.infer<typeof CellWriteItemSchema>;
+
+/** Up to 100 cells to write. A scene and a layer meet in at most one of them. */
+export const CellWriteRequestSchema = z.object({
+  projectID: z.uuid(),
+  cells: z.array(CellWriteItemSchema).min(1).max(100),
 });
 
 /** The value {@link CellWriteRequestSchema} validates. */
 export type CellWriteRequest = z.infer<typeof CellWriteRequestSchema>;
 
 /**
- * Writes a cell where a scene and a layer of the same project cross, and returns it. The first write
- * creates the cell. Throws on HTTP 400 when the content breaks the schema of the layer's kind or
- * weighs over 2 MiB, and 404 when the caller owns no such project, or
- * the project holds no such scene or layer.
+ * Writes cells where scenes and layers of the project cross, and returns them in the order of the
+ * request. The first write of a cell creates it, and the cells are all written or none are. Throws on
+ * HTTP 400 when a content breaks the schema of its layer's kind or weighs over 2 MiB, and 404 when the
+ * caller owns no such project, or the project holds one of the scenes or layers not.
  */
 export async function cellWrite(
   api: NarrativeEngineApi,
   accessToken: string,
   request: CellWriteRequest
-): Promise<Cell> {
-  return await api.fetch("/v1/cell", CellSchema, {
+): Promise<Cell[]> {
+  return await api.fetch("/v1/cells", z.array(CellSchema), {
     method: "PUT",
     headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
     body: JSON.stringify(request),

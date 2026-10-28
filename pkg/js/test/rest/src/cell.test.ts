@@ -4,43 +4,52 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { expectStatus } from "@a-novel-kit/nodelib-test/http";
 import {
-  type Cell,
   Language,
   type Layer,
+  LayerKind,
   ManuscriptContentSchema,
   NarrativeEngineApi,
   type ProjectComposer,
+  type Scene,
   cellList,
   cellWrite,
   layerCreate,
   projectCreate,
   projectDelete,
+  sceneCreate,
 } from "@a-novel/service-narrative-engine-rest";
 
 const api = new NarrativeEngineApi(process.env.REST_URL!);
 
 const ABSENT_ID = "01920000-0000-7000-8000-000000000000";
+const COLOR = "#4a90d9";
 const accessToken = await superAdminAccessToken();
 
 let project: ProjectComposer;
+let scenes: Scene[];
 let other: ProjectComposer;
+let otherScenes: Scene[];
 let notes: Layer;
 
+/** Creates a project with one scene per title. */
+async function projectWithScenes(title: string, titles: string[]): Promise<[ProjectComposer, Scene[]]> {
+  const created = await projectCreate(api, accessToken, { title, language: Language.En });
+  const createdScenes = await sceneCreate(api, accessToken, {
+    projectID: created.id,
+    scenes: titles.map((sceneTitle) => ({ title: sceneTitle, color: COLOR })),
+  });
+
+  return [created, createdScenes];
+}
+
 beforeAll(async () => {
-  project = await projectCreate(api, accessToken, {
-    title: "Cells",
-    language: Language.En,
-    scenes: [
-      { title: "Opening", color: "#4a90d9" },
-      { title: "Ending", color: "#4a90d9" },
-    ],
+  [project, scenes] = await projectWithScenes("Cells", ["Opening", "Ending"]);
+  [other, otherScenes] = await projectWithScenes("Other", ["Only"]);
+  [notes] = await layerCreate(api, accessToken, {
+    projectID: project.id,
+    position: 1,
+    layers: [{ kind: LayerKind.Notes, name: "Notes" }],
   });
-  other = await projectCreate(api, accessToken, {
-    title: "Other",
-    language: Language.En,
-    scenes: [{ title: "Only", color: "#4a90d9" }],
-  });
-  notes = await layerCreate(api, accessToken, { projectID: project.id, position: 1, name: "Notes" });
 });
 
 afterAll(async () => {
@@ -51,9 +60,8 @@ afterAll(async () => {
 
 describe("cellWrite", () => {
   it("writes a manuscript cell, then rewrites it", async () => {
-    const request = {
-      projectID: project.id,
-      sceneID: project.scenes[0].id,
+    const cell = {
+      sceneID: scenes[0].id,
       layerID: project.layers[0].id,
       content: {
         blocks: [
@@ -63,70 +71,75 @@ describe("cellWrite", () => {
       },
     };
 
-    const written = await cellWrite(api, accessToken, request);
-    expect(ManuscriptContentSchema.parse(written.content)).toEqual(request.content);
+    const [written] = await cellWrite(api, accessToken, { projectID: project.id, cells: [cell] });
+    expect(ManuscriptContentSchema.parse(written.content)).toEqual(cell.content);
 
-    const rewritten = await cellWrite(api, accessToken, { ...request, content: { blocks: [] } });
+    const [rewritten] = await cellWrite(api, accessToken, {
+      projectID: project.id,
+      cells: [{ ...cell, content: { blocks: [] } }],
+    });
     expect(rewritten.content).toEqual({ blocks: [] });
 
     const stored = (await cellList(api, accessToken, { projectID: project.id })).cells;
     expect(stored).toContainEqual(rewritten);
   });
 
-  it("writes a notes cell", async () => {
-    const cell = await cellWrite(api, accessToken, {
+  it("writes cells of several layers at once, in the order of the request", async () => {
+    const written = await cellWrite(api, accessToken, {
       projectID: project.id,
-      sceneID: project.scenes[1].id,
-      layerID: notes.id,
-      content: { text: "Marie" },
+      cells: [
+        { sceneID: scenes[1].id, layerID: notes.id, content: { text: "Marie" } },
+        { sceneID: scenes[1].id, layerID: project.layers[0].id, content: { blocks: [] } },
+      ],
     });
 
-    expect(cell.content).toEqual({ text: "Marie" });
+    expect(written.map((cell) => [cell.layerID, cell.content])).toEqual([
+      [notes.id, { text: "Marie" }],
+      [project.layers[0].id, { blocks: [] }],
+    ]);
   });
 
-  it("returns 400 for content outside the schema of the layer's kind", async () => {
-    const request = {
-      projectID: project.id,
-      sceneID: project.scenes[0].id,
-      layerID: notes.id,
-      content: { blocks: [] },
-    };
-    await expectStatus(cellWrite(api, accessToken, request), 400);
+  it("returns 400 for content outside the schema of the layer's kind, and writes none of the cells", async () => {
+    const cells = [
+      { sceneID: scenes[0].id, layerID: notes.id, content: { text: "Kept out" } },
+      { sceneID: scenes[0].id, layerID: project.layers[0].id, content: { text: "Not a manuscript" } },
+    ];
+    await expectStatus(cellWrite(api, accessToken, { projectID: project.id, cells }), 400);
+
+    const stored = (await cellList(api, accessToken, { projectID: project.id })).cells;
+    expect(stored.find((cell) => cell.sceneID === scenes[0].id && cell.layerID === notes.id)).toBeUndefined();
   });
 
-  it("returns 404 for a scene of another project", async () => {
-    const request = {
-      projectID: project.id,
-      sceneID: other.scenes[0].id,
-      layerID: notes.id,
-      content: { text: "Marie" },
-    };
-    await expectStatus(cellWrite(api, accessToken, request), 404);
+  it("returns 400 for a scene and a layer named twice", async () => {
+    const cell = { sceneID: scenes[0].id, layerID: notes.id, content: { text: "Marie" } };
+    await expectStatus(cellWrite(api, accessToken, { projectID: project.id, cells: [cell, cell] }), 400);
+  });
+
+  it("returns 404 for a scene of another project, and writes none of the cells", async () => {
+    const cells = [
+      { sceneID: scenes[0].id, layerID: notes.id, content: { text: "Kept out" } },
+      { sceneID: otherScenes[0].id, layerID: notes.id, content: { text: "Marie" } },
+    ];
+    await expectStatus(cellWrite(api, accessToken, { projectID: project.id, cells }), 404);
+
+    const stored = (await cellList(api, accessToken, { projectID: project.id })).cells;
+    expect(stored.find((cell) => cell.sceneID === scenes[0].id && cell.layerID === notes.id)).toBeUndefined();
   });
 
   it("returns 404 for a layer of another project", async () => {
-    const request = { projectID: other.id, sceneID: other.scenes[0].id, layerID: notes.id, content: { text: "Marie" } };
-    await expectStatus(cellWrite(api, accessToken, request), 404);
+    const cells = [{ sceneID: otherScenes[0].id, layerID: notes.id, content: { text: "Marie" } }];
+    await expectStatus(cellWrite(api, accessToken, { projectID: other.id, cells }), 404);
   });
 });
 
 describe("cellList", () => {
   it("pages through the cells of a project, with their total", async () => {
-    const paged = await projectCreate(api, accessToken, {
-      title: "Paged",
-      language: Language.En,
-      scenes: [
-        { title: "One", color: "#4a90d9" },
-        { title: "Two", color: "#4a90d9" },
-        { title: "Three", color: "#4a90d9" },
-      ],
-    });
+    const [paged, pagedScenes] = await projectWithScenes("Paged", ["One", "Two", "Three"]);
 
-    const written: Cell[] = [];
-    for (const scene of paged.scenes) {
-      const request = { projectID: paged.id, sceneID: scene.id, layerID: paged.layers[0].id, content: { blocks: [] } };
-      written.push(await cellWrite(api, accessToken, request));
-    }
+    const written = await cellWrite(api, accessToken, {
+      projectID: paged.id,
+      cells: pagedScenes.map((scene) => ({ sceneID: scene.id, layerID: paged.layers[0].id, content: { blocks: [] } })),
+    });
 
     await expect(cellList(api, accessToken, { projectID: paged.id, limit: 2 })).resolves.toEqual({
       cells: written.slice(0, 2),

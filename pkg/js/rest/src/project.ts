@@ -1,6 +1,5 @@
 import type { NarrativeEngineApi } from "./api";
 import { LayerSchema } from "./layer";
-import { SceneFieldsSchema, SceneSchema } from "./scene";
 
 import { HTTP_HEADERS } from "@a-novel-kit/nodelib-browser/http";
 
@@ -30,9 +29,8 @@ export const ProjectSchema = z.object({
 /** The value {@link ProjectSchema} validates. */
 export type Project = z.infer<typeof ProjectSchema>;
 
-/** A project with every scene and layer, each list in its order, as {@link projectCreate} returns it. */
+/** A new project with its required layers, in order, as {@link projectCreate} returns it. */
 export const ProjectComposerSchema = ProjectSchema.extend({
-  scenes: z.array(SceneSchema),
   layers: z.array(LayerSchema),
 });
 
@@ -54,12 +52,11 @@ export const ProjectTitleSchema = z.string().max(200).regex(/\S/);
 /** What a project's narrative is about, which may be empty. */
 export const ProjectPremiseSchema = z.string().max(20000);
 
-/** The project to create, with the scenes it starts with, in order. */
+/** The project to create. Its scenes come next, from `sceneCreate`. */
 export const ProjectCreateRequestSchema = z.object({
   title: ProjectTitleSchema,
   premise: ProjectPremiseSchema.optional(),
   language: LanguageSchema,
-  scenes: z.array(SceneFieldsSchema).max(100).optional(),
 });
 
 /** The value {@link ProjectCreateRequestSchema} validates. */
@@ -101,7 +98,7 @@ export const ProjectDeleteRequestSchema = z.object({
 /** The value {@link ProjectDeleteRequestSchema} validates. */
 export type ProjectDeleteRequest = z.infer<typeof ProjectDeleteRequestSchema>;
 
-/** Creates a project with its manuscript layer and first scenes, and returns its Scenes Composer. */
+/** Creates a project with its required layers, and returns it with them. */
 export async function projectCreate(
   api: NarrativeEngineApi,
   accessToken: string,

@@ -39,10 +39,14 @@ export const SceneFieldsSchema = z.object({
   prompt: ScenePromptSchema.optional(),
 });
 
-/** The scene to add at `position`, first when omitted. A position past the last scene appends it. */
-export const SceneCreateRequestSchema = SceneFieldsSchema.extend({
+/**
+ * Up to 100 scenes to add at `position`, in narrative order, first when omitted. A position past the last
+ * scene appends them.
+ */
+export const SceneCreateRequestSchema = z.object({
   projectID: z.uuid(),
   position: z.int().min(0).optional(),
+  scenes: z.array(SceneFieldsSchema).min(1).max(100),
 });
 
 /** The value {@link SceneCreateRequestSchema} validates. */
@@ -67,10 +71,10 @@ export const SceneMoveRequestSchema = z.object({
 /** The value {@link SceneMoveRequestSchema} validates. */
 export type SceneMoveRequest = z.infer<typeof SceneMoveRequestSchema>;
 
-/** The scene to delete. */
+/** Up to 100 scenes to delete, each once. */
 export const SceneDeleteRequestSchema = z.object({
   projectID: z.uuid(),
-  id: z.uuid(),
+  ids: z.array(z.uuid()).min(1).max(100),
 });
 
 /** The value {@link SceneDeleteRequestSchema} validates. */
@@ -96,16 +100,16 @@ export const SceneListRequestSchema = z.object({
 export type SceneListRequest = z.infer<typeof SceneListRequestSchema>;
 
 /**
- * Adds a scene to a project and returns it at its place; the scenes from there on move down one place.
- * Throws on HTTP 404 when the caller owns no such project, and 422 when the project holds 500 scenes
- * already.
+ * Adds scenes to a project and returns them in narrative order; the scenes from there on move down.
+ * They are all added, or none are. Throws on HTTP 404 when the caller owns no such project, and 422
+ * when the project would hold more than 500 scenes.
  */
 export async function sceneCreate(
   api: NarrativeEngineApi,
   accessToken: string,
   request: SceneCreateRequest
-): Promise<Scene> {
-  return await api.fetch("/v1/scenes", SceneSchema, {
+): Promise<Scene[]> {
+  return await api.fetch("/v1/scenes", z.array(SceneSchema), {
     method: "POST",
     headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
     body: JSON.stringify(request),
@@ -145,16 +149,17 @@ export async function sceneMove(
 }
 
 /**
- * Deletes a scene with its cells and returns it as it was; the scenes after it move up one place.
- * Throws on HTTP 404 when the caller owns no such project, or the project holds no such scene.
+ * Deletes scenes with their cells and returns them as they were; the scenes after them move up to
+ * close the gaps. They are all deleted, or none are. Throws on HTTP 404 when the caller owns no such
+ * project, or the project holds one of the scenes not.
  */
 export async function sceneDelete(
   api: NarrativeEngineApi,
   accessToken: string,
   request: SceneDeleteRequest
-): Promise<Scene> {
-  const params = new URLSearchParams({ projectID: request.projectID, id: request.id });
-  return await api.fetch(`/v1/scene?${params.toString()}`, SceneSchema, {
+): Promise<Scene[]> {
+  const params = new URLSearchParams([["projectID", request.projectID], ...request.ids.map((id) => ["id", id])]);
+  return await api.fetch(`/v1/scenes?${params.toString()}`, z.array(SceneSchema), {
     method: "DELETE",
     headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
   });

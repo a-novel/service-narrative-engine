@@ -87,8 +87,8 @@ paths:
       operationId: projectCreate
       summary: Create a project.
       description: |
-        Creates a project with its manuscript layer and the scenes it starts with, in order, in one step.
-        A project starts with at most 100 scenes.
+        Creates a project with its required layers, today one manuscript layer, in one step. Its scenes
+        come next, from sceneCreate.
       tags: [project]
       requestBody:
         required: true
@@ -225,10 +225,11 @@ paths:
   /v1/scenes:
     post:
       operationId: sceneCreate
-      summary: Create a scene.
+      summary: Create scenes.
       description: |
-        Adds a scene to a project at `position`, and moves the scenes from there on down one place. A
-        position past the last scene appends the new one. A project holds at most 500 scenes.
+        Adds up to 100 scenes to a project at `position`, in order, and moves the scenes from there on down.
+        A position past the last scene appends them. A project holds at most 500 scenes. The scenes are all
+        added, or none are.
       tags: [scene]
       requestBody:
         required: true
@@ -238,7 +239,7 @@ paths:
               $ref: "#/components/schemas/sceneCreateRequest"
       responses:
         "201":
-          $ref: "#/components/responses/scene"
+          $ref: "#/components/responses/scenes"
         "400":
           $ref: "#/components/responses/badRequest"
         "401":
@@ -285,22 +286,20 @@ paths:
         default:
           $ref: "#/components/responses/internalError"
 
-  /v1/scene:
-    put:
-      operationId: sceneUpdate
-      summary: Update a scene.
+    delete:
+      operationId: sceneDelete
+      summary: Delete scenes.
       description: |
-        Replaces the title, color, description and prompt of a scene.
+        Deletes up to 100 scenes with their cells, and returns them as they were. The scenes after them move
+        up to close the gaps. The scenes are all deleted, or none are: an id the project does not hold
+        answers 404.
       tags: [scene]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/sceneUpdateRequest"
+      parameters:
+        - $ref: "#/components/parameters/parentProjectID"
+        - $ref: "#/components/parameters/sceneIDs"
       responses:
         "200":
-          $ref: "#/components/responses/scene"
+          $ref: "#/components/responses/scenes"
         "400":
           $ref: "#/components/responses/badRequest"
         "401":
@@ -316,16 +315,19 @@ paths:
         default:
           $ref: "#/components/responses/internalError"
 
-    delete:
-      operationId: sceneDelete
-      summary: Delete a scene.
+  /v1/scene:
+    put:
+      operationId: sceneUpdate
+      summary: Update a scene.
       description: |
-        Deletes a scene with its cells, and returns the scene as it was. The scenes after it move up one
-        place.
+        Replaces the title, color, description and prompt of a scene.
       tags: [scene]
-      parameters:
-        - $ref: "#/components/parameters/parentProjectID"
-        - $ref: "#/components/parameters/sceneID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/sceneUpdateRequest"
       responses:
         "200":
           $ref: "#/components/responses/scene"
@@ -379,10 +381,11 @@ paths:
   /v1/layers:
     post:
       operationId: layerCreate
-      summary: Create a notes layer.
+      summary: Create layers.
       description: |
-        Adds a notes layer to a project at `position`, and moves the layers from there on down one place. A
-        position past the last layer appends the new one. A project holds at most 1000 layers.
+        Adds up to 100 layers of any kind to a project at `position`, in order, and moves the layers from
+        there on down. A position past the last layer appends them. A project holds at most 1000 layers. The
+        layers are all added, or none are.
       tags: [layer]
       requestBody:
         required: true
@@ -392,7 +395,7 @@ paths:
               $ref: "#/components/schemas/layerCreateRequest"
       responses:
         "201":
-          $ref: "#/components/responses/layer"
+          $ref: "#/components/responses/layers"
         "400":
           $ref: "#/components/responses/badRequest"
         "401":
@@ -439,6 +442,37 @@ paths:
         default:
           $ref: "#/components/responses/internalError"
 
+    delete:
+      operationId: layerDelete
+      summary: Delete layers.
+      description: |
+        Deletes up to 100 layers with their cells, and returns them as they were. The layers after them move
+        up to close the gaps. A project keeps at least one layer of each required kind, such as the
+        manuscript. The layers are all deleted, or none are: an id the project does not hold answers 404.
+      tags: [layer]
+      parameters:
+        - $ref: "#/components/parameters/parentProjectID"
+        - $ref: "#/components/parameters/layerIDs"
+      responses:
+        "200":
+          $ref: "#/components/responses/layers"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/requiredLayer"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/plannedDowntime"
+        default:
+          $ref: "#/components/responses/internalError"
+
   /v1/layer:
     put:
       operationId: layerUpdate
@@ -463,36 +497,6 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
-        "429":
-          $ref: "#/components/responses/tooManyRequests"
-        "503":
-          $ref: "#/components/responses/plannedDowntime"
-        default:
-          $ref: "#/components/responses/internalError"
-
-    delete:
-      operationId: layerDelete
-      summary: Delete a notes layer.
-      description: |
-        Deletes a notes layer with its cells, and returns the layer as it was. The layers after it move up
-        one place. A required layer, such as the manuscript, stays for the life of its project.
-      tags: [layer]
-      parameters:
-        - $ref: "#/components/parameters/parentProjectID"
-        - $ref: "#/components/parameters/layerID"
-      responses:
-        "200":
-          $ref: "#/components/responses/layer"
-        "400":
-          $ref: "#/components/responses/badRequest"
-        "401":
-          $ref: "#/components/responses/invalidToken"
-        "403":
-          $ref: "#/components/responses/forbidden"
-        "404":
-          $ref: "#/components/responses/notFound"
-        "422":
-          $ref: "#/components/responses/requiredLayer"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -563,14 +567,14 @@ paths:
         default:
           $ref: "#/components/responses/internalError"
 
-  /v1/cell:
     put:
       operationId: cellWrite
-      summary: Write a cell.
+      summary: Write cells.
       description: |
-        Writes the content of the cell where a scene and a layer of the same project cross. The content
-        follows the content schema of the layer's kind and weighs at most 2 MiB. The first write creates the
-        cell.
+        Writes up to 100 cells where scenes and layers of the project cross, and returns them in the order of
+        the request. Each content follows the content schema of its layer's kind and weighs at most 2 MiB,
+        and the whole body at most 4 MiB. The first write of a cell creates it. The cells are all written,
+        or none are.
       tags: [cell]
       requestBody:
         required: true
@@ -580,7 +584,7 @@ paths:
               $ref: "#/components/schemas/cellWriteRequest"
       responses:
         "200":
-          $ref: "#/components/responses/cell"
+          $ref: "#/components/responses/cells"
         "400":
           $ref: "#/components/responses/badRequest"
         "401":
@@ -655,7 +659,7 @@ components:
             $ref: "#/components/schemas/projectPage"
 
     projectComposer:
-      description: A project with its scenes and layers.
+      description: A new project with its required layers.
       content:
         application/json:
           schema:
@@ -689,12 +693,32 @@ components:
           schema:
             $ref: "#/components/schemas/layerPage"
 
-    cell:
-      description: A cell.
+    scenes:
+      description: Scenes, in narrative order.
       content:
         application/json:
           schema:
-            $ref: "#/components/schemas/cell"
+            type: array
+            items:
+              $ref: "#/components/schemas/scene"
+
+    layers:
+      description: Layers, in order.
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/layer"
+
+    cells:
+      description: Cells, in the order of the request.
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/cell"
 
     cellPage:
       description: A page of a project's cells, by the position of their scene, then of their layer, with their total.
@@ -842,8 +866,8 @@ components:
 
     projectComposer:
       type: object
-      description: A project with every scene and layer, each list in its order.
-      required: [id, title, premise, language, createdAt, updatedAt, scenes, layers]
+      description: A new project with the layers it starts with, in order.
+      required: [id, title, premise, language, createdAt, updatedAt, layers]
       additionalProperties: false
       properties:
         id:
@@ -858,14 +882,9 @@ components:
           $ref: "#/components/schemas/project/properties/createdAt"
         updatedAt:
           $ref: "#/components/schemas/project/properties/updatedAt"
-        scenes:
-          type: array
-          description: The scenes of the project, in narrative order.
-          items:
-            $ref: "#/components/schemas/scene"
         layers:
           type: array
-          description: The layers of the project, in order. The manuscript layer is one of them.
+          description: The required layers of the project, one of each kind, in order.
           items:
             $ref: "#/components/schemas/layer"
 
@@ -944,7 +963,7 @@ components:
         kind:
           type: string
           description: |
-            The content schema the cells of the layer follow: `manuscript` for the one manuscript layer,
+            The content schema the cells of the layer follow: `manuscript` for a layer of manuscript text,
             `notes` for free text. Later releases add kinds, so a client skips a layer of a kind it does not
             know.
           examples: [manuscript, notes]
@@ -1053,7 +1072,7 @@ components:
       required: [title, language]
       additionalProperties: false
       examples:
-        - { "title": "Les Heures claires", "language": "fr", "scenes": [{ "title": "Ouverture", "color": "#e0457b" }] }
+        - { "title": "Les Heures claires", "language": "fr" }
       properties:
         title:
           type: string
@@ -1067,16 +1086,10 @@ components:
           examples: ["Marie attend un homme qui ne viendra pas."]
         language:
           $ref: "#/components/schemas/language"
-        scenes:
-          type: array
-          description: The scenes the project starts with, in order, such as those of a preset.
-          maxItems: 100
-          items:
-            $ref: "#/components/schemas/projectCreateScene"
 
-    projectCreateScene:
+    sceneCreateItem:
       type: object
-      description: A scene a new project starts with.
+      description: A scene to add.
       required: [title, color]
       additionalProperties: false
       properties:
@@ -1118,26 +1131,25 @@ components:
 
     sceneCreateRequest:
       type: object
-      description: The scene to add, and where.
-      required: [projectID, title, color]
+      description: The scenes to add, and where.
+      required: [projectID, scenes]
       additionalProperties: false
       properties:
         projectID:
           $ref: "#/components/schemas/projectID"
         position:
           type: integer
-          description: The scene's place in narrative order, from 0. A position past the last scene appends the new one.
+          description: The place of the first new scene in narrative order, from 0, and the others follow it. A position past the last scene appends them.
           minimum: 0
           default: 0
           examples: [2]
-        title:
-          $ref: "#/components/schemas/projectCreateScene/properties/title"
-        color:
-          $ref: "#/components/schemas/projectCreateScene/properties/color"
-        description:
-          $ref: "#/components/schemas/projectCreateScene/properties/description"
-        prompt:
-          $ref: "#/components/schemas/projectCreateScene/properties/prompt"
+        scenes:
+          type: array
+          description: The scenes to add, in narrative order.
+          minItems: 1
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/sceneCreateItem"
 
     sceneUpdateRequest:
       type: object
@@ -1150,13 +1162,13 @@ components:
         id:
           $ref: "#/components/schemas/sceneID"
         title:
-          $ref: "#/components/schemas/projectCreateScene/properties/title"
+          $ref: "#/components/schemas/sceneCreateItem/properties/title"
         color:
-          $ref: "#/components/schemas/projectCreateScene/properties/color"
+          $ref: "#/components/schemas/sceneCreateItem/properties/color"
         description:
-          $ref: "#/components/schemas/projectCreateScene/properties/description"
+          $ref: "#/components/schemas/sceneCreateItem/properties/description"
         prompt:
-          $ref: "#/components/schemas/projectCreateScene/properties/prompt"
+          $ref: "#/components/schemas/sceneCreateItem/properties/prompt"
 
     sceneMoveRequest:
       type: object
@@ -1174,20 +1186,16 @@ components:
           minimum: 0
           examples: [2]
 
-    layerCreateRequest:
+    layerCreateItem:
       type: object
-      description: The notes layer to add, and where.
-      required: [projectID, name]
+      description: A layer to add.
+      required: [kind, name]
       additionalProperties: false
       properties:
-        projectID:
-          $ref: "#/components/schemas/projectID"
-        position:
-          type: integer
-          description: The layer's place among the project's rows, from 0. A position past the last layer appends the new one.
-          minimum: 0
-          default: 0
-          examples: [2]
+        kind:
+          type: string
+          description: The content schema the cells of the layer follow, such as `manuscript` or `notes`. A kind with no content schema answers 400.
+          examples: [notes]
         name:
           type: string
           description: The name of the layer. Not blank.
@@ -1198,6 +1206,28 @@ components:
           description: What the layer records.
           maxLength: 20000
           examples: ["Who appears in the scene."]
+
+    layerCreateRequest:
+      type: object
+      description: The layers to add, and where.
+      required: [projectID, layers]
+      additionalProperties: false
+      properties:
+        projectID:
+          $ref: "#/components/schemas/projectID"
+        position:
+          type: integer
+          description: The place of the first new layer among the project's rows, from 0, and the others follow it. A position past the last layer appends them.
+          minimum: 0
+          default: 0
+          examples: [2]
+        layers:
+          type: array
+          description: The layers to add, in order.
+          minItems: 1
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/layerCreateItem"
 
     layerUpdateRequest:
       type: object
@@ -1210,9 +1240,9 @@ components:
         id:
           $ref: "#/components/schemas/layerID"
         name:
-          $ref: "#/components/schemas/layerCreateRequest/properties/name"
+          $ref: "#/components/schemas/layerCreateItem/properties/name"
         description:
-          $ref: "#/components/schemas/layerCreateRequest/properties/description"
+          $ref: "#/components/schemas/layerCreateItem/properties/description"
 
     layerMoveRequest:
       type: object
@@ -1230,20 +1260,33 @@ components:
           minimum: 0
           examples: [2]
 
-    cellWriteRequest:
+    cellWriteItem:
       type: object
-      description: The content of a cell.
-      required: [projectID, sceneID, layerID, content]
+      description: The content of one cell.
+      required: [sceneID, layerID, content]
       additionalProperties: false
       properties:
-        projectID:
-          $ref: "#/components/schemas/projectID"
         sceneID:
           $ref: "#/components/schemas/sceneID"
         layerID:
           $ref: "#/components/schemas/layerID"
         content:
           $ref: "#/components/schemas/cellContent"
+
+    cellWriteRequest:
+      type: object
+      description: The cells to write. A scene and a layer meet in at most one of them.
+      required: [projectID, cells]
+      additionalProperties: false
+      properties:
+        projectID:
+          $ref: "#/components/schemas/projectID"
+        cells:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/cellWriteItem"
 
     plannedDowntimeProblem:
       type: object
@@ -1310,21 +1353,35 @@ components:
       schema:
         $ref: "#/components/schemas/projectID"
 
-    sceneID:
+    sceneIDs:
       name: id
       in: query
-      description: The scene to act on.
+      description: The scenes to act on, one parameter each.
       required: true
+      style: form
+      explode: true
       schema:
-        $ref: "#/components/schemas/sceneID"
+        type: array
+        minItems: 1
+        maxItems: 100
+        uniqueItems: true
+        items:
+          $ref: "#/components/schemas/sceneID"
 
-    layerID:
+    layerIDs:
       name: id
       in: query
-      description: The layer to act on.
+      description: The layers to act on, one parameter each.
       required: true
+      style: form
+      explode: true
       schema:
-        $ref: "#/components/schemas/layerID"
+        type: array
+        minItems: 1
+        maxItems: 100
+        uniqueItems: true
+        items:
+          $ref: "#/components/schemas/layerID"
 
     limit:
       name: limit
