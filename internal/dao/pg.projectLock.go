@@ -25,7 +25,7 @@ type ProjectLockRequest struct {
 }
 
 // PgProjectLock reads a project by its ID and locks it until the transaction ends, so changes to the
-// order of its scenes and layers run one at a time. The caller checks the owner.
+// order of its scenes and layers run one at a time. The caller checks the owner with [PgProjectOwned].
 type PgProjectLock struct{}
 
 func NewPgProjectLock() *PgProjectLock {

@@ -24,7 +24,7 @@ type ProjectSelectRequest struct {
 	ID uuid.UUID
 }
 
-// PgProjectSelect reads a project by its ID. The caller checks the owner.
+// PgProjectSelect reads a project by its ID. The caller checks the owner with [PgProjectOwned].
 type PgProjectSelect struct{}
 
 func NewPgProjectSelect() *PgProjectSelect {
