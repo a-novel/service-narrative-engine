@@ -27,9 +27,6 @@ func TestLayerCreate(t *testing.T) {
 
 		ownerMock  *daoMock[bool]
 		lockMock   *daoMock[*dao.Project]
-		anchorMock *daoMock[*dao.Layer]
-		// position is where the service inserts the layer, when the case reaches the insert.
-		position   int
 		insertMock *daoMock[*dao.Layer]
 		transactor transaction.Transactor
 
@@ -43,20 +40,17 @@ func TestLayerCreate(t *testing.T) {
 
 			ownerMock:  &daoMock[bool]{resp: true},
 			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
-			position:   0,
 			insertMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID3, 0)},
 
 			expect: coreLayer(layerID3, 0),
 		},
 		{
-			name: "Success/AfterAnchor",
+			name: "Success/Position",
 
-			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID, Name: "Layer", After: layerID2},
+			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID, Name: "Layer", Position: 2},
 
 			ownerMock:  &daoMock[bool]{resp: true},
 			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
-			anchorMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
-			position:   2,
 			insertMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID3, 2)},
 
 			expect: coreLayer(layerID3, 2),
@@ -65,6 +59,13 @@ func TestLayerCreate(t *testing.T) {
 			name: "Error/InvalidRequest",
 
 			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID},
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/NegativePosition",
+
+			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID, Name: "Layer", Position: -1},
 
 			expectErr: core.ErrInvalidRequest,
 		},
@@ -87,25 +88,14 @@ func TestLayerCreate(t *testing.T) {
 			expectErr: errFoo,
 		},
 		{
-			name: "Error/ProjectNotFound",
+			name: "Error/Lock",
 
 			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID, Name: "Layer"},
 
 			ownerMock: &daoMock[bool]{resp: true},
-			lockMock:  &daoMock[*dao.Project]{err: dao.ErrProjectLockNotFound},
+			lockMock:  &daoMock[*dao.Project]{err: errFoo},
 
-			expectErr: core.ErrProjectNotFound,
-		},
-		{
-			name: "Error/UnknownAnchor",
-
-			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID, Name: "Layer", After: layerID2},
-
-			ownerMock:  &daoMock[bool]{resp: true},
-			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
-			anchorMock: &daoMock[*dao.Layer]{err: dao.ErrLayerSelectNotFound},
-
-			expectErr: core.ErrInvalidRequest,
+			expectErr: errFoo,
 		},
 		{
 			name: "Error/ProjectFull",
@@ -147,7 +137,6 @@ func TestLayerCreate(t *testing.T) {
 
 			mockOwner := coremocks.NewMockLayerCreateDaoOwner(t)
 			mockLock := coremocks.NewMockLayerCreateDaoLock(t)
-			mockSelect := coremocks.NewMockLayerCreateDaoSelect(t)
 			mockInsert := coremocks.NewMockLayerCreateDaoInsert(t)
 
 			if testCase.ownerMock != nil {
@@ -162,16 +151,10 @@ func TestLayerCreate(t *testing.T) {
 					Return(testCase.lockMock.resp, testCase.lockMock.err)
 			}
 
-			if testCase.anchorMock != nil {
-				mockSelect.EXPECT().
-					Exec(mock.Anything, &dao.LayerSelectRequest{ProjectID: projectID, ID: testCase.request.After}).
-					Return(testCase.anchorMock.resp, testCase.anchorMock.err)
-			}
-
 			if testCase.insertMock != nil {
 				mockInsert.EXPECT().
 					Exec(mock.Anything, mock.MatchedBy(func(req *dao.LayerInsertRequest) bool {
-						return req.ProjectID == projectID && req.Position == testCase.position &&
+						return req.ProjectID == projectID && req.Position == testCase.request.Position &&
 							req.Kind == core.LayerKindNotes && req.Name == "Layer" && recent(req.Now)
 					})).
 					Return(testCase.insertMock.resp, testCase.insertMock.err)
@@ -182,7 +165,7 @@ func TestLayerCreate(t *testing.T) {
 				transactor = transactiontest.NewTransactor()
 			}
 
-			service := core.NewLayerCreate(mockOwner, mockLock, mockSelect, mockInsert, transactor)
+			service := core.NewLayerCreate(mockOwner, mockLock, mockInsert, transactor)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
@@ -190,7 +173,6 @@ func TestLayerCreate(t *testing.T) {
 
 			mockOwner.AssertExpectations(t)
 			mockLock.AssertExpectations(t)
-			mockSelect.AssertExpectations(t)
 			mockInsert.AssertExpectations(t)
 		})
 	}

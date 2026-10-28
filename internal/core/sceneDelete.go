@@ -68,23 +68,18 @@ func (service *SceneDelete) Exec(ctx context.Context, request *SceneDeleteReques
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	owned, err := service.daoOwner.Exec(ctx, &dao.ProjectOwnedRequest{ID: request.ProjectID, OwnerID: request.OwnerID})
+	err = checkProjectOwnership(ctx, service.daoOwner, projectOwnershipOpts{
+		projectID: request.ProjectID,
+		ownerID:   request.OwnerID,
+	})
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("check owner: %w", err))
-	}
-
-	if !owned {
-		return nil, otel.ReportError(span, ErrProjectNotFound)
 	}
 
 	var scene *Scene
 
 	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
 		_, err := service.daoLock.Exec(ctx, &dao.ProjectLockRequest{ID: request.ProjectID})
-		if errors.Is(err, dao.ErrProjectLockNotFound) {
-			err = errors.Join(err, ErrProjectNotFound)
-		}
-
 		if err != nil {
 			return fmt.Errorf("lock project: %w", err)
 		}

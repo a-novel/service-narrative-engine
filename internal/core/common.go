@@ -1,10 +1,15 @@
 package core
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
+
+	"github.com/a-novel-kit/golib/otel"
+
+	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
 var (
@@ -16,19 +21,38 @@ var (
 	ErrLayerNotFound = errors.New("layer not found")
 	// ErrProjectFull is returned when a project already holds as many scenes or layers as it may.
 	ErrProjectFull = errors.New("project full")
-	// ErrManuscriptLayer is returned by a write the manuscript layer refuses: it is unique and
-	// permanent.
-	ErrManuscriptLayer = errors.New("manuscript layer is permanent")
+	// ErrRequiredLayer is returned by a delete of a layer every project holds, such as the manuscript.
+	ErrRequiredLayer = errors.New("required layer")
 )
 
-// moveTarget returns the position an entity at from takes when it moves right after the one at
-// anchor, among the positions that remain once it leaves its own.
-func moveTarget(from, anchor int) int {
-	if anchor < from {
-		return anchor + 1
+// projectOwnerDao checks that a user owns a project. Each service names its own interface, and every
+// one satisfies this.
+type projectOwnerDao interface {
+	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
+}
+
+// projectOwnershipOpts names the project to check and the user who claims it.
+type projectOwnershipOpts struct {
+	projectID uuid.UUID
+	ownerID   uuid.UUID
+}
+
+// checkProjectOwnership returns [ErrProjectNotFound] unless the user owns the project, so another
+// user's project reads as missing.
+func checkProjectOwnership(ctx context.Context, daoOwner projectOwnerDao, opts projectOwnershipOpts) error {
+	ctx, span := otel.Tracer().Start(ctx, "core.checkProjectOwnership")
+	defer span.End()
+
+	owned, err := daoOwner.Exec(ctx, &dao.ProjectOwnedRequest{ID: opts.projectID, OwnerID: opts.ownerID})
+	if err != nil {
+		return otel.ReportError(span, err)
 	}
 
-	return anchor
+	if !owned {
+		return otel.ReportError(span, ErrProjectNotFound)
+	}
+
+	return nil
 }
 
 // newIDs generates count UUIDv7 identifiers.

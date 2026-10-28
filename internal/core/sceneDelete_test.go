@@ -72,14 +72,14 @@ func TestSceneDelete(t *testing.T) {
 			expectErr: errFoo,
 		},
 		{
-			name: "Error/ProjectNotFound",
+			name: "Error/Lock",
 
 			request: request,
 
 			ownerMock: &daoMock[bool]{resp: true},
-			lockMock:  &daoMock[*dao.Project]{err: dao.ErrProjectLockNotFound},
+			lockMock:  &daoMock[*dao.Project]{err: errFoo},
 
-			expectErr: core.ErrProjectNotFound,
+			expectErr: errFoo,
 		},
 		{
 			name: "Error/NotFound",

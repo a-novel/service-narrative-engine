@@ -24,15 +24,15 @@ type SceneListDao interface {
 	Exec(ctx context.Context, request *dao.SceneListRequest) ([]*dao.SceneListRow, error)
 }
 
-// SceneListDefaultSize is the page size of a [SceneListRequest] whose Limit is zero.
-const SceneListDefaultSize = 100
+// SceneListLimitDefault is the page size of a [SceneListRequest] whose Limit is zero.
+const SceneListLimitDefault = 100
 
 // SceneListRequest selects a page of a project's scenes.
 type SceneListRequest struct {
 	OwnerID   uuid.UUID `validate:"required"`
 	ProjectID uuid.UUID `validate:"required"`
 
-	// Limit caps the page at 500 scenes. It defaults to [SceneListDefaultSize] when zero.
+	// Limit caps the page at 500 scenes. It defaults to [SceneListLimitDefault] when zero.
 	Limit int `validate:"min=0,max=500"`
 	// Offset is how many scenes come before the page, in narrative order.
 	Offset int `validate:"min=0"`
@@ -65,23 +65,21 @@ func (service *SceneList) Exec(ctx context.Context, request *SceneListRequest) (
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	limit := request.Limit
-	if limit == 0 {
-		limit = SceneListDefaultSize
+	if request.Limit == 0 {
+		request.Limit = SceneListLimitDefault
 	}
 
-	owned, err := service.daoOwner.Exec(ctx, &dao.ProjectOwnedRequest{ID: request.ProjectID, OwnerID: request.OwnerID})
+	err = checkProjectOwnership(ctx, service.daoOwner, projectOwnershipOpts{
+		projectID: request.ProjectID,
+		ownerID:   request.OwnerID,
+	})
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("check owner: %w", err))
 	}
 
-	if !owned {
-		return nil, otel.ReportError(span, ErrProjectNotFound)
-	}
-
 	rows, err := service.dao.Exec(ctx, &dao.SceneListRequest{
 		ProjectID: request.ProjectID,
-		Limit:     limit,
+		Limit:     request.Limit,
 		Offset:    request.Offset,
 	})
 	if err != nil {

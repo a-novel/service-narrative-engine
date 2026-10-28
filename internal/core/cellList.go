@@ -24,15 +24,15 @@ type CellListDao interface {
 	Exec(ctx context.Context, request *dao.CellListRequest) ([]*dao.CellListRow, error)
 }
 
-// CellListDefaultSize is the page size of a [CellListRequest] whose Limit is zero.
-const CellListDefaultSize = 100
+// CellListLimitDefault is the page size of a [CellListRequest] whose Limit is zero.
+const CellListLimitDefault = 100
 
 // CellListRequest selects a page of a project's cells.
 type CellListRequest struct {
 	OwnerID   uuid.UUID `validate:"required"`
 	ProjectID uuid.UUID `validate:"required"`
 
-	// Limit caps the page at 500 cells. It defaults to [CellListDefaultSize] when zero.
+	// Limit caps the page at 500 cells. It defaults to [CellListLimitDefault] when zero.
 	Limit int `validate:"min=0,max=500"`
 	// Offset is how many cells come before the page, by the position of their scene, then of their layer.
 	Offset int `validate:"min=0"`
@@ -65,23 +65,21 @@ func (service *CellList) Exec(ctx context.Context, request *CellListRequest) (*C
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	limit := request.Limit
-	if limit == 0 {
-		limit = CellListDefaultSize
+	if request.Limit == 0 {
+		request.Limit = CellListLimitDefault
 	}
 
-	owned, err := service.daoOwner.Exec(ctx, &dao.ProjectOwnedRequest{ID: request.ProjectID, OwnerID: request.OwnerID})
+	err = checkProjectOwnership(ctx, service.daoOwner, projectOwnershipOpts{
+		projectID: request.ProjectID,
+		ownerID:   request.OwnerID,
+	})
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("check owner: %w", err))
 	}
 
-	if !owned {
-		return nil, otel.ReportError(span, ErrProjectNotFound)
-	}
-
 	rows, err := service.dao.Exec(ctx, &dao.CellListRequest{
 		ProjectID: request.ProjectID,
-		Limit:     limit,
+		Limit:     request.Limit,
 		Offset:    request.Offset,
 	})
 	if err != nil {

@@ -179,7 +179,8 @@ func TestProjectCreate(t *testing.T) {
 			if testCase.layerMock != nil {
 				daoLayerMock.EXPECT().
 					Exec(mock.Anything, mock.MatchedBy(func(req *dao.LayerInsertRequest) bool {
-						return req.ProjectID == projectID && req.Kind == core.LayerKindManuscript && req.Position == 0
+						return req.ProjectID == projectID && req.Kind == core.LayerKindManuscript && req.Position == 0 &&
+							req.Name == "Manuscript" && recent(req.Now)
 					})).
 					Return(testCase.layerMock.resp, testCase.layerMock.err)
 			}

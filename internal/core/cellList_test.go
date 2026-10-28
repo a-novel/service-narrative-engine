@@ -52,7 +52,7 @@ func TestCellList(t *testing.T) {
 			request: &core.CellListRequest{OwnerID: ownerID, ProjectID: projectID},
 
 			ownerMock:   &daoMock[bool]{resp: true},
-			listRequest: &dao.CellListRequest{ProjectID: projectID, Limit: core.CellListDefaultSize},
+			listRequest: &dao.CellListRequest{ProjectID: projectID, Limit: core.CellListLimitDefault},
 			listMock:    &daoMock[[]*dao.CellListRow]{},
 
 			expect: &core.CellPage{Cells: []*core.Cell{}},
@@ -102,7 +102,7 @@ func TestCellList(t *testing.T) {
 			request: &core.CellListRequest{OwnerID: ownerID, ProjectID: projectID},
 
 			ownerMock:   &daoMock[bool]{resp: true},
-			listRequest: &dao.CellListRequest{ProjectID: projectID, Limit: core.CellListDefaultSize},
+			listRequest: &dao.CellListRequest{ProjectID: projectID, Limit: core.CellListLimitDefault},
 			listMock:    &daoMock[[]*dao.CellListRow]{err: errFoo},
 
 			expectErr: errFoo,

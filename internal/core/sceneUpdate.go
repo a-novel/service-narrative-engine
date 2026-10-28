@@ -66,13 +66,12 @@ func (service *SceneUpdate) Exec(ctx context.Context, request *SceneUpdateReques
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	owned, err := service.daoOwner.Exec(ctx, &dao.ProjectOwnedRequest{ID: request.ProjectID, OwnerID: request.OwnerID})
+	err = checkProjectOwnership(ctx, service.daoOwner, projectOwnershipOpts{
+		projectID: request.ProjectID,
+		ownerID:   request.OwnerID,
+	})
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("check owner: %w", err))
-	}
-
-	if !owned {
-		return nil, otel.ReportError(span, ErrProjectNotFound)
 	}
 
 	entity, err := service.dao.Exec(ctx, &dao.SceneUpdateRequest{

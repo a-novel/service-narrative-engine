@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 	"time"
@@ -19,20 +20,12 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// manuscriptLayerName names the manuscript layer of a new project. Clients show their own label for
-// the manuscript kind, in the reader's language.
-const manuscriptLayerName = "Manuscript"
-
-// projectCreateOwnIDs counts the IDs a new project needs besides its scenes': its own and its
-// manuscript layer's.
-const projectCreateOwnIDs = 2
-
 // ProjectCreateDaoProject inserts the project.
 type ProjectCreateDaoProject interface {
 	Exec(ctx context.Context, request *dao.ProjectInsertRequest) (*dao.Project, error)
 }
 
-// ProjectCreateDaoLayer inserts the project's manuscript layer.
+// ProjectCreateDaoLayer inserts the project's required layers.
 type ProjectCreateDaoLayer interface {
 	Exec(ctx context.Context, request *dao.LayerInsertRequest) (*dao.Layer, error)
 }
@@ -69,7 +62,7 @@ type ProjectCreateRequest struct {
 	Scenes []ProjectCreateScene `validate:"max=500,dive"`
 }
 
-// ProjectCreate creates a project with its manuscript layer and its first scenes, in one
+// ProjectCreate creates a project with its required layers and its first scenes, in one
 // transaction.
 type ProjectCreate struct {
 	daoProject ProjectCreateDaoProject
@@ -106,12 +99,14 @@ func (service *ProjectCreate) Exec(ctx context.Context, request *ProjectCreateRe
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	// UUIDv7 sorts by creation time, which lets ProjectList order projects by ID. The project and its manuscript
-	// layer take the first two IDs.
-	ids, err := newIDs(len(request.Scenes) + projectCreateOwnIDs)
+	// UUIDv7 sorts by creation time, which lets ProjectList order projects by ID. The project takes the
+	// first ID, then its required layers, then its scenes.
+	ids, err := newIDs(1 + len(requiredLayers) + len(request.Scenes))
 	if err != nil {
 		return nil, otel.ReportError(span, err)
 	}
+
+	layerIDs, sceneIDs := ids[1:1+len(requiredLayers)], ids[1+len(requiredLayers):]
 
 	now := time.Now()
 	composer := &ProjectComposer{}
@@ -129,20 +124,23 @@ func (service *ProjectCreate) Exec(ctx context.Context, request *ProjectCreateRe
 			return fmt.Errorf("insert project: %w", err)
 		}
 
-		layer, err := service.daoLayer.Exec(ctx, &dao.LayerInsertRequest{
-			ID:        ids[1],
-			ProjectID: project.ID,
-			Position:  0,
-			Kind:      LayerKindManuscript,
-			Name:      manuscriptLayerName,
-			Now:       now,
-		})
-		if err != nil {
-			return fmt.Errorf("insert manuscript layer: %w", err)
-		}
-
 		composer.Project = newProject(project)
-		composer.Layers = []*Layer{newLayer(layer)}
+
+		for position, kind := range slices.Sorted(maps.Keys(requiredLayers)) {
+			layer, err := service.daoLayer.Exec(ctx, &dao.LayerInsertRequest{
+				ID:        layerIDs[position],
+				ProjectID: project.ID,
+				Position:  position,
+				Kind:      kind,
+				Name:      requiredLayers[kind],
+				Now:       now,
+			})
+			if err != nil {
+				return fmt.Errorf("insert %s layer: %w", kind, err)
+			}
+
+			composer.Layers = append(composer.Layers, newLayer(layer))
+		}
 
 		if len(request.Scenes) == 0 {
 			return nil
@@ -151,7 +149,7 @@ func (service *ProjectCreate) Exec(ctx context.Context, request *ProjectCreateRe
 		scenes, err := service.daoScenes.Exec(ctx, &dao.SceneInsertRequest{
 			ProjectID: project.ID,
 			Position:  0,
-			Scenes:    lo.Map(request.Scenes, seedScene(ids[2:])),
+			Scenes:    lo.Map(request.Scenes, seedScene(sceneIDs)),
 			Now:       now,
 		})
 		if err != nil {

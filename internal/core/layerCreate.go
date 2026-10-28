@@ -25,11 +25,6 @@ type LayerCreateDaoLock interface {
 	Exec(ctx context.Context, request *dao.ProjectLockRequest) (*dao.Project, error)
 }
 
-// LayerCreateDaoSelect reads the layer the new one follows.
-type LayerCreateDaoSelect interface {
-	Exec(ctx context.Context, request *dao.LayerSelectRequest) (*dao.Layer, error)
-}
-
 // LayerCreateDaoInsert inserts the layer, and moves the layers at or after its position down.
 type LayerCreateDaoInsert interface {
 	Exec(ctx context.Context, request *dao.LayerInsertRequest) (*dao.Layer, error)
@@ -40,8 +35,9 @@ type LayerCreateRequest struct {
 	OwnerID   uuid.UUID `validate:"required"`
 	ProjectID uuid.UUID `validate:"required"`
 
-	// After is the layer the new one follows. uuid.Nil places it first.
-	After uuid.UUID
+	// Position is the layer's place among the project's rows, from 0. A position past the last layer
+	// appends it.
+	Position int `validate:"min=0"`
 
 	// Name labels the layer's row in the composer.
 	Name string `validate:"required,notblank,max=100"`
@@ -49,11 +45,11 @@ type LayerCreateRequest struct {
 	Description string `validate:"max=20000"`
 }
 
-// LayerCreate adds a notes layer to a project, right after the layer the caller names.
+// LayerCreate adds a notes layer to a project at the position the caller names. The layers from that
+// position on move down by one.
 type LayerCreate struct {
 	daoOwner   LayerCreateDaoOwner
 	daoLock    LayerCreateDaoLock
-	daoSelect  LayerCreateDaoSelect
 	daoInsert  LayerCreateDaoInsert
 	transactor transaction.Transactor
 }
@@ -61,17 +57,10 @@ type LayerCreate struct {
 func NewLayerCreate(
 	daoOwner LayerCreateDaoOwner,
 	daoLock LayerCreateDaoLock,
-	daoSelect LayerCreateDaoSelect,
 	daoInsert LayerCreateDaoInsert,
 	transactor transaction.Transactor,
 ) *LayerCreate {
-	return &LayerCreate{
-		daoOwner:   daoOwner,
-		daoLock:    daoLock,
-		daoSelect:  daoSelect,
-		daoInsert:  daoInsert,
-		transactor: transactor,
-	}
+	return &LayerCreate{daoOwner: daoOwner, daoLock: daoLock, daoInsert: daoInsert, transactor: transactor}
 }
 
 func (service *LayerCreate) Exec(ctx context.Context, request *LayerCreateRequest) (*Layer, error) {
@@ -81,7 +70,7 @@ func (service *LayerCreate) Exec(ctx context.Context, request *LayerCreateReques
 	span.SetAttributes(
 		attribute.String("project.id", request.ProjectID.String()),
 		attribute.String("project.owner_id", request.OwnerID.String()),
-		attribute.String("layer.after", request.After.String()),
+		attribute.Int("layer.position", request.Position),
 	)
 
 	err := validate.Struct(request)
@@ -89,13 +78,12 @@ func (service *LayerCreate) Exec(ctx context.Context, request *LayerCreateReques
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	owned, err := service.daoOwner.Exec(ctx, &dao.ProjectOwnedRequest{ID: request.ProjectID, OwnerID: request.OwnerID})
+	err = checkProjectOwnership(ctx, service.daoOwner, projectOwnershipOpts{
+		projectID: request.ProjectID,
+		ownerID:   request.OwnerID,
+	})
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("check owner: %w", err))
-	}
-
-	if !owned {
-		return nil, otel.ReportError(span, ErrProjectNotFound)
 	}
 
 	id, err := uuid.NewV7()
@@ -107,35 +95,14 @@ func (service *LayerCreate) Exec(ctx context.Context, request *LayerCreateReques
 
 	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
 		_, err := service.daoLock.Exec(ctx, &dao.ProjectLockRequest{ID: request.ProjectID})
-		if errors.Is(err, dao.ErrProjectLockNotFound) {
-			err = errors.Join(err, ErrProjectNotFound)
-		}
-
 		if err != nil {
 			return fmt.Errorf("lock project: %w", err)
-		}
-
-		position := 0
-
-		if request.After != uuid.Nil {
-			anchor, err := service.daoSelect.Exec(ctx, &dao.LayerSelectRequest{
-				ProjectID: request.ProjectID, ID: request.After,
-			})
-			if errors.Is(err, dao.ErrLayerSelectNotFound) {
-				err = errors.Join(err, ErrInvalidRequest)
-			}
-
-			if err != nil {
-				return fmt.Errorf("select anchor: %w", err)
-			}
-
-			position = anchor.Position + 1
 		}
 
 		inserted, err := service.daoInsert.Exec(ctx, &dao.LayerInsertRequest{
 			ID:          id,
 			ProjectID:   request.ProjectID,
-			Position:    position,
+			Position:    request.Position,
 			Kind:        LayerKindNotes,
 			Name:        request.Name,
 			Description: request.Description,

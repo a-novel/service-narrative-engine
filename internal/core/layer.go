@@ -9,11 +9,18 @@ import (
 )
 
 const (
-	// LayerKindManuscript is the kind of the permanent layer whose cells the manuscript exports.
+	// LayerKindManuscript is the kind of the layer whose cells the manuscript exports.
 	LayerKindManuscript = "manuscript"
 	// LayerKindNotes is the kind of a layer of free text.
 	LayerKindNotes = "notes"
 )
+
+// requiredLayers maps the kind of each layer every project holds to the name a new project gives
+// it. A project starts with these layers, by kind order, and none of them can be deleted. Clients
+// show their own label for a required kind, in the reader's language.
+var requiredLayers = map[string]string{
+	LayerKindManuscript: "Manuscript",
+}
 
 // Layer is one row of the Scenes Composer: one kind of information followed across scenes.
 type Layer struct {

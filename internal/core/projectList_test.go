@@ -51,7 +51,7 @@ func TestProjectList(t *testing.T) {
 
 			request: &core.ProjectListRequest{OwnerID: ownerID},
 
-			daoRequest: &dao.ProjectListRequest{OwnerID: ownerID, Limit: core.ProjectListDefaultSize},
+			daoRequest: &dao.ProjectListRequest{OwnerID: ownerID, Limit: core.ProjectListLimitDefault},
 			daoMock:    &daoMock[[]*dao.ProjectListRow]{},
 
 			expect: &core.ProjectPage{Projects: []*core.Project{}},
@@ -82,7 +82,7 @@ func TestProjectList(t *testing.T) {
 
 			request: &core.ProjectListRequest{OwnerID: ownerID},
 
-			daoRequest: &dao.ProjectListRequest{OwnerID: ownerID, Limit: core.ProjectListDefaultSize},
+			daoRequest: &dao.ProjectListRequest{OwnerID: ownerID, Limit: core.ProjectListLimitDefault},
 			daoMock:    &daoMock[[]*dao.ProjectListRow]{err: errFoo},
 
 			expectErr: errFoo,

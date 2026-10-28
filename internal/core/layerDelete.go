@@ -19,9 +19,9 @@ type LayerDeleteDaoOwner interface {
 	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
 }
 
-// LayerDeleteDaoSelect reads the layer to delete, to check its kind.
-type LayerDeleteDaoSelect interface {
-	Exec(ctx context.Context, request *dao.LayerSelectRequest) (*dao.Layer, error)
+// LayerDeleteDaoKind reads the kind of the layer to delete, which may name a required layer.
+type LayerDeleteDaoKind interface {
+	Exec(ctx context.Context, request *dao.LayerKindRequest) (string, error)
 }
 
 // LayerDeleteDaoLock locks the project, so changes to its order run one at a time.
@@ -42,10 +42,10 @@ type LayerDeleteRequest struct {
 }
 
 // LayerDelete deletes a notes layer with its cells, and moves the layers after it up by one. It
-// refuses the manuscript layer with [ErrManuscriptLayer].
+// refuses a required layer, such as the manuscript, with [ErrRequiredLayer].
 type LayerDelete struct {
 	daoOwner   LayerDeleteDaoOwner
-	daoSelect  LayerDeleteDaoSelect
+	daoKind    LayerDeleteDaoKind
 	daoLock    LayerDeleteDaoLock
 	dao        LayerDeleteDao
 	transactor transaction.Transactor
@@ -53,13 +53,13 @@ type LayerDelete struct {
 
 func NewLayerDelete(
 	daoOwner LayerDeleteDaoOwner,
-	daoSelect LayerDeleteDaoSelect,
+	daoKind LayerDeleteDaoKind,
 	daoLock LayerDeleteDaoLock,
 	dao LayerDeleteDao,
 	transactor transaction.Transactor,
 ) *LayerDelete {
 	return &LayerDelete{
-		daoOwner: daoOwner, daoSelect: daoSelect, daoLock: daoLock, dao: dao, transactor: transactor,
+		daoOwner: daoOwner, daoKind: daoKind, daoLock: daoLock, dao: dao, transactor: transactor,
 	}
 }
 
@@ -78,45 +78,36 @@ func (service *LayerDelete) Exec(ctx context.Context, request *LayerDeleteReques
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	owned, err := service.daoOwner.Exec(ctx, &dao.ProjectOwnedRequest{ID: request.ProjectID, OwnerID: request.OwnerID})
+	err = checkProjectOwnership(ctx, service.daoOwner, projectOwnershipOpts{
+		projectID: request.ProjectID,
+		ownerID:   request.OwnerID,
+	})
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("check owner: %w", err))
 	}
 
-	if !owned {
-		return nil, otel.ReportError(span, ErrProjectNotFound)
-	}
-
-	target, err := service.daoSelect.Exec(ctx, &dao.LayerSelectRequest{ProjectID: request.ProjectID, ID: request.ID})
-	if errors.Is(err, dao.ErrLayerSelectNotFound) {
+	kind, err := service.daoKind.Exec(ctx, &dao.LayerKindRequest{ProjectID: request.ProjectID, ID: request.ID})
+	if errors.Is(err, dao.ErrLayerKindNotFound) {
 		err = errors.Join(err, ErrLayerNotFound)
 	}
 
 	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("select layer: %w", err))
+		return nil, otel.ReportError(span, fmt.Errorf("read layer kind: %w", err))
 	}
 
-	if target.Kind == LayerKindManuscript {
-		return nil, otel.ReportError(span, ErrManuscriptLayer)
+	if _, required := requiredLayers[kind]; required {
+		return nil, otel.ReportError(span, fmt.Errorf("%w: %s", ErrRequiredLayer, kind))
 	}
 
 	var layer *Layer
 
 	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
 		_, err := service.daoLock.Exec(ctx, &dao.ProjectLockRequest{ID: request.ProjectID})
-		if errors.Is(err, dao.ErrProjectLockNotFound) {
-			err = errors.Join(err, ErrProjectNotFound)
-		}
-
 		if err != nil {
 			return fmt.Errorf("lock project: %w", err)
 		}
 
 		deleted, err := service.dao.Exec(ctx, &dao.LayerDeleteRequest{ProjectID: request.ProjectID, ID: request.ID})
-		if errors.Is(err, dao.ErrLayerDeleteNotFound) {
-			err = errors.Join(err, ErrLayerNotFound)
-		}
-
 		if err != nil {
 			return fmt.Errorf("delete layer: %w", err)
 		}

@@ -27,9 +27,6 @@ func TestSceneCreate(t *testing.T) {
 
 		ownerMock  *daoMock[bool]
 		lockMock   *daoMock[*dao.Project]
-		anchorMock *daoMock[*dao.Scene]
-		// position is where the service inserts the scene, when the case reaches the insert.
-		position   int
 		insertMock *daoMock[[]*dao.Scene]
 		transactor transaction.Transactor
 
@@ -43,22 +40,19 @@ func TestSceneCreate(t *testing.T) {
 
 			ownerMock:  &daoMock[bool]{resp: true},
 			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
-			position:   0,
 			insertMock: &daoMock[[]*dao.Scene]{resp: []*dao.Scene{daoScene(sceneID3, 0)}},
 
 			expect: coreScene(sceneID3, 0),
 		},
 		{
-			name: "Success/AfterAnchor",
+			name: "Success/Position",
 
 			request: &core.SceneCreateRequest{
-				OwnerID: ownerID, ProjectID: projectID, Title: "Scene", Color: "#4A90D9", After: sceneID2,
+				OwnerID: ownerID, ProjectID: projectID, Title: "Scene", Color: "#4A90D9", Position: 2,
 			},
 
 			ownerMock:  &daoMock[bool]{resp: true},
 			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
-			anchorMock: &daoMock[*dao.Scene]{resp: daoScene(sceneID2, 1)},
-			position:   2,
 			insertMock: &daoMock[[]*dao.Scene]{resp: []*dao.Scene{daoScene(sceneID3, 2)}},
 
 			expect: coreScene(sceneID3, 2),
@@ -67,6 +61,15 @@ func TestSceneCreate(t *testing.T) {
 			name: "Error/InvalidRequest",
 
 			request: &core.SceneCreateRequest{OwnerID: ownerID, ProjectID: projectID, Color: "#4A90D9"},
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/NegativePosition",
+
+			request: &core.SceneCreateRequest{
+				OwnerID: ownerID, ProjectID: projectID, Title: "Scene", Color: "#4A90D9", Position: -1,
+			},
 
 			expectErr: core.ErrInvalidRequest,
 		},
@@ -89,27 +92,14 @@ func TestSceneCreate(t *testing.T) {
 			expectErr: errFoo,
 		},
 		{
-			name: "Error/ProjectNotFound",
+			name: "Error/Lock",
 
 			request: &core.SceneCreateRequest{OwnerID: ownerID, ProjectID: projectID, Title: "Scene", Color: "#4A90D9"},
 
 			ownerMock: &daoMock[bool]{resp: true},
-			lockMock:  &daoMock[*dao.Project]{err: dao.ErrProjectLockNotFound},
+			lockMock:  &daoMock[*dao.Project]{err: errFoo},
 
-			expectErr: core.ErrProjectNotFound,
-		},
-		{
-			name: "Error/UnknownAnchor",
-
-			request: &core.SceneCreateRequest{
-				OwnerID: ownerID, ProjectID: projectID, Title: "Scene", Color: "#4A90D9", After: sceneID2,
-			},
-
-			ownerMock:  &daoMock[bool]{resp: true},
-			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
-			anchorMock: &daoMock[*dao.Scene]{err: dao.ErrSceneSelectNotFound},
-
-			expectErr: core.ErrInvalidRequest,
+			expectErr: errFoo,
 		},
 		{
 			name: "Error/ProjectFull",
@@ -151,7 +141,6 @@ func TestSceneCreate(t *testing.T) {
 
 			mockOwner := coremocks.NewMockSceneCreateDaoOwner(t)
 			mockLock := coremocks.NewMockSceneCreateDaoLock(t)
-			mockSelect := coremocks.NewMockSceneCreateDaoSelect(t)
 			mockInsert := coremocks.NewMockSceneCreateDaoInsert(t)
 
 			if testCase.ownerMock != nil {
@@ -166,16 +155,10 @@ func TestSceneCreate(t *testing.T) {
 					Return(testCase.lockMock.resp, testCase.lockMock.err)
 			}
 
-			if testCase.anchorMock != nil {
-				mockSelect.EXPECT().
-					Exec(mock.Anything, &dao.SceneSelectRequest{ProjectID: projectID, ID: testCase.request.After}).
-					Return(testCase.anchorMock.resp, testCase.anchorMock.err)
-			}
-
 			if testCase.insertMock != nil {
 				mockInsert.EXPECT().
 					Exec(mock.Anything, mock.MatchedBy(func(req *dao.SceneInsertRequest) bool {
-						return req.ProjectID == projectID && req.Position == testCase.position &&
+						return req.ProjectID == projectID && req.Position == testCase.request.Position &&
 							len(req.Scenes) == 1 && req.Scenes[0].Title == "Scene" && req.Scenes[0].Color == sceneColor && recent(req.Now)
 					})).
 					Return(testCase.insertMock.resp, testCase.insertMock.err)
@@ -186,7 +169,7 @@ func TestSceneCreate(t *testing.T) {
 				transactor = transactiontest.NewTransactor()
 			}
 
-			service := core.NewSceneCreate(mockOwner, mockLock, mockSelect, mockInsert, transactor)
+			service := core.NewSceneCreate(mockOwner, mockLock, mockInsert, transactor)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
@@ -194,7 +177,6 @@ func TestSceneCreate(t *testing.T) {
 
 			mockOwner.AssertExpectations(t)
 			mockLock.AssertExpectations(t)
-			mockSelect.AssertExpectations(t)
 			mockInsert.AssertExpectations(t)
 		})
 	}

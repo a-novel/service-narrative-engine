@@ -21,9 +21,9 @@ type CellWriteDaoOwner interface {
 	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
 }
 
-// CellWriteDaoLayer reads the cell's layer, whose kind names the content schema.
-type CellWriteDaoLayer interface {
-	Exec(ctx context.Context, request *dao.LayerSelectRequest) (*dao.Layer, error)
+// CellWriteDaoKind reads the kind of the cell's layer, which names the content schema.
+type CellWriteDaoKind interface {
+	Exec(ctx context.Context, request *dao.LayerKindRequest) (string, error)
 }
 
 // CellWriteDao writes the cell. It refuses a scene of another project.
@@ -48,12 +48,12 @@ type CellWriteRequest struct {
 // layer's kind. The first write creates the cell.
 type CellWrite struct {
 	daoOwner CellWriteDaoOwner
-	daoLayer CellWriteDaoLayer
+	daoKind  CellWriteDaoKind
 	dao      CellWriteDao
 }
 
-func NewCellWrite(daoOwner CellWriteDaoOwner, daoLayer CellWriteDaoLayer, dao CellWriteDao) *CellWrite {
-	return &CellWrite{daoOwner: daoOwner, daoLayer: daoLayer, dao: dao}
+func NewCellWrite(daoOwner CellWriteDaoOwner, daoKind CellWriteDaoKind, dao CellWriteDao) *CellWrite {
+	return &CellWrite{daoOwner: daoOwner, daoKind: daoKind, dao: dao}
 }
 
 func (service *CellWrite) Exec(ctx context.Context, request *CellWriteRequest) (*Cell, error) {
@@ -73,25 +73,24 @@ func (service *CellWrite) Exec(ctx context.Context, request *CellWriteRequest) (
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	owned, err := service.daoOwner.Exec(ctx, &dao.ProjectOwnedRequest{ID: request.ProjectID, OwnerID: request.OwnerID})
+	err = checkProjectOwnership(ctx, service.daoOwner, projectOwnershipOpts{
+		projectID: request.ProjectID,
+		ownerID:   request.OwnerID,
+	})
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("check owner: %w", err))
 	}
 
-	if !owned {
-		return nil, otel.ReportError(span, ErrProjectNotFound)
-	}
-
-	layer, err := service.daoLayer.Exec(ctx, &dao.LayerSelectRequest{ProjectID: request.ProjectID, ID: request.LayerID})
-	if errors.Is(err, dao.ErrLayerSelectNotFound) {
+	kind, err := service.daoKind.Exec(ctx, &dao.LayerKindRequest{ProjectID: request.ProjectID, ID: request.LayerID})
+	if errors.Is(err, dao.ErrLayerKindNotFound) {
 		err = errors.Join(err, ErrLayerNotFound)
 	}
 
 	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("select layer: %w", err))
+		return nil, otel.ReportError(span, fmt.Errorf("read layer kind: %w", err))
 	}
 
-	schema, err := schemas.Content(layer.Kind)
+	schema, err := schemas.Content(kind)
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("content schema: %w", err))
 	}

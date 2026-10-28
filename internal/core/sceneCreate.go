@@ -26,12 +26,7 @@ type SceneCreateDaoLock interface {
 	Exec(ctx context.Context, request *dao.ProjectLockRequest) (*dao.Project, error)
 }
 
-// SceneCreateDaoSelect reads the scene the new one follows.
-type SceneCreateDaoSelect interface {
-	Exec(ctx context.Context, request *dao.SceneSelectRequest) (*dao.Scene, error)
-}
-
-// SceneCreateDaoInsert inserts the scene, and moves the scenes after it down by one.
+// SceneCreateDaoInsert inserts the scene, and moves the scenes at or after its position down.
 type SceneCreateDaoInsert interface {
 	Exec(ctx context.Context, request *dao.SceneInsertRequest) ([]*dao.Scene, error)
 }
@@ -41,8 +36,9 @@ type SceneCreateRequest struct {
 	OwnerID   uuid.UUID `validate:"required"`
 	ProjectID uuid.UUID `validate:"required"`
 
-	// After is the scene the new one follows. uuid.Nil places it first.
-	After uuid.UUID
+	// Position is the scene's place in narrative order, from 0. A position past the last scene appends
+	// it.
+	Position int `validate:"min=0"`
 
 	// Title names the scene in the composer.
 	Title string `validate:"required,notblank,max=200"`
@@ -54,11 +50,11 @@ type SceneCreateRequest struct {
 	Prompt string `validate:"max=20000"`
 }
 
-// SceneCreate adds a scene to a project, right after the scene the caller names.
+// SceneCreate adds a scene to a project at the position the caller names. The scenes from that
+// position on move down by one.
 type SceneCreate struct {
 	daoOwner   SceneCreateDaoOwner
 	daoLock    SceneCreateDaoLock
-	daoSelect  SceneCreateDaoSelect
 	daoInsert  SceneCreateDaoInsert
 	transactor transaction.Transactor
 }
@@ -66,17 +62,10 @@ type SceneCreate struct {
 func NewSceneCreate(
 	daoOwner SceneCreateDaoOwner,
 	daoLock SceneCreateDaoLock,
-	daoSelect SceneCreateDaoSelect,
 	daoInsert SceneCreateDaoInsert,
 	transactor transaction.Transactor,
 ) *SceneCreate {
-	return &SceneCreate{
-		daoOwner:   daoOwner,
-		daoLock:    daoLock,
-		daoSelect:  daoSelect,
-		daoInsert:  daoInsert,
-		transactor: transactor,
-	}
+	return &SceneCreate{daoOwner: daoOwner, daoLock: daoLock, daoInsert: daoInsert, transactor: transactor}
 }
 
 func (service *SceneCreate) Exec(ctx context.Context, request *SceneCreateRequest) (*Scene, error) {
@@ -86,7 +75,7 @@ func (service *SceneCreate) Exec(ctx context.Context, request *SceneCreateReques
 	span.SetAttributes(
 		attribute.String("project.id", request.ProjectID.String()),
 		attribute.String("project.owner_id", request.OwnerID.String()),
-		attribute.String("scene.after", request.After.String()),
+		attribute.Int("scene.position", request.Position),
 	)
 
 	err := validate.Struct(request)
@@ -94,13 +83,12 @@ func (service *SceneCreate) Exec(ctx context.Context, request *SceneCreateReques
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	owned, err := service.daoOwner.Exec(ctx, &dao.ProjectOwnedRequest{ID: request.ProjectID, OwnerID: request.OwnerID})
+	err = checkProjectOwnership(ctx, service.daoOwner, projectOwnershipOpts{
+		projectID: request.ProjectID,
+		ownerID:   request.OwnerID,
+	})
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("check owner: %w", err))
-	}
-
-	if !owned {
-		return nil, otel.ReportError(span, ErrProjectNotFound)
 	}
 
 	id, err := uuid.NewV7()
@@ -112,34 +100,13 @@ func (service *SceneCreate) Exec(ctx context.Context, request *SceneCreateReques
 
 	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
 		_, err := service.daoLock.Exec(ctx, &dao.ProjectLockRequest{ID: request.ProjectID})
-		if errors.Is(err, dao.ErrProjectLockNotFound) {
-			err = errors.Join(err, ErrProjectNotFound)
-		}
-
 		if err != nil {
 			return fmt.Errorf("lock project: %w", err)
 		}
 
-		position := 0
-
-		if request.After != uuid.Nil {
-			anchor, err := service.daoSelect.Exec(ctx, &dao.SceneSelectRequest{
-				ProjectID: request.ProjectID, ID: request.After,
-			})
-			if errors.Is(err, dao.ErrSceneSelectNotFound) {
-				err = errors.Join(err, ErrInvalidRequest)
-			}
-
-			if err != nil {
-				return fmt.Errorf("select anchor: %w", err)
-			}
-
-			position = anchor.Position + 1
-		}
-
 		inserted, err := service.daoInsert.Exec(ctx, &dao.SceneInsertRequest{
 			ProjectID: request.ProjectID,
-			Position:  position,
+			Position:  request.Position,
 			Scenes: []dao.SceneInsertItem{{
 				ID: id, Title: request.Title, Color: strings.ToLower(request.Color),
 				Description: request.Description, Prompt: request.Prompt,

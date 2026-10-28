@@ -24,15 +24,15 @@ type LayerListDao interface {
 	Exec(ctx context.Context, request *dao.LayerListRequest) ([]*dao.LayerListRow, error)
 }
 
-// LayerListDefaultSize is the page size of a [LayerListRequest] whose Limit is zero.
-const LayerListDefaultSize = 100
+// LayerListLimitDefault is the page size of a [LayerListRequest] whose Limit is zero.
+const LayerListLimitDefault = 100
 
 // LayerListRequest selects a page of a project's layers.
 type LayerListRequest struct {
 	OwnerID   uuid.UUID `validate:"required"`
 	ProjectID uuid.UUID `validate:"required"`
 
-	// Limit caps the page at 500 layers. It defaults to [LayerListDefaultSize] when zero.
+	// Limit caps the page at 500 layers. It defaults to [LayerListLimitDefault] when zero.
 	Limit int `validate:"min=0,max=500"`
 	// Offset is how many layers come before the page, in order.
 	Offset int `validate:"min=0"`
@@ -65,23 +65,21 @@ func (service *LayerList) Exec(ctx context.Context, request *LayerListRequest) (
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	limit := request.Limit
-	if limit == 0 {
-		limit = LayerListDefaultSize
+	if request.Limit == 0 {
+		request.Limit = LayerListLimitDefault
 	}
 
-	owned, err := service.daoOwner.Exec(ctx, &dao.ProjectOwnedRequest{ID: request.ProjectID, OwnerID: request.OwnerID})
+	err = checkProjectOwnership(ctx, service.daoOwner, projectOwnershipOpts{
+		projectID: request.ProjectID,
+		ownerID:   request.OwnerID,
+	})
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("check owner: %w", err))
 	}
 
-	if !owned {
-		return nil, otel.ReportError(span, ErrProjectNotFound)
-	}
-
 	rows, err := service.dao.Exec(ctx, &dao.LayerListRequest{
 		ProjectID: request.ProjectID,
-		Limit:     limit,
+		Limit:     request.Limit,
 		Offset:    request.Offset,
 	})
 	if err != nil {

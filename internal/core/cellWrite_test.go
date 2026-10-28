@@ -37,7 +37,7 @@ func TestCellWrite(t *testing.T) {
 		request *core.CellWriteRequest
 
 		ownerMock *daoMock[bool]
-		layerMock *daoMock[*dao.Layer]
+		kindMock  *daoMock[string]
 		daoMock   *daoMock[*dao.Cell]
 
 		expect    *core.Cell
@@ -49,7 +49,7 @@ func TestCellWrite(t *testing.T) {
 			request: request(layerID2, notes),
 
 			ownerMock: &daoMock[bool]{resp: true},
-			layerMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
+			kindMock:  &daoMock[string]{resp: core.LayerKindNotes},
 			daoMock: &daoMock[*dao.Cell]{resp: &dao.Cell{
 				ProjectID: projectID, SceneID: sceneID1, LayerID: layerID2, Content: notes, UpdatedAt: updatedAt,
 			}},
@@ -64,7 +64,7 @@ func TestCellWrite(t *testing.T) {
 			request: request(layerID1, manuscript),
 
 			ownerMock: &daoMock[bool]{resp: true},
-			layerMock: &daoMock[*dao.Layer]{resp: daoLayer(layerID1, 0, core.LayerKindManuscript)},
+			kindMock:  &daoMock[string]{resp: core.LayerKindManuscript},
 			daoMock: &daoMock[*dao.Cell]{resp: &dao.Cell{
 				ProjectID: projectID, SceneID: sceneID1, LayerID: layerID1, Content: manuscript, UpdatedAt: updatedAt,
 			}},
@@ -111,7 +111,7 @@ func TestCellWrite(t *testing.T) {
 			request: request(layerID2, notes),
 
 			ownerMock: &daoMock[bool]{resp: true},
-			layerMock: &daoMock[*dao.Layer]{err: dao.ErrLayerSelectNotFound},
+			kindMock:  &daoMock[string]{err: dao.ErrLayerKindNotFound},
 
 			expectErr: core.ErrLayerNotFound,
 		},
@@ -121,7 +121,7 @@ func TestCellWrite(t *testing.T) {
 			request: request(layerID1, notes),
 
 			ownerMock: &daoMock[bool]{resp: true},
-			layerMock: &daoMock[*dao.Layer]{resp: daoLayer(layerID1, 0, core.LayerKindManuscript)},
+			kindMock:  &daoMock[string]{resp: core.LayerKindManuscript},
 
 			expectErr: core.ErrInvalidRequest,
 		},
@@ -131,7 +131,7 @@ func TestCellWrite(t *testing.T) {
 			request: request(layerID2, notes),
 
 			ownerMock: &daoMock[bool]{resp: true},
-			layerMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
+			kindMock:  &daoMock[string]{resp: core.LayerKindNotes},
 			daoMock:   &daoMock[*dao.Cell]{err: dao.ErrCellUpsertSceneNotFound},
 
 			expectErr: core.ErrSceneNotFound,
@@ -142,7 +142,7 @@ func TestCellWrite(t *testing.T) {
 			request: request(layerID2, notes),
 
 			ownerMock: &daoMock[bool]{resp: true},
-			layerMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
+			kindMock:  &daoMock[string]{resp: core.LayerKindNotes},
 			daoMock:   &daoMock[*dao.Cell]{err: dao.ErrCellUpsertLayerNotFound},
 
 			expectErr: core.ErrLayerNotFound,
@@ -153,7 +153,7 @@ func TestCellWrite(t *testing.T) {
 			request: request(layerID2, notes),
 
 			ownerMock: &daoMock[bool]{resp: true},
-			layerMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
+			kindMock:  &daoMock[string]{resp: core.LayerKindNotes},
 			daoMock:   &daoMock[*dao.Cell]{err: errFoo},
 
 			expectErr: errFoo,
@@ -165,7 +165,7 @@ func TestCellWrite(t *testing.T) {
 			t.Parallel()
 
 			mockOwner := coremocks.NewMockCellWriteDaoOwner(t)
-			mockLayer := coremocks.NewMockCellWriteDaoLayer(t)
+			mockKind := coremocks.NewMockCellWriteDaoKind(t)
 			mockDao := coremocks.NewMockCellWriteDao(t)
 
 			if testCase.ownerMock != nil {
@@ -174,10 +174,10 @@ func TestCellWrite(t *testing.T) {
 					Return(testCase.ownerMock.resp, testCase.ownerMock.err)
 			}
 
-			if testCase.layerMock != nil {
-				mockLayer.EXPECT().
-					Exec(mock.Anything, &dao.LayerSelectRequest{ProjectID: projectID, ID: testCase.request.LayerID}).
-					Return(testCase.layerMock.resp, testCase.layerMock.err)
+			if testCase.kindMock != nil {
+				mockKind.EXPECT().
+					Exec(mock.Anything, &dao.LayerKindRequest{ProjectID: projectID, ID: testCase.request.LayerID}).
+					Return(testCase.kindMock.resp, testCase.kindMock.err)
 			}
 
 			if testCase.daoMock != nil {
@@ -190,14 +190,14 @@ func TestCellWrite(t *testing.T) {
 					Return(testCase.daoMock.resp, testCase.daoMock.err)
 			}
 
-			service := core.NewCellWrite(mockOwner, mockLayer, mockDao)
+			service := core.NewCellWrite(mockOwner, mockKind, mockDao)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
 
 			mockOwner.AssertExpectations(t)
-			mockLayer.AssertExpectations(t)
+			mockKind.AssertExpectations(t)
 			mockDao.AssertExpectations(t)
 		})
 	}
