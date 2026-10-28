@@ -10,9 +10,9 @@ import {
   type Scene,
   projectCreate,
   projectDelete,
-  projectGet,
   sceneCreate,
   sceneDelete,
+  sceneList,
   sceneMove,
   sceneUpdate,
 } from "@a-novel/service-narrative-engine-rest";
@@ -30,18 +30,23 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await projectDelete(api, accessToken, await projectGet(api, accessToken, project));
+  await projectDelete(api, accessToken, project);
 });
+
+/** Returns every scene of the test project, in narrative order. */
+async function storedScenes(): Promise<Scene[]> {
+  return (await sceneList(api, accessToken, { projectID: project.id, limit: 500 })).scenes;
+}
 
 /** Returns the scene titles of the test project, in narrative order. */
 async function sceneTitles(): Promise<string[]> {
-  return (await projectGet(api, accessToken, project)).scenes.map((scene) => scene.title);
+  return (await storedScenes()).map((scene) => scene.title);
 }
 
 /** Deletes every scene the test created. */
 async function deleteScenes(...scenes: Scene[]): Promise<void> {
   for (const scene of scenes) {
-    const stored = (await projectGet(api, accessToken, project)).scenes.find((item) => item.id === scene.id);
+    const stored = (await storedScenes()).find((item) => item.id === scene.id);
     if (stored) await sceneDelete(api, accessToken, stored);
   }
 }
@@ -112,14 +117,13 @@ describe("sceneMove", () => {
       color: COLOR,
     });
 
-    const scenes = await sceneMove(api, accessToken, { id: first.id, after: second.id });
-    expect(scenes.map((scene) => [scene.position, scene.title])).toEqual([
-      [0, "Second"],
-      [1, "First"],
-    ]);
+    const moved = await sceneMove(api, accessToken, { id: first.id, after: second.id });
+    expect(moved).toMatchObject({ id: first.id, position: 1 });
+    await expect(sceneTitles()).resolves.toEqual(["Second", "First"]);
 
     const back = await sceneMove(api, accessToken, { id: first.id });
-    expect(back.map((scene) => scene.title)).toEqual(["First", "Second"]);
+    expect(back).toMatchObject({ id: first.id, position: 0 });
+    await expect(sceneTitles()).resolves.toEqual(["First", "Second"]);
 
     await deleteScenes(first, second);
   });
@@ -139,7 +143,7 @@ describe("sceneMove", () => {
 
     await Promise.all(scenes.map((scene) => sceneMove(api, accessToken, { id: scene.id })));
 
-    const stored = (await projectGet(api, accessToken, project)).scenes;
+    const stored = await storedScenes();
     expect(stored.map((scene) => scene.position)).toEqual([0, 1, 2, 3, 4, 5]);
     expect(new Set(stored.map((scene) => scene.id))).toEqual(new Set(scenes.map((scene) => scene.id)));
 
@@ -171,7 +175,7 @@ describe("sceneDelete", () => {
 
     await expect(sceneDelete(api, accessToken, first)).resolves.toMatchObject({ id: first.id });
 
-    const scenes = (await projectGet(api, accessToken, project)).scenes;
+    const scenes = await storedScenes();
     expect(scenes.map((scene) => [scene.position, scene.title])).toEqual([[0, "Second"]]);
 
     await deleteScenes(second);
@@ -179,5 +183,39 @@ describe("sceneDelete", () => {
 
   it("returns 404 for an absent scene", async () => {
     await expectStatus(sceneDelete(api, accessToken, { id: ABSENT_ID }), 404);
+  });
+});
+
+describe("sceneList", () => {
+  it("pages through the scenes in narrative order, with their total", async () => {
+    const scenes: Scene[] = [];
+    for (const title of ["One", "Two", "Three"]) {
+      scenes.push(
+        await sceneCreate(api, accessToken, { projectID: project.id, after: scenes.at(-1)?.id, title, color: COLOR })
+      );
+    }
+
+    const first = await sceneList(api, accessToken, { projectID: project.id, limit: 2 });
+    expect(first.total).toBe(3);
+    expect(first.scenes.map((scene) => scene.title)).toEqual(["One", "Two"]);
+
+    const second = await sceneList(api, accessToken, { projectID: project.id, limit: 2, offset: 2 });
+    expect(second.total).toBe(3);
+    expect(second.scenes.map((scene) => scene.title)).toEqual(["Three"]);
+
+    await expect(sceneList(api, accessToken, { projectID: project.id, offset: 3 })).resolves.toEqual({
+      scenes: [],
+      total: 0,
+    });
+
+    await deleteScenes(...scenes);
+  });
+
+  it("returns 400 for a page over 500 scenes", async () => {
+    await expectStatus(sceneList(api, accessToken, { projectID: project.id, limit: 501 }), 400);
+  });
+
+  it("returns 404 for an absent project", async () => {
+    await expectStatus(sceneList(api, accessToken, { projectID: ABSENT_ID }), 404);
   });
 });

@@ -15,7 +15,6 @@ import {
   layerCreate,
   projectCreate,
   projectDelete,
-  projectGet,
 } from "@a-novel/service-narrative-engine-rest";
 
 const api = new NarrativeEngineApi(process.env.REST_URL!);
@@ -46,7 +45,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   for (const item of [project, other]) {
-    await projectDelete(api, accessToken, await projectGet(api, accessToken, item));
+    await projectDelete(api, accessToken, item);
   }
 });
 
@@ -112,22 +111,14 @@ describe("cellList", () => {
       written.push(await cellWrite(api, accessToken, request));
     }
 
-    const first = await cellList(api, accessToken, { projectID: paged.id, limit: 2 });
-    expect(first.total).toBe(3);
-    expect(first.cells).toHaveLength(2);
-
-    const last = first.cells[1];
-    const second = await cellList(api, accessToken, {
-      projectID: paged.id,
-      limit: 2,
-      afterSceneID: last.sceneID,
-      afterLayerID: last.layerID,
+    await expect(cellList(api, accessToken, { projectID: paged.id, limit: 2 })).resolves.toEqual({
+      cells: written.slice(0, 2),
+      total: 3,
     });
-    expect(second.total).toBe(3);
-
-    const all = [...first.cells, ...second.cells];
-    expect(all).toHaveLength(3);
-    expect(all).toEqual(expect.arrayContaining(written));
+    await expect(cellList(api, accessToken, { projectID: paged.id, limit: 2, offset: 2 })).resolves.toEqual({
+      cells: written.slice(2),
+      total: 3,
+    });
 
     await projectDelete(api, accessToken, paged);
   });

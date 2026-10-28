@@ -20,7 +20,10 @@ export const CellSchema = z.object({
 /** The value {@link CellSchema} validates. */
 export type Cell = z.infer<typeof CellSchema>;
 
-/** A page of a project's cells, in the order of their keys, with how many the project holds in all. */
+/**
+ * A page of a project's cells, by the position of their scene, then of their layer, with how many the
+ * project holds in all.
+ */
 export const CellPageSchema = z.object({
   cells: z.array(CellSchema),
   total: z.int(),
@@ -29,15 +32,11 @@ export const CellPageSchema = z.object({
 /** The value {@link CellPageSchema} validates. */
 export type CellPage = z.infer<typeof CellPageSchema>;
 
-/**
- * A page of a project's cells: at most `limit`, 100 when omitted, after the cell whose key
- * `afterSceneID` and `afterLayerID` name.
- */
+/** A page of a project's cells: at most `limit`, 100 when omitted, after the first `offset`. */
 export const CellListRequestSchema = z.object({
   projectID: z.uuid(),
   limit: z.int().max(500).optional(),
-  afterSceneID: z.uuid().optional(),
-  afterLayerID: z.uuid().optional(),
+  offset: z.int().min(0).optional(),
 });
 
 /** The value {@link CellListRequestSchema} validates. */
@@ -71,10 +70,8 @@ export async function cellWrite(
 }
 
 /**
- * Lists a page of a project's cells written so far, with their total. Pass the `sceneID` and
- * `layerID` of the last cell received as `afterSceneID` and `afterLayerID` for the next page. A
- * cell's key never changes, so moving scenes or layers between two pages skips and repeats nothing.
- * Throws on HTTP 404 when the caller owns no such project.
+ * Lists a page of a project's cells written so far, with their total. Raise `offset` by the page size
+ * for the next page. Throws on HTTP 404 when the caller owns no such project.
  */
 export async function cellList(
   api: NarrativeEngineApi,
@@ -83,8 +80,7 @@ export async function cellList(
 ): Promise<CellPage> {
   const params = new URLSearchParams({ projectID: request.projectID });
   if (request.limit) params.set("limit", `${request.limit}`);
-  if (request.afterSceneID) params.set("afterSceneID", request.afterSceneID);
-  if (request.afterLayerID) params.set("afterLayerID", request.afterLayerID);
+  if (request.offset) params.set("offset", `${request.offset}`);
   return await api.fetch(`/v1/cells?${params.toString()}`, CellPageSchema, {
     method: "GET",
     headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },

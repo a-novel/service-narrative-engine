@@ -30,10 +30,7 @@ export const ProjectSchema = z.object({
 /** The value {@link ProjectSchema} validates. */
 export type Project = z.infer<typeof ProjectSchema>;
 
-/**
- * A project with every scene and layer, each list in its order. Its cells come page by page from
- * `cellList`.
- */
+/** A project with every scene and layer, each list in its order, as {@link projectCreate} returns it. */
 export const ProjectComposerSchema = ProjectSchema.extend({
   scenes: z.array(SceneSchema),
   layers: z.array(LayerSchema),
@@ -76,10 +73,10 @@ export const ProjectGetRequestSchema = z.object({
 /** The value {@link ProjectGetRequestSchema} validates. */
 export type ProjectGetRequest = z.infer<typeof ProjectGetRequestSchema>;
 
-/** A page of projects: at most `limit`, 20 when omitted, older than the project `after` names. */
+/** A page of projects, newest first: at most `limit`, 20 when omitted, after the first `offset`. */
 export const ProjectListRequestSchema = z.object({
   limit: z.int().max(100).optional(),
-  after: z.uuid().optional(),
+  offset: z.int().min(0).optional(),
 });
 
 /** The value {@link ProjectListRequestSchema} validates. */
@@ -118,24 +115,24 @@ export async function projectCreate(
 }
 
 /**
- * Returns a project with its scenes and layers, each list in its order. Read its cells with
- * `cellList`. Throws on HTTP 404 when the caller owns no such project.
+ * Returns a project of the caller. Read its scenes, layers and cells page by page with `sceneList`,
+ * `layerList` and `cellList`. Throws on HTTP 404 when the caller owns no such project.
  */
 export async function projectGet(
   api: NarrativeEngineApi,
   accessToken: string,
   request: ProjectGetRequest
-): Promise<ProjectComposer> {
+): Promise<Project> {
   const params = new URLSearchParams({ id: request.id });
-  return await api.fetch(`/v1/project?${params.toString()}`, ProjectComposerSchema, {
+  return await api.fetch(`/v1/project?${params.toString()}`, ProjectSchema, {
     method: "GET",
     headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
   });
 }
 
 /**
- * Lists a page of the caller's projects, newest first, with their total. Pass the ID of the last
- * project received as `after` for the next page.
+ * Lists a page of the caller's projects, newest first, with their total. Raise `offset` by the page
+ * size for the next page.
  */
 export async function projectList(
   api: NarrativeEngineApi,
@@ -144,7 +141,7 @@ export async function projectList(
 ): Promise<ProjectPage> {
   const params = new URLSearchParams();
   if (request.limit) params.set("limit", `${request.limit}`);
-  if (request.after) params.set("after", request.after);
+  if (request.offset) params.set("offset", `${request.offset}`);
   const query = params.toString();
   return await api.fetch(`/v1/projects${query ? `?${query}` : ""}`, ProjectPageSchema, {
     method: "GET",

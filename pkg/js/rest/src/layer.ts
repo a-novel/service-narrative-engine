@@ -73,6 +73,25 @@ export const LayerDeleteRequestSchema = z.object({
 /** The value {@link LayerDeleteRequestSchema} validates. */
 export type LayerDeleteRequest = z.infer<typeof LayerDeleteRequestSchema>;
 
+/** A page of a project's layers, in order, with how many the project holds in all. */
+export const LayerPageSchema = z.object({
+  layers: z.array(LayerSchema),
+  total: z.int(),
+});
+
+/** The value {@link LayerPageSchema} validates. */
+export type LayerPage = z.infer<typeof LayerPageSchema>;
+
+/** A page of a project's layers: at most `limit`, 100 when omitted, after the first `offset`. */
+export const LayerListRequestSchema = z.object({
+  projectID: z.uuid(),
+  limit: z.int().max(500).optional(),
+  offset: z.int().min(0).optional(),
+});
+
+/** The value {@link LayerListRequestSchema} validates. */
+export type LayerListRequest = z.infer<typeof LayerListRequestSchema>;
+
 /**
  * Adds a notes layer to a project and returns it at its place. Throws on HTTP 400 when `after` names
  * no layer of the project, 404 when the caller owns no such project, and 422 when the project holds
@@ -104,15 +123,16 @@ export async function layerUpdate(
 }
 
 /**
- * Moves a layer and returns every layer of its project in their new order. Throws on HTTP 400 when
- * `after` names the moved layer or none of the project, and 404 for an unknown layer.
+ * Moves a layer and returns it at its new position. The layers between its old and new position shift by
+ * one. Throws on HTTP 400 when `after` names the moved layer or none of the project, and 404 for an
+ * unknown layer.
  */
 export async function layerMove(
   api: NarrativeEngineApi,
   accessToken: string,
   request: LayerMoveRequest
-): Promise<Layer[]> {
-  return await api.fetch("/v1/layer/move", z.array(LayerSchema), {
+): Promise<Layer> {
+  return await api.fetch("/v1/layer/move", LayerSchema, {
     method: "POST",
     headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
     body: JSON.stringify(request),
@@ -132,6 +152,24 @@ export async function layerDelete(
   const params = new URLSearchParams({ id: request.id });
   return await api.fetch(`/v1/layer?${params.toString()}`, LayerSchema, {
     method: "DELETE",
+    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
+  });
+}
+
+/**
+ * Lists a page of a project's layers, in order, with their total. Raise `offset` by the page size for
+ * the next page. Throws on HTTP 404 when the caller owns no such project.
+ */
+export async function layerList(
+  api: NarrativeEngineApi,
+  accessToken: string,
+  request: LayerListRequest
+): Promise<LayerPage> {
+  const params = new URLSearchParams({ projectID: request.projectID });
+  if (request.limit) params.set("limit", `${request.limit}`);
+  if (request.offset) params.set("offset", `${request.offset}`);
+  return await api.fetch(`/v1/layers?${params.toString()}`, LayerPageSchema, {
+    method: "GET",
     headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
   });
 }

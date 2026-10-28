@@ -62,17 +62,23 @@ describe("projectCreate", () => {
 });
 
 describe("projectGet", () => {
-  it("returns the project with its scenes and layers", async () => {
+  it("returns the project", async () => {
     const created = await projectCreate(api, accessToken, {
       title: "Clear Hours",
+      premise: "Marie waits.",
       language: Language.En,
       scenes: [{ title: "Opening", color: "#4a90d9" }],
     });
 
     const project = await projectGet(api, accessToken, { id: created.id });
-    expect(project.id).toBe(created.id);
-    expect(project.scenes).toEqual(created.scenes);
-    expect(project.layers).toEqual(created.layers);
+    expect(project).toEqual({
+      id: created.id,
+      title: "Clear Hours",
+      premise: "Marie waits.",
+      language: Language.En,
+      createdAt: created.createdAt,
+      updatedAt: created.updatedAt,
+    });
 
     await projectDelete(api, accessToken, project);
   });
@@ -95,11 +101,12 @@ describe("projectList", () => {
     expect(ids.indexOf(newer.id)).toBeGreaterThanOrEqual(0);
     expect(ids.indexOf(newer.id)).toBeLessThan(ids.indexOf(older.id));
 
-    const nextPage = (await projectList(api, accessToken, { after: newer.id, limit: 100 })).projects.map(
+    // Other test files create projects meanwhile, so the page after the newer project still holds the older one.
+    const offset = ids.indexOf(newer.id) + 1;
+    const nextPage = (await projectList(api, accessToken, { offset, limit: 100 })).projects.map(
       (project) => project.id
     );
     expect(nextPage).toContain(older.id);
-    expect(nextPage).not.toContain(newer.id);
 
     const firstPage = await projectList(api, accessToken, { limit: 1 });
     expect(firstPage.projects).toHaveLength(1);
@@ -111,6 +118,10 @@ describe("projectList", () => {
 
   it("returns 400 for a page over 100 projects", async () => {
     await expectStatus(projectList(api, accessToken, { limit: 101 }), 400);
+  });
+
+  it("returns 400 for a negative offset", async () => {
+    await expectStatus(projectList(api, accessToken, { offset: -1 }), 400);
   });
 });
 

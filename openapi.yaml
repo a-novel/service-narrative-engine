@@ -117,11 +117,11 @@ paths:
       summary: List projects.
       description: |
         Returns a page of the caller's projects, newest first, with how many the caller holds in all. To read
-        the next page, pass the ID of the last project received as `after`.
+        the next page, raise `offset` by the page size.
       tags: [project]
       parameters:
         - $ref: "#/components/parameters/limit"
-        - $ref: "#/components/parameters/after"
+        - $ref: "#/components/parameters/offset"
       responses:
         "200":
           $ref: "#/components/responses/projectList"
@@ -141,16 +141,16 @@ paths:
   /v1/project:
     get:
       operationId: projectGet
-      summary: Get a project with its scenes and layers.
+      summary: Get a project.
       description: |
-        Returns a project with every scene and layer, each list in its order. A project holds at most 500
-        scenes and 1000 layers. Its cells come page by page from `GET /v1/cells`.
+        Returns a project of the caller. Its scenes, layers and cells come page by page from `GET /v1/scenes`,
+        `GET /v1/layers` and `GET /v1/cells`.
       tags: [project]
       parameters:
         - $ref: "#/components/parameters/projectID"
       responses:
         "200":
-          $ref: "#/components/responses/projectComposer"
+          $ref: "#/components/responses/project"
         "400":
           $ref: "#/components/responses/badRequest"
         "401":
@@ -256,6 +256,35 @@ paths:
         default:
           $ref: "#/components/responses/internalError"
 
+    get:
+      operationId: sceneList
+      summary: List the scenes of a project.
+      description: |
+        Returns a page of a project's scenes, in narrative order, with how many the project holds in all. To read the next
+        page, raise `offset` by the page size.
+      tags: [scene]
+      parameters:
+        - $ref: "#/components/parameters/listProjectID"
+        - $ref: "#/components/parameters/composerLimit"
+        - $ref: "#/components/parameters/offset"
+      responses:
+        "200":
+          $ref: "#/components/responses/scenePage"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/plannedDowntime"
+        default:
+          $ref: "#/components/responses/internalError"
+
   /v1/scene:
     put:
       operationId: sceneUpdate
@@ -319,8 +348,8 @@ paths:
       operationId: sceneMove
       summary: Move a scene.
       description: |
-        Moves a scene right after the scene `after` names, or first without it. Returns every scene of the
-        project in their new order.
+        Moves a scene right after the scene `after` names, or first without it, and returns it at its new
+        position. The scenes between its old and new position shift by one.
       tags: [scene]
       requestBody:
         required: true
@@ -330,7 +359,7 @@ paths:
               $ref: "#/components/schemas/sceneMoveRequest"
       responses:
         "200":
-          $ref: "#/components/responses/sceneList"
+          $ref: "#/components/responses/scene"
         "400":
           $ref: "#/components/responses/badRequest"
         "401":
@@ -373,6 +402,35 @@ paths:
           $ref: "#/components/responses/notFound"
         "422":
           $ref: "#/components/responses/projectFull"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/plannedDowntime"
+        default:
+          $ref: "#/components/responses/internalError"
+
+    get:
+      operationId: layerList
+      summary: List the layers of a project.
+      description: |
+        Returns a page of a project's layers, in order, with how many the project holds in all. To read the next
+        page, raise `offset` by the page size.
+      tags: [layer]
+      parameters:
+        - $ref: "#/components/parameters/listProjectID"
+        - $ref: "#/components/parameters/composerLimit"
+        - $ref: "#/components/parameters/offset"
+      responses:
+        "200":
+          $ref: "#/components/responses/layerPage"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -445,8 +503,8 @@ paths:
       operationId: layerMove
       summary: Move a layer.
       description: |
-        Moves a layer right after the layer `after` names, or first without it. Returns every layer of the
-        project in their new order.
+        Moves a layer right after the layer `after` names, or first without it, and returns it at its new
+        position. The layers between its old and new position shift by one.
       tags: [layer]
       requestBody:
         required: true
@@ -456,7 +514,7 @@ paths:
               $ref: "#/components/schemas/layerMoveRequest"
       responses:
         "200":
-          $ref: "#/components/responses/layerList"
+          $ref: "#/components/responses/layer"
         "400":
           $ref: "#/components/responses/badRequest"
         "401":
@@ -477,16 +535,14 @@ paths:
       operationId: cellList
       summary: List the cells of a project.
       description: |
-        Returns a page of the cells written so far in a project, in the order of their keys, with how many the
-        project holds in all. A cell nobody wrote yet is absent. To read the next page, pass the `sceneID`
-        and `layerID` of the last cell received as `afterSceneID` and `afterLayerID`. A cell's key never
-        changes, so moving scenes or layers between two pages skips and repeats nothing.
+        Returns a page of the cells written so far in a project, by the position of their scene, then of their
+        layer, with how many the project holds in all. A cell nobody wrote yet is absent. To read the next
+        page, raise `offset` by the page size.
       tags: [cell]
       parameters:
-        - $ref: "#/components/parameters/cellProjectID"
-        - $ref: "#/components/parameters/cellLimit"
-        - $ref: "#/components/parameters/afterSceneID"
-        - $ref: "#/components/parameters/afterLayerID"
+        - $ref: "#/components/parameters/listProjectID"
+        - $ref: "#/components/parameters/composerLimit"
+        - $ref: "#/components/parameters/offset"
       responses:
         "200":
           $ref: "#/components/responses/cellPage"
@@ -610,14 +666,12 @@ components:
           schema:
             $ref: "#/components/schemas/scene"
 
-    sceneList:
-      description: Every scene of a project, in narrative order.
+    scenePage:
+      description: A page of a project's scenes, in narrative order, with their total.
       content:
         application/json:
           schema:
-            type: array
-            items:
-              $ref: "#/components/schemas/scene"
+            $ref: "#/components/schemas/scenePage"
 
     layer:
       description: A layer.
@@ -626,14 +680,12 @@ components:
           schema:
             $ref: "#/components/schemas/layer"
 
-    layerList:
-      description: Every layer of a project, in order.
+    layerPage:
+      description: A page of a project's layers, in order, with their total.
       content:
         application/json:
           schema:
-            type: array
-            items:
-              $ref: "#/components/schemas/layer"
+            $ref: "#/components/schemas/layerPage"
 
     cell:
       description: A cell.
@@ -643,7 +695,7 @@ components:
             $ref: "#/components/schemas/cell"
 
     cellPage:
-      description: A page of a project's cells, in the order of their keys, with their total.
+      description: A page of a project's cells, by the position of their scene, then of their layer, with their total.
       content:
         application/json:
           schema:
@@ -829,7 +881,9 @@ components:
             $ref: "#/components/schemas/project"
         total:
           type: integer
-          description: How many projects the caller holds in all, so a client paging through them knows when it holds them all.
+          description: |
+            How many projects the caller holds in all, so a client paging through them knows when it holds
+            them all. A page past the end reports 0.
           minimum: 0
           examples: [42]
 
@@ -925,9 +979,47 @@ components:
           format: date-time
           examples: ["2021-01-02T00:00:00Z"]
 
+    scenePage:
+      type: object
+      description: A page of a project's scenes, in narrative order.
+      required: [scenes, total]
+      additionalProperties: false
+      properties:
+        scenes:
+          type: array
+          description: The scenes of the page.
+          items:
+            $ref: "#/components/schemas/scene"
+        total:
+          type: integer
+          description: |
+            How many scenes the project holds in all, so a client paging through them knows when it holds them
+            all. A page past the end reports 0.
+          minimum: 0
+          examples: [120]
+
+    layerPage:
+      type: object
+      description: A page of a project's layers, in order.
+      required: [layers, total]
+      additionalProperties: false
+      properties:
+        layers:
+          type: array
+          description: The layers of the page.
+          items:
+            $ref: "#/components/schemas/layer"
+        total:
+          type: integer
+          description: |
+            How many layers the project holds in all, so a client paging through them knows when it holds them
+            all. A page past the end reports 0.
+          minimum: 0
+          examples: [12]
+
     cellPage:
       type: object
-      description: A page of a project's cells, in the order of their keys.
+      description: A page of a project's cells, by the position of their scene, then of their layer.
       required: [cells, total]
       additionalProperties: false
       properties:
@@ -938,7 +1030,9 @@ components:
             $ref: "#/components/schemas/cell"
         total:
           type: integer
-          description: How many cells the project holds in all, so a client paging through them knows when it holds them all.
+          description: |
+            How many cells the project holds in all, so a client paging through them knows when it holds them
+            all. A page past the end reports 0.
           minimum: 0
           examples: [1200]
 
@@ -1220,18 +1314,18 @@ components:
         default: 20
         examples: [10]
 
-    cellProjectID:
+    listProjectID:
       name: projectID
       in: query
-      description: The project whose cells to list.
+      description: The project whose scenes, layers or cells to list.
       required: true
       schema:
         $ref: "#/components/schemas/projectID"
 
-    cellLimit:
+    composerLimit:
       name: limit
       in: query
-      description: Maximum number of cells to return, at most 500. Omitted or 0, the page holds 100.
+      description: Maximum number of items to return, at most 500. Omitted or 0, the page holds 100.
       required: false
       schema:
         type: integer
@@ -1239,28 +1333,13 @@ components:
         default: 100
         examples: [200]
 
-    afterSceneID:
-      name: afterSceneID
+    offset:
+      name: offset
       in: query
-      description: The `sceneID` of the last cell of the previous page. Omitted, the page starts at the first cell.
+      description: How many items come before the page. Omitted, the page starts at the first item.
       required: false
       schema:
-        $ref: "#/components/schemas/sceneID"
-
-    afterLayerID:
-      name: afterLayerID
-      in: query
-      description: The `layerID` of the last cell of the previous page.
-      required: false
-      schema:
-        $ref: "#/components/schemas/layerID"
-
-    after:
-      name: after
-      in: query
-      description: |
-        ID of the last project of the previous page. The page starts with the next older project, even
-        when that project was deleted since. Omitted, the page starts at the newest project.
-      required: false
-      schema:
-        $ref: "#/components/schemas/projectID"
+        type: integer
+        minimum: 0
+        default: 0
+        examples: [100]
