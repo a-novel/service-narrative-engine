@@ -1,4 +1,4 @@
-migration-history	sha256:19f17b714295a248d8975845ae7a917b12334636e34780d215b8a0dceee4cf4b
+migration-history	sha256:4b77a927843b20f5afd8a6ab986f1c44fe52d9eda2c5a29af552a19cb78f8ca0
 column	cells.content	jsonb NOT NULL
 column	cells.layer_id	uuid NOT NULL
 column	cells.scene_id	uuid NOT NULL
@@ -40,7 +40,7 @@ constraint	layers.layers_kind_not_null	NOT NULL kind
 constraint	layers.layers_name_check	CHECK ((name <> ''::text))
 constraint	layers.layers_name_not_null	NOT NULL name
 constraint	layers.layers_pkey	PRIMARY KEY (id)
-constraint	layers.layers_position_check	CHECK (("position" >= 0))
+constraint	layers.layers_position_check	CHECK ((("position" >= 0) AND ("position" < 1000)))
 constraint	layers.layers_position_not_null	NOT NULL "position"
 constraint	layers.layers_project_id_fkey	FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 constraint	layers.layers_project_id_not_null	NOT NULL project_id
@@ -60,7 +60,7 @@ constraint	scenes.scenes_color_not_null	NOT NULL color
 constraint	scenes.scenes_description_not_null	NOT NULL description
 constraint	scenes.scenes_id_not_null	NOT NULL id
 constraint	scenes.scenes_pkey	PRIMARY KEY (id)
-constraint	scenes.scenes_position_check	CHECK (("position" >= 0))
+constraint	scenes.scenes_position_check	CHECK ((("position" >= 0) AND ("position" < 500)))
 constraint	scenes.scenes_position_not_null	NOT NULL "position"
 constraint	scenes.scenes_project_id_fkey	FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 constraint	scenes.scenes_project_id_not_null	NOT NULL project_id

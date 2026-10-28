@@ -1,0 +1,55 @@
+package dao
+
+import (
+	"context"
+	"database/sql"
+	_ "embed"
+	"errors"
+	"fmt"
+
+	"github.com/google/uuid"
+
+	"github.com/a-novel-kit/golib/otel"
+	"github.com/a-novel-kit/golib/postgres"
+)
+
+//go:embed pg.layerDelete.sql
+var layerDeleteQuery string
+
+// ErrLayerDeleteNotFound is returned by [PgLayerDelete.Exec] when no layer has the ID.
+var ErrLayerDeleteNotFound = errors.New("layer not found")
+
+// LayerDeleteRequest is the input to [PgLayerDelete.Exec].
+type LayerDeleteRequest struct {
+	ID uuid.UUID
+}
+
+// PgLayerDelete removes a layer with its cells, and moves the layers after it up by one.
+type PgLayerDelete struct{}
+
+func NewPgLayerDelete() *PgLayerDelete {
+	return &PgLayerDelete{}
+}
+
+func (dao *PgLayerDelete) Exec(ctx context.Context, request *LayerDeleteRequest) (*Layer, error) {
+	ctx, span := otel.Tracer().Start(ctx, "dao.PgLayerDelete")
+	defer span.End()
+
+	db, err := postgres.GetContext(ctx)
+	if err != nil {
+		return nil, otel.ReportError(span, fmt.Errorf("get postgres context: %w", err))
+	}
+
+	entity := &Layer{}
+
+	err = db.NewRaw(layerDeleteQuery, request.ID).Scan(ctx, entity)
+	if errors.Is(err, sql.ErrNoRows) {
+		err = errors.Join(err, ErrLayerDeleteNotFound)
+	}
+
+	if err != nil {
+		return nil, otel.ReportError(span, fmt.Errorf("execute query: %w", err))
+	}
+
+	return entity, nil
+}

@@ -20,8 +20,12 @@ CREATE INDEX projects_owner_id_idx ON projects (owner_id, id DESC);
 CREATE TABLE scenes (
   id uuid PRIMARY KEY NOT NULL DEFAULT uuidv7(),
   project_id uuid NOT NULL REFERENCES projects (id) ON DELETE CASCADE,
-  /* The scene's place in narrative order, from 0. */
-  position integer NOT NULL CHECK (position >= 0),
+  /* The scene's place in narrative order, from 0. With the unique position key, the range caps a
+  project at 500 scenes, so a read of every scene needs no pagination. */
+  position integer NOT NULL CONSTRAINT scenes_position_check CHECK (
+    position >= 0
+    AND position < 500
+  ),
   title text NOT NULL CHECK (title <> ''),
   /* The scene's color in the composer, as a lowercase #rrggbb hex code. */
   color text NOT NULL CHECK (color ~ '^#[0-9a-f]{6}$'),
@@ -38,8 +42,12 @@ CREATE TABLE scenes (
 CREATE TABLE layers (
   id uuid PRIMARY KEY NOT NULL DEFAULT uuidv7(),
   project_id uuid NOT NULL REFERENCES projects (id) ON DELETE CASCADE,
-  /* The layer's place among the project's rows, from 0. */
-  position integer NOT NULL CHECK (position >= 0),
+  /* The layer's place among the project's rows, from 0. With the unique position key, the range
+  caps a project at 1000 layers, so a read of every layer needs no pagination. */
+  position integer NOT NULL CONSTRAINT layers_position_check CHECK (
+    position >= 0
+    AND position < 1000
+  ),
   /* Names the content schema the layer's cells follow, as a lowercase kebab-case label. */
   kind text NOT NULL CHECK (kind ~ '^[a-z][a-z0-9]*(-[a-z0-9]+)*$'),
   name text NOT NULL CHECK (name <> ''),
