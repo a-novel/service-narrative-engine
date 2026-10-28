@@ -33,8 +33,8 @@ type ProjectUpdateRequest struct {
 	Title string `validate:"required,notblank,max=200"`
 	// Premise says what the narrative is about, in a few sentences.
 	Premise string `validate:"max=20000"`
-	// Language is the language the project is written in.
-	Language string `validate:"required,oneof=en fr"`
+	// Language is the language the project is written in, one of [ProjectLanguages].
+	Language string `validate:"required,language"`
 }
 
 // ProjectUpdate replaces a project's own fields.

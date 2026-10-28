@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"maps"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -25,29 +24,12 @@ type ProjectCreateDaoProject interface {
 	Exec(ctx context.Context, request *dao.ProjectInsertRequest) (*dao.Project, error)
 }
 
-// ProjectCreateDaoLayer inserts the project's required layers.
-type ProjectCreateDaoLayer interface {
-	Exec(ctx context.Context, request *dao.LayerInsertRequest) (*dao.Layer, error)
+// ProjectCreateDaoLayers inserts the project's required layers.
+type ProjectCreateDaoLayers interface {
+	Exec(ctx context.Context, request *dao.LayerInsertRequest) ([]*dao.Layer, error)
 }
 
-// ProjectCreateDaoScenes inserts the scenes the project starts with.
-type ProjectCreateDaoScenes interface {
-	Exec(ctx context.Context, request *dao.SceneInsertRequest) ([]*dao.Scene, error)
-}
-
-// ProjectCreateScene is a scene a new project starts with, such as one a preset seeds.
-type ProjectCreateScene struct {
-	// Title names the scene in the composer.
-	Title string `validate:"required,notblank,max=200"`
-	// Color is the scene's color in the composer, as a #rrggbb hex code in either case.
-	Color string `validate:"required,len=7,hexcolor"`
-	// Description says what the scene is for, written for the author.
-	Description string `validate:"max=20000"`
-	// Prompt holds extra instructions for the model when it writes about the scene.
-	Prompt string `validate:"max=20000"`
-}
-
-// ProjectCreateRequest carries a new project and the scenes it starts with.
+// ProjectCreateRequest carries a new project.
 type ProjectCreateRequest struct {
 	OwnerID uuid.UUID `validate:"required"`
 
@@ -55,44 +37,30 @@ type ProjectCreateRequest struct {
 	Title string `validate:"required,notblank,max=200"`
 	// Premise says what the narrative is about, in a few sentences.
 	Premise string `validate:"max=20000"`
-	// Language is the language the project is written in.
-	Language string `validate:"required,oneof=en fr"`
-
-	// Scenes are the scenes the project starts with, in order, up to the 500 a project holds.
-	Scenes []ProjectCreateScene `validate:"max=500,dive"`
+	// Language is the language the project is written in, one of [ProjectLanguages].
+	Language string `validate:"required,language"`
 }
 
-// ProjectCreate creates a project with its required layers and its first scenes, in one
-// transaction.
+// ProjectCreate creates a project with its required layers, in one transaction.
 type ProjectCreate struct {
 	daoProject ProjectCreateDaoProject
-	daoLayer   ProjectCreateDaoLayer
-	daoScenes  ProjectCreateDaoScenes
+	daoLayers  ProjectCreateDaoLayers
 	transactor transaction.Transactor
 }
 
 func NewProjectCreate(
 	daoProject ProjectCreateDaoProject,
-	daoLayer ProjectCreateDaoLayer,
-	daoScenes ProjectCreateDaoScenes,
+	daoLayers ProjectCreateDaoLayers,
 	transactor transaction.Transactor,
 ) *ProjectCreate {
-	return &ProjectCreate{
-		daoProject: daoProject,
-		daoLayer:   daoLayer,
-		daoScenes:  daoScenes,
-		transactor: transactor,
-	}
+	return &ProjectCreate{daoProject: daoProject, daoLayers: daoLayers, transactor: transactor}
 }
 
 func (service *ProjectCreate) Exec(ctx context.Context, request *ProjectCreateRequest) (*ProjectComposer, error) {
 	ctx, span := otel.Tracer().Start(ctx, "core.ProjectCreate")
 	defer span.End()
 
-	span.SetAttributes(
-		attribute.String("project.owner_id", request.OwnerID.String()),
-		attribute.Int("scenes.count", len(request.Scenes)),
-	)
+	span.SetAttributes(attribute.String("project.owner_id", request.OwnerID.String()))
 
 	err := validate.Struct(request)
 	if err != nil {
@@ -100,13 +68,11 @@ func (service *ProjectCreate) Exec(ctx context.Context, request *ProjectCreateRe
 	}
 
 	// UUIDv7 sorts by creation time, which lets ProjectList order projects by ID. The project takes the
-	// first ID, then its required layers, then its scenes.
-	ids, err := newIDs(1 + len(requiredLayers) + len(request.Scenes))
+	// first ID, then its required layers.
+	ids, err := newIDs(ctx, 1+len(requiredLayers))
 	if err != nil {
 		return nil, otel.ReportError(span, err)
 	}
-
-	layerIDs, sceneIDs := ids[1:1+len(requiredLayers)], ids[1+len(requiredLayers):]
 
 	now := time.Now()
 	composer := &ProjectComposer{}
@@ -124,40 +90,24 @@ func (service *ProjectCreate) Exec(ctx context.Context, request *ProjectCreateRe
 			return fmt.Errorf("insert project: %w", err)
 		}
 
-		composer.Project = newProject(project)
+		kinds := slices.Sorted(maps.Keys(requiredLayers))
 
-		for position, kind := range slices.Sorted(maps.Keys(requiredLayers)) {
-			layer, err := service.daoLayer.Exec(ctx, &dao.LayerInsertRequest{
-				ID:        layerIDs[position],
-				ProjectID: project.ID,
-				Position:  position,
-				Kind:      kind,
-				Name:      requiredLayers[kind],
-				Now:       now,
-			})
-			if err != nil {
-				return fmt.Errorf("insert %s layer: %w", kind, err)
-			}
-
-			composer.Layers = append(composer.Layers, newLayer(layer))
-		}
-
-		if len(request.Scenes) == 0 {
-			return nil
-		}
-
-		scenes, err := service.daoScenes.Exec(ctx, &dao.SceneInsertRequest{
+		layers, err := service.daoLayers.Exec(ctx, &dao.LayerInsertRequest{
 			ProjectID: project.ID,
 			Position:  0,
-			Scenes:    lo.Map(request.Scenes, seedScene(sceneIDs)),
-			Now:       now,
+			Layers: lo.Map(kinds, func(kind string, index int) dao.LayerInsertItem {
+				return dao.LayerInsertItem{ID: ids[1+index], Kind: kind, Name: requiredLayers[kind]}
+			}),
+			Now: now,
 		})
 		if err != nil {
-			return fmt.Errorf("insert scenes: %w", err)
+			return fmt.Errorf("insert required layers: %w", err)
 		}
 
-		slices.SortFunc(scenes, func(a, b *dao.Scene) int { return cmp.Compare(a.Position, b.Position) })
-		composer.Scenes = lo.Map(scenes, func(entity *dao.Scene, _ int) *Scene { return newScene(entity) })
+		slices.SortFunc(layers, func(a, b *dao.Layer) int { return cmp.Compare(a.Position, b.Position) })
+
+		composer.Project = newProject(project)
+		composer.Layers = lo.Map(layers, func(entity *dao.Layer, _ int) *Layer { return newLayer(entity) })
 
 		return nil
 	})
@@ -166,14 +116,4 @@ func (service *ProjectCreate) Exec(ctx context.Context, request *ProjectCreateRe
 	}
 
 	return composer, nil
-}
-
-// seedScene adapts the scenes of a request to lo.Map, giving each the ID at its index.
-func seedScene(ids []uuid.UUID) func(scene ProjectCreateScene, index int) dao.SceneInsertItem {
-	return func(scene ProjectCreateScene, index int) dao.SceneInsertItem {
-		return dao.SceneInsertItem{
-			ID: ids[index], Title: scene.Title, Color: strings.ToLower(scene.Color),
-			Description: scene.Description, Prompt: scene.Prompt,
-		}
-	}
 }

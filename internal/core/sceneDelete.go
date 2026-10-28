@@ -1,11 +1,14 @@
 package core
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/a-novel-kit/golib/otel"
@@ -24,19 +27,21 @@ type SceneDeleteDaoLock interface {
 	Exec(ctx context.Context, request *dao.ProjectLockRequest) (*dao.Project, error)
 }
 
-// SceneDeleteDao removes the scene, and moves the scenes after it up.
+// SceneDeleteDao removes the scenes, and moves the scenes after them up.
 type SceneDeleteDao interface {
-	Exec(ctx context.Context, request *dao.SceneDeleteRequest) (*dao.Scene, error)
+	Exec(ctx context.Context, request *dao.SceneDeleteRequest) ([]*dao.Scene, error)
 }
 
-// SceneDeleteRequest names the scene to delete.
+// SceneDeleteRequest names the scenes to delete.
 type SceneDeleteRequest struct {
 	OwnerID   uuid.UUID `validate:"required"`
 	ProjectID uuid.UUID `validate:"required"`
-	ID        uuid.UUID `validate:"required"`
+	// IDs lists the scenes to delete, each once, at most 100.
+	IDs []uuid.UUID `validate:"required,min=1,max=100,unique,dive,required"`
 }
 
-// SceneDelete deletes a scene with its cells, and moves the scenes after it up by one.
+// SceneDelete deletes scenes with their cells, and moves the scenes after them up to close the gaps. It
+// deletes all of them or none.
 type SceneDelete struct {
 	daoOwner   SceneDeleteDaoOwner
 	daoLock    SceneDeleteDaoLock
@@ -53,14 +58,14 @@ func NewSceneDelete(
 	return &SceneDelete{daoOwner: daoOwner, daoLock: daoLock, dao: dao, transactor: transactor}
 }
 
-func (service *SceneDelete) Exec(ctx context.Context, request *SceneDeleteRequest) (*Scene, error) {
+func (service *SceneDelete) Exec(ctx context.Context, request *SceneDeleteRequest) ([]*Scene, error) {
 	ctx, span := otel.Tracer().Start(ctx, "core.SceneDelete")
 	defer span.End()
 
 	span.SetAttributes(
 		attribute.String("project.id", request.ProjectID.String()),
-		attribute.String("scene.id", request.ID.String()),
 		attribute.String("project.owner_id", request.OwnerID.String()),
+		attribute.Int("scenes.count", len(request.IDs)),
 	)
 
 	err := validate.Struct(request)
@@ -76,7 +81,7 @@ func (service *SceneDelete) Exec(ctx context.Context, request *SceneDeleteReques
 		return nil, otel.ReportError(span, fmt.Errorf("check owner: %w", err))
 	}
 
-	var scene *Scene
+	var scenes []*Scene
 
 	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
 		_, err := service.daoLock.Exec(ctx, &dao.ProjectLockRequest{ID: request.ProjectID})
@@ -84,16 +89,18 @@ func (service *SceneDelete) Exec(ctx context.Context, request *SceneDeleteReques
 			return fmt.Errorf("lock project: %w", err)
 		}
 
-		deleted, err := service.dao.Exec(ctx, &dao.SceneDeleteRequest{ProjectID: request.ProjectID, ID: request.ID})
-		if errors.Is(err, dao.ErrSceneDeleteNotFound) {
-			err = errors.Join(err, ErrSceneNotFound)
-		}
-
+		deleted, err := service.dao.Exec(ctx, &dao.SceneDeleteRequest{ProjectID: request.ProjectID, IDs: request.IDs})
 		if err != nil {
-			return fmt.Errorf("delete scene: %w", err)
+			return fmt.Errorf("delete scenes: %w", err)
 		}
 
-		scene = newScene(deleted)
+		// A miss rolls the whole delete back.
+		if len(deleted) != len(request.IDs) {
+			return fmt.Errorf("%w: %d of %d scenes", ErrSceneNotFound, len(request.IDs)-len(deleted), len(request.IDs))
+		}
+
+		slices.SortFunc(deleted, func(a, b *dao.Scene) int { return cmp.Compare(a.Position, b.Position) })
+		scenes = lo.Map(deleted, func(entity *dao.Scene, _ int) *Scene { return newScene(entity) })
 
 		return nil
 	})
@@ -101,5 +108,5 @@ func (service *SceneDelete) Exec(ctx context.Context, request *SceneDeleteReques
 		return nil, otel.ReportError(span, fmt.Errorf("run transaction: %w", err))
 	}
 
-	return scene, nil
+	return scenes, nil
 }

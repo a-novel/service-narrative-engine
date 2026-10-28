@@ -51,6 +51,13 @@ func TestProjectUpdate(t *testing.T) {
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
+			name: "Error/UnknownLanguage",
+
+			request: &core.ProjectUpdateRequest{OwnerID: ownerID, ID: projectID, Title: "Clear Hours", Language: "de"},
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
 			name: "Error/NotOwned",
 
 			request: request,

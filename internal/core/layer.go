@@ -15,9 +15,9 @@ const (
 	LayerKindNotes = "notes"
 )
 
-// requiredLayers maps the kind of each layer every project holds to the name a new project gives
-// it. A project starts with these layers, by kind order, and none of them can be deleted. Clients
-// show their own label for a required kind, in the reader's language.
+// requiredLayers maps each kind a project always holds a layer of to the name a new project gives that
+// layer. A project starts with one layer of each, by kind order, and keeps at least one of each.
+// Clients show their own label for a required kind, in the reader's language.
 var requiredLayers = map[string]string{
 	LayerKindManuscript: "Manuscript",
 }

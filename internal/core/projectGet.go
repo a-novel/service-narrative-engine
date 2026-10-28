@@ -13,6 +13,11 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
+// ProjectGetDaoOwner checks that the user owns the project.
+type ProjectGetDaoOwner interface {
+	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
+}
+
 // ProjectGetDao reads the project.
 type ProjectGetDao interface {
 	Exec(ctx context.Context, request *dao.ProjectSelectRequest) (*dao.Project, error)
@@ -27,11 +32,12 @@ type ProjectGetRequest struct {
 // ProjectGet reads a project of the caller. Its scenes, layers and cells come page by page from
 // [SceneList], [LayerList] and [CellList].
 type ProjectGet struct {
-	dao ProjectGetDao
+	daoOwner ProjectGetDaoOwner
+	dao      ProjectGetDao
 }
 
-func NewProjectGet(dao ProjectGetDao) *ProjectGet {
-	return &ProjectGet{dao: dao}
+func NewProjectGet(daoOwner ProjectGetDaoOwner, dao ProjectGetDao) *ProjectGet {
+	return &ProjectGet{daoOwner: daoOwner, dao: dao}
 }
 
 func (service *ProjectGet) Exec(ctx context.Context, request *ProjectGetRequest) (*Project, error) {
@@ -48,18 +54,17 @@ func (service *ProjectGet) Exec(ctx context.Context, request *ProjectGetRequest)
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	project, err := service.dao.Exec(ctx, &dao.ProjectSelectRequest{ID: request.ID})
-	if errors.Is(err, dao.ErrProjectSelectNotFound) {
-		err = errors.Join(err, ErrProjectNotFound)
+	err = checkProjectOwnership(ctx, service.daoOwner, projectOwnershipOpts{
+		projectID: request.ID,
+		ownerID:   request.OwnerID,
+	})
+	if err != nil {
+		return nil, otel.ReportError(span, fmt.Errorf("check owner: %w", err))
 	}
 
+	project, err := service.dao.Exec(ctx, &dao.ProjectSelectRequest{ID: request.ID})
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("select project: %w", err))
-	}
-
-	// Another user's project reads as missing.
-	if project.OwnerID != request.OwnerID {
-		return nil, otel.ReportError(span, ErrProjectNotFound)
 	}
 
 	return newProject(project), nil

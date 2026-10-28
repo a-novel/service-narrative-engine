@@ -2,8 +2,11 @@ package core_test
 
 import (
 	"errors"
+	"slices"
 	"testing"
 
+	"github.com/google/uuid"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -20,6 +23,18 @@ func TestLayerCreate(t *testing.T) {
 
 	errFoo := errors.New("foo")
 
+	layer := core.LayerCreateItem{Kind: core.LayerKindNotes, Name: "Layer"}
+	// insertLayer is layer as the insert receives it, without its generated ID.
+	insertLayer := dao.LayerInsertItem{Kind: core.LayerKindNotes, Name: "Layer"}
+
+	// manuscript is a second manuscript layer, which a project may hold.
+	manuscript := coreLayer(layerID1, 1)
+	manuscript.Kind = core.LayerKindManuscript
+
+	request := func(position int, layers ...core.LayerCreateItem) *core.LayerCreateRequest {
+		return &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID, Position: position, Layers: layers}
+	}
+
 	testCases := []struct {
 		name string
 
@@ -27,52 +42,98 @@ func TestLayerCreate(t *testing.T) {
 
 		ownerMock  *daoMock[bool]
 		lockMock   *daoMock[*dao.Project]
-		insertMock *daoMock[*dao.Layer]
-		transactor transaction.Transactor
+		insertMock *daoMock[[]*dao.Layer]
+		// insertLayers are the layers the insert receives, without their generated IDs.
+		insertLayers []dao.LayerInsertItem
+		transactor   transaction.Transactor
 
-		expect    *core.Layer
+		expect    []*core.Layer
 		expectErr error
 	}{
 		{
 			name: "Success/First",
 
-			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID, Name: "Layer"},
+			request: request(0, layer),
 
-			ownerMock:  &daoMock[bool]{resp: true},
-			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
-			insertMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID3, 0)},
+			ownerMock:    &daoMock[bool]{resp: true},
+			lockMock:     &daoMock[*dao.Project]{resp: daoProject()},
+			insertMock:   &daoMock[[]*dao.Layer]{resp: []*dao.Layer{notesLayer(layerID3, 0)}},
+			insertLayers: []dao.LayerInsertItem{insertLayer},
 
-			expect: coreLayer(layerID3, 0),
+			expect: []*core.Layer{coreLayer(layerID3, 0)},
 		},
 		{
 			name: "Success/Position",
 
-			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID, Name: "Layer", Position: 2},
+			request: request(2, layer),
 
-			ownerMock:  &daoMock[bool]{resp: true},
-			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
-			insertMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID3, 2)},
+			ownerMock:    &daoMock[bool]{resp: true},
+			lockMock:     &daoMock[*dao.Project]{resp: daoProject()},
+			insertMock:   &daoMock[[]*dao.Layer]{resp: []*dao.Layer{notesLayer(layerID3, 2)}},
+			insertLayers: []dao.LayerInsertItem{insertLayer},
 
-			expect: coreLayer(layerID3, 2),
+			expect: []*core.Layer{coreLayer(layerID3, 2)},
+		},
+		{
+			name: "Success/Batch",
+
+			request: request(1,
+				core.LayerCreateItem{Kind: core.LayerKindManuscript, Name: "Layer"},
+				core.LayerCreateItem{Kind: core.LayerKindNotes, Name: "Layer", Description: "Who appears."},
+			),
+
+			ownerMock: &daoMock[bool]{resp: true},
+			lockMock:  &daoMock[*dao.Project]{resp: daoProject()},
+			// The insert returns its rows in no particular order.
+			insertMock: &daoMock[[]*dao.Layer]{resp: []*dao.Layer{
+				notesLayer(layerID2, 2), daoLayer(layerID1, 1, core.LayerKindManuscript),
+			}},
+			insertLayers: []dao.LayerInsertItem{
+				{Kind: core.LayerKindManuscript, Name: "Layer"},
+				{Kind: core.LayerKindNotes, Name: "Layer", Description: "Who appears."},
+			},
+
+			expect: []*core.Layer{manuscript, coreLayer(layerID2, 2)},
 		},
 		{
 			name: "Error/InvalidRequest",
 
-			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID},
+			request: request(0, core.LayerCreateItem{Kind: core.LayerKindNotes}),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/UnknownKind",
+
+			request: request(0, core.LayerCreateItem{Kind: "chapter", Name: "Layer"}),
 
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
 			name: "Error/NegativePosition",
 
-			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID, Name: "Layer", Position: -1},
+			request: request(-1, layer),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/NoLayer",
+
+			request: request(0),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/TooManyLayers",
+
+			request: request(0, slices.Repeat([]core.LayerCreateItem{layer}, 101)...),
 
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
 			name: "Error/NotOwned",
 
-			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID, Name: "Layer"},
+			request: request(0, layer),
 
 			ownerMock: &daoMock[bool]{resp: false},
 
@@ -81,7 +142,7 @@ func TestLayerCreate(t *testing.T) {
 		{
 			name: "Error/CheckOwner",
 
-			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID, Name: "Layer"},
+			request: request(0, layer),
 
 			ownerMock: &daoMock[bool]{err: errFoo},
 
@@ -90,7 +151,7 @@ func TestLayerCreate(t *testing.T) {
 		{
 			name: "Error/Lock",
 
-			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID, Name: "Layer"},
+			request: request(0, layer),
 
 			ownerMock: &daoMock[bool]{resp: true},
 			lockMock:  &daoMock[*dao.Project]{err: errFoo},
@@ -100,29 +161,31 @@ func TestLayerCreate(t *testing.T) {
 		{
 			name: "Error/ProjectFull",
 
-			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID, Name: "Layer"},
+			request: request(0, layer),
 
-			ownerMock:  &daoMock[bool]{resp: true},
-			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
-			insertMock: &daoMock[*dao.Layer]{err: dao.ErrLayerInsertFull},
+			ownerMock:    &daoMock[bool]{resp: true},
+			lockMock:     &daoMock[*dao.Project]{resp: daoProject()},
+			insertMock:   &daoMock[[]*dao.Layer]{err: dao.ErrLayerInsertFull},
+			insertLayers: []dao.LayerInsertItem{insertLayer},
 
 			expectErr: core.ErrProjectFull,
 		},
 		{
 			name: "Error/Insert",
 
-			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID, Name: "Layer"},
+			request: request(0, layer),
 
-			ownerMock:  &daoMock[bool]{resp: true},
-			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
-			insertMock: &daoMock[*dao.Layer]{err: errFoo},
+			ownerMock:    &daoMock[bool]{resp: true},
+			lockMock:     &daoMock[*dao.Project]{resp: daoProject()},
+			insertMock:   &daoMock[[]*dao.Layer]{err: errFoo},
+			insertLayers: []dao.LayerInsertItem{insertLayer},
 
 			expectErr: errFoo,
 		},
 		{
 			name: "Error/Transaction",
 
-			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID, Name: "Layer"},
+			request: request(0, layer),
 
 			ownerMock:  &daoMock[bool]{resp: true},
 			transactor: transactiontest.NewFailingTransactor(errFoo),
@@ -154,8 +217,15 @@ func TestLayerCreate(t *testing.T) {
 			if testCase.insertMock != nil {
 				mockInsert.EXPECT().
 					Exec(mock.Anything, mock.MatchedBy(func(req *dao.LayerInsertRequest) bool {
-						return req.ProjectID == projectID && req.Position == testCase.request.Position &&
-							req.Kind == core.LayerKindNotes && req.Name == "Layer" && recent(req.Now)
+						ids := lo.Map(req.Layers, func(item dao.LayerInsertItem, _ int) uuid.UUID { return item.ID })
+						layers := lo.Map(req.Layers, func(item dao.LayerInsertItem, _ int) dao.LayerInsertItem {
+							item.ID = uuid.Nil
+
+							return item
+						})
+
+						return req.ProjectID == projectID && req.Position == testCase.request.Position && recent(req.Now) &&
+							freshIDs(ids) && slices.Equal(layers, testCase.insertLayers)
 					})).
 					Return(testCase.insertMock.resp, testCase.insertMock.err)
 			}

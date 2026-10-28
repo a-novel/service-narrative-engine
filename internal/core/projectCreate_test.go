@@ -5,6 +5,8 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/google/uuid"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -24,14 +26,8 @@ func TestProjectCreate(t *testing.T) {
 	manuscript := daoLayer(layerID1, 0, core.LayerKindManuscript)
 	manuscript.Name = "Manuscript"
 
-	validRequest := &core.ProjectCreateRequest{
-		OwnerID:  ownerID,
-		Title:    "Les Heures claires",
-		Language: "fr",
-		Scenes: []core.ProjectCreateScene{
-			{Title: "Ouverture", Color: "#4A90D9"},
-			{Title: "Le thème", Color: "#e0457b", Description: "Paul ment.", Prompt: "Lent."},
-		},
+	request := func(title, language string) *core.ProjectCreateRequest {
+		return &core.ProjectCreateRequest{OwnerID: ownerID, Title: title, Premise: "Paul ment.", Language: language}
 	}
 
 	testCases := []struct {
@@ -41,8 +37,7 @@ func TestProjectCreate(t *testing.T) {
 		transactor transaction.Transactor
 
 		projectMock *daoMock[*dao.Project]
-		layerMock   *daoMock[*dao.Layer]
-		scenesMock  *daoMock[[]*dao.Scene]
+		layersMock  *daoMock[[]*dao.Layer]
 
 		expect    *core.ProjectComposer
 		expectErr error
@@ -50,37 +45,10 @@ func TestProjectCreate(t *testing.T) {
 		{
 			name: "Success",
 
-			request: validRequest,
+			request: request("Les Heures claires", "fr"),
 
 			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
-			layerMock:   &daoMock[*dao.Layer]{resp: manuscript},
-			// The insert returns its rows in no particular order.
-			scenesMock: &daoMock[[]*dao.Scene]{resp: []*dao.Scene{daoScene(sceneID2, 1), daoScene(sceneID1, 0)}},
-
-			expect: &core.ProjectComposer{
-				Project: &core.Project{
-					ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr",
-					CreatedAt: createdAt, UpdatedAt: updatedAt,
-				},
-				Scenes: []*core.Scene{
-					{ID: sceneID1, ProjectID: projectID, Position: 0, Title: "Scene", Color: sceneColor, UpdatedAt: updatedAt},
-					{ID: sceneID2, ProjectID: projectID, Position: 1, Title: "Scene", Color: sceneColor, UpdatedAt: updatedAt},
-				},
-				Layers: []*core.Layer{
-					{
-						ID: layerID1, ProjectID: projectID, Kind: core.LayerKindManuscript, Name: "Manuscript",
-						UpdatedAt: updatedAt,
-					},
-				},
-			},
-		},
-		{
-			name: "Success/NoScene",
-
-			request: &core.ProjectCreateRequest{OwnerID: ownerID, Title: "Les Heures claires", Language: "fr"},
-
-			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
-			layerMock:   &daoMock[*dao.Layer]{resp: manuscript},
+			layersMock:  &daoMock[[]*dao.Layer]{resp: []*dao.Layer{manuscript}},
 
 			expect: &core.ProjectComposer{
 				Project: &core.Project{
@@ -98,61 +66,40 @@ func TestProjectCreate(t *testing.T) {
 		{
 			name: "Error/BlankTitle",
 
-			request: &core.ProjectCreateRequest{OwnerID: ownerID, Title: "   ", Language: "fr"},
+			request: request("   ", "fr"),
 
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
 			name: "Error/UnknownLanguage",
 
-			request: &core.ProjectCreateRequest{OwnerID: ownerID, Title: "Clear Hours", Language: "de"},
-
-			expectErr: core.ErrInvalidRequest,
-		},
-		{
-			name: "Error/TooManyScenes",
-
-			request: &core.ProjectCreateRequest{
-				OwnerID: ownerID, Title: "Clear Hours", Language: "en",
-				Scenes: slices.Repeat([]core.ProjectCreateScene{{Title: "Scene", Color: sceneColor}}, 501),
-			},
+			request: request("Clear Hours", "de"),
 
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
 			name: "Error/InsertProject",
 
-			request: validRequest,
+			request: request("Les Heures claires", "fr"),
 
 			projectMock: &daoMock[*dao.Project]{err: errFoo},
 
 			expectErr: errFoo,
 		},
 		{
-			name: "Error/InsertLayer",
+			name: "Error/InsertLayers",
 
-			request: validRequest,
-
-			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
-			layerMock:   &daoMock[*dao.Layer]{err: errFoo},
-
-			expectErr: errFoo,
-		},
-		{
-			name: "Error/InsertScenes",
-
-			request: validRequest,
+			request: request("Les Heures claires", "fr"),
 
 			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
-			layerMock:   &daoMock[*dao.Layer]{resp: manuscript},
-			scenesMock:  &daoMock[[]*dao.Scene]{err: errFoo},
+			layersMock:  &daoMock[[]*dao.Layer]{err: errFoo},
 
 			expectErr: errFoo,
 		},
 		{
 			name: "Error/Transaction",
 
-			request:    validRequest,
+			request:    request("Les Heures claires", "fr"),
 			transactor: transactiontest.NewFailingTransactor(errFoo),
 
 			expectErr: errFoo,
@@ -164,36 +111,32 @@ func TestProjectCreate(t *testing.T) {
 			t.Parallel()
 
 			daoProjectMock := coremocks.NewMockProjectCreateDaoProject(t)
-			daoLayerMock := coremocks.NewMockProjectCreateDaoLayer(t)
-			daoScenesMock := coremocks.NewMockProjectCreateDaoScenes(t)
+			daoLayersMock := coremocks.NewMockProjectCreateDaoLayers(t)
 
 			if testCase.projectMock != nil {
 				daoProjectMock.EXPECT().
 					Exec(mock.Anything, mock.MatchedBy(func(req *dao.ProjectInsertRequest) bool {
-						return req.OwnerID == testCase.request.OwnerID && req.Title == testCase.request.Title &&
+						return req.ID != uuid.Nil && req.OwnerID == testCase.request.OwnerID &&
+							req.Title == testCase.request.Title && req.Premise == testCase.request.Premise &&
 							req.Language == testCase.request.Language && recent(req.Now)
 					})).
 					Return(testCase.projectMock.resp, testCase.projectMock.err)
 			}
 
-			if testCase.layerMock != nil {
-				daoLayerMock.EXPECT().
+			if testCase.layersMock != nil {
+				daoLayersMock.EXPECT().
 					Exec(mock.Anything, mock.MatchedBy(func(req *dao.LayerInsertRequest) bool {
-						return req.ProjectID == projectID && req.Kind == core.LayerKindManuscript && req.Position == 0 &&
-							req.Name == "Manuscript" && recent(req.Now)
-					})).
-					Return(testCase.layerMock.resp, testCase.layerMock.err)
-			}
+						ids := lo.Map(req.Layers, func(item dao.LayerInsertItem, _ int) uuid.UUID { return item.ID })
+						layers := lo.Map(req.Layers, func(item dao.LayerInsertItem, _ int) dao.LayerInsertItem {
+							item.ID = uuid.Nil
 
-			if testCase.scenesMock != nil {
-				daoScenesMock.EXPECT().
-					Exec(mock.Anything, mock.MatchedBy(func(req *dao.SceneInsertRequest) bool {
-						return req.ProjectID == projectID && req.Position == 0 &&
-							len(req.Scenes) == len(testCase.request.Scenes) &&
-							req.Scenes[0].Color == sceneColor &&
-							req.Scenes[1].Description == testCase.request.Scenes[1].Description
+							return item
+						})
+
+						return req.ProjectID == projectID && req.Position == 0 && recent(req.Now) && freshIDs(ids) &&
+							slices.Equal(layers, []dao.LayerInsertItem{{Kind: core.LayerKindManuscript, Name: "Manuscript"}})
 					})).
-					Return(testCase.scenesMock.resp, testCase.scenesMock.err)
+					Return(testCase.layersMock.resp, testCase.layersMock.err)
 			}
 
 			transactor := testCase.transactor
@@ -201,15 +144,14 @@ func TestProjectCreate(t *testing.T) {
 				transactor = transactiontest.NewTransactor()
 			}
 
-			service := core.NewProjectCreate(daoProjectMock, daoLayerMock, daoScenesMock, transactor)
+			service := core.NewProjectCreate(daoProjectMock, daoLayersMock, transactor)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
 
 			daoProjectMock.AssertExpectations(t)
-			daoLayerMock.AssertExpectations(t)
-			daoScenesMock.AssertExpectations(t)
+			daoLayersMock.AssertExpectations(t)
 		})
 	}
 }

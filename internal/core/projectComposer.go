@@ -1,9 +1,9 @@
 package core
 
-// ProjectComposer is a project with the layout of its Scenes Composer: its scenes and layers in
-// order. A client reads the cells page by page, with [CellList].
+// ProjectComposer is a new project with the layers it starts with, in order. Its scenes come next, from
+// [SceneCreate].
 type ProjectComposer struct {
 	Project *Project
-	Scenes  []*Scene
-	Layers  []*Layer
+	// Layers are the project's required layers, one of each kind.
+	Layers []*Layer
 }

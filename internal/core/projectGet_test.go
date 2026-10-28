@@ -1,6 +1,7 @@
 package core_test
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/mock"
@@ -14,12 +15,15 @@ import (
 func TestProjectGet(t *testing.T) {
 	t.Parallel()
 
+	errFoo := errors.New("foo")
+
 	testCases := []struct {
 		name string
 
 		request *core.ProjectGetRequest
 
-		daoMock *daoMock[*dao.Project]
+		ownerMock *daoMock[bool]
+		daoMock   *daoMock[*dao.Project]
 
 		expect    *core.Project
 		expectErr error
@@ -29,7 +33,8 @@ func TestProjectGet(t *testing.T) {
 
 			request: &core.ProjectGetRequest{OwnerID: ownerID, ID: projectID},
 
-			daoMock: &daoMock[*dao.Project]{resp: daoProject()},
+			ownerMock: &daoMock[bool]{resp: true},
+			daoMock:   &daoMock[*dao.Project]{resp: daoProject()},
 
 			expect: &core.Project{
 				ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr",
@@ -44,22 +49,32 @@ func TestProjectGet(t *testing.T) {
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
-			name: "Error/NotFound",
+			name: "Error/NotOwned",
 
 			request: &core.ProjectGetRequest{OwnerID: ownerID, ID: projectID},
 
-			daoMock: &daoMock[*dao.Project]{err: dao.ErrProjectSelectNotFound},
+			ownerMock: &daoMock[bool]{resp: false},
 
 			expectErr: core.ErrProjectNotFound,
 		},
 		{
-			name: "Error/OtherOwner",
+			name: "Error/CheckOwner",
 
 			request: &core.ProjectGetRequest{OwnerID: ownerID, ID: projectID},
 
-			daoMock: &daoMock[*dao.Project]{resp: foreignProject()},
+			ownerMock: &daoMock[bool]{err: errFoo},
 
-			expectErr: core.ErrProjectNotFound,
+			expectErr: errFoo,
+		},
+		{
+			name: "Error/Select",
+
+			request: &core.ProjectGetRequest{OwnerID: ownerID, ID: projectID},
+
+			ownerMock: &daoMock[bool]{resp: true},
+			daoMock:   &daoMock[*dao.Project]{err: errFoo},
+
+			expectErr: errFoo,
 		},
 	}
 
@@ -67,7 +82,14 @@ func TestProjectGet(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
+			mockOwner := coremocks.NewMockProjectGetDaoOwner(t)
 			mockDao := coremocks.NewMockProjectGetDao(t)
+
+			if testCase.ownerMock != nil {
+				mockOwner.EXPECT().
+					Exec(mock.Anything, &dao.ProjectOwnedRequest{ID: projectID, OwnerID: ownerID}).
+					Return(testCase.ownerMock.resp, testCase.ownerMock.err)
+			}
 
 			if testCase.daoMock != nil {
 				mockDao.EXPECT().
@@ -75,12 +97,13 @@ func TestProjectGet(t *testing.T) {
 					Return(testCase.daoMock.resp, testCase.daoMock.err)
 			}
 
-			service := core.NewProjectGet(mockDao)
+			service := core.NewProjectGet(mockOwner, mockDao)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
 
+			mockOwner.AssertExpectations(t)
 			mockDao.AssertExpectations(t)
 		})
 	}

@@ -8,6 +8,10 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
+// ProjectLanguages lists the languages a project can be written in, as BCP 47 tags. The schema's
+// project_language enum holds the same values.
+var ProjectLanguages = []string{"en", "fr"}
+
 // Project is a narrative in progress, owned by one user. It produces one manuscript.
 type Project struct {
 	ID uuid.UUID

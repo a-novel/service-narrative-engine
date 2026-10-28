@@ -356,22 +356,24 @@ func (_m *MockCellWriteDaoKind) EXPECT() *MockCellWriteDaoKind_Expecter {
 }
 
 // Exec provides a mock function for the type MockCellWriteDaoKind
-func (_mock *MockCellWriteDaoKind) Exec(ctx context.Context, request *dao.LayerKindRequest) (string, error) {
+func (_mock *MockCellWriteDaoKind) Exec(ctx context.Context, request *dao.LayerKindRequest) ([]*dao.LayerKind, error) {
 	ret := _mock.Called(ctx, request)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Exec")
 	}
 
-	var r0 string
+	var r0 []*dao.LayerKind
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *dao.LayerKindRequest) (string, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *dao.LayerKindRequest) ([]*dao.LayerKind, error)); ok {
 		return returnFunc(ctx, request)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *dao.LayerKindRequest) string); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *dao.LayerKindRequest) []*dao.LayerKind); ok {
 		r0 = returnFunc(ctx, request)
 	} else {
-		r0 = ret.Get(0).(string)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*dao.LayerKind)
+		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, *dao.LayerKindRequest) error); ok {
 		r1 = returnFunc(ctx, request)
@@ -411,12 +413,12 @@ func (_c *MockCellWriteDaoKind_Exec_Call) Run(run func(ctx context.Context, requ
 	return _c
 }
 
-func (_c *MockCellWriteDaoKind_Exec_Call) Return(s string, err error) *MockCellWriteDaoKind_Exec_Call {
-	_c.Call.Return(s, err)
+func (_c *MockCellWriteDaoKind_Exec_Call) Return(layerKinds []*dao.LayerKind, err error) *MockCellWriteDaoKind_Exec_Call {
+	_c.Call.Return(layerKinds, err)
 	return _c
 }
 
-func (_c *MockCellWriteDaoKind_Exec_Call) RunAndReturn(run func(ctx context.Context, request *dao.LayerKindRequest) (string, error)) *MockCellWriteDaoKind_Exec_Call {
+func (_c *MockCellWriteDaoKind_Exec_Call) RunAndReturn(run func(ctx context.Context, request *dao.LayerKindRequest) ([]*dao.LayerKind, error)) *MockCellWriteDaoKind_Exec_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -458,23 +460,23 @@ func (_m *MockCellWriteDao) EXPECT() *MockCellWriteDao_Expecter {
 }
 
 // Exec provides a mock function for the type MockCellWriteDao
-func (_mock *MockCellWriteDao) Exec(ctx context.Context, request *dao.CellUpsertRequest) (*dao.Cell, error) {
+func (_mock *MockCellWriteDao) Exec(ctx context.Context, request *dao.CellUpsertRequest) ([]*dao.Cell, error) {
 	ret := _mock.Called(ctx, request)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Exec")
 	}
 
-	var r0 *dao.Cell
+	var r0 []*dao.Cell
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *dao.CellUpsertRequest) (*dao.Cell, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *dao.CellUpsertRequest) ([]*dao.Cell, error)); ok {
 		return returnFunc(ctx, request)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *dao.CellUpsertRequest) *dao.Cell); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *dao.CellUpsertRequest) []*dao.Cell); ok {
 		r0 = returnFunc(ctx, request)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*dao.Cell)
+			r0 = ret.Get(0).([]*dao.Cell)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, *dao.CellUpsertRequest) error); ok {
@@ -515,12 +517,12 @@ func (_c *MockCellWriteDao_Exec_Call) Run(run func(ctx context.Context, request 
 	return _c
 }
 
-func (_c *MockCellWriteDao_Exec_Call) Return(cell *dao.Cell, err error) *MockCellWriteDao_Exec_Call {
-	_c.Call.Return(cell, err)
+func (_c *MockCellWriteDao_Exec_Call) Return(cells []*dao.Cell, err error) *MockCellWriteDao_Exec_Call {
+	_c.Call.Return(cells, err)
 	return _c
 }
 
-func (_c *MockCellWriteDao_Exec_Call) RunAndReturn(run func(ctx context.Context, request *dao.CellUpsertRequest) (*dao.Cell, error)) *MockCellWriteDao_Exec_Call {
+func (_c *MockCellWriteDao_Exec_Call) RunAndReturn(run func(ctx context.Context, request *dao.CellUpsertRequest) ([]*dao.Cell, error)) *MockCellWriteDao_Exec_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -870,23 +872,23 @@ func (_m *MockLayerCreateDaoInsert) EXPECT() *MockLayerCreateDaoInsert_Expecter 
 }
 
 // Exec provides a mock function for the type MockLayerCreateDaoInsert
-func (_mock *MockLayerCreateDaoInsert) Exec(ctx context.Context, request *dao.LayerInsertRequest) (*dao.Layer, error) {
+func (_mock *MockLayerCreateDaoInsert) Exec(ctx context.Context, request *dao.LayerInsertRequest) ([]*dao.Layer, error) {
 	ret := _mock.Called(ctx, request)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Exec")
 	}
 
-	var r0 *dao.Layer
+	var r0 []*dao.Layer
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *dao.LayerInsertRequest) (*dao.Layer, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *dao.LayerInsertRequest) ([]*dao.Layer, error)); ok {
 		return returnFunc(ctx, request)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *dao.LayerInsertRequest) *dao.Layer); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *dao.LayerInsertRequest) []*dao.Layer); ok {
 		r0 = returnFunc(ctx, request)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*dao.Layer)
+			r0 = ret.Get(0).([]*dao.Layer)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, *dao.LayerInsertRequest) error); ok {
@@ -927,12 +929,12 @@ func (_c *MockLayerCreateDaoInsert_Exec_Call) Run(run func(ctx context.Context, 
 	return _c
 }
 
-func (_c *MockLayerCreateDaoInsert_Exec_Call) Return(layer *dao.Layer, err error) *MockLayerCreateDaoInsert_Exec_Call {
-	_c.Call.Return(layer, err)
+func (_c *MockLayerCreateDaoInsert_Exec_Call) Return(layers []*dao.Layer, err error) *MockLayerCreateDaoInsert_Exec_Call {
+	_c.Call.Return(layers, err)
 	return _c
 }
 
-func (_c *MockLayerCreateDaoInsert_Exec_Call) RunAndReturn(run func(ctx context.Context, request *dao.LayerInsertRequest) (*dao.Layer, error)) *MockLayerCreateDaoInsert_Exec_Call {
+func (_c *MockLayerCreateDaoInsert_Exec_Call) RunAndReturn(run func(ctx context.Context, request *dao.LayerInsertRequest) ([]*dao.Layer, error)) *MockLayerCreateDaoInsert_Exec_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1035,108 +1037,6 @@ func (_c *MockLayerDeleteDaoOwner_Exec_Call) Return(b bool, err error) *MockLaye
 }
 
 func (_c *MockLayerDeleteDaoOwner_Exec_Call) RunAndReturn(run func(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)) *MockLayerDeleteDaoOwner_Exec_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// NewMockLayerDeleteDaoKind creates a new instance of MockLayerDeleteDaoKind. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
-// The first argument is typically a *testing.T value.
-func NewMockLayerDeleteDaoKind(t interface {
-	mock.TestingT
-	Cleanup(func())
-}) *MockLayerDeleteDaoKind {
-	if helper, ok := t.(interface{ Helper() }); ok {
-		helper.Helper()
-	}
-
-	mock := &MockLayerDeleteDaoKind{}
-	mock.Mock.Test(t)
-
-	t.Cleanup(func() {
-		if helper, ok := t.(interface{ Helper() }); ok {
-			helper.Helper()
-		}
-		mock.AssertExpectations(t)
-	})
-
-	return mock
-}
-
-// MockLayerDeleteDaoKind is an autogenerated mock type for the LayerDeleteDaoKind type
-type MockLayerDeleteDaoKind struct {
-	mock.Mock
-}
-
-type MockLayerDeleteDaoKind_Expecter struct {
-	mock *mock.Mock
-}
-
-func (_m *MockLayerDeleteDaoKind) EXPECT() *MockLayerDeleteDaoKind_Expecter {
-	return &MockLayerDeleteDaoKind_Expecter{mock: &_m.Mock}
-}
-
-// Exec provides a mock function for the type MockLayerDeleteDaoKind
-func (_mock *MockLayerDeleteDaoKind) Exec(ctx context.Context, request *dao.LayerKindRequest) (string, error) {
-	ret := _mock.Called(ctx, request)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Exec")
-	}
-
-	var r0 string
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *dao.LayerKindRequest) (string, error)); ok {
-		return returnFunc(ctx, request)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *dao.LayerKindRequest) string); ok {
-		r0 = returnFunc(ctx, request)
-	} else {
-		r0 = ret.Get(0).(string)
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *dao.LayerKindRequest) error); ok {
-		r1 = returnFunc(ctx, request)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// MockLayerDeleteDaoKind_Exec_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Exec'
-type MockLayerDeleteDaoKind_Exec_Call struct {
-	*mock.Call
-}
-
-// Exec is a helper method to define mock.On call
-//   - ctx context.Context
-//   - request *dao.LayerKindRequest
-func (_e *MockLayerDeleteDaoKind_Expecter) Exec(ctx any, request any) *MockLayerDeleteDaoKind_Exec_Call {
-	return &MockLayerDeleteDaoKind_Exec_Call{Call: _e.mock.On("Exec", ctx, request)}
-}
-
-func (_c *MockLayerDeleteDaoKind_Exec_Call) Run(run func(ctx context.Context, request *dao.LayerKindRequest)) *MockLayerDeleteDaoKind_Exec_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 *dao.LayerKindRequest
-		if args[1] != nil {
-			arg1 = args[1].(*dao.LayerKindRequest)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *MockLayerDeleteDaoKind_Exec_Call) Return(s string, err error) *MockLayerDeleteDaoKind_Exec_Call {
-	_c.Call.Return(s, err)
-	return _c
-}
-
-func (_c *MockLayerDeleteDaoKind_Exec_Call) RunAndReturn(run func(ctx context.Context, request *dao.LayerKindRequest) (string, error)) *MockLayerDeleteDaoKind_Exec_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1245,6 +1145,110 @@ func (_c *MockLayerDeleteDaoLock_Exec_Call) RunAndReturn(run func(ctx context.Co
 	return _c
 }
 
+// NewMockLayerDeleteDaoKind creates a new instance of MockLayerDeleteDaoKind. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
+// The first argument is typically a *testing.T value.
+func NewMockLayerDeleteDaoKind(t interface {
+	mock.TestingT
+	Cleanup(func())
+}) *MockLayerDeleteDaoKind {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
+	mock := &MockLayerDeleteDaoKind{}
+	mock.Mock.Test(t)
+
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
+
+	return mock
+}
+
+// MockLayerDeleteDaoKind is an autogenerated mock type for the LayerDeleteDaoKind type
+type MockLayerDeleteDaoKind struct {
+	mock.Mock
+}
+
+type MockLayerDeleteDaoKind_Expecter struct {
+	mock *mock.Mock
+}
+
+func (_m *MockLayerDeleteDaoKind) EXPECT() *MockLayerDeleteDaoKind_Expecter {
+	return &MockLayerDeleteDaoKind_Expecter{mock: &_m.Mock}
+}
+
+// Exec provides a mock function for the type MockLayerDeleteDaoKind
+func (_mock *MockLayerDeleteDaoKind) Exec(ctx context.Context, request *dao.LayerKindRequest) ([]*dao.LayerKind, error) {
+	ret := _mock.Called(ctx, request)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Exec")
+	}
+
+	var r0 []*dao.LayerKind
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *dao.LayerKindRequest) ([]*dao.LayerKind, error)); ok {
+		return returnFunc(ctx, request)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *dao.LayerKindRequest) []*dao.LayerKind); ok {
+		r0 = returnFunc(ctx, request)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*dao.LayerKind)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *dao.LayerKindRequest) error); ok {
+		r1 = returnFunc(ctx, request)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockLayerDeleteDaoKind_Exec_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Exec'
+type MockLayerDeleteDaoKind_Exec_Call struct {
+	*mock.Call
+}
+
+// Exec is a helper method to define mock.On call
+//   - ctx context.Context
+//   - request *dao.LayerKindRequest
+func (_e *MockLayerDeleteDaoKind_Expecter) Exec(ctx any, request any) *MockLayerDeleteDaoKind_Exec_Call {
+	return &MockLayerDeleteDaoKind_Exec_Call{Call: _e.mock.On("Exec", ctx, request)}
+}
+
+func (_c *MockLayerDeleteDaoKind_Exec_Call) Run(run func(ctx context.Context, request *dao.LayerKindRequest)) *MockLayerDeleteDaoKind_Exec_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *dao.LayerKindRequest
+		if args[1] != nil {
+			arg1 = args[1].(*dao.LayerKindRequest)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockLayerDeleteDaoKind_Exec_Call) Return(layerKinds []*dao.LayerKind, err error) *MockLayerDeleteDaoKind_Exec_Call {
+	_c.Call.Return(layerKinds, err)
+	return _c
+}
+
+func (_c *MockLayerDeleteDaoKind_Exec_Call) RunAndReturn(run func(ctx context.Context, request *dao.LayerKindRequest) ([]*dao.LayerKind, error)) *MockLayerDeleteDaoKind_Exec_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // NewMockLayerDeleteDao creates a new instance of MockLayerDeleteDao. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewMockLayerDeleteDao(t interface {
@@ -1282,23 +1286,23 @@ func (_m *MockLayerDeleteDao) EXPECT() *MockLayerDeleteDao_Expecter {
 }
 
 // Exec provides a mock function for the type MockLayerDeleteDao
-func (_mock *MockLayerDeleteDao) Exec(ctx context.Context, request *dao.LayerDeleteRequest) (*dao.Layer, error) {
+func (_mock *MockLayerDeleteDao) Exec(ctx context.Context, request *dao.LayerDeleteRequest) ([]*dao.Layer, error) {
 	ret := _mock.Called(ctx, request)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Exec")
 	}
 
-	var r0 *dao.Layer
+	var r0 []*dao.Layer
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *dao.LayerDeleteRequest) (*dao.Layer, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *dao.LayerDeleteRequest) ([]*dao.Layer, error)); ok {
 		return returnFunc(ctx, request)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *dao.LayerDeleteRequest) *dao.Layer); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *dao.LayerDeleteRequest) []*dao.Layer); ok {
 		r0 = returnFunc(ctx, request)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*dao.Layer)
+			r0 = ret.Get(0).([]*dao.Layer)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, *dao.LayerDeleteRequest) error); ok {
@@ -1339,12 +1343,12 @@ func (_c *MockLayerDeleteDao_Exec_Call) Run(run func(ctx context.Context, reques
 	return _c
 }
 
-func (_c *MockLayerDeleteDao_Exec_Call) Return(layer *dao.Layer, err error) *MockLayerDeleteDao_Exec_Call {
-	_c.Call.Return(layer, err)
+func (_c *MockLayerDeleteDao_Exec_Call) Return(layers []*dao.Layer, err error) *MockLayerDeleteDao_Exec_Call {
+	_c.Call.Return(layers, err)
 	return _c
 }
 
-func (_c *MockLayerDeleteDao_Exec_Call) RunAndReturn(run func(ctx context.Context, request *dao.LayerDeleteRequest) (*dao.Layer, error)) *MockLayerDeleteDao_Exec_Call {
+func (_c *MockLayerDeleteDao_Exec_Call) RunAndReturn(run func(ctx context.Context, request *dao.LayerDeleteRequest) ([]*dao.Layer, error)) *MockLayerDeleteDao_Exec_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -2175,17 +2179,17 @@ func (_c *MockProjectCreateDaoProject_Exec_Call) RunAndReturn(run func(ctx conte
 	return _c
 }
 
-// NewMockProjectCreateDaoLayer creates a new instance of MockProjectCreateDaoLayer. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
+// NewMockProjectCreateDaoLayers creates a new instance of MockProjectCreateDaoLayers. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
-func NewMockProjectCreateDaoLayer(t interface {
+func NewMockProjectCreateDaoLayers(t interface {
 	mock.TestingT
 	Cleanup(func())
-}) *MockProjectCreateDaoLayer {
+}) *MockProjectCreateDaoLayers {
 	if helper, ok := t.(interface{ Helper() }); ok {
 		helper.Helper()
 	}
 
-	mock := &MockProjectCreateDaoLayer{}
+	mock := &MockProjectCreateDaoLayers{}
 	mock.Mock.Test(t)
 
 	t.Cleanup(func() {
@@ -2198,37 +2202,37 @@ func NewMockProjectCreateDaoLayer(t interface {
 	return mock
 }
 
-// MockProjectCreateDaoLayer is an autogenerated mock type for the ProjectCreateDaoLayer type
-type MockProjectCreateDaoLayer struct {
+// MockProjectCreateDaoLayers is an autogenerated mock type for the ProjectCreateDaoLayers type
+type MockProjectCreateDaoLayers struct {
 	mock.Mock
 }
 
-type MockProjectCreateDaoLayer_Expecter struct {
+type MockProjectCreateDaoLayers_Expecter struct {
 	mock *mock.Mock
 }
 
-func (_m *MockProjectCreateDaoLayer) EXPECT() *MockProjectCreateDaoLayer_Expecter {
-	return &MockProjectCreateDaoLayer_Expecter{mock: &_m.Mock}
+func (_m *MockProjectCreateDaoLayers) EXPECT() *MockProjectCreateDaoLayers_Expecter {
+	return &MockProjectCreateDaoLayers_Expecter{mock: &_m.Mock}
 }
 
-// Exec provides a mock function for the type MockProjectCreateDaoLayer
-func (_mock *MockProjectCreateDaoLayer) Exec(ctx context.Context, request *dao.LayerInsertRequest) (*dao.Layer, error) {
+// Exec provides a mock function for the type MockProjectCreateDaoLayers
+func (_mock *MockProjectCreateDaoLayers) Exec(ctx context.Context, request *dao.LayerInsertRequest) ([]*dao.Layer, error) {
 	ret := _mock.Called(ctx, request)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Exec")
 	}
 
-	var r0 *dao.Layer
+	var r0 []*dao.Layer
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *dao.LayerInsertRequest) (*dao.Layer, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *dao.LayerInsertRequest) ([]*dao.Layer, error)); ok {
 		return returnFunc(ctx, request)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *dao.LayerInsertRequest) *dao.Layer); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *dao.LayerInsertRequest) []*dao.Layer); ok {
 		r0 = returnFunc(ctx, request)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*dao.Layer)
+			r0 = ret.Get(0).([]*dao.Layer)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, *dao.LayerInsertRequest) error); ok {
@@ -2239,19 +2243,19 @@ func (_mock *MockProjectCreateDaoLayer) Exec(ctx context.Context, request *dao.L
 	return r0, r1
 }
 
-// MockProjectCreateDaoLayer_Exec_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Exec'
-type MockProjectCreateDaoLayer_Exec_Call struct {
+// MockProjectCreateDaoLayers_Exec_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Exec'
+type MockProjectCreateDaoLayers_Exec_Call struct {
 	*mock.Call
 }
 
 // Exec is a helper method to define mock.On call
 //   - ctx context.Context
 //   - request *dao.LayerInsertRequest
-func (_e *MockProjectCreateDaoLayer_Expecter) Exec(ctx any, request any) *MockProjectCreateDaoLayer_Exec_Call {
-	return &MockProjectCreateDaoLayer_Exec_Call{Call: _e.mock.On("Exec", ctx, request)}
+func (_e *MockProjectCreateDaoLayers_Expecter) Exec(ctx any, request any) *MockProjectCreateDaoLayers_Exec_Call {
+	return &MockProjectCreateDaoLayers_Exec_Call{Call: _e.mock.On("Exec", ctx, request)}
 }
 
-func (_c *MockProjectCreateDaoLayer_Exec_Call) Run(run func(ctx context.Context, request *dao.LayerInsertRequest)) *MockProjectCreateDaoLayer_Exec_Call {
+func (_c *MockProjectCreateDaoLayers_Exec_Call) Run(run func(ctx context.Context, request *dao.LayerInsertRequest)) *MockProjectCreateDaoLayers_Exec_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -2269,116 +2273,12 @@ func (_c *MockProjectCreateDaoLayer_Exec_Call) Run(run func(ctx context.Context,
 	return _c
 }
 
-func (_c *MockProjectCreateDaoLayer_Exec_Call) Return(layer *dao.Layer, err error) *MockProjectCreateDaoLayer_Exec_Call {
-	_c.Call.Return(layer, err)
+func (_c *MockProjectCreateDaoLayers_Exec_Call) Return(layers []*dao.Layer, err error) *MockProjectCreateDaoLayers_Exec_Call {
+	_c.Call.Return(layers, err)
 	return _c
 }
 
-func (_c *MockProjectCreateDaoLayer_Exec_Call) RunAndReturn(run func(ctx context.Context, request *dao.LayerInsertRequest) (*dao.Layer, error)) *MockProjectCreateDaoLayer_Exec_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// NewMockProjectCreateDaoScenes creates a new instance of MockProjectCreateDaoScenes. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
-// The first argument is typically a *testing.T value.
-func NewMockProjectCreateDaoScenes(t interface {
-	mock.TestingT
-	Cleanup(func())
-}) *MockProjectCreateDaoScenes {
-	if helper, ok := t.(interface{ Helper() }); ok {
-		helper.Helper()
-	}
-
-	mock := &MockProjectCreateDaoScenes{}
-	mock.Mock.Test(t)
-
-	t.Cleanup(func() {
-		if helper, ok := t.(interface{ Helper() }); ok {
-			helper.Helper()
-		}
-		mock.AssertExpectations(t)
-	})
-
-	return mock
-}
-
-// MockProjectCreateDaoScenes is an autogenerated mock type for the ProjectCreateDaoScenes type
-type MockProjectCreateDaoScenes struct {
-	mock.Mock
-}
-
-type MockProjectCreateDaoScenes_Expecter struct {
-	mock *mock.Mock
-}
-
-func (_m *MockProjectCreateDaoScenes) EXPECT() *MockProjectCreateDaoScenes_Expecter {
-	return &MockProjectCreateDaoScenes_Expecter{mock: &_m.Mock}
-}
-
-// Exec provides a mock function for the type MockProjectCreateDaoScenes
-func (_mock *MockProjectCreateDaoScenes) Exec(ctx context.Context, request *dao.SceneInsertRequest) ([]*dao.Scene, error) {
-	ret := _mock.Called(ctx, request)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Exec")
-	}
-
-	var r0 []*dao.Scene
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *dao.SceneInsertRequest) ([]*dao.Scene, error)); ok {
-		return returnFunc(ctx, request)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *dao.SceneInsertRequest) []*dao.Scene); ok {
-		r0 = returnFunc(ctx, request)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*dao.Scene)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *dao.SceneInsertRequest) error); ok {
-		r1 = returnFunc(ctx, request)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// MockProjectCreateDaoScenes_Exec_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Exec'
-type MockProjectCreateDaoScenes_Exec_Call struct {
-	*mock.Call
-}
-
-// Exec is a helper method to define mock.On call
-//   - ctx context.Context
-//   - request *dao.SceneInsertRequest
-func (_e *MockProjectCreateDaoScenes_Expecter) Exec(ctx any, request any) *MockProjectCreateDaoScenes_Exec_Call {
-	return &MockProjectCreateDaoScenes_Exec_Call{Call: _e.mock.On("Exec", ctx, request)}
-}
-
-func (_c *MockProjectCreateDaoScenes_Exec_Call) Run(run func(ctx context.Context, request *dao.SceneInsertRequest)) *MockProjectCreateDaoScenes_Exec_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 *dao.SceneInsertRequest
-		if args[1] != nil {
-			arg1 = args[1].(*dao.SceneInsertRequest)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *MockProjectCreateDaoScenes_Exec_Call) Return(scenes []*dao.Scene, err error) *MockProjectCreateDaoScenes_Exec_Call {
-	_c.Call.Return(scenes, err)
-	return _c
-}
-
-func (_c *MockProjectCreateDaoScenes_Exec_Call) RunAndReturn(run func(ctx context.Context, request *dao.SceneInsertRequest) ([]*dao.Scene, error)) *MockProjectCreateDaoScenes_Exec_Call {
+func (_c *MockProjectCreateDaoLayers_Exec_Call) RunAndReturn(run func(ctx context.Context, request *dao.LayerInsertRequest) ([]*dao.Layer, error)) *MockProjectCreateDaoLayers_Exec_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -2585,6 +2485,108 @@ func (_c *MockProjectDeleteDao_Exec_Call) Return(project *dao.Project, err error
 }
 
 func (_c *MockProjectDeleteDao_Exec_Call) RunAndReturn(run func(ctx context.Context, request *dao.ProjectDeleteRequest) (*dao.Project, error)) *MockProjectDeleteDao_Exec_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// NewMockProjectGetDaoOwner creates a new instance of MockProjectGetDaoOwner. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
+// The first argument is typically a *testing.T value.
+func NewMockProjectGetDaoOwner(t interface {
+	mock.TestingT
+	Cleanup(func())
+}) *MockProjectGetDaoOwner {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
+	mock := &MockProjectGetDaoOwner{}
+	mock.Mock.Test(t)
+
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
+
+	return mock
+}
+
+// MockProjectGetDaoOwner is an autogenerated mock type for the ProjectGetDaoOwner type
+type MockProjectGetDaoOwner struct {
+	mock.Mock
+}
+
+type MockProjectGetDaoOwner_Expecter struct {
+	mock *mock.Mock
+}
+
+func (_m *MockProjectGetDaoOwner) EXPECT() *MockProjectGetDaoOwner_Expecter {
+	return &MockProjectGetDaoOwner_Expecter{mock: &_m.Mock}
+}
+
+// Exec provides a mock function for the type MockProjectGetDaoOwner
+func (_mock *MockProjectGetDaoOwner) Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error) {
+	ret := _mock.Called(ctx, request)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Exec")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *dao.ProjectOwnedRequest) (bool, error)); ok {
+		return returnFunc(ctx, request)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *dao.ProjectOwnedRequest) bool); ok {
+		r0 = returnFunc(ctx, request)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *dao.ProjectOwnedRequest) error); ok {
+		r1 = returnFunc(ctx, request)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockProjectGetDaoOwner_Exec_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Exec'
+type MockProjectGetDaoOwner_Exec_Call struct {
+	*mock.Call
+}
+
+// Exec is a helper method to define mock.On call
+//   - ctx context.Context
+//   - request *dao.ProjectOwnedRequest
+func (_e *MockProjectGetDaoOwner_Expecter) Exec(ctx any, request any) *MockProjectGetDaoOwner_Exec_Call {
+	return &MockProjectGetDaoOwner_Exec_Call{Call: _e.mock.On("Exec", ctx, request)}
+}
+
+func (_c *MockProjectGetDaoOwner_Exec_Call) Run(run func(ctx context.Context, request *dao.ProjectOwnedRequest)) *MockProjectGetDaoOwner_Exec_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *dao.ProjectOwnedRequest
+		if args[1] != nil {
+			arg1 = args[1].(*dao.ProjectOwnedRequest)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockProjectGetDaoOwner_Exec_Call) Return(b bool, err error) *MockProjectGetDaoOwner_Exec_Call {
+	_c.Call.Return(b, err)
+	return _c
+}
+
+func (_c *MockProjectGetDaoOwner_Exec_Call) RunAndReturn(run func(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)) *MockProjectGetDaoOwner_Exec_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -3556,23 +3558,23 @@ func (_m *MockSceneDeleteDao) EXPECT() *MockSceneDeleteDao_Expecter {
 }
 
 // Exec provides a mock function for the type MockSceneDeleteDao
-func (_mock *MockSceneDeleteDao) Exec(ctx context.Context, request *dao.SceneDeleteRequest) (*dao.Scene, error) {
+func (_mock *MockSceneDeleteDao) Exec(ctx context.Context, request *dao.SceneDeleteRequest) ([]*dao.Scene, error) {
 	ret := _mock.Called(ctx, request)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Exec")
 	}
 
-	var r0 *dao.Scene
+	var r0 []*dao.Scene
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *dao.SceneDeleteRequest) (*dao.Scene, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *dao.SceneDeleteRequest) ([]*dao.Scene, error)); ok {
 		return returnFunc(ctx, request)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *dao.SceneDeleteRequest) *dao.Scene); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *dao.SceneDeleteRequest) []*dao.Scene); ok {
 		r0 = returnFunc(ctx, request)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*dao.Scene)
+			r0 = ret.Get(0).([]*dao.Scene)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, *dao.SceneDeleteRequest) error); ok {
@@ -3613,12 +3615,12 @@ func (_c *MockSceneDeleteDao_Exec_Call) Run(run func(ctx context.Context, reques
 	return _c
 }
 
-func (_c *MockSceneDeleteDao_Exec_Call) Return(scene *dao.Scene, err error) *MockSceneDeleteDao_Exec_Call {
-	_c.Call.Return(scene, err)
+func (_c *MockSceneDeleteDao_Exec_Call) Return(scenes []*dao.Scene, err error) *MockSceneDeleteDao_Exec_Call {
+	_c.Call.Return(scenes, err)
 	return _c
 }
 
-func (_c *MockSceneDeleteDao_Exec_Call) RunAndReturn(run func(ctx context.Context, request *dao.SceneDeleteRequest) (*dao.Scene, error)) *MockSceneDeleteDao_Exec_Call {
+func (_c *MockSceneDeleteDao_Exec_Call) RunAndReturn(run func(ctx context.Context, request *dao.SceneDeleteRequest) ([]*dao.Scene, error)) *MockSceneDeleteDao_Exec_Call {
 	_c.Call.Return(run)
 	return _c
 }

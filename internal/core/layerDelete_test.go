@@ -4,6 +4,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/google/uuid"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -20,7 +22,19 @@ func TestLayerDelete(t *testing.T) {
 
 	errFoo := errors.New("foo")
 
-	request := &core.LayerDeleteRequest{OwnerID: ownerID, ProjectID: projectID, ID: layerID2}
+	request := func(ids ...uuid.UUID) *core.LayerDeleteRequest {
+		return &core.LayerDeleteRequest{OwnerID: ownerID, ProjectID: projectID, IDs: ids}
+	}
+
+	// kinds is what the kind read returns for layers of one kind, of which the project holds count.
+	kinds := func(kind string, count int, ids ...uuid.UUID) []*dao.LayerKind {
+		return lo.Map(ids, func(id uuid.UUID, _ int) *dao.LayerKind {
+			return &dao.LayerKind{ID: id, Kind: kind, Count: count}
+		})
+	}
+
+	manuscript := coreLayer(layerID1, 0)
+	manuscript.Kind = core.LayerKindManuscript
 
 	testCases := []struct {
 		name string
@@ -28,37 +42,83 @@ func TestLayerDelete(t *testing.T) {
 		request *core.LayerDeleteRequest
 
 		ownerMock  *daoMock[bool]
-		kindMock   *daoMock[string]
 		lockMock   *daoMock[*dao.Project]
-		deleteMock *daoMock[*dao.Layer]
+		kindMock   *daoMock[[]*dao.LayerKind]
+		deleteMock *daoMock[[]*dao.Layer]
 		transactor transaction.Transactor
 
-		expect    *core.Layer
+		expect    []*core.Layer
 		expectErr error
 	}{
 		{
+			// A project needs no notes layer, so its last one goes.
 			name: "Success",
 
-			request: request,
+			request: request(layerID2),
 
 			ownerMock:  &daoMock[bool]{resp: true},
-			kindMock:   &daoMock[string]{resp: core.LayerKindNotes},
 			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
-			deleteMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
+			kindMock:   &daoMock[[]*dao.LayerKind]{resp: kinds(core.LayerKindNotes, 1, layerID2)},
+			deleteMock: &daoMock[[]*dao.Layer]{resp: []*dao.Layer{notesLayer(layerID2, 1)}},
 
-			expect: coreLayer(layerID2, 1),
+			expect: []*core.Layer{coreLayer(layerID2, 1)},
 		},
 		{
-			name: "Error/InvalidRequest",
+			name: "Success/OneOfTwoManuscripts",
 
-			request: &core.LayerDeleteRequest{OwnerID: ownerID, ProjectID: projectID},
+			request: request(layerID1),
+
+			ownerMock: &daoMock[bool]{resp: true},
+			lockMock:  &daoMock[*dao.Project]{resp: daoProject()},
+			kindMock:  &daoMock[[]*dao.LayerKind]{resp: kinds(core.LayerKindManuscript, 2, layerID1)},
+			deleteMock: &daoMock[[]*dao.Layer]{resp: []*dao.Layer{
+				daoLayer(layerID1, 0, core.LayerKindManuscript),
+			}},
+
+			expect: []*core.Layer{manuscript},
+		},
+		{
+			name: "Success/Batch",
+
+			request: request(layerID3, layerID1),
+
+			ownerMock: &daoMock[bool]{resp: true},
+			lockMock:  &daoMock[*dao.Project]{resp: daoProject()},
+			kindMock: &daoMock[[]*dao.LayerKind]{resp: append(
+				kinds(core.LayerKindNotes, 1, layerID3), kinds(core.LayerKindManuscript, 2, layerID1)...,
+			)},
+			// The delete returns its rows in no particular order.
+			deleteMock: &daoMock[[]*dao.Layer]{resp: []*dao.Layer{
+				notesLayer(layerID3, 2), daoLayer(layerID1, 0, core.LayerKindManuscript),
+			}},
+
+			expect: []*core.Layer{manuscript, coreLayer(layerID3, 2)},
+		},
+		{
+			name: "Error/NoID",
+
+			request: request(),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/DuplicateID",
+
+			request: request(layerID2, layerID2),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/TooManyIDs",
+
+			request: request(lo.Times(101, func(int) uuid.UUID { return uuid.New() })...),
 
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
 			name: "Error/NotOwned",
 
-			request: request,
+			request: request(layerID2),
 
 			ownerMock: &daoMock[bool]{resp: false},
 
@@ -67,62 +127,84 @@ func TestLayerDelete(t *testing.T) {
 		{
 			name: "Error/CheckOwner",
 
-			request: request,
+			request: request(layerID2),
 
 			ownerMock: &daoMock[bool]{err: errFoo},
 
 			expectErr: errFoo,
 		},
 		{
-			name: "Error/NotFound",
-
-			request: request,
-
-			ownerMock: &daoMock[bool]{resp: true},
-			kindMock:  &daoMock[string]{err: dao.ErrLayerKindNotFound},
-
-			expectErr: core.ErrLayerNotFound,
-		},
-		{
-			name: "Error/RequiredLayer",
-
-			request: request,
-
-			ownerMock: &daoMock[bool]{resp: true},
-			kindMock:  &daoMock[string]{resp: core.LayerKindManuscript},
-
-			expectErr: core.ErrRequiredLayer,
-		},
-		{
 			name: "Error/Lock",
 
-			request: request,
+			request: request(layerID2),
 
 			ownerMock: &daoMock[bool]{resp: true},
-			kindMock:  &daoMock[string]{resp: core.LayerKindNotes},
 			lockMock:  &daoMock[*dao.Project]{err: errFoo},
 
 			expectErr: errFoo,
 		},
 		{
+			name: "Error/Kind",
+
+			request: request(layerID2),
+
+			ownerMock: &daoMock[bool]{resp: true},
+			lockMock:  &daoMock[*dao.Project]{resp: daoProject()},
+			kindMock:  &daoMock[[]*dao.LayerKind]{err: errFoo},
+
+			expectErr: errFoo,
+		},
+		{
+			name: "Error/NotFound",
+
+			request: request(layerID2, layerID3),
+
+			ownerMock: &daoMock[bool]{resp: true},
+			lockMock:  &daoMock[*dao.Project]{resp: daoProject()},
+			kindMock:  &daoMock[[]*dao.LayerKind]{resp: kinds(core.LayerKindNotes, 1, layerID2)},
+
+			expectErr: core.ErrLayerNotFound,
+		},
+		{
+			name: "Error/OnlyManuscript",
+
+			request: request(layerID1),
+
+			ownerMock: &daoMock[bool]{resp: true},
+			lockMock:  &daoMock[*dao.Project]{resp: daoProject()},
+			kindMock:  &daoMock[[]*dao.LayerKind]{resp: kinds(core.LayerKindManuscript, 1, layerID1)},
+
+			expectErr: core.ErrRequiredLayer,
+		},
+		{
+			name: "Error/BothManuscripts",
+
+			request: request(layerID1, layerID2),
+
+			ownerMock: &daoMock[bool]{resp: true},
+			lockMock:  &daoMock[*dao.Project]{resp: daoProject()},
+			kindMock:  &daoMock[[]*dao.LayerKind]{resp: kinds(core.LayerKindManuscript, 2, layerID1, layerID2)},
+
+			expectErr: core.ErrRequiredLayer,
+		},
+		{
 			name: "Error/Delete",
 
-			request: request,
+			request: request(layerID2),
 
 			ownerMock:  &daoMock[bool]{resp: true},
-			kindMock:   &daoMock[string]{resp: core.LayerKindNotes},
 			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
-			deleteMock: &daoMock[*dao.Layer]{err: errFoo},
+			kindMock:   &daoMock[[]*dao.LayerKind]{resp: kinds(core.LayerKindNotes, 1, layerID2)},
+			deleteMock: &daoMock[[]*dao.Layer]{err: errFoo},
 
 			expectErr: errFoo,
 		},
 		{
 			name: "Error/Transaction",
 
-			request: request,
+			request: request(layerID2),
 
 			ownerMock:  &daoMock[bool]{resp: true},
-			kindMock:   &daoMock[string]{resp: core.LayerKindNotes},
 			transactor: transactiontest.NewFailingTransactor(errFoo),
 
 			expectErr: errFoo,
@@ -134,8 +216,8 @@ func TestLayerDelete(t *testing.T) {
 			t.Parallel()
 
 			mockOwner := coremocks.NewMockLayerDeleteDaoOwner(t)
-			mockKind := coremocks.NewMockLayerDeleteDaoKind(t)
 			mockLock := coremocks.NewMockLayerDeleteDaoLock(t)
+			mockKind := coremocks.NewMockLayerDeleteDaoKind(t)
 			mockDelete := coremocks.NewMockLayerDeleteDao(t)
 
 			if testCase.ownerMock != nil {
@@ -144,21 +226,21 @@ func TestLayerDelete(t *testing.T) {
 					Return(testCase.ownerMock.resp, testCase.ownerMock.err)
 			}
 
-			if testCase.kindMock != nil {
-				mockKind.EXPECT().
-					Exec(mock.Anything, &dao.LayerKindRequest{ProjectID: projectID, ID: layerID2}).
-					Return(testCase.kindMock.resp, testCase.kindMock.err)
-			}
-
 			if testCase.lockMock != nil {
 				mockLock.EXPECT().
 					Exec(mock.Anything, &dao.ProjectLockRequest{ID: projectID}).
 					Return(testCase.lockMock.resp, testCase.lockMock.err)
 			}
 
+			if testCase.kindMock != nil {
+				mockKind.EXPECT().
+					Exec(mock.Anything, &dao.LayerKindRequest{ProjectID: projectID, IDs: testCase.request.IDs}).
+					Return(testCase.kindMock.resp, testCase.kindMock.err)
+			}
+
 			if testCase.deleteMock != nil {
 				mockDelete.EXPECT().
-					Exec(mock.Anything, &dao.LayerDeleteRequest{ProjectID: projectID, ID: layerID2}).
+					Exec(mock.Anything, &dao.LayerDeleteRequest{ProjectID: projectID, IDs: testCase.request.IDs}).
 					Return(testCase.deleteMock.resp, testCase.deleteMock.err)
 			}
 
@@ -167,15 +249,15 @@ func TestLayerDelete(t *testing.T) {
 				transactor = transactiontest.NewTransactor()
 			}
 
-			service := core.NewLayerDelete(mockOwner, mockKind, mockLock, mockDelete, transactor)
+			service := core.NewLayerDelete(mockOwner, mockLock, mockKind, mockDelete, transactor)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
 
 			mockOwner.AssertExpectations(t)
-			mockKind.AssertExpectations(t)
 			mockLock.AssertExpectations(t)
+			mockKind.AssertExpectations(t)
 			mockDelete.AssertExpectations(t)
 		})
 	}

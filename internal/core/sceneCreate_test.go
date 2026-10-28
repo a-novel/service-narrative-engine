@@ -2,8 +2,11 @@ package core_test
 
 import (
 	"errors"
+	"slices"
 	"testing"
 
+	"github.com/google/uuid"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -20,6 +23,14 @@ func TestSceneCreate(t *testing.T) {
 
 	errFoo := errors.New("foo")
 
+	scene := core.SceneCreateItem{Title: "Scene", Color: "#4A90D9"}
+	// insertScene is scene as the insert receives it, without its generated ID.
+	insertScene := dao.SceneInsertItem{Title: "Scene", Color: sceneColor}
+
+	request := func(position int, scenes ...core.SceneCreateItem) *core.SceneCreateRequest {
+		return &core.SceneCreateRequest{OwnerID: ownerID, ProjectID: projectID, Position: position, Scenes: scenes}
+	}
+
 	testCases := []struct {
 		name string
 
@@ -28,55 +39,87 @@ func TestSceneCreate(t *testing.T) {
 		ownerMock  *daoMock[bool]
 		lockMock   *daoMock[*dao.Project]
 		insertMock *daoMock[[]*dao.Scene]
-		transactor transaction.Transactor
+		// insertScenes are the scenes the insert receives, without their generated IDs.
+		insertScenes []dao.SceneInsertItem
+		transactor   transaction.Transactor
 
-		expect    *core.Scene
+		expect    []*core.Scene
 		expectErr error
 	}{
 		{
 			name: "Success/First",
 
-			request: &core.SceneCreateRequest{OwnerID: ownerID, ProjectID: projectID, Title: "Scene", Color: "#4A90D9"},
+			request: request(0, scene),
 
-			ownerMock:  &daoMock[bool]{resp: true},
-			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
-			insertMock: &daoMock[[]*dao.Scene]{resp: []*dao.Scene{daoScene(sceneID3, 0)}},
+			ownerMock:    &daoMock[bool]{resp: true},
+			lockMock:     &daoMock[*dao.Project]{resp: daoProject()},
+			insertMock:   &daoMock[[]*dao.Scene]{resp: []*dao.Scene{daoScene(sceneID3, 0)}},
+			insertScenes: []dao.SceneInsertItem{insertScene},
 
-			expect: coreScene(sceneID3, 0),
+			expect: []*core.Scene{coreScene(sceneID3, 0)},
 		},
 		{
 			name: "Success/Position",
 
-			request: &core.SceneCreateRequest{
-				OwnerID: ownerID, ProjectID: projectID, Title: "Scene", Color: "#4A90D9", Position: 2,
+			request: request(2, scene),
+
+			ownerMock:    &daoMock[bool]{resp: true},
+			lockMock:     &daoMock[*dao.Project]{resp: daoProject()},
+			insertMock:   &daoMock[[]*dao.Scene]{resp: []*dao.Scene{daoScene(sceneID3, 2)}},
+			insertScenes: []dao.SceneInsertItem{insertScene},
+
+			expect: []*core.Scene{coreScene(sceneID3, 2)},
+		},
+		{
+			name: "Success/Batch",
+
+			request: request(1, scene, core.SceneCreateItem{
+				Title: "Le thème", Color: "#E0457B", Description: "Paul ment.", Prompt: "Lent.",
+			}),
+
+			ownerMock: &daoMock[bool]{resp: true},
+			lockMock:  &daoMock[*dao.Project]{resp: daoProject()},
+			// The insert returns its rows in no particular order.
+			insertMock: &daoMock[[]*dao.Scene]{resp: []*dao.Scene{daoScene(sceneID2, 2), daoScene(sceneID1, 1)}},
+			insertScenes: []dao.SceneInsertItem{
+				insertScene,
+				{Title: "Le thème", Color: "#e0457b", Description: "Paul ment.", Prompt: "Lent."},
 			},
 
-			ownerMock:  &daoMock[bool]{resp: true},
-			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
-			insertMock: &daoMock[[]*dao.Scene]{resp: []*dao.Scene{daoScene(sceneID3, 2)}},
-
-			expect: coreScene(sceneID3, 2),
+			expect: []*core.Scene{coreScene(sceneID1, 1), coreScene(sceneID2, 2)},
 		},
 		{
 			name: "Error/InvalidRequest",
 
-			request: &core.SceneCreateRequest{OwnerID: ownerID, ProjectID: projectID, Color: "#4A90D9"},
+			request: request(0, core.SceneCreateItem{Color: "#4A90D9"}),
 
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
 			name: "Error/NegativePosition",
 
-			request: &core.SceneCreateRequest{
-				OwnerID: ownerID, ProjectID: projectID, Title: "Scene", Color: "#4A90D9", Position: -1,
-			},
+			request: request(-1, scene),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/NoScene",
+
+			request: request(0),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/TooManyScenes",
+
+			request: request(0, slices.Repeat([]core.SceneCreateItem{scene}, 101)...),
 
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
 			name: "Error/NotOwned",
 
-			request: &core.SceneCreateRequest{OwnerID: ownerID, ProjectID: projectID, Title: "Scene", Color: "#4A90D9"},
+			request: request(0, scene),
 
 			ownerMock: &daoMock[bool]{resp: false},
 
@@ -85,7 +128,7 @@ func TestSceneCreate(t *testing.T) {
 		{
 			name: "Error/CheckOwner",
 
-			request: &core.SceneCreateRequest{OwnerID: ownerID, ProjectID: projectID, Title: "Scene", Color: "#4A90D9"},
+			request: request(0, scene),
 
 			ownerMock: &daoMock[bool]{err: errFoo},
 
@@ -94,7 +137,7 @@ func TestSceneCreate(t *testing.T) {
 		{
 			name: "Error/Lock",
 
-			request: &core.SceneCreateRequest{OwnerID: ownerID, ProjectID: projectID, Title: "Scene", Color: "#4A90D9"},
+			request: request(0, scene),
 
 			ownerMock: &daoMock[bool]{resp: true},
 			lockMock:  &daoMock[*dao.Project]{err: errFoo},
@@ -104,29 +147,31 @@ func TestSceneCreate(t *testing.T) {
 		{
 			name: "Error/ProjectFull",
 
-			request: &core.SceneCreateRequest{OwnerID: ownerID, ProjectID: projectID, Title: "Scene", Color: "#4A90D9"},
+			request: request(0, scene),
 
-			ownerMock:  &daoMock[bool]{resp: true},
-			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
-			insertMock: &daoMock[[]*dao.Scene]{err: dao.ErrSceneInsertFull},
+			ownerMock:    &daoMock[bool]{resp: true},
+			lockMock:     &daoMock[*dao.Project]{resp: daoProject()},
+			insertMock:   &daoMock[[]*dao.Scene]{err: dao.ErrSceneInsertFull},
+			insertScenes: []dao.SceneInsertItem{insertScene},
 
 			expectErr: core.ErrProjectFull,
 		},
 		{
 			name: "Error/Insert",
 
-			request: &core.SceneCreateRequest{OwnerID: ownerID, ProjectID: projectID, Title: "Scene", Color: "#4A90D9"},
+			request: request(0, scene),
 
-			ownerMock:  &daoMock[bool]{resp: true},
-			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
-			insertMock: &daoMock[[]*dao.Scene]{err: errFoo},
+			ownerMock:    &daoMock[bool]{resp: true},
+			lockMock:     &daoMock[*dao.Project]{resp: daoProject()},
+			insertMock:   &daoMock[[]*dao.Scene]{err: errFoo},
+			insertScenes: []dao.SceneInsertItem{insertScene},
 
 			expectErr: errFoo,
 		},
 		{
 			name: "Error/Transaction",
 
-			request: &core.SceneCreateRequest{OwnerID: ownerID, ProjectID: projectID, Title: "Scene", Color: "#4A90D9"},
+			request: request(0, scene),
 
 			ownerMock:  &daoMock[bool]{resp: true},
 			transactor: transactiontest.NewFailingTransactor(errFoo),
@@ -158,8 +203,15 @@ func TestSceneCreate(t *testing.T) {
 			if testCase.insertMock != nil {
 				mockInsert.EXPECT().
 					Exec(mock.Anything, mock.MatchedBy(func(req *dao.SceneInsertRequest) bool {
-						return req.ProjectID == projectID && req.Position == testCase.request.Position &&
-							len(req.Scenes) == 1 && req.Scenes[0].Title == "Scene" && req.Scenes[0].Color == sceneColor && recent(req.Now)
+						ids := lo.Map(req.Scenes, func(item dao.SceneInsertItem, _ int) uuid.UUID { return item.ID })
+						scenes := lo.Map(req.Scenes, func(item dao.SceneInsertItem, _ int) dao.SceneInsertItem {
+							item.ID = uuid.Nil
+
+							return item
+						})
+
+						return req.ProjectID == projectID && req.Position == testCase.request.Position && recent(req.Now) &&
+							freshIDs(ids) && slices.Equal(scenes, testCase.insertScenes)
 					})).
 					Return(testCase.insertMock.resp, testCase.insertMock.err)
 			}

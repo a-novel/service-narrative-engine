@@ -21,7 +21,8 @@ var (
 	ErrLayerNotFound = errors.New("layer not found")
 	// ErrProjectFull is returned when a project already holds as many scenes or layers as it may.
 	ErrProjectFull = errors.New("project full")
-	// ErrRequiredLayer is returned by a delete of a layer every project holds, such as the manuscript.
+	// ErrRequiredLayer is returned by a delete that would leave a project without a layer of a required
+	// kind, such as the manuscript.
 	ErrRequiredLayer = errors.New("required layer")
 )
 
@@ -56,13 +57,16 @@ func checkProjectOwnership(ctx context.Context, daoOwner projectOwnerDao, opts p
 }
 
 // newIDs generates count UUIDv7 identifiers.
-func newIDs(count int) ([]uuid.UUID, error) {
+func newIDs(ctx context.Context, count int) ([]uuid.UUID, error) {
+	_, span := otel.Tracer().Start(ctx, "core.newIDs")
+	defer span.End()
+
 	ids := make([]uuid.UUID, count)
 
 	for i := range ids {
 		id, err := uuid.NewV7()
 		if err != nil {
-			return nil, fmt.Errorf("generate id: %w", err)
+			return nil, otel.ReportError(span, fmt.Errorf("generate id: %w", err))
 		}
 
 		ids[i] = id

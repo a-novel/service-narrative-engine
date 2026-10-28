@@ -1,24 +1,25 @@
 package core_test
 
 import (
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 
 	"github.com/a-novel/service-narrative-engine/internal/core"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
 var (
-	ownerID      = uuid.MustParse("00000000-0000-0000-0000-0000000000a1")
-	otherOwnerID = uuid.MustParse("00000000-0000-0000-0000-0000000000a2")
-	projectID    = uuid.MustParse("00000000-0000-0000-0000-000000000001")
-	sceneID1     = uuid.MustParse("00000000-0000-0000-0000-000000000011")
-	sceneID2     = uuid.MustParse("00000000-0000-0000-0000-000000000012")
-	sceneID3     = uuid.MustParse("00000000-0000-0000-0000-000000000013")
-	layerID1     = uuid.MustParse("00000000-0000-0000-0000-000000000021")
-	layerID2     = uuid.MustParse("00000000-0000-0000-0000-000000000022")
-	layerID3     = uuid.MustParse("00000000-0000-0000-0000-000000000023")
+	ownerID   = uuid.MustParse("00000000-0000-0000-0000-0000000000a1")
+	projectID = uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	sceneID1  = uuid.MustParse("00000000-0000-0000-0000-000000000011")
+	sceneID2  = uuid.MustParse("00000000-0000-0000-0000-000000000012")
+	sceneID3  = uuid.MustParse("00000000-0000-0000-0000-000000000013")
+	layerID1  = uuid.MustParse("00000000-0000-0000-0000-000000000021")
+	layerID2  = uuid.MustParse("00000000-0000-0000-0000-000000000022")
+	layerID3  = uuid.MustParse("00000000-0000-0000-0000-000000000023")
 
 	// sceneColor is the color of every test scene.
 	sceneColor = "#4a90d9"
@@ -37,6 +38,11 @@ type daoMock[Resp any] struct {
 // recent reports whether a request's instant was captured during the test.
 func recent(instant time.Time) bool {
 	return time.Since(instant) < time.Minute
+}
+
+// freshIDs reports whether each ID is set and appears once, as the IDs a service generates.
+func freshIDs(ids []uuid.UUID) bool {
+	return !slices.Contains(ids, uuid.Nil) && len(lo.Uniq(ids)) == len(ids)
 }
 
 func daoScene(id uuid.UUID, position int) *dao.Scene {
@@ -60,14 +66,6 @@ func daoProject() *dao.Project {
 		ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr",
 		CreatedAt: createdAt, UpdatedAt: updatedAt,
 	}
-}
-
-// foreignProject returns the test project as another user owns it.
-func foreignProject() *dao.Project {
-	project := daoProject()
-	project.OwnerID = otherOwnerID
-
-	return project
 }
 
 func coreScene(id uuid.UUID, position int) *core.Scene {
