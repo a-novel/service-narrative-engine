@@ -20,81 +20,48 @@ func TestLayerCreate(t *testing.T) {
 
 	errFoo := errors.New("foo")
 
-	existing := []*dao.Layer{notesLayer(layerID1, 0), notesLayer(layerID2, 1)}
-
-	// The new layer's ID is generated, so a reorder is matched by where the existing layers land.
-	newBetween := func(req *dao.LayerReorderRequest) bool {
-		return len(req.IDs) == 3 && req.IDs[0] == layerID1 && req.IDs[2] == layerID2
-	}
-	newFirst := func(req *dao.LayerReorderRequest) bool {
-		return len(req.IDs) == 3 && req.IDs[1] == layerID1 && req.IDs[2] == layerID2
-	}
-
 	testCases := []struct {
 		name string
 
-		request    *core.LayerCreateRequest
-		transactor transaction.Transactor
+		request *core.LayerCreateRequest
 
-		lockMock    *daoMock[*dao.Project]
-		listMock    *daoMock[[]*dao.Layer]
-		insertMock  *daoMock[*dao.Layer]
-		reorderMock *daoMock[[]*dao.Layer]
-		reorderedBy func(req *dao.LayerReorderRequest) bool
+		lockMock   *daoMock[*dao.Project]
+		anchorMock *daoMock[*dao.Layer]
+		// position is where the service inserts the layer, when the case reaches the insert.
+		position   int
+		insertMock *daoMock[*dao.Layer]
+		transactor transaction.Transactor
 
 		expect    *core.Layer
 		expectErr error
 	}{
 		{
-			name: "Success/Last",
-
-			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID, After: layerID2, Name: "Layer"},
-
-			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
-			listMock:   &daoMock[[]*dao.Layer]{resp: existing},
-			insertMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID3, 2)},
-
-			expect: &core.Layer{
-				ID: layerID3, ProjectID: projectID, Position: 2, Kind: core.LayerKindNotes, Name: "Layer",
-				UpdatedAt: updatedAt,
-			},
-		},
-		{
-			name: "Success/Between",
-
-			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID, After: layerID1, Name: "Layer"},
-
-			lockMock:    &daoMock[*dao.Project]{resp: daoProject()},
-			listMock:    &daoMock[[]*dao.Layer]{resp: existing},
-			insertMock:  &daoMock[*dao.Layer]{resp: notesLayer(layerID3, 2)},
-			reorderMock: &daoMock[[]*dao.Layer]{},
-			reorderedBy: newBetween,
-
-			expect: &core.Layer{
-				ID: layerID3, ProjectID: projectID, Position: 1, Kind: core.LayerKindNotes, Name: "Layer",
-				UpdatedAt: updatedAt,
-			},
-		},
-		{
 			name: "Success/First",
 
 			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID, Name: "Layer"},
 
-			lockMock:    &daoMock[*dao.Project]{resp: daoProject()},
-			listMock:    &daoMock[[]*dao.Layer]{resp: existing},
-			insertMock:  &daoMock[*dao.Layer]{resp: notesLayer(layerID3, 2)},
-			reorderMock: &daoMock[[]*dao.Layer]{},
-			reorderedBy: newFirst,
+			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
+			position:   0,
+			insertMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID3, 0)},
 
-			expect: &core.Layer{
-				ID: layerID3, ProjectID: projectID, Position: 0, Kind: core.LayerKindNotes, Name: "Layer",
-				UpdatedAt: updatedAt,
-			},
+			expect: coreLayer(layerID3, 0),
 		},
 		{
-			name: "Error/MissingProject",
+			name: "Success/AfterAnchor",
 
-			request: &core.LayerCreateRequest{OwnerID: ownerID},
+			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID, Name: "Layer", After: layerID2},
+
+			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
+			anchorMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
+			position:   2,
+			insertMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID3, 2)},
+
+			expect: coreLayer(layerID3, 2),
+		},
+		{
+			name: "Error/InvalidRequest",
+
+			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID},
 
 			expectErr: core.ErrInvalidRequest,
 		},
@@ -108,54 +75,64 @@ func TestLayerCreate(t *testing.T) {
 			expectErr: core.ErrProjectNotFound,
 		},
 		{
+			name: "Error/OtherOwner",
+
+			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID, Name: "Layer"},
+
+			lockMock: &daoMock[*dao.Project]{resp: foreignProject()},
+
+			expectErr: core.ErrProjectNotFound,
+		},
+		{
+			name: "Error/UnknownAnchor",
+
+			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID, Name: "Layer", After: layerID2},
+
+			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
+			anchorMock: &daoMock[*dao.Layer]{err: dao.ErrLayerSelectNotFound},
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/AnchorElsewhere",
+
+			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID, Name: "Layer", After: layerID2},
+
+			lockMock: &daoMock[*dao.Project]{resp: daoProject()},
+			anchorMock: &daoMock[*dao.Layer]{resp: func() *dao.Layer {
+				anchor := notesLayer(layerID3, 2)
+				anchor.ProjectID = otherProjectID
+
+				return anchor
+			}()},
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
 			name: "Error/ProjectFull",
 
 			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID, Name: "Layer"},
 
 			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
-			listMock:   &daoMock[[]*dao.Layer]{resp: existing},
 			insertMock: &daoMock[*dao.Layer]{err: dao.ErrLayerInsertFull},
 
 			expectErr: core.ErrProjectFull,
 		},
 		{
-			name: "Error/UnknownAnchor",
-
-			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID, After: layerID3, Name: "Layer"},
-
-			lockMock: &daoMock[*dao.Project]{resp: daoProject()},
-			listMock: &daoMock[[]*dao.Layer]{resp: existing},
-
-			expectErr: core.ErrInvalidRequest,
-		},
-		{
 			name: "Error/Insert",
-
-			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID, After: layerID2, Name: "Layer"},
-
-			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
-			listMock:   &daoMock[[]*dao.Layer]{resp: existing},
-			insertMock: &daoMock[*dao.Layer]{err: errFoo},
-
-			expectErr: errFoo,
-		},
-		{
-			name: "Error/Reorder",
 
 			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID, Name: "Layer"},
 
-			lockMock:    &daoMock[*dao.Project]{resp: daoProject()},
-			listMock:    &daoMock[[]*dao.Layer]{resp: existing},
-			insertMock:  &daoMock[*dao.Layer]{resp: notesLayer(layerID3, 2)},
-			reorderMock: &daoMock[[]*dao.Layer]{err: errFoo},
-			reorderedBy: newFirst,
+			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
+			insertMock: &daoMock[*dao.Layer]{err: errFoo},
 
 			expectErr: errFoo,
 		},
 		{
 			name: "Error/Transaction",
 
-			request:    &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID, Name: "Layer"},
+			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID, Name: "Layer"},
+
 			transactor: transactiontest.NewFailingTransactor(errFoo),
 
 			expectErr: errFoo,
@@ -167,35 +144,28 @@ func TestLayerCreate(t *testing.T) {
 			t.Parallel()
 
 			mockLock := coremocks.NewMockLayerCreateDaoLock(t)
-			mockList := coremocks.NewMockLayerCreateDaoList(t)
+			mockSelect := coremocks.NewMockLayerCreateDaoSelect(t)
 			mockInsert := coremocks.NewMockLayerCreateDaoInsert(t)
-			mockReorder := coremocks.NewMockLayerCreateDaoReorder(t)
 
 			if testCase.lockMock != nil {
 				mockLock.EXPECT().
-					Exec(mock.Anything, &dao.ProjectLockRequest{ID: projectID, OwnerID: ownerID}).
+					Exec(mock.Anything, &dao.ProjectLockRequest{ID: projectID}).
 					Return(testCase.lockMock.resp, testCase.lockMock.err)
 			}
 
-			if testCase.listMock != nil {
-				mockList.EXPECT().
-					Exec(mock.Anything, &dao.LayerListRequest{ProjectID: projectID}).
-					Return(testCase.listMock.resp, testCase.listMock.err)
+			if testCase.anchorMock != nil {
+				mockSelect.EXPECT().
+					Exec(mock.Anything, &dao.LayerSelectRequest{ID: testCase.request.After}).
+					Return(testCase.anchorMock.resp, testCase.anchorMock.err)
 			}
 
 			if testCase.insertMock != nil {
 				mockInsert.EXPECT().
 					Exec(mock.Anything, mock.MatchedBy(func(req *dao.LayerInsertRequest) bool {
-						return req.ProjectID == projectID && req.Position == len(existing) &&
-							req.Kind == core.LayerKindNotes && req.Name == testCase.request.Name && recent(req.Now)
+						return req.ProjectID == projectID && req.Position == testCase.position &&
+							req.Kind == core.LayerKindNotes && req.Name == "Layer" && recent(req.Now)
 					})).
 					Return(testCase.insertMock.resp, testCase.insertMock.err)
-			}
-
-			if testCase.reorderMock != nil {
-				mockReorder.EXPECT().
-					Exec(mock.Anything, mock.MatchedBy(testCase.reorderedBy)).
-					Return(testCase.reorderMock.resp, testCase.reorderMock.err)
 			}
 
 			transactor := testCase.transactor
@@ -203,16 +173,15 @@ func TestLayerCreate(t *testing.T) {
 				transactor = transactiontest.NewTransactor()
 			}
 
-			service := core.NewLayerCreate(mockLock, mockList, mockInsert, mockReorder, transactor)
+			service := core.NewLayerCreate(mockLock, mockSelect, mockInsert, transactor)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
 
 			mockLock.AssertExpectations(t)
-			mockList.AssertExpectations(t)
+			mockSelect.AssertExpectations(t)
 			mockInsert.AssertExpectations(t)
-			mockReorder.AssertExpectations(t)
 		})
 	}
 }

@@ -14,19 +14,14 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// CellListDaoProject reads the project, so a project of another owner reads as missing.
+// CellListDaoProject reads the project, to check its owner.
 type CellListDaoProject interface {
 	Exec(ctx context.Context, request *dao.ProjectSelectRequest) (*dao.Project, error)
 }
 
 // CellListDao reads a page of the project's cells.
 type CellListDao interface {
-	Exec(ctx context.Context, request *dao.CellListRequest) ([]*dao.Cell, error)
-}
-
-// CellListDaoCount counts the project's cells.
-type CellListDaoCount interface {
-	Exec(ctx context.Context, request *dao.CellCountRequest) (*dao.CellCount, error)
+	Exec(ctx context.Context, request *dao.CellListRequest) ([]*dao.CellListRow, error)
 }
 
 // CellListDefaultSize is the page size of a [CellListRequest] whose Limit is zero or negative.
@@ -39,22 +34,19 @@ type CellListRequest struct {
 
 	// Limit caps the page at 500 cells. It defaults to [CellListDefaultSize] when zero or negative.
 	Limit int `validate:"max=500"`
-	// AfterSceneID and AfterLayerID are the key of the last cell of the previous page. The page
-	// starts with the next cell in key order, or with the first one when both are uuid.Nil.
-	AfterSceneID uuid.UUID
-	AfterLayerID uuid.UUID
+	// Offset is how many cells come before the page, by the position of their scene, then of their layer.
+	Offset int `validate:"min=0"`
 }
 
-// CellList reads a project's cells page by page, in the order of their keys. Each page carries the
-// total, so a client that loaded the project with [ProjectGet] knows when it holds every cell.
+// CellList reads a project's cells page by page, by the position of their scene, then of their
+// layer. Each page carries the total, so a client knows when it holds every cell.
 type CellList struct {
 	daoProject CellListDaoProject
 	dao        CellListDao
-	daoCount   CellListDaoCount
 }
 
-func NewCellList(daoProject CellListDaoProject, dao CellListDao, daoCount CellListDaoCount) *CellList {
-	return &CellList{daoProject: daoProject, dao: dao, daoCount: daoCount}
+func NewCellList(daoProject CellListDaoProject, dao CellListDao) *CellList {
+	return &CellList{daoProject: daoProject, dao: dao}
 }
 
 func (service *CellList) Exec(ctx context.Context, request *CellListRequest) (*CellPage, error) {
@@ -70,8 +62,7 @@ func (service *CellList) Exec(ctx context.Context, request *CellListRequest) (*C
 		attribute.String("project.id", request.ProjectID.String()),
 		attribute.String("project.owner_id", request.OwnerID.String()),
 		attribute.Int("cells.limit", limit),
-		attribute.String("cells.after_scene_id", request.AfterSceneID.String()),
-		attribute.String("cells.after_layer_id", request.AfterLayerID.String()),
+		attribute.Int("cells.offset", request.Offset),
 	)
 
 	err := validate.Struct(request)
@@ -79,7 +70,7 @@ func (service *CellList) Exec(ctx context.Context, request *CellListRequest) (*C
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	_, err = service.daoProject.Exec(ctx, &dao.ProjectSelectRequest{ID: request.ProjectID, OwnerID: request.OwnerID})
+	project, err := service.daoProject.Exec(ctx, &dao.ProjectSelectRequest{ID: request.ProjectID})
 	if errors.Is(err, dao.ErrProjectSelectNotFound) {
 		err = errors.Join(err, ErrProjectNotFound)
 	}
@@ -88,20 +79,28 @@ func (service *CellList) Exec(ctx context.Context, request *CellListRequest) (*C
 		return nil, otel.ReportError(span, fmt.Errorf("select project: %w", err))
 	}
 
-	entities, err := service.dao.Exec(ctx, &dao.CellListRequest{
-		ProjectID:    request.ProjectID,
-		Limit:        limit,
-		AfterSceneID: request.AfterSceneID,
-		AfterLayerID: request.AfterLayerID,
+	err = checkOwner(project, request.OwnerID, ErrProjectNotFound)
+	if err != nil {
+		return nil, otel.ReportError(span, err)
+	}
+
+	rows, err := service.dao.Exec(ctx, &dao.CellListRequest{
+		ProjectID: request.ProjectID,
+		Limit:     limit,
+		Offset:    request.Offset,
 	})
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("list cells: %w", err))
 	}
 
-	count, err := service.daoCount.Exec(ctx, &dao.CellCountRequest{ProjectID: request.ProjectID})
-	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("count cells: %w", err))
+	page := &CellPage{
+		Cells: lo.Map(rows, func(row *dao.CellListRow, _ int) *Cell { return newCell(&row.Cell, 0) }),
 	}
 
-	return &CellPage{Cells: lo.Map(entities, newCell), Total: count.Count}, nil
+	// Every row carries the total, and a page past the end carries none.
+	if len(rows) > 0 {
+		page.Total = rows[0].Total
+	}
+
+	return page, nil
 }

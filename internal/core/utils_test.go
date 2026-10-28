@@ -6,18 +6,22 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/a-novel/service-narrative-engine/internal/config"
+	"github.com/a-novel/service-narrative-engine/internal/core"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
 var (
-	ownerID   = uuid.MustParse("00000000-0000-0000-0000-0000000000a1")
-	projectID = uuid.MustParse("00000000-0000-0000-0000-000000000001")
-	sceneID1  = uuid.MustParse("00000000-0000-0000-0000-000000000011")
-	sceneID2  = uuid.MustParse("00000000-0000-0000-0000-000000000012")
-	sceneID3  = uuid.MustParse("00000000-0000-0000-0000-000000000013")
-	layerID1  = uuid.MustParse("00000000-0000-0000-0000-000000000021")
-	layerID2  = uuid.MustParse("00000000-0000-0000-0000-000000000022")
-	layerID3  = uuid.MustParse("00000000-0000-0000-0000-000000000023")
+	ownerID      = uuid.MustParse("00000000-0000-0000-0000-0000000000a1")
+	otherOwnerID = uuid.MustParse("00000000-0000-0000-0000-0000000000a2")
+	projectID    = uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	// otherProjectID is a project the test scenes and layers do not belong to.
+	otherProjectID = uuid.MustParse("00000000-0000-0000-0000-000000000002")
+	sceneID1       = uuid.MustParse("00000000-0000-0000-0000-000000000011")
+	sceneID2       = uuid.MustParse("00000000-0000-0000-0000-000000000012")
+	sceneID3       = uuid.MustParse("00000000-0000-0000-0000-000000000013")
+	layerID1       = uuid.MustParse("00000000-0000-0000-0000-000000000021")
+	layerID2       = uuid.MustParse("00000000-0000-0000-0000-000000000022")
+	layerID3       = uuid.MustParse("00000000-0000-0000-0000-000000000023")
 
 	// sceneColor is the color of every test scene.
 	sceneColor = "#4a90d9"
@@ -61,5 +65,26 @@ func daoProject() *dao.Project {
 	return &dao.Project{
 		ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr",
 		CreatedAt: createdAt, UpdatedAt: updatedAt,
+	}
+}
+
+// foreignProject returns the test project as another user owns it.
+func foreignProject() *dao.Project {
+	project := daoProject()
+	project.OwnerID = otherOwnerID
+
+	return project
+}
+
+func coreScene(id uuid.UUID, position int) *core.Scene {
+	return &core.Scene{
+		ID: id, ProjectID: projectID, Position: position, Title: "Scene", Color: sceneColor, UpdatedAt: updatedAt,
+	}
+}
+
+func coreLayer(id uuid.UUID, position int) *core.Layer {
+	return &core.Layer{
+		ID: id, ProjectID: projectID, Position: position, Kind: core.LayerKindNotes, Name: "Layer",
+		UpdatedAt: updatedAt,
 	}
 }

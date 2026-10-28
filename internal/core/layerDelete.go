@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/a-novel-kit/golib/otel"
@@ -25,19 +24,9 @@ type LayerDeleteDaoLock interface {
 	Exec(ctx context.Context, request *dao.ProjectLockRequest) (*dao.Project, error)
 }
 
-// LayerDeleteDao removes the layer.
+// LayerDeleteDao removes the layer, and moves the layers after it up.
 type LayerDeleteDao interface {
 	Exec(ctx context.Context, request *dao.LayerDeleteRequest) (*dao.Layer, error)
-}
-
-// LayerDeleteDaoList reads the layers that remain.
-type LayerDeleteDaoList interface {
-	Exec(ctx context.Context, request *dao.LayerListRequest) ([]*dao.Layer, error)
-}
-
-// LayerDeleteDaoReorder closes the gap the layer leaves.
-type LayerDeleteDaoReorder interface {
-	Exec(ctx context.Context, request *dao.LayerReorderRequest) ([]*dao.Layer, error)
 }
 
 // LayerDeleteRequest names the layer to delete.
@@ -46,14 +35,12 @@ type LayerDeleteRequest struct {
 	ID      uuid.UUID `validate:"required"`
 }
 
-// LayerDelete deletes a notes layer with its cells, and closes the gap in the order. It refuses the
-// manuscript layer with [ErrManuscriptLayer].
+// LayerDelete deletes a notes layer with its cells, and moves the layers after it up by one. It
+// refuses the manuscript layer with [ErrManuscriptLayer].
 type LayerDelete struct {
 	daoSelect  LayerDeleteDaoSelect
 	daoLock    LayerDeleteDaoLock
 	dao        LayerDeleteDao
-	daoList    LayerDeleteDaoList
-	daoReorder LayerDeleteDaoReorder
 	transactor transaction.Transactor
 }
 
@@ -61,18 +48,9 @@ func NewLayerDelete(
 	daoSelect LayerDeleteDaoSelect,
 	daoLock LayerDeleteDaoLock,
 	dao LayerDeleteDao,
-	daoList LayerDeleteDaoList,
-	daoReorder LayerDeleteDaoReorder,
 	transactor transaction.Transactor,
 ) *LayerDelete {
-	return &LayerDelete{
-		daoSelect:  daoSelect,
-		daoLock:    daoLock,
-		dao:        dao,
-		daoList:    daoList,
-		daoReorder: daoReorder,
-		transactor: transactor,
-	}
+	return &LayerDelete{daoSelect: daoSelect, daoLock: daoLock, dao: dao, transactor: transactor}
 }
 
 func (service *LayerDelete) Exec(ctx context.Context, request *LayerDeleteRequest) (*Layer, error) {
@@ -92,7 +70,7 @@ func (service *LayerDelete) Exec(ctx context.Context, request *LayerDeleteReques
 	var layer *Layer
 
 	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
-		target, err := service.daoSelect.Exec(ctx, &dao.LayerSelectRequest{ID: request.ID, OwnerID: request.OwnerID})
+		target, err := service.daoSelect.Exec(ctx, &dao.LayerSelectRequest{ID: request.ID})
 		if errors.Is(err, dao.ErrLayerSelectNotFound) {
 			err = errors.Join(err, ErrLayerNotFound)
 		}
@@ -105,13 +83,22 @@ func (service *LayerDelete) Exec(ctx context.Context, request *LayerDeleteReques
 			return ErrManuscriptLayer
 		}
 
-		_, err = service.daoLock.Exec(ctx, &dao.ProjectLockRequest{ID: target.ProjectID, OwnerID: request.OwnerID})
+		project, err := service.daoLock.Exec(ctx, &dao.ProjectLockRequest{ID: target.ProjectID})
+		if errors.Is(err, dao.ErrProjectLockNotFound) {
+			err = errors.Join(err, ErrLayerNotFound)
+		}
+
 		if err != nil {
 			return fmt.Errorf("lock project: %w", err)
 		}
 
+		err = checkOwner(project, request.OwnerID, ErrLayerNotFound)
+		if err != nil {
+			return err
+		}
+
 		// The lock serializes deletes, so a miss means a concurrent delete won.
-		deleted, err := service.dao.Exec(ctx, &dao.LayerDeleteRequest{ID: request.ID, OwnerID: request.OwnerID})
+		deleted, err := service.dao.Exec(ctx, &dao.LayerDeleteRequest{ID: request.ID})
 		if errors.Is(err, dao.ErrLayerDeleteNotFound) {
 			err = errors.Join(err, ErrLayerNotFound)
 		}
@@ -120,24 +107,7 @@ func (service *LayerDelete) Exec(ctx context.Context, request *LayerDeleteReques
 			return fmt.Errorf("delete layer: %w", err)
 		}
 
-		remaining, err := service.daoList.Exec(ctx, &dao.LayerListRequest{ProjectID: target.ProjectID})
-		if err != nil {
-			return fmt.Errorf("list layers: %w", err)
-		}
-
 		layer = newLayer(deleted, 0)
-
-		if len(remaining) == 0 {
-			return nil
-		}
-
-		_, err = service.daoReorder.Exec(ctx, &dao.LayerReorderRequest{
-			ProjectID: target.ProjectID,
-			IDs:       lo.Map(remaining, layerID),
-		})
-		if err != nil {
-			return fmt.Errorf("reorder layers: %w", err)
-		}
 
 		return nil
 	})

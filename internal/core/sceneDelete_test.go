@@ -4,7 +4,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -21,20 +20,17 @@ func TestSceneDelete(t *testing.T) {
 
 	errFoo := errors.New("foo")
 
-	validRequest := &core.SceneDeleteRequest{OwnerID: ownerID, ID: sceneID1}
+	request := &core.SceneDeleteRequest{OwnerID: ownerID, ID: sceneID2}
 
 	testCases := []struct {
 		name string
 
-		request    *core.SceneDeleteRequest
-		transactor transaction.Transactor
+		request *core.SceneDeleteRequest
 
-		selectMock   *daoMock[*dao.Scene]
-		lockMock     *daoMock[*dao.Project]
-		deleteMock   *daoMock[*dao.Scene]
-		listMock     *daoMock[[]*dao.Scene]
-		reorderOrder []uuid.UUID
-		reorderMock  *daoMock[[]*dao.Scene]
+		selectMock *daoMock[*dao.Scene]
+		lockMock   *daoMock[*dao.Project]
+		deleteMock *daoMock[*dao.Scene]
+		transactor transaction.Transactor
 
 		expect    *core.Scene
 		expectErr error
@@ -42,69 +38,56 @@ func TestSceneDelete(t *testing.T) {
 		{
 			name: "Success",
 
-			request: validRequest,
+			request: request,
 
-			selectMock: &daoMock[*dao.Scene]{resp: daoScene(sceneID1, 0)},
+			selectMock: &daoMock[*dao.Scene]{resp: daoScene(sceneID2, 1)},
 			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
-			deleteMock: &daoMock[*dao.Scene]{resp: daoScene(sceneID1, 0)},
-			// The remaining scenes keep their order and close the gap.
-			listMock:     &daoMock[[]*dao.Scene]{resp: []*dao.Scene{daoScene(sceneID2, 1), daoScene(sceneID3, 2)}},
-			reorderOrder: []uuid.UUID{sceneID2, sceneID3},
-			reorderMock:  &daoMock[[]*dao.Scene]{},
+			deleteMock: &daoMock[*dao.Scene]{resp: daoScene(sceneID2, 1)},
 
-			expect: &core.Scene{ID: sceneID1, ProjectID: projectID, Title: "Scene", Color: sceneColor, UpdatedAt: updatedAt},
+			expect: coreScene(sceneID2, 1),
 		},
 		{
-			name: "Success/LastScene",
+			name: "Error/InvalidRequest",
 
-			request: validRequest,
+			request: &core.SceneDeleteRequest{OwnerID: ownerID},
 
-			selectMock: &daoMock[*dao.Scene]{resp: daoScene(sceneID1, 0)},
-			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
-			deleteMock: &daoMock[*dao.Scene]{resp: daoScene(sceneID1, 0)},
-			listMock:   &daoMock[[]*dao.Scene]{},
-
-			expect: &core.Scene{ID: sceneID1, ProjectID: projectID, Title: "Scene", Color: sceneColor, UpdatedAt: updatedAt},
+			expectErr: core.ErrInvalidRequest,
 		},
 		{
 			name: "Error/NotFound",
 
-			request: validRequest,
+			request: request,
 
 			selectMock: &daoMock[*dao.Scene]{err: dao.ErrSceneSelectNotFound},
 
 			expectErr: core.ErrSceneNotFound,
 		},
 		{
-			name: "Error/List",
+			name: "Error/OtherOwner",
 
-			request: validRequest,
+			request: request,
 
-			selectMock: &daoMock[*dao.Scene]{resp: daoScene(sceneID1, 0)},
-			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
-			deleteMock: &daoMock[*dao.Scene]{resp: daoScene(sceneID1, 0)},
-			listMock:   &daoMock[[]*dao.Scene]{err: errFoo},
+			selectMock: &daoMock[*dao.Scene]{resp: daoScene(sceneID2, 1)},
+			lockMock:   &daoMock[*dao.Project]{resp: foreignProject()},
 
-			expectErr: errFoo,
+			expectErr: core.ErrSceneNotFound,
 		},
 		{
-			name: "Error/Reorder",
+			name: "Error/DeletedMeanwhile",
 
-			request: validRequest,
+			request: request,
 
-			selectMock:   &daoMock[*dao.Scene]{resp: daoScene(sceneID1, 0)},
-			lockMock:     &daoMock[*dao.Project]{resp: daoProject()},
-			deleteMock:   &daoMock[*dao.Scene]{resp: daoScene(sceneID1, 0)},
-			listMock:     &daoMock[[]*dao.Scene]{resp: []*dao.Scene{daoScene(sceneID2, 1)}},
-			reorderOrder: []uuid.UUID{sceneID2},
-			reorderMock:  &daoMock[[]*dao.Scene]{err: errFoo},
+			selectMock: &daoMock[*dao.Scene]{resp: daoScene(sceneID2, 1)},
+			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
+			deleteMock: &daoMock[*dao.Scene]{err: dao.ErrSceneDeleteNotFound},
 
-			expectErr: errFoo,
+			expectErr: core.ErrSceneNotFound,
 		},
 		{
 			name: "Error/Transaction",
 
-			request:    validRequest,
+			request: request,
+
 			transactor: transactiontest.NewFailingTransactor(errFoo),
 
 			expectErr: errFoo,
@@ -118,37 +101,23 @@ func TestSceneDelete(t *testing.T) {
 			mockSelect := coremocks.NewMockSceneDeleteDaoSelect(t)
 			mockLock := coremocks.NewMockSceneDeleteDaoLock(t)
 			mockDelete := coremocks.NewMockSceneDeleteDao(t)
-			mockList := coremocks.NewMockSceneDeleteDaoList(t)
-			mockReorder := coremocks.NewMockSceneDeleteDaoReorder(t)
 
 			if testCase.selectMock != nil {
 				mockSelect.EXPECT().
-					Exec(mock.Anything, &dao.SceneSelectRequest{ID: sceneID1, OwnerID: ownerID}).
+					Exec(mock.Anything, &dao.SceneSelectRequest{ID: sceneID2}).
 					Return(testCase.selectMock.resp, testCase.selectMock.err)
 			}
 
 			if testCase.lockMock != nil {
 				mockLock.EXPECT().
-					Exec(mock.Anything, &dao.ProjectLockRequest{ID: projectID, OwnerID: ownerID}).
+					Exec(mock.Anything, &dao.ProjectLockRequest{ID: projectID}).
 					Return(testCase.lockMock.resp, testCase.lockMock.err)
 			}
 
 			if testCase.deleteMock != nil {
 				mockDelete.EXPECT().
-					Exec(mock.Anything, &dao.SceneDeleteRequest{ID: sceneID1, OwnerID: ownerID}).
+					Exec(mock.Anything, &dao.SceneDeleteRequest{ID: sceneID2}).
 					Return(testCase.deleteMock.resp, testCase.deleteMock.err)
-			}
-
-			if testCase.listMock != nil {
-				mockList.EXPECT().
-					Exec(mock.Anything, &dao.SceneListRequest{ProjectID: projectID}).
-					Return(testCase.listMock.resp, testCase.listMock.err)
-			}
-
-			if testCase.reorderMock != nil {
-				mockReorder.EXPECT().
-					Exec(mock.Anything, &dao.SceneReorderRequest{ProjectID: projectID, IDs: testCase.reorderOrder}).
-					Return(testCase.reorderMock.resp, testCase.reorderMock.err)
 			}
 
 			transactor := testCase.transactor
@@ -156,7 +125,7 @@ func TestSceneDelete(t *testing.T) {
 				transactor = transactiontest.NewTransactor()
 			}
 
-			service := core.NewSceneDelete(mockSelect, mockLock, mockDelete, mockList, mockReorder, transactor)
+			service := core.NewSceneDelete(mockSelect, mockLock, mockDelete, transactor)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
@@ -165,8 +134,6 @@ func TestSceneDelete(t *testing.T) {
 			mockSelect.AssertExpectations(t)
 			mockLock.AssertExpectations(t)
 			mockDelete.AssertExpectations(t)
-			mockList.AssertExpectations(t)
-			mockReorder.AssertExpectations(t)
 		})
 	}
 }

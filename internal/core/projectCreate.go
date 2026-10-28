@@ -109,7 +109,7 @@ func (service *ProjectCreate) Exec(ctx context.Context, request *ProjectCreateRe
 		))
 	}
 
-	// UUIDv7 sorts by creation time, which lets ProjectList page by ID. The project and its manuscript
+	// UUIDv7 sorts by creation time, which lets ProjectList order projects by ID. The project and its manuscript
 	// layer take the first two IDs.
 	ids, err := newIDs(len(request.Scenes) + projectCreateOwnIDs)
 	if err != nil {

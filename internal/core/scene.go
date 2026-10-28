@@ -1,6 +1,9 @@
 package core
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -36,4 +39,18 @@ func newScene(entity *dao.Scene, _ int) *Scene {
 		Prompt:      entity.Prompt,
 		UpdatedAt:   entity.UpdatedAt,
 	}
+}
+
+// sceneAnchor reads the scene another one follows, which must belong to the project.
+func sceneAnchor(ctx context.Context, daoSelect SceneCreateDaoSelect, projectID, id uuid.UUID) (*dao.Scene, error) {
+	anchor, err := daoSelect.Exec(ctx, &dao.SceneSelectRequest{ID: id})
+	if errors.Is(err, dao.ErrSceneSelectNotFound) || (err == nil && anchor.ProjectID != projectID) {
+		return nil, fmt.Errorf("%w: unknown anchor %s", ErrInvalidRequest, id)
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("select anchor: %w", err)
+	}
+
+	return anchor, nil
 }

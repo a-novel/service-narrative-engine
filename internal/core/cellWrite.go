@@ -27,6 +27,11 @@ type CellWriteDaoLayer interface {
 	Exec(ctx context.Context, request *dao.LayerSelectRequest) (*dao.Layer, error)
 }
 
+// CellWriteDaoProject reads the cell's project, to check its owner.
+type CellWriteDaoProject interface {
+	Exec(ctx context.Context, request *dao.ProjectSelectRequest) (*dao.Project, error)
+}
+
 // CellWriteDao writes the cell.
 type CellWriteDao interface {
 	Exec(ctx context.Context, request *dao.CellUpsertRequest) (*dao.Cell, error)
@@ -44,16 +49,21 @@ type CellWriteRequest struct {
 // CellWrite writes the content of a cell, which it validates against the content schema of the
 // layer's kind. The first write creates the cell.
 type CellWrite struct {
-	daoScene CellWriteDaoScene
-	daoLayer CellWriteDaoLayer
-	dao      CellWriteDao
-	config   config.Composer
+	daoScene   CellWriteDaoScene
+	daoLayer   CellWriteDaoLayer
+	daoProject CellWriteDaoProject
+	dao        CellWriteDao
+	config     config.Composer
 }
 
 func NewCellWrite(
-	daoScene CellWriteDaoScene, daoLayer CellWriteDaoLayer, dao CellWriteDao, config config.Composer,
+	daoScene CellWriteDaoScene,
+	daoLayer CellWriteDaoLayer,
+	daoProject CellWriteDaoProject,
+	dao CellWriteDao,
+	config config.Composer,
 ) *CellWrite {
-	return &CellWrite{daoScene: daoScene, daoLayer: daoLayer, dao: dao, config: config}
+	return &CellWrite{daoScene: daoScene, daoLayer: daoLayer, daoProject: daoProject, dao: dao, config: config}
 }
 
 func (service *CellWrite) Exec(ctx context.Context, request *CellWriteRequest) (*Cell, error) {
@@ -78,7 +88,7 @@ func (service *CellWrite) Exec(ctx context.Context, request *CellWriteRequest) (
 		))
 	}
 
-	scene, err := service.daoScene.Exec(ctx, &dao.SceneSelectRequest{ID: request.SceneID, OwnerID: request.OwnerID})
+	scene, err := service.daoScene.Exec(ctx, &dao.SceneSelectRequest{ID: request.SceneID})
 	if errors.Is(err, dao.ErrSceneSelectNotFound) {
 		err = errors.Join(err, ErrSceneNotFound)
 	}
@@ -87,7 +97,7 @@ func (service *CellWrite) Exec(ctx context.Context, request *CellWriteRequest) (
 		return nil, otel.ReportError(span, fmt.Errorf("select scene: %w", err))
 	}
 
-	layer, err := service.daoLayer.Exec(ctx, &dao.LayerSelectRequest{ID: request.LayerID, OwnerID: request.OwnerID})
+	layer, err := service.daoLayer.Exec(ctx, &dao.LayerSelectRequest{ID: request.LayerID})
 	if errors.Is(err, dao.ErrLayerSelectNotFound) {
 		err = errors.Join(err, ErrLayerNotFound)
 	}
@@ -98,6 +108,20 @@ func (service *CellWrite) Exec(ctx context.Context, request *CellWriteRequest) (
 
 	if scene.ProjectID != layer.ProjectID {
 		return nil, otel.ReportError(span, ErrCellNotFound)
+	}
+
+	project, err := service.daoProject.Exec(ctx, &dao.ProjectSelectRequest{ID: scene.ProjectID})
+	if errors.Is(err, dao.ErrProjectSelectNotFound) {
+		err = errors.Join(err, ErrSceneNotFound)
+	}
+
+	if err != nil {
+		return nil, otel.ReportError(span, fmt.Errorf("select project: %w", err))
+	}
+
+	err = checkOwner(project, request.OwnerID, ErrSceneNotFound)
+	if err != nil {
+		return nil, otel.ReportError(span, err)
 	}
 
 	err = validateContent(layer.Kind, request.Content)

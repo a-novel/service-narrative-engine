@@ -40,9 +40,10 @@ func TestCellWrite(t *testing.T) {
 
 		request *core.CellWriteRequest
 
-		sceneMock *daoMock[*dao.Scene]
-		layerMock *daoMock[*dao.Layer]
-		daoMock   *daoMock[*dao.Cell]
+		sceneMock   *daoMock[*dao.Scene]
+		layerMock   *daoMock[*dao.Layer]
+		projectMock *daoMock[*dao.Project]
+		daoMock     *daoMock[*dao.Cell]
 
 		expect    *core.Cell
 		expectErr error
@@ -52,8 +53,9 @@ func TestCellWrite(t *testing.T) {
 
 			request: request(layerID2, notes),
 
-			sceneMock: &daoMock[*dao.Scene]{resp: daoScene(sceneID1, 0)},
-			layerMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
+			sceneMock:   &daoMock[*dao.Scene]{resp: daoScene(sceneID1, 0)},
+			layerMock:   &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
+			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
 			daoMock: &daoMock[*dao.Cell]{resp: &dao.Cell{
 				SceneID: sceneID1, LayerID: layerID2, Content: notes, UpdatedAt: updatedAt,
 			}},
@@ -65,8 +67,9 @@ func TestCellWrite(t *testing.T) {
 
 			request: request(layerID1, manuscript),
 
-			sceneMock: &daoMock[*dao.Scene]{resp: daoScene(sceneID1, 0)},
-			layerMock: &daoMock[*dao.Layer]{resp: daoLayer(layerID1, 0, core.LayerKindManuscript)},
+			sceneMock:   &daoMock[*dao.Scene]{resp: daoScene(sceneID1, 0)},
+			layerMock:   &daoMock[*dao.Layer]{resp: daoLayer(layerID1, 0, core.LayerKindManuscript)},
+			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
 			daoMock: &daoMock[*dao.Cell]{resp: &dao.Cell{
 				SceneID: sceneID1, LayerID: layerID1, Content: manuscript, UpdatedAt: updatedAt,
 			}},
@@ -121,8 +124,9 @@ func TestCellWrite(t *testing.T) {
 
 			request: request(layerID1, notes),
 
-			sceneMock: &daoMock[*dao.Scene]{resp: daoScene(sceneID1, 0)},
-			layerMock: &daoMock[*dao.Layer]{resp: daoLayer(layerID1, 0, core.LayerKindManuscript)},
+			sceneMock:   &daoMock[*dao.Scene]{resp: daoScene(sceneID1, 0)},
+			layerMock:   &daoMock[*dao.Layer]{resp: daoLayer(layerID1, 0, core.LayerKindManuscript)},
+			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
 
 			expectErr: core.ErrInvalidRequest,
 		},
@@ -131,8 +135,9 @@ func TestCellWrite(t *testing.T) {
 
 			request: request(layerID1, duplicates),
 
-			sceneMock: &daoMock[*dao.Scene]{resp: daoScene(sceneID1, 0)},
-			layerMock: &daoMock[*dao.Layer]{resp: daoLayer(layerID1, 0, core.LayerKindManuscript)},
+			sceneMock:   &daoMock[*dao.Scene]{resp: daoScene(sceneID1, 0)},
+			layerMock:   &daoMock[*dao.Layer]{resp: daoLayer(layerID1, 0, core.LayerKindManuscript)},
+			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
 
 			expectErr: core.ErrInvalidRequest,
 		},
@@ -141,11 +146,23 @@ func TestCellWrite(t *testing.T) {
 
 			request: request(layerID2, notes),
 
-			sceneMock: &daoMock[*dao.Scene]{resp: daoScene(sceneID1, 0)},
-			layerMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
-			daoMock:   &daoMock[*dao.Cell]{err: errFoo},
+			sceneMock:   &daoMock[*dao.Scene]{resp: daoScene(sceneID1, 0)},
+			layerMock:   &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
+			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
+			daoMock:     &daoMock[*dao.Cell]{err: errFoo},
 
 			expectErr: errFoo,
+		},
+		{
+			name: "Error/OtherOwner",
+
+			request: request(layerID2, notes),
+
+			sceneMock:   &daoMock[*dao.Scene]{resp: daoScene(sceneID1, 0)},
+			layerMock:   &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
+			projectMock: &daoMock[*dao.Project]{resp: foreignProject()},
+
+			expectErr: core.ErrSceneNotFound,
 		},
 	}
 
@@ -158,18 +175,25 @@ func TestCellWrite(t *testing.T) {
 
 			mockScene := coremocks.NewMockCellWriteDaoScene(t)
 			mockLayer := coremocks.NewMockCellWriteDaoLayer(t)
+			mockProject := coremocks.NewMockCellWriteDaoProject(t)
 			mockDao := coremocks.NewMockCellWriteDao(t)
 
 			if testCase.sceneMock != nil {
 				mockScene.EXPECT().
-					Exec(mock.Anything, &dao.SceneSelectRequest{ID: sceneID1, OwnerID: ownerID}).
+					Exec(mock.Anything, &dao.SceneSelectRequest{ID: sceneID1}).
 					Return(testCase.sceneMock.resp, testCase.sceneMock.err)
 			}
 
 			if testCase.layerMock != nil {
 				mockLayer.EXPECT().
-					Exec(mock.Anything, &dao.LayerSelectRequest{ID: testCase.request.LayerID, OwnerID: ownerID}).
+					Exec(mock.Anything, &dao.LayerSelectRequest{ID: testCase.request.LayerID}).
 					Return(testCase.layerMock.resp, testCase.layerMock.err)
+			}
+
+			if testCase.projectMock != nil {
+				mockProject.EXPECT().
+					Exec(mock.Anything, &dao.ProjectSelectRequest{ID: projectID}).
+					Return(testCase.projectMock.resp, testCase.projectMock.err)
 			}
 
 			if testCase.daoMock != nil {
@@ -181,7 +205,7 @@ func TestCellWrite(t *testing.T) {
 					Return(testCase.daoMock.resp, testCase.daoMock.err)
 			}
 
-			service := core.NewCellWrite(mockScene, mockLayer, mockDao, limits)
+			service := core.NewCellWrite(mockScene, mockLayer, mockProject, mockDao, limits)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
@@ -189,6 +213,7 @@ func TestCellWrite(t *testing.T) {
 
 			mockScene.AssertExpectations(t)
 			mockLayer.AssertExpectations(t)
+			mockProject.AssertExpectations(t)
 			mockDao.AssertExpectations(t)
 		})
 	}

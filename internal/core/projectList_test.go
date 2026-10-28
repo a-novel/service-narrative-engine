@@ -4,7 +4,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -24,8 +23,7 @@ func TestProjectList(t *testing.T) {
 		request *core.ProjectListRequest
 
 		daoRequest *dao.ProjectListRequest
-		daoMock    *daoMock[[]*dao.Project]
-		countMock  *daoMock[*dao.ProjectCount]
+		daoMock    *daoMock[[]*dao.ProjectListRow]
 
 		expect    *core.ProjectPage
 		expectErr error
@@ -33,11 +31,10 @@ func TestProjectList(t *testing.T) {
 		{
 			name: "Success",
 
-			request: &core.ProjectListRequest{OwnerID: ownerID, Limit: 10, After: projectID},
+			request: &core.ProjectListRequest{OwnerID: ownerID, Limit: 10, Offset: 30},
 
-			daoRequest: &dao.ProjectListRequest{OwnerID: ownerID, Limit: 10, After: projectID},
-			daoMock:    &daoMock[[]*dao.Project]{resp: []*dao.Project{daoProject()}},
-			countMock:  &daoMock[*dao.ProjectCount]{resp: &dao.ProjectCount{Count: 3}},
+			daoRequest: &dao.ProjectListRequest{OwnerID: ownerID, Limit: 10, Offset: 30},
+			daoMock:    &daoMock[[]*dao.ProjectListRow]{resp: []*dao.ProjectListRow{{Project: *daoProject(), Total: 31}}},
 
 			expect: &core.ProjectPage{
 				Projects: []*core.Project{
@@ -46,7 +43,7 @@ func TestProjectList(t *testing.T) {
 						CreatedAt: createdAt, UpdatedAt: updatedAt,
 					},
 				},
-				Total: 3,
+				Total: 31,
 			},
 		},
 		{
@@ -54,9 +51,8 @@ func TestProjectList(t *testing.T) {
 
 			request: &core.ProjectListRequest{OwnerID: ownerID},
 
-			daoRequest: &dao.ProjectListRequest{OwnerID: ownerID, Limit: core.ProjectListDefaultSize, After: uuid.Max},
-			daoMock:    &daoMock[[]*dao.Project]{resp: []*dao.Project{}},
-			countMock:  &daoMock[*dao.ProjectCount]{resp: &dao.ProjectCount{}},
+			daoRequest: &dao.ProjectListRequest{OwnerID: ownerID, Limit: core.ProjectListDefaultSize},
+			daoMock:    &daoMock[[]*dao.ProjectListRow]{},
 
 			expect: &core.ProjectPage{Projects: []*core.Project{}},
 		},
@@ -68,23 +64,19 @@ func TestProjectList(t *testing.T) {
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
+			name: "Error/NegativeOffset",
+
+			request: &core.ProjectListRequest{OwnerID: ownerID, Offset: -1},
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
 			name: "Error/Internal",
 
 			request: &core.ProjectListRequest{OwnerID: ownerID},
 
-			daoRequest: &dao.ProjectListRequest{OwnerID: ownerID, Limit: core.ProjectListDefaultSize, After: uuid.Max},
-			daoMock:    &daoMock[[]*dao.Project]{err: errFoo},
-
-			expectErr: errFoo,
-		},
-		{
-			name: "Error/Count",
-
-			request: &core.ProjectListRequest{OwnerID: ownerID},
-
-			daoRequest: &dao.ProjectListRequest{OwnerID: ownerID, Limit: core.ProjectListDefaultSize, After: uuid.Max},
-			daoMock:    &daoMock[[]*dao.Project]{resp: []*dao.Project{}},
-			countMock:  &daoMock[*dao.ProjectCount]{err: errFoo},
+			daoRequest: &dao.ProjectListRequest{OwnerID: ownerID, Limit: core.ProjectListDefaultSize},
+			daoMock:    &daoMock[[]*dao.ProjectListRow]{err: errFoo},
 
 			expectErr: errFoo,
 		},
@@ -95,7 +87,6 @@ func TestProjectList(t *testing.T) {
 			t.Parallel()
 
 			mockDao := coremocks.NewMockProjectListDao(t)
-			mockCount := coremocks.NewMockProjectListDaoCount(t)
 
 			if testCase.daoMock != nil {
 				mockDao.EXPECT().
@@ -103,20 +94,13 @@ func TestProjectList(t *testing.T) {
 					Return(testCase.daoMock.resp, testCase.daoMock.err)
 			}
 
-			if testCase.countMock != nil {
-				mockCount.EXPECT().
-					Exec(mock.Anything, &dao.ProjectCountRequest{OwnerID: ownerID}).
-					Return(testCase.countMock.resp, testCase.countMock.err)
-			}
-
-			service := core.NewProjectList(mockDao, mockCount)
+			service := core.NewProjectList(mockDao)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
 
 			mockDao.AssertExpectations(t)
-			mockCount.AssertExpectations(t)
 		})
 	}
 }

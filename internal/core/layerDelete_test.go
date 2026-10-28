@@ -4,7 +4,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -21,20 +20,17 @@ func TestLayerDelete(t *testing.T) {
 
 	errFoo := errors.New("foo")
 
-	validRequest := &core.LayerDeleteRequest{OwnerID: ownerID, ID: layerID1}
+	request := &core.LayerDeleteRequest{OwnerID: ownerID, ID: layerID2}
 
 	testCases := []struct {
 		name string
 
-		request    *core.LayerDeleteRequest
-		transactor transaction.Transactor
+		request *core.LayerDeleteRequest
 
-		selectMock   *daoMock[*dao.Layer]
-		lockMock     *daoMock[*dao.Project]
-		deleteMock   *daoMock[*dao.Layer]
-		listMock     *daoMock[[]*dao.Layer]
-		reorderOrder []uuid.UUID
-		reorderMock  *daoMock[[]*dao.Layer]
+		selectMock *daoMock[*dao.Layer]
+		lockMock   *daoMock[*dao.Project]
+		deleteMock *daoMock[*dao.Layer]
+		transactor transaction.Transactor
 
 		expect    *core.Layer
 		expectErr error
@@ -42,84 +38,65 @@ func TestLayerDelete(t *testing.T) {
 		{
 			name: "Success",
 
-			request: validRequest,
+			request: request,
 
-			selectMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID1, 0)},
+			selectMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
 			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
-			deleteMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID1, 0)},
-			// The remaining layers keep their order and close the gap.
-			listMock:     &daoMock[[]*dao.Layer]{resp: []*dao.Layer{notesLayer(layerID2, 1), notesLayer(layerID3, 2)}},
-			reorderOrder: []uuid.UUID{layerID2, layerID3},
-			reorderMock:  &daoMock[[]*dao.Layer]{},
+			deleteMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
 
-			expect: &core.Layer{
-				ID: layerID1, ProjectID: projectID, Kind: core.LayerKindNotes, Name: "Layer",
-				UpdatedAt: updatedAt,
-			},
+			expect: coreLayer(layerID2, 1),
 		},
 		{
-			name: "Success/LastLayer",
+			name: "Error/InvalidRequest",
 
-			request: validRequest,
+			request: &core.LayerDeleteRequest{OwnerID: ownerID},
 
-			selectMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID1, 0)},
-			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
-			deleteMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID1, 0)},
-			listMock:   &daoMock[[]*dao.Layer]{},
-
-			expect: &core.Layer{
-				ID: layerID1, ProjectID: projectID, Kind: core.LayerKindNotes, Name: "Layer",
-				UpdatedAt: updatedAt,
-			},
-		},
-		{
-			name: "Error/ManuscriptLayer",
-
-			request: validRequest,
-
-			selectMock: &daoMock[*dao.Layer]{resp: daoLayer(layerID1, 0, core.LayerKindManuscript)},
-
-			expectErr: core.ErrManuscriptLayer,
+			expectErr: core.ErrInvalidRequest,
 		},
 		{
 			name: "Error/NotFound",
 
-			request: validRequest,
+			request: request,
 
 			selectMock: &daoMock[*dao.Layer]{err: dao.ErrLayerSelectNotFound},
 
 			expectErr: core.ErrLayerNotFound,
 		},
 		{
-			name: "Error/List",
+			name: "Error/ManuscriptLayer",
 
-			request: validRequest,
+			request: &core.LayerDeleteRequest{OwnerID: ownerID, ID: layerID2},
 
-			selectMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID1, 0)},
-			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
-			deleteMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID1, 0)},
-			listMock:   &daoMock[[]*dao.Layer]{err: errFoo},
+			selectMock: &daoMock[*dao.Layer]{resp: daoLayer(layerID2, 1, core.LayerKindManuscript)},
 
-			expectErr: errFoo,
+			expectErr: core.ErrManuscriptLayer,
 		},
 		{
-			name: "Error/Reorder",
+			name: "Error/OtherOwner",
 
-			request: validRequest,
+			request: request,
 
-			selectMock:   &daoMock[*dao.Layer]{resp: notesLayer(layerID1, 0)},
-			lockMock:     &daoMock[*dao.Project]{resp: daoProject()},
-			deleteMock:   &daoMock[*dao.Layer]{resp: notesLayer(layerID1, 0)},
-			listMock:     &daoMock[[]*dao.Layer]{resp: []*dao.Layer{notesLayer(layerID2, 1)}},
-			reorderOrder: []uuid.UUID{layerID2},
-			reorderMock:  &daoMock[[]*dao.Layer]{err: errFoo},
+			selectMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
+			lockMock:   &daoMock[*dao.Project]{resp: foreignProject()},
 
-			expectErr: errFoo,
+			expectErr: core.ErrLayerNotFound,
+		},
+		{
+			name: "Error/DeletedMeanwhile",
+
+			request: request,
+
+			selectMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
+			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
+			deleteMock: &daoMock[*dao.Layer]{err: dao.ErrLayerDeleteNotFound},
+
+			expectErr: core.ErrLayerNotFound,
 		},
 		{
 			name: "Error/Transaction",
 
-			request:    validRequest,
+			request: request,
+
 			transactor: transactiontest.NewFailingTransactor(errFoo),
 
 			expectErr: errFoo,
@@ -133,37 +110,23 @@ func TestLayerDelete(t *testing.T) {
 			mockSelect := coremocks.NewMockLayerDeleteDaoSelect(t)
 			mockLock := coremocks.NewMockLayerDeleteDaoLock(t)
 			mockDelete := coremocks.NewMockLayerDeleteDao(t)
-			mockList := coremocks.NewMockLayerDeleteDaoList(t)
-			mockReorder := coremocks.NewMockLayerDeleteDaoReorder(t)
 
 			if testCase.selectMock != nil {
 				mockSelect.EXPECT().
-					Exec(mock.Anything, &dao.LayerSelectRequest{ID: layerID1, OwnerID: ownerID}).
+					Exec(mock.Anything, &dao.LayerSelectRequest{ID: layerID2}).
 					Return(testCase.selectMock.resp, testCase.selectMock.err)
 			}
 
 			if testCase.lockMock != nil {
 				mockLock.EXPECT().
-					Exec(mock.Anything, &dao.ProjectLockRequest{ID: projectID, OwnerID: ownerID}).
+					Exec(mock.Anything, &dao.ProjectLockRequest{ID: projectID}).
 					Return(testCase.lockMock.resp, testCase.lockMock.err)
 			}
 
 			if testCase.deleteMock != nil {
 				mockDelete.EXPECT().
-					Exec(mock.Anything, &dao.LayerDeleteRequest{ID: layerID1, OwnerID: ownerID}).
+					Exec(mock.Anything, &dao.LayerDeleteRequest{ID: layerID2}).
 					Return(testCase.deleteMock.resp, testCase.deleteMock.err)
-			}
-
-			if testCase.listMock != nil {
-				mockList.EXPECT().
-					Exec(mock.Anything, &dao.LayerListRequest{ProjectID: projectID}).
-					Return(testCase.listMock.resp, testCase.listMock.err)
-			}
-
-			if testCase.reorderMock != nil {
-				mockReorder.EXPECT().
-					Exec(mock.Anything, &dao.LayerReorderRequest{ProjectID: projectID, IDs: testCase.reorderOrder}).
-					Return(testCase.reorderMock.resp, testCase.reorderMock.err)
 			}
 
 			transactor := testCase.transactor
@@ -171,7 +134,7 @@ func TestLayerDelete(t *testing.T) {
 				transactor = transactiontest.NewTransactor()
 			}
 
-			service := core.NewLayerDelete(mockSelect, mockLock, mockDelete, mockList, mockReorder, transactor)
+			service := core.NewLayerDelete(mockSelect, mockLock, mockDelete, transactor)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
@@ -180,8 +143,6 @@ func TestLayerDelete(t *testing.T) {
 			mockSelect.AssertExpectations(t)
 			mockLock.AssertExpectations(t)
 			mockDelete.AssertExpectations(t)
-			mockList.AssertExpectations(t)
-			mockReorder.AssertExpectations(t)
 		})
 	}
 }

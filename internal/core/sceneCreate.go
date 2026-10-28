@@ -4,12 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/a-novel-kit/golib/otel"
@@ -23,19 +21,14 @@ type SceneCreateDaoLock interface {
 	Exec(ctx context.Context, request *dao.ProjectLockRequest) (*dao.Project, error)
 }
 
-// SceneCreateDaoList reads the project's scenes in order.
-type SceneCreateDaoList interface {
-	Exec(ctx context.Context, request *dao.SceneListRequest) ([]*dao.Scene, error)
+// SceneCreateDaoSelect reads the scene the new one follows.
+type SceneCreateDaoSelect interface {
+	Exec(ctx context.Context, request *dao.SceneSelectRequest) (*dao.Scene, error)
 }
 
-// SceneCreateDaoInsert inserts the scene.
+// SceneCreateDaoInsert inserts the scene, and moves the scenes at or after its position down.
 type SceneCreateDaoInsert interface {
 	Exec(ctx context.Context, request *dao.SceneInsertRequest) ([]*dao.Scene, error)
-}
-
-// SceneCreateDaoReorder moves the scene to its place.
-type SceneCreateDaoReorder interface {
-	Exec(ctx context.Context, request *dao.SceneReorderRequest) ([]*dao.Scene, error)
 }
 
 // SceneCreateRequest carries a new scene and its place in the project.
@@ -51,29 +44,21 @@ type SceneCreateRequest struct {
 	Prompt      string `validate:"max=20000"`
 }
 
-// SceneCreate adds a scene to a project, at the place the caller names.
+// SceneCreate adds a scene to a project, right after the scene the caller names.
 type SceneCreate struct {
 	daoLock    SceneCreateDaoLock
-	daoList    SceneCreateDaoList
+	daoSelect  SceneCreateDaoSelect
 	daoInsert  SceneCreateDaoInsert
-	daoReorder SceneCreateDaoReorder
 	transactor transaction.Transactor
 }
 
 func NewSceneCreate(
 	daoLock SceneCreateDaoLock,
-	daoList SceneCreateDaoList,
+	daoSelect SceneCreateDaoSelect,
 	daoInsert SceneCreateDaoInsert,
-	daoReorder SceneCreateDaoReorder,
 	transactor transaction.Transactor,
 ) *SceneCreate {
-	return &SceneCreate{
-		daoLock:    daoLock,
-		daoList:    daoList,
-		daoInsert:  daoInsert,
-		daoReorder: daoReorder,
-		transactor: transactor,
-	}
+	return &SceneCreate{daoLock: daoLock, daoSelect: daoSelect, daoInsert: daoInsert, transactor: transactor}
 }
 
 func (service *SceneCreate) Exec(ctx context.Context, request *SceneCreateRequest) (*Scene, error) {
@@ -99,7 +84,7 @@ func (service *SceneCreate) Exec(ctx context.Context, request *SceneCreateReques
 	var scene *Scene
 
 	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
-		_, err := service.daoLock.Exec(ctx, &dao.ProjectLockRequest{ID: request.ProjectID, OwnerID: request.OwnerID})
+		project, err := service.daoLock.Exec(ctx, &dao.ProjectLockRequest{ID: request.ProjectID})
 		if errors.Is(err, dao.ErrProjectLockNotFound) {
 			err = errors.Join(err, ErrProjectNotFound)
 		}
@@ -108,21 +93,25 @@ func (service *SceneCreate) Exec(ctx context.Context, request *SceneCreateReques
 			return fmt.Errorf("lock project: %w", err)
 		}
 
-		scenes, err := service.daoList.Exec(ctx, &dao.SceneListRequest{ProjectID: request.ProjectID})
-		if err != nil {
-			return fmt.Errorf("list scenes: %w", err)
-		}
-
-		ids := append(lo.Map(scenes, sceneID), id)
-
-		order, err := moveAfter(ids, id, request.After)
+		err = checkOwner(project, request.OwnerID, ErrProjectNotFound)
 		if err != nil {
 			return err
 		}
 
+		position := 0
+
+		if request.After != uuid.Nil {
+			anchor, err := sceneAnchor(ctx, service.daoSelect, project.ID, request.After)
+			if err != nil {
+				return err
+			}
+
+			position = anchor.Position + 1
+		}
+
 		inserted, err := service.daoInsert.Exec(ctx, &dao.SceneInsertRequest{
 			ProjectID: request.ProjectID,
-			Position:  len(scenes),
+			Position:  position,
 			Scenes: []dao.SceneInsertItem{{
 				ID: id, Title: request.Title, Color: strings.ToLower(request.Color),
 				Description: request.Description, Prompt: request.Prompt,
@@ -139,17 +128,6 @@ func (service *SceneCreate) Exec(ctx context.Context, request *SceneCreateReques
 
 		scene = newScene(inserted[0], 0)
 
-		if slices.Equal(order, ids) {
-			return nil
-		}
-
-		_, err = service.daoReorder.Exec(ctx, &dao.SceneReorderRequest{ProjectID: request.ProjectID, IDs: order})
-		if err != nil {
-			return fmt.Errorf("reorder scenes: %w", err)
-		}
-
-		scene.Position = slices.Index(order, id)
-
 		return nil
 	})
 	if err != nil {
@@ -157,9 +135,4 @@ func (service *SceneCreate) Exec(ctx context.Context, request *SceneCreateReques
 	}
 
 	return scene, nil
-}
-
-// sceneID adapts a scene to lo.Map, returning its ID.
-func sceneID(scene *dao.Scene, _ int) uuid.UUID {
-	return scene.ID
 }

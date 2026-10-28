@@ -17,18 +17,15 @@ func TestProjectUpdate(t *testing.T) {
 
 	errFoo := errors.New("foo")
 
-	updated := daoProject()
-	updated.Title = "Clear Hours"
-	updated.Language = "en"
-
-	validRequest := &core.ProjectUpdateRequest{OwnerID: ownerID, ID: projectID, Title: "Clear Hours", Language: "en"}
+	request := &core.ProjectUpdateRequest{OwnerID: ownerID, ID: projectID, Title: "Clear Hours", Language: "en"}
 
 	testCases := []struct {
 		name string
 
 		request *core.ProjectUpdateRequest
 
-		daoMock *daoMock[*dao.Project]
+		selectMock *daoMock[*dao.Project]
+		daoMock    *daoMock[*dao.Project]
 
 		expect    *core.Project
 		expectErr error
@@ -36,37 +33,58 @@ func TestProjectUpdate(t *testing.T) {
 		{
 			name: "Success",
 
-			request: validRequest,
+			request: request,
 
-			daoMock: &daoMock[*dao.Project]{resp: updated},
+			selectMock: &daoMock[*dao.Project]{resp: daoProject()},
+			daoMock:    &daoMock[*dao.Project]{resp: daoProject()},
 
 			expect: &core.Project{
-				ID: projectID, OwnerID: ownerID, Title: "Clear Hours", Language: "en",
+				ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr",
 				CreatedAt: createdAt, UpdatedAt: updatedAt,
 			},
 		},
 		{
-			name: "Error/BlankTitle",
+			name: "Error/InvalidRequest",
 
-			request: &core.ProjectUpdateRequest{OwnerID: ownerID, ID: projectID, Title: " ", Language: "en"},
+			request: &core.ProjectUpdateRequest{OwnerID: ownerID, ID: projectID, Language: "en"},
 
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
 			name: "Error/NotFound",
 
-			request: validRequest,
+			request: request,
 
-			daoMock: &daoMock[*dao.Project]{err: dao.ErrProjectUpdateNotFound},
+			selectMock: &daoMock[*dao.Project]{err: dao.ErrProjectSelectNotFound},
+
+			expectErr: core.ErrProjectNotFound,
+		},
+		{
+			name: "Error/OtherOwner",
+
+			request: request,
+
+			selectMock: &daoMock[*dao.Project]{resp: foreignProject()},
+
+			expectErr: core.ErrProjectNotFound,
+		},
+		{
+			name: "Error/DeletedMeanwhile",
+
+			request: request,
+
+			selectMock: &daoMock[*dao.Project]{resp: daoProject()},
+			daoMock:    &daoMock[*dao.Project]{err: dao.ErrProjectUpdateNotFound},
 
 			expectErr: core.ErrProjectNotFound,
 		},
 		{
 			name: "Error/Internal",
 
-			request: validRequest,
+			request: request,
 
-			daoMock: &daoMock[*dao.Project]{err: errFoo},
+			selectMock: &daoMock[*dao.Project]{resp: daoProject()},
+			daoMock:    &daoMock[*dao.Project]{err: errFoo},
 
 			expectErr: errFoo,
 		},
@@ -76,23 +94,30 @@ func TestProjectUpdate(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
+			mockSelect := coremocks.NewMockProjectUpdateDaoSelect(t)
 			mockDao := coremocks.NewMockProjectUpdateDao(t)
+
+			if testCase.selectMock != nil {
+				mockSelect.EXPECT().
+					Exec(mock.Anything, &dao.ProjectSelectRequest{ID: projectID}).
+					Return(testCase.selectMock.resp, testCase.selectMock.err)
+			}
 
 			if testCase.daoMock != nil {
 				mockDao.EXPECT().
 					Exec(mock.Anything, mock.MatchedBy(func(req *dao.ProjectUpdateRequest) bool {
-						return req.ID == projectID && req.OwnerID == ownerID && req.Title == "Clear Hours" &&
-							req.Language == "en" && recent(req.Now)
+						return req.ID == projectID && req.Title == "Clear Hours" && req.Language == "en" && recent(req.Now)
 					})).
 					Return(testCase.daoMock.resp, testCase.daoMock.err)
 			}
 
-			service := core.NewProjectUpdate(mockDao)
+			service := core.NewProjectUpdate(mockSelect, mockDao)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
 
+			mockSelect.AssertExpectations(t)
 			mockDao.AssertExpectations(t)
 		})
 	}

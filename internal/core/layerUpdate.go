@@ -14,6 +14,16 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
+// LayerUpdateDaoSelect reads the layer, to find its project.
+type LayerUpdateDaoSelect interface {
+	Exec(ctx context.Context, request *dao.LayerSelectRequest) (*dao.Layer, error)
+}
+
+// LayerUpdateDaoProject reads the layer's project, to check its owner.
+type LayerUpdateDaoProject interface {
+	Exec(ctx context.Context, request *dao.ProjectSelectRequest) (*dao.Project, error)
+}
+
 // LayerUpdateDao writes the layer's new fields.
 type LayerUpdateDao interface {
 	Exec(ctx context.Context, request *dao.LayerUpdateRequest) (*dao.Layer, error)
@@ -29,11 +39,13 @@ type LayerUpdateRequest struct {
 
 // LayerUpdate replaces a layer's name and description.
 type LayerUpdate struct {
-	dao LayerUpdateDao
+	daoSelect  LayerUpdateDaoSelect
+	daoProject LayerUpdateDaoProject
+	dao        LayerUpdateDao
 }
 
-func NewLayerUpdate(dao LayerUpdateDao) *LayerUpdate {
-	return &LayerUpdate{dao: dao}
+func NewLayerUpdate(daoSelect LayerUpdateDaoSelect, daoProject LayerUpdateDaoProject, dao LayerUpdateDao) *LayerUpdate {
+	return &LayerUpdate{daoSelect: daoSelect, daoProject: daoProject, dao: dao}
 }
 
 func (service *LayerUpdate) Exec(ctx context.Context, request *LayerUpdateRequest) (*Layer, error) {
@@ -50,9 +62,31 @@ func (service *LayerUpdate) Exec(ctx context.Context, request *LayerUpdateReques
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
+	target, err := service.daoSelect.Exec(ctx, &dao.LayerSelectRequest{ID: request.ID})
+	if errors.Is(err, dao.ErrLayerSelectNotFound) {
+		err = errors.Join(err, ErrLayerNotFound)
+	}
+
+	if err != nil {
+		return nil, otel.ReportError(span, fmt.Errorf("select layer: %w", err))
+	}
+
+	project, err := service.daoProject.Exec(ctx, &dao.ProjectSelectRequest{ID: target.ProjectID})
+	if errors.Is(err, dao.ErrProjectSelectNotFound) {
+		err = errors.Join(err, ErrLayerNotFound)
+	}
+
+	if err != nil {
+		return nil, otel.ReportError(span, fmt.Errorf("select project: %w", err))
+	}
+
+	err = checkOwner(project, request.OwnerID, ErrLayerNotFound)
+	if err != nil {
+		return nil, otel.ReportError(span, err)
+	}
+
 	entity, err := service.dao.Exec(ctx, &dao.LayerUpdateRequest{
 		ID:          request.ID,
-		OwnerID:     request.OwnerID,
 		Name:        request.Name,
 		Description: request.Description,
 		Now:         time.Now(),

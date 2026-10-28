@@ -1,7 +1,6 @@
 package core_test
 
 import (
-	"encoding/json"
 	"errors"
 	"testing"
 
@@ -18,9 +17,6 @@ func TestCellList(t *testing.T) {
 
 	errFoo := errors.New("foo")
 
-	content := json.RawMessage(`{"text":"Marie"}`)
-	cell := &dao.Cell{SceneID: sceneID1, LayerID: layerID2, Content: content, UpdatedAt: updatedAt}
-
 	testCases := []struct {
 		name string
 
@@ -29,8 +25,7 @@ func TestCellList(t *testing.T) {
 		projectMock *daoMock[*dao.Project]
 		// listRequest is the page the service asks for, when the case reaches the list.
 		listRequest *dao.CellListRequest
-		listMock    *daoMock[[]*dao.Cell]
-		countMock   *daoMock[*dao.CellCount]
+		listMock    *daoMock[[]*dao.CellListRow]
 
 		expect    *core.CellPage
 		expectErr error
@@ -38,31 +33,27 @@ func TestCellList(t *testing.T) {
 		{
 			name: "Success",
 
-			request: &core.CellListRequest{
-				OwnerID: ownerID, ProjectID: projectID, Limit: 50, AfterSceneID: sceneID1, AfterLayerID: layerID1,
-			},
+			request: &core.CellListRequest{OwnerID: ownerID, ProjectID: projectID, Limit: 50, Offset: 100},
 
 			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
-			listRequest: &dao.CellListRequest{
-				ProjectID: projectID, Limit: 50, AfterSceneID: sceneID1, AfterLayerID: layerID1,
-			},
-			listMock:  &daoMock[[]*dao.Cell]{resp: []*dao.Cell{cell}},
-			countMock: &daoMock[*dao.CellCount]{resp: &dao.CellCount{Count: 2}},
+			listRequest: &dao.CellListRequest{ProjectID: projectID, Limit: 50, Offset: 100},
+			listMock: &daoMock[[]*dao.CellListRow]{resp: []*dao.CellListRow{
+				{Cell: dao.Cell{SceneID: sceneID1, LayerID: layerID1, UpdatedAt: updatedAt}, Total: 120},
+			}},
 
 			expect: &core.CellPage{
-				Cells: []*core.Cell{{SceneID: sceneID1, LayerID: layerID2, Content: content, UpdatedAt: updatedAt}},
-				Total: 2,
+				Cells: []*core.Cell{{SceneID: sceneID1, LayerID: layerID1, UpdatedAt: updatedAt}},
+				Total: 120,
 			},
 		},
 		{
-			name: "Success/DefaultLimit",
+			name: "Success/PastEnd",
 
 			request: &core.CellListRequest{OwnerID: ownerID, ProjectID: projectID},
 
 			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
 			listRequest: &dao.CellListRequest{ProjectID: projectID, Limit: core.CellListDefaultSize},
-			listMock:    &daoMock[[]*dao.Cell]{},
-			countMock:   &daoMock[*dao.CellCount]{resp: &dao.CellCount{}},
+			listMock:    &daoMock[[]*dao.CellListRow]{},
 
 			expect: &core.CellPage{Cells: []*core.Cell{}},
 		},
@@ -74,9 +65,9 @@ func TestCellList(t *testing.T) {
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
-			name: "Error/MissingProjectID",
+			name: "Error/NegativeOffset",
 
-			request: &core.CellListRequest{OwnerID: ownerID},
+			request: &core.CellListRequest{OwnerID: ownerID, ProjectID: projectID, Offset: -1},
 
 			expectErr: core.ErrInvalidRequest,
 		},
@@ -90,25 +81,22 @@ func TestCellList(t *testing.T) {
 			expectErr: core.ErrProjectNotFound,
 		},
 		{
+			name: "Error/OtherOwner",
+
+			request: &core.CellListRequest{OwnerID: ownerID, ProjectID: projectID},
+
+			projectMock: &daoMock[*dao.Project]{resp: foreignProject()},
+
+			expectErr: core.ErrProjectNotFound,
+		},
+		{
 			name: "Error/List",
 
 			request: &core.CellListRequest{OwnerID: ownerID, ProjectID: projectID},
 
 			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
 			listRequest: &dao.CellListRequest{ProjectID: projectID, Limit: core.CellListDefaultSize},
-			listMock:    &daoMock[[]*dao.Cell]{err: errFoo},
-
-			expectErr: errFoo,
-		},
-		{
-			name: "Error/Count",
-
-			request: &core.CellListRequest{OwnerID: ownerID, ProjectID: projectID},
-
-			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
-			listRequest: &dao.CellListRequest{ProjectID: projectID, Limit: core.CellListDefaultSize},
-			listMock:    &daoMock[[]*dao.Cell]{},
-			countMock:   &daoMock[*dao.CellCount]{err: errFoo},
+			listMock:    &daoMock[[]*dao.CellListRow]{err: errFoo},
 
 			expectErr: errFoo,
 		},
@@ -118,37 +106,29 @@ func TestCellList(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			daoProjectMock := coremocks.NewMockCellListDaoProject(t)
-			daoListMock := coremocks.NewMockCellListDao(t)
-			daoCountMock := coremocks.NewMockCellListDaoCount(t)
+			mockProject := coremocks.NewMockCellListDaoProject(t)
+			mockList := coremocks.NewMockCellListDao(t)
 
 			if testCase.projectMock != nil {
-				daoProjectMock.EXPECT().
-					Exec(mock.Anything, &dao.ProjectSelectRequest{ID: projectID, OwnerID: ownerID}).
+				mockProject.EXPECT().
+					Exec(mock.Anything, &dao.ProjectSelectRequest{ID: projectID}).
 					Return(testCase.projectMock.resp, testCase.projectMock.err)
 			}
 
 			if testCase.listMock != nil {
-				daoListMock.EXPECT().
+				mockList.EXPECT().
 					Exec(mock.Anything, testCase.listRequest).
 					Return(testCase.listMock.resp, testCase.listMock.err)
 			}
 
-			if testCase.countMock != nil {
-				daoCountMock.EXPECT().
-					Exec(mock.Anything, &dao.CellCountRequest{ProjectID: projectID}).
-					Return(testCase.countMock.resp, testCase.countMock.err)
-			}
-
-			service := core.NewCellList(daoProjectMock, daoListMock, daoCountMock)
+			service := core.NewCellList(mockProject, mockList)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
 
-			daoProjectMock.AssertExpectations(t)
-			daoListMock.AssertExpectations(t)
-			daoCountMock.AssertExpectations(t)
+			mockProject.AssertExpectations(t)
+			mockList.AssertExpectations(t)
 		})
 	}
 }

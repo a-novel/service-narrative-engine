@@ -1,6 +1,9 @@
 package core
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -38,4 +41,18 @@ func newLayer(entity *dao.Layer, _ int) *Layer {
 		Description: entity.Description,
 		UpdatedAt:   entity.UpdatedAt,
 	}
+}
+
+// layerAnchor reads the layer another one follows, which must belong to the project.
+func layerAnchor(ctx context.Context, daoSelect LayerCreateDaoSelect, projectID, id uuid.UUID) (*dao.Layer, error) {
+	anchor, err := daoSelect.Exec(ctx, &dao.LayerSelectRequest{ID: id})
+	if errors.Is(err, dao.ErrLayerSelectNotFound) || (err == nil && anchor.ProjectID != projectID) {
+		return nil, fmt.Errorf("%w: unknown anchor %s", ErrInvalidRequest, id)
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("select anchor: %w", err)
+	}
+
+	return anchor, nil
 }

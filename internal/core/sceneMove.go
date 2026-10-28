@@ -1,14 +1,11 @@
 package core
 
 import (
-	"cmp"
 	"context"
 	"errors"
 	"fmt"
-	"slices"
 
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/a-novel-kit/golib/otel"
@@ -17,7 +14,7 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// SceneMoveDaoSelect reads the scene to move.
+// SceneMoveDaoSelect reads the scene to move and the scene it follows.
 type SceneMoveDaoSelect interface {
 	Exec(ctx context.Context, request *dao.SceneSelectRequest) (*dao.Scene, error)
 }
@@ -27,14 +24,9 @@ type SceneMoveDaoLock interface {
 	Exec(ctx context.Context, request *dao.ProjectLockRequest) (*dao.Project, error)
 }
 
-// SceneMoveDaoList reads the project's scenes in order.
-type SceneMoveDaoList interface {
-	Exec(ctx context.Context, request *dao.SceneListRequest) ([]*dao.Scene, error)
-}
-
-// SceneMoveDaoReorder writes the new order.
-type SceneMoveDaoReorder interface {
-	Exec(ctx context.Context, request *dao.SceneReorderRequest) ([]*dao.Scene, error)
+// SceneMoveDao moves the scene, and shifts the scenes between its old and new position.
+type SceneMoveDao interface {
+	Exec(ctx context.Context, request *dao.SceneMoveRequest) (*dao.Scene, error)
 }
 
 // SceneMoveRequest names the scene to move and the scene it follows.
@@ -45,33 +37,25 @@ type SceneMoveRequest struct {
 	After uuid.UUID
 }
 
-// SceneMove moves a scene within its project. It returns every scene of the project in their new
-// order.
+// SceneMove moves a scene within its project, and returns it at its new position. The scenes between its
+// old and new position shift by one.
 type SceneMove struct {
 	daoSelect  SceneMoveDaoSelect
 	daoLock    SceneMoveDaoLock
-	daoList    SceneMoveDaoList
-	daoReorder SceneMoveDaoReorder
+	dao        SceneMoveDao
 	transactor transaction.Transactor
 }
 
 func NewSceneMove(
 	daoSelect SceneMoveDaoSelect,
 	daoLock SceneMoveDaoLock,
-	daoList SceneMoveDaoList,
-	daoReorder SceneMoveDaoReorder,
+	dao SceneMoveDao,
 	transactor transaction.Transactor,
 ) *SceneMove {
-	return &SceneMove{
-		daoSelect:  daoSelect,
-		daoLock:    daoLock,
-		daoList:    daoList,
-		daoReorder: daoReorder,
-		transactor: transactor,
-	}
+	return &SceneMove{daoSelect: daoSelect, daoLock: daoLock, dao: dao, transactor: transactor}
 }
 
-func (service *SceneMove) Exec(ctx context.Context, request *SceneMoveRequest) ([]*Scene, error) {
+func (service *SceneMove) Exec(ctx context.Context, request *SceneMoveRequest) (*Scene, error) {
 	ctx, span := otel.Tracer().Start(ctx, "core.SceneMove")
 	defer span.End()
 
@@ -86,10 +70,14 @@ func (service *SceneMove) Exec(ctx context.Context, request *SceneMoveRequest) (
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	var scenes []*Scene
+	if request.After == request.ID {
+		return nil, otel.ReportError(span, fmt.Errorf("%w: %s cannot follow itself", ErrInvalidRequest, request.ID))
+	}
+
+	var scene *Scene
 
 	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
-		scene, err := service.daoSelect.Exec(ctx, &dao.SceneSelectRequest{ID: request.ID, OwnerID: request.OwnerID})
+		target, err := service.daoSelect.Exec(ctx, &dao.SceneSelectRequest{ID: request.ID})
 		if errors.Is(err, dao.ErrSceneSelectNotFound) {
 			err = errors.Join(err, ErrSceneNotFound)
 		}
@@ -98,28 +86,57 @@ func (service *SceneMove) Exec(ctx context.Context, request *SceneMoveRequest) (
 			return fmt.Errorf("select scene: %w", err)
 		}
 
-		_, err = service.daoLock.Exec(ctx, &dao.ProjectLockRequest{ID: scene.ProjectID, OwnerID: request.OwnerID})
+		project, err := service.daoLock.Exec(ctx, &dao.ProjectLockRequest{ID: target.ProjectID})
+		if errors.Is(err, dao.ErrProjectLockNotFound) {
+			err = errors.Join(err, ErrSceneNotFound)
+		}
+
 		if err != nil {
 			return fmt.Errorf("lock project: %w", err)
 		}
 
-		current, err := service.daoList.Exec(ctx, &dao.SceneListRequest{ProjectID: scene.ProjectID})
-		if err != nil {
-			return fmt.Errorf("list scenes: %w", err)
-		}
-
-		order, err := moveAfter(lo.Map(current, sceneID), request.ID, request.After)
+		err = checkOwner(project, request.OwnerID, ErrSceneNotFound)
 		if err != nil {
 			return err
 		}
 
-		reordered, err := service.daoReorder.Exec(ctx, &dao.SceneReorderRequest{ProjectID: scene.ProjectID, IDs: order})
-		if err != nil {
-			return fmt.Errorf("reorder scenes: %w", err)
+		// Another change may have moved the scene before the lock, so read its position again.
+		target, err = service.daoSelect.Exec(ctx, &dao.SceneSelectRequest{ID: request.ID})
+		if errors.Is(err, dao.ErrSceneSelectNotFound) {
+			err = errors.Join(err, ErrSceneNotFound)
 		}
 
-		slices.SortFunc(reordered, func(a, b *dao.Scene) int { return cmp.Compare(a.Position, b.Position) })
-		scenes = lo.Map(reordered, newScene)
+		if err != nil {
+			return fmt.Errorf("select scene: %w", err)
+		}
+
+		to := 0
+
+		if request.After != uuid.Nil {
+			anchor, err := sceneAnchor(ctx, service.daoSelect, project.ID, request.After)
+			if err != nil {
+				return err
+			}
+
+			to = moveTarget(target.Position, anchor.Position)
+		}
+
+		if to == target.Position {
+			scene = newScene(target, 0)
+
+			return nil
+		}
+
+		moved, err := service.dao.Exec(ctx, &dao.SceneMoveRequest{ID: request.ID, To: to})
+		if errors.Is(err, dao.ErrSceneMoveNotFound) {
+			err = errors.Join(err, ErrSceneNotFound)
+		}
+
+		if err != nil {
+			return fmt.Errorf("move scene: %w", err)
+		}
+
+		scene = newScene(moved, 0)
 
 		return nil
 	})
@@ -127,5 +144,5 @@ func (service *SceneMove) Exec(ctx context.Context, request *SceneMoveRequest) (
 		return nil, otel.ReportError(span, fmt.Errorf("run transaction: %w", err))
 	}
 
-	return scenes, nil
+	return scene, nil
 }

@@ -17,14 +17,15 @@ func TestProjectDelete(t *testing.T) {
 
 	errFoo := errors.New("foo")
 
-	validRequest := &core.ProjectDeleteRequest{OwnerID: ownerID, ID: projectID}
+	request := &core.ProjectDeleteRequest{OwnerID: ownerID, ID: projectID}
 
 	testCases := []struct {
 		name string
 
 		request *core.ProjectDeleteRequest
 
-		daoMock *daoMock[*dao.Project]
+		selectMock *daoMock[*dao.Project]
+		daoMock    *daoMock[*dao.Project]
 
 		expect    *core.Project
 		expectErr error
@@ -32,9 +33,10 @@ func TestProjectDelete(t *testing.T) {
 		{
 			name: "Success",
 
-			request: validRequest,
+			request: request,
 
-			daoMock: &daoMock[*dao.Project]{resp: daoProject()},
+			selectMock: &daoMock[*dao.Project]{resp: daoProject()},
+			daoMock:    &daoMock[*dao.Project]{resp: daoProject()},
 
 			expect: &core.Project{
 				ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr",
@@ -42,7 +44,7 @@ func TestProjectDelete(t *testing.T) {
 			},
 		},
 		{
-			name: "Error/MissingID",
+			name: "Error/InvalidRequest",
 
 			request: &core.ProjectDeleteRequest{OwnerID: ownerID},
 
@@ -51,18 +53,38 @@ func TestProjectDelete(t *testing.T) {
 		{
 			name: "Error/NotFound",
 
-			request: validRequest,
+			request: request,
 
-			daoMock: &daoMock[*dao.Project]{err: dao.ErrProjectDeleteNotFound},
+			selectMock: &daoMock[*dao.Project]{err: dao.ErrProjectSelectNotFound},
+
+			expectErr: core.ErrProjectNotFound,
+		},
+		{
+			name: "Error/OtherOwner",
+
+			request: request,
+
+			selectMock: &daoMock[*dao.Project]{resp: foreignProject()},
+
+			expectErr: core.ErrProjectNotFound,
+		},
+		{
+			name: "Error/DeletedMeanwhile",
+
+			request: request,
+
+			selectMock: &daoMock[*dao.Project]{resp: daoProject()},
+			daoMock:    &daoMock[*dao.Project]{err: dao.ErrProjectDeleteNotFound},
 
 			expectErr: core.ErrProjectNotFound,
 		},
 		{
 			name: "Error/Internal",
 
-			request: validRequest,
+			request: request,
 
-			daoMock: &daoMock[*dao.Project]{err: errFoo},
+			selectMock: &daoMock[*dao.Project]{resp: daoProject()},
+			daoMock:    &daoMock[*dao.Project]{err: errFoo},
 
 			expectErr: errFoo,
 		},
@@ -72,20 +94,28 @@ func TestProjectDelete(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
+			mockSelect := coremocks.NewMockProjectDeleteDaoSelect(t)
 			mockDao := coremocks.NewMockProjectDeleteDao(t)
+
+			if testCase.selectMock != nil {
+				mockSelect.EXPECT().
+					Exec(mock.Anything, &dao.ProjectSelectRequest{ID: projectID}).
+					Return(testCase.selectMock.resp, testCase.selectMock.err)
+			}
 
 			if testCase.daoMock != nil {
 				mockDao.EXPECT().
-					Exec(mock.Anything, &dao.ProjectDeleteRequest{ID: projectID, OwnerID: ownerID}).
+					Exec(mock.Anything, &dao.ProjectDeleteRequest{ID: projectID}).
 					Return(testCase.daoMock.resp, testCase.daoMock.err)
 			}
 
-			service := core.NewProjectDelete(mockDao)
+			service := core.NewProjectDelete(mockSelect, mockDao)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
 
+			mockSelect.AssertExpectations(t)
 			mockDao.AssertExpectations(t)
 		})
 	}

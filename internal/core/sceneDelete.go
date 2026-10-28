@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/a-novel-kit/golib/otel"
@@ -25,19 +24,9 @@ type SceneDeleteDaoLock interface {
 	Exec(ctx context.Context, request *dao.ProjectLockRequest) (*dao.Project, error)
 }
 
-// SceneDeleteDao removes the scene.
+// SceneDeleteDao removes the scene, and moves the scenes after it up.
 type SceneDeleteDao interface {
 	Exec(ctx context.Context, request *dao.SceneDeleteRequest) (*dao.Scene, error)
-}
-
-// SceneDeleteDaoList reads the scenes that remain.
-type SceneDeleteDaoList interface {
-	Exec(ctx context.Context, request *dao.SceneListRequest) ([]*dao.Scene, error)
-}
-
-// SceneDeleteDaoReorder closes the gap the scene leaves.
-type SceneDeleteDaoReorder interface {
-	Exec(ctx context.Context, request *dao.SceneReorderRequest) ([]*dao.Scene, error)
 }
 
 // SceneDeleteRequest names the scene to delete.
@@ -46,13 +35,11 @@ type SceneDeleteRequest struct {
 	ID      uuid.UUID `validate:"required"`
 }
 
-// SceneDelete deletes a scene with its cells, and closes the gap in the order.
+// SceneDelete deletes a scene with its cells, and moves the scenes after it up by one.
 type SceneDelete struct {
 	daoSelect  SceneDeleteDaoSelect
 	daoLock    SceneDeleteDaoLock
 	dao        SceneDeleteDao
-	daoList    SceneDeleteDaoList
-	daoReorder SceneDeleteDaoReorder
 	transactor transaction.Transactor
 }
 
@@ -60,18 +47,9 @@ func NewSceneDelete(
 	daoSelect SceneDeleteDaoSelect,
 	daoLock SceneDeleteDaoLock,
 	dao SceneDeleteDao,
-	daoList SceneDeleteDaoList,
-	daoReorder SceneDeleteDaoReorder,
 	transactor transaction.Transactor,
 ) *SceneDelete {
-	return &SceneDelete{
-		daoSelect:  daoSelect,
-		daoLock:    daoLock,
-		dao:        dao,
-		daoList:    daoList,
-		daoReorder: daoReorder,
-		transactor: transactor,
-	}
+	return &SceneDelete{daoSelect: daoSelect, daoLock: daoLock, dao: dao, transactor: transactor}
 }
 
 func (service *SceneDelete) Exec(ctx context.Context, request *SceneDeleteRequest) (*Scene, error) {
@@ -91,7 +69,7 @@ func (service *SceneDelete) Exec(ctx context.Context, request *SceneDeleteReques
 	var scene *Scene
 
 	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
-		target, err := service.daoSelect.Exec(ctx, &dao.SceneSelectRequest{ID: request.ID, OwnerID: request.OwnerID})
+		target, err := service.daoSelect.Exec(ctx, &dao.SceneSelectRequest{ID: request.ID})
 		if errors.Is(err, dao.ErrSceneSelectNotFound) {
 			err = errors.Join(err, ErrSceneNotFound)
 		}
@@ -100,13 +78,22 @@ func (service *SceneDelete) Exec(ctx context.Context, request *SceneDeleteReques
 			return fmt.Errorf("select scene: %w", err)
 		}
 
-		_, err = service.daoLock.Exec(ctx, &dao.ProjectLockRequest{ID: target.ProjectID, OwnerID: request.OwnerID})
+		project, err := service.daoLock.Exec(ctx, &dao.ProjectLockRequest{ID: target.ProjectID})
+		if errors.Is(err, dao.ErrProjectLockNotFound) {
+			err = errors.Join(err, ErrSceneNotFound)
+		}
+
 		if err != nil {
 			return fmt.Errorf("lock project: %w", err)
 		}
 
+		err = checkOwner(project, request.OwnerID, ErrSceneNotFound)
+		if err != nil {
+			return err
+		}
+
 		// The lock serializes deletes, so a miss means a concurrent delete won.
-		deleted, err := service.dao.Exec(ctx, &dao.SceneDeleteRequest{ID: request.ID, OwnerID: request.OwnerID})
+		deleted, err := service.dao.Exec(ctx, &dao.SceneDeleteRequest{ID: request.ID})
 		if errors.Is(err, dao.ErrSceneDeleteNotFound) {
 			err = errors.Join(err, ErrSceneNotFound)
 		}
@@ -115,24 +102,7 @@ func (service *SceneDelete) Exec(ctx context.Context, request *SceneDeleteReques
 			return fmt.Errorf("delete scene: %w", err)
 		}
 
-		remaining, err := service.daoList.Exec(ctx, &dao.SceneListRequest{ProjectID: target.ProjectID})
-		if err != nil {
-			return fmt.Errorf("list scenes: %w", err)
-		}
-
 		scene = newScene(deleted, 0)
-
-		if len(remaining) == 0 {
-			return nil
-		}
-
-		_, err = service.daoReorder.Exec(ctx, &dao.SceneReorderRequest{
-			ProjectID: target.ProjectID,
-			IDs:       lo.Map(remaining, sceneID),
-		})
-		if err != nil {
-			return fmt.Errorf("reorder scenes: %w", err)
-		}
 
 		return nil
 	})

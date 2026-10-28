@@ -16,12 +16,7 @@ import (
 
 // ProjectListDao reads a page of the caller's projects.
 type ProjectListDao interface {
-	Exec(ctx context.Context, request *dao.ProjectListRequest) ([]*dao.Project, error)
-}
-
-// ProjectListDaoCount counts the caller's projects.
-type ProjectListDaoCount interface {
-	Exec(ctx context.Context, request *dao.ProjectCountRequest) (*dao.ProjectCount, error)
+	Exec(ctx context.Context, request *dao.ProjectListRequest) ([]*dao.ProjectListRow, error)
 }
 
 // ProjectListDefaultSize is the page size of a [ProjectListRequest] whose Limit is zero or negative.
@@ -30,22 +25,21 @@ const ProjectListDefaultSize = 20
 // ProjectListRequest selects a page of the caller's projects.
 type ProjectListRequest struct {
 	OwnerID uuid.UUID `validate:"required"`
+
 	// Limit caps the page at 100 projects. It defaults to [ProjectListDefaultSize] when zero or
 	// negative.
 	Limit int `validate:"max=100"`
-	// After is the ID of the last project of the previous page. The page starts with the next older
-	// project, or with the newest one when After is uuid.Nil.
-	After uuid.UUID
+	// Offset is how many projects come before the page, newest first.
+	Offset int `validate:"min=0"`
 }
 
 // ProjectList reads the caller's projects page by page, newest first. Each page carries the total.
 type ProjectList struct {
-	dao      ProjectListDao
-	daoCount ProjectListDaoCount
+	dao ProjectListDao
 }
 
-func NewProjectList(dao ProjectListDao, daoCount ProjectListDaoCount) *ProjectList {
-	return &ProjectList{dao: dao, daoCount: daoCount}
+func NewProjectList(dao ProjectListDao) *ProjectList {
+	return &ProjectList{dao: dao}
 }
 
 func (service *ProjectList) Exec(ctx context.Context, request *ProjectListRequest) (*ProjectPage, error) {
@@ -57,16 +51,10 @@ func (service *ProjectList) Exec(ctx context.Context, request *ProjectListReques
 		limit = ProjectListDefaultSize
 	}
 
-	// Project IDs are UUIDv7, so uuid.Max sorts after every project.
-	after := request.After
-	if after == uuid.Nil {
-		after = uuid.Max
-	}
-
 	span.SetAttributes(
 		attribute.String("project.owner_id", request.OwnerID.String()),
 		attribute.Int("projects.limit", limit),
-		attribute.String("projects.after", request.After.String()),
+		attribute.Int("projects.offset", request.Offset),
 	)
 
 	err := validate.Struct(request)
@@ -74,18 +62,23 @@ func (service *ProjectList) Exec(ctx context.Context, request *ProjectListReques
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	entities, err := service.dao.Exec(ctx, &dao.ProjectListRequest{OwnerID: request.OwnerID, Limit: limit, After: after})
+	rows, err := service.dao.Exec(ctx, &dao.ProjectListRequest{
+		OwnerID: request.OwnerID,
+		Limit:   limit,
+		Offset:  request.Offset,
+	})
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("list projects: %w", err))
 	}
 
-	count, err := service.daoCount.Exec(ctx, &dao.ProjectCountRequest{OwnerID: request.OwnerID})
-	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("count projects: %w", err))
+	page := &ProjectPage{
+		Projects: lo.Map(rows, func(row *dao.ProjectListRow, _ int) *Project { return newProject(&row.Project) }),
 	}
 
-	return &ProjectPage{
-		Projects: lo.Map(entities, func(entity *dao.Project, _ int) *Project { return newProject(entity) }),
-		Total:    count.Count,
-	}, nil
+	// Every row carries the total, and a page past the end carries none.
+	if len(rows) > 0 {
+		page.Total = rows[0].Total
+	}
+
+	return page, nil
 }

@@ -15,6 +15,16 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
+// SceneUpdateDaoSelect reads the scene, to find its project.
+type SceneUpdateDaoSelect interface {
+	Exec(ctx context.Context, request *dao.SceneSelectRequest) (*dao.Scene, error)
+}
+
+// SceneUpdateDaoProject reads the scene's project, to check its owner.
+type SceneUpdateDaoProject interface {
+	Exec(ctx context.Context, request *dao.ProjectSelectRequest) (*dao.Project, error)
+}
+
 // SceneUpdateDao writes the scene's new fields.
 type SceneUpdateDao interface {
 	Exec(ctx context.Context, request *dao.SceneUpdateRequest) (*dao.Scene, error)
@@ -33,11 +43,13 @@ type SceneUpdateRequest struct {
 
 // SceneUpdate replaces a scene's title, color, description and prompt.
 type SceneUpdate struct {
-	dao SceneUpdateDao
+	daoSelect  SceneUpdateDaoSelect
+	daoProject SceneUpdateDaoProject
+	dao        SceneUpdateDao
 }
 
-func NewSceneUpdate(dao SceneUpdateDao) *SceneUpdate {
-	return &SceneUpdate{dao: dao}
+func NewSceneUpdate(daoSelect SceneUpdateDaoSelect, daoProject SceneUpdateDaoProject, dao SceneUpdateDao) *SceneUpdate {
+	return &SceneUpdate{daoSelect: daoSelect, daoProject: daoProject, dao: dao}
 }
 
 func (service *SceneUpdate) Exec(ctx context.Context, request *SceneUpdateRequest) (*Scene, error) {
@@ -54,9 +66,31 @@ func (service *SceneUpdate) Exec(ctx context.Context, request *SceneUpdateReques
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
+	target, err := service.daoSelect.Exec(ctx, &dao.SceneSelectRequest{ID: request.ID})
+	if errors.Is(err, dao.ErrSceneSelectNotFound) {
+		err = errors.Join(err, ErrSceneNotFound)
+	}
+
+	if err != nil {
+		return nil, otel.ReportError(span, fmt.Errorf("select scene: %w", err))
+	}
+
+	project, err := service.daoProject.Exec(ctx, &dao.ProjectSelectRequest{ID: target.ProjectID})
+	if errors.Is(err, dao.ErrProjectSelectNotFound) {
+		err = errors.Join(err, ErrSceneNotFound)
+	}
+
+	if err != nil {
+		return nil, otel.ReportError(span, fmt.Errorf("select project: %w", err))
+	}
+
+	err = checkOwner(project, request.OwnerID, ErrSceneNotFound)
+	if err != nil {
+		return nil, otel.ReportError(span, err)
+	}
+
 	entity, err := service.dao.Exec(ctx, &dao.SceneUpdateRequest{
 		ID:          request.ID,
-		OwnerID:     request.OwnerID,
 		Title:       request.Title,
 		Color:       strings.ToLower(request.Color),
 		Description: request.Description,

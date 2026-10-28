@@ -3,17 +3,18 @@ package core
 import (
 	"errors"
 	"fmt"
-	"slices"
 
 	"github.com/google/uuid"
+
+	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
 var (
-	// ErrProjectNotFound is returned when no project with the ID belongs to the caller.
+	// ErrProjectNotFound is returned when no project has the ID, or another user owns it.
 	ErrProjectNotFound = errors.New("project not found")
-	// ErrSceneNotFound is returned when no scene with the ID belongs to a project of the caller.
+	// ErrSceneNotFound is returned when no scene has the ID, or another user owns its project.
 	ErrSceneNotFound = errors.New("scene not found")
-	// ErrLayerNotFound is returned when no layer with the ID belongs to a project of the caller.
+	// ErrLayerNotFound is returned when no layer has the ID, or another user owns its project.
 	ErrLayerNotFound = errors.New("layer not found")
 	// ErrCellNotFound is returned when the scene and the layer of a cell belong to different
 	// projects.
@@ -25,26 +26,24 @@ var (
 	ErrManuscriptLayer = errors.New("manuscript layer is permanent")
 )
 
-// moveAfter returns ids with id moved right after anchor, or first when anchor is uuid.Nil.
-func moveAfter(ids []uuid.UUID, id, anchor uuid.UUID) ([]uuid.UUID, error) {
-	if anchor == id {
-		return nil, fmt.Errorf("%w: %s cannot follow itself", ErrInvalidRequest, id)
+// checkOwner returns notFound unless ownerID owns the project, so another user's data reads as
+// missing.
+func checkOwner(project *dao.Project, ownerID uuid.UUID, notFound error) error {
+	if project.OwnerID != ownerID {
+		return fmt.Errorf("%w: project %s belongs to another user", notFound, project.ID)
 	}
 
-	order := slices.DeleteFunc(slices.Clone(ids), func(candidate uuid.UUID) bool { return candidate == id })
+	return nil
+}
 
-	position := 0
-
-	if anchor != uuid.Nil {
-		index := slices.Index(order, anchor)
-		if index < 0 {
-			return nil, fmt.Errorf("%w: unknown anchor %s", ErrInvalidRequest, anchor)
-		}
-
-		position = index + 1
+// moveTarget returns the position an entity at from takes when it moves right after the one at
+// anchor, among the positions that remain once it leaves its own.
+func moveTarget(from, anchor int) int {
+	if anchor < from {
+		return anchor + 1
 	}
 
-	return slices.Insert(order, position, id), nil
+	return anchor
 }
 
 // newIDs generates count UUIDv7 identifiers.

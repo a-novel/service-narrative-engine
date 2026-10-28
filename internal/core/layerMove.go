@@ -1,14 +1,11 @@
 package core
 
 import (
-	"cmp"
 	"context"
 	"errors"
 	"fmt"
-	"slices"
 
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/a-novel-kit/golib/otel"
@@ -17,7 +14,7 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// LayerMoveDaoSelect reads the layer to move.
+// LayerMoveDaoSelect reads the layer to move and the layer it follows.
 type LayerMoveDaoSelect interface {
 	Exec(ctx context.Context, request *dao.LayerSelectRequest) (*dao.Layer, error)
 }
@@ -27,14 +24,9 @@ type LayerMoveDaoLock interface {
 	Exec(ctx context.Context, request *dao.ProjectLockRequest) (*dao.Project, error)
 }
 
-// LayerMoveDaoList reads the project's layers in order.
-type LayerMoveDaoList interface {
-	Exec(ctx context.Context, request *dao.LayerListRequest) ([]*dao.Layer, error)
-}
-
-// LayerMoveDaoReorder writes the new order.
-type LayerMoveDaoReorder interface {
-	Exec(ctx context.Context, request *dao.LayerReorderRequest) ([]*dao.Layer, error)
+// LayerMoveDao moves the layer, and shifts the layers between its old and new position.
+type LayerMoveDao interface {
+	Exec(ctx context.Context, request *dao.LayerMoveRequest) (*dao.Layer, error)
 }
 
 // LayerMoveRequest names the layer to move and the layer it follows.
@@ -45,33 +37,25 @@ type LayerMoveRequest struct {
 	After uuid.UUID
 }
 
-// LayerMove moves a layer within its project. It returns every layer of the project in their new
-// order.
+// LayerMove moves a layer within its project, and returns it at its new position. The layers between its
+// old and new position shift by one.
 type LayerMove struct {
 	daoSelect  LayerMoveDaoSelect
 	daoLock    LayerMoveDaoLock
-	daoList    LayerMoveDaoList
-	daoReorder LayerMoveDaoReorder
+	dao        LayerMoveDao
 	transactor transaction.Transactor
 }
 
 func NewLayerMove(
 	daoSelect LayerMoveDaoSelect,
 	daoLock LayerMoveDaoLock,
-	daoList LayerMoveDaoList,
-	daoReorder LayerMoveDaoReorder,
+	dao LayerMoveDao,
 	transactor transaction.Transactor,
 ) *LayerMove {
-	return &LayerMove{
-		daoSelect:  daoSelect,
-		daoLock:    daoLock,
-		daoList:    daoList,
-		daoReorder: daoReorder,
-		transactor: transactor,
-	}
+	return &LayerMove{daoSelect: daoSelect, daoLock: daoLock, dao: dao, transactor: transactor}
 }
 
-func (service *LayerMove) Exec(ctx context.Context, request *LayerMoveRequest) ([]*Layer, error) {
+func (service *LayerMove) Exec(ctx context.Context, request *LayerMoveRequest) (*Layer, error) {
 	ctx, span := otel.Tracer().Start(ctx, "core.LayerMove")
 	defer span.End()
 
@@ -86,10 +70,14 @@ func (service *LayerMove) Exec(ctx context.Context, request *LayerMoveRequest) (
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	var layers []*Layer
+	if request.After == request.ID {
+		return nil, otel.ReportError(span, fmt.Errorf("%w: %s cannot follow itself", ErrInvalidRequest, request.ID))
+	}
+
+	var layer *Layer
 
 	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
-		layer, err := service.daoSelect.Exec(ctx, &dao.LayerSelectRequest{ID: request.ID, OwnerID: request.OwnerID})
+		target, err := service.daoSelect.Exec(ctx, &dao.LayerSelectRequest{ID: request.ID})
 		if errors.Is(err, dao.ErrLayerSelectNotFound) {
 			err = errors.Join(err, ErrLayerNotFound)
 		}
@@ -98,28 +86,57 @@ func (service *LayerMove) Exec(ctx context.Context, request *LayerMoveRequest) (
 			return fmt.Errorf("select layer: %w", err)
 		}
 
-		_, err = service.daoLock.Exec(ctx, &dao.ProjectLockRequest{ID: layer.ProjectID, OwnerID: request.OwnerID})
+		project, err := service.daoLock.Exec(ctx, &dao.ProjectLockRequest{ID: target.ProjectID})
+		if errors.Is(err, dao.ErrProjectLockNotFound) {
+			err = errors.Join(err, ErrLayerNotFound)
+		}
+
 		if err != nil {
 			return fmt.Errorf("lock project: %w", err)
 		}
 
-		current, err := service.daoList.Exec(ctx, &dao.LayerListRequest{ProjectID: layer.ProjectID})
-		if err != nil {
-			return fmt.Errorf("list layers: %w", err)
-		}
-
-		order, err := moveAfter(lo.Map(current, layerID), request.ID, request.After)
+		err = checkOwner(project, request.OwnerID, ErrLayerNotFound)
 		if err != nil {
 			return err
 		}
 
-		reordered, err := service.daoReorder.Exec(ctx, &dao.LayerReorderRequest{ProjectID: layer.ProjectID, IDs: order})
-		if err != nil {
-			return fmt.Errorf("reorder layers: %w", err)
+		// Another change may have moved the layer before the lock, so read its position again.
+		target, err = service.daoSelect.Exec(ctx, &dao.LayerSelectRequest{ID: request.ID})
+		if errors.Is(err, dao.ErrLayerSelectNotFound) {
+			err = errors.Join(err, ErrLayerNotFound)
 		}
 
-		slices.SortFunc(reordered, func(a, b *dao.Layer) int { return cmp.Compare(a.Position, b.Position) })
-		layers = lo.Map(reordered, newLayer)
+		if err != nil {
+			return fmt.Errorf("select layer: %w", err)
+		}
+
+		to := 0
+
+		if request.After != uuid.Nil {
+			anchor, err := layerAnchor(ctx, service.daoSelect, project.ID, request.After)
+			if err != nil {
+				return err
+			}
+
+			to = moveTarget(target.Position, anchor.Position)
+		}
+
+		if to == target.Position {
+			layer = newLayer(target, 0)
+
+			return nil
+		}
+
+		moved, err := service.dao.Exec(ctx, &dao.LayerMoveRequest{ID: request.ID, To: to})
+		if errors.Is(err, dao.ErrLayerMoveNotFound) {
+			err = errors.Join(err, ErrLayerNotFound)
+		}
+
+		if err != nil {
+			return fmt.Errorf("move layer: %w", err)
+		}
+
+		layer = newLayer(moved, 0)
 
 		return nil
 	})
@@ -127,5 +144,5 @@ func (service *LayerMove) Exec(ctx context.Context, request *LayerMoveRequest) (
 		return nil, otel.ReportError(span, fmt.Errorf("run transaction: %w", err))
 	}
 
-	return layers, nil
+	return layer, nil
 }

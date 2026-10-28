@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/a-novel-kit/golib/otel"
@@ -14,19 +13,9 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// ProjectGetDaoProject reads the project.
-type ProjectGetDaoProject interface {
+// ProjectGetDao reads the project.
+type ProjectGetDao interface {
 	Exec(ctx context.Context, request *dao.ProjectSelectRequest) (*dao.Project, error)
-}
-
-// ProjectGetDaoScenes reads the project's scenes.
-type ProjectGetDaoScenes interface {
-	Exec(ctx context.Context, request *dao.SceneListRequest) ([]*dao.Scene, error)
-}
-
-// ProjectGetDaoLayers reads the project's layers.
-type ProjectGetDaoLayers interface {
-	Exec(ctx context.Context, request *dao.LayerListRequest) ([]*dao.Layer, error)
 }
 
 // ProjectGetRequest names a project of the caller.
@@ -35,27 +24,17 @@ type ProjectGetRequest struct {
 	ID      uuid.UUID `validate:"required"`
 }
 
-// ProjectGet reads a project with the layout of its Scenes Composer, so a client loads it in one
-// call before paging through its cells with [CellList].
+// ProjectGet reads a project of the caller. Its scenes, layers and cells come page by page from
+// [SceneList], [LayerList] and [CellList].
 type ProjectGet struct {
-	daoProject ProjectGetDaoProject
-	daoScenes  ProjectGetDaoScenes
-	daoLayers  ProjectGetDaoLayers
+	dao ProjectGetDao
 }
 
-func NewProjectGet(
-	daoProject ProjectGetDaoProject,
-	daoScenes ProjectGetDaoScenes,
-	daoLayers ProjectGetDaoLayers,
-) *ProjectGet {
-	return &ProjectGet{
-		daoProject: daoProject,
-		daoScenes:  daoScenes,
-		daoLayers:  daoLayers,
-	}
+func NewProjectGet(dao ProjectGetDao) *ProjectGet {
+	return &ProjectGet{dao: dao}
 }
 
-func (service *ProjectGet) Exec(ctx context.Context, request *ProjectGetRequest) (*ProjectComposer, error) {
+func (service *ProjectGet) Exec(ctx context.Context, request *ProjectGetRequest) (*Project, error) {
 	ctx, span := otel.Tracer().Start(ctx, "core.ProjectGet")
 	defer span.End()
 
@@ -69,7 +48,7 @@ func (service *ProjectGet) Exec(ctx context.Context, request *ProjectGetRequest)
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	project, err := service.daoProject.Exec(ctx, &dao.ProjectSelectRequest{ID: request.ID, OwnerID: request.OwnerID})
+	project, err := service.dao.Exec(ctx, &dao.ProjectSelectRequest{ID: request.ID})
 	if errors.Is(err, dao.ErrProjectSelectNotFound) {
 		err = errors.Join(err, ErrProjectNotFound)
 	}
@@ -78,19 +57,10 @@ func (service *ProjectGet) Exec(ctx context.Context, request *ProjectGetRequest)
 		return nil, otel.ReportError(span, fmt.Errorf("select project: %w", err))
 	}
 
-	scenes, err := service.daoScenes.Exec(ctx, &dao.SceneListRequest{ProjectID: project.ID})
+	err = checkOwner(project, request.OwnerID, ErrProjectNotFound)
 	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("list scenes: %w", err))
+		return nil, otel.ReportError(span, err)
 	}
 
-	layers, err := service.daoLayers.Exec(ctx, &dao.LayerListRequest{ProjectID: project.ID})
-	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("list layers: %w", err))
-	}
-
-	return &ProjectComposer{
-		Project: newProject(project),
-		Scenes:  lo.Map(scenes, newScene),
-		Layers:  lo.Map(layers, newLayer),
-	}, nil
+	return newProject(project), nil
 }

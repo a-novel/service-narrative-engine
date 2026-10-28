@@ -14,6 +14,11 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
+// ProjectUpdateDaoSelect reads the project, to check its owner.
+type ProjectUpdateDaoSelect interface {
+	Exec(ctx context.Context, request *dao.ProjectSelectRequest) (*dao.Project, error)
+}
+
 // ProjectUpdateDao writes the project's new fields.
 type ProjectUpdateDao interface {
 	Exec(ctx context.Context, request *dao.ProjectUpdateRequest) (*dao.Project, error)
@@ -31,11 +36,12 @@ type ProjectUpdateRequest struct {
 
 // ProjectUpdate replaces a project's own fields.
 type ProjectUpdate struct {
-	dao ProjectUpdateDao
+	daoSelect ProjectUpdateDaoSelect
+	dao       ProjectUpdateDao
 }
 
-func NewProjectUpdate(dao ProjectUpdateDao) *ProjectUpdate {
-	return &ProjectUpdate{dao: dao}
+func NewProjectUpdate(daoSelect ProjectUpdateDaoSelect, dao ProjectUpdateDao) *ProjectUpdate {
+	return &ProjectUpdate{daoSelect: daoSelect, dao: dao}
 }
 
 func (service *ProjectUpdate) Exec(ctx context.Context, request *ProjectUpdateRequest) (*Project, error) {
@@ -52,9 +58,22 @@ func (service *ProjectUpdate) Exec(ctx context.Context, request *ProjectUpdateRe
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
+	project, err := service.daoSelect.Exec(ctx, &dao.ProjectSelectRequest{ID: request.ID})
+	if errors.Is(err, dao.ErrProjectSelectNotFound) {
+		err = errors.Join(err, ErrProjectNotFound)
+	}
+
+	if err != nil {
+		return nil, otel.ReportError(span, fmt.Errorf("select project: %w", err))
+	}
+
+	err = checkOwner(project, request.OwnerID, ErrProjectNotFound)
+	if err != nil {
+		return nil, otel.ReportError(span, err)
+	}
+
 	entity, err := service.dao.Exec(ctx, &dao.ProjectUpdateRequest{
 		ID:       request.ID,
-		OwnerID:  request.OwnerID,
 		Title:    request.Title,
 		Premise:  request.Premise,
 		Language: request.Language,

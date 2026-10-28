@@ -17,23 +17,16 @@ func TestSceneUpdate(t *testing.T) {
 
 	errFoo := errors.New("foo")
 
-	updated := daoScene(sceneID1, 0)
-	updated.Title = "Ouverture"
-	updated.Color = "#e0457b"
-	updated.Description = "Marie attend."
-	updated.Prompt = "Garder le suspense."
-
-	validRequest := &core.SceneUpdateRequest{
-		OwnerID: ownerID, ID: sceneID1, Title: "Ouverture", Color: "#E0457B",
-		Description: "Marie attend.", Prompt: "Garder le suspense.",
-	}
+	request := &core.SceneUpdateRequest{OwnerID: ownerID, ID: sceneID2, Title: "Scene", Color: "#4A90D9"}
 
 	testCases := []struct {
 		name string
 
 		request *core.SceneUpdateRequest
 
-		daoMock *daoMock[*dao.Scene]
+		selectMock  *daoMock[*dao.Scene]
+		projectMock *daoMock[*dao.Project]
+		updateMock  *daoMock[*dao.Scene]
 
 		expect    *core.Scene
 		expectErr error
@@ -41,37 +34,59 @@ func TestSceneUpdate(t *testing.T) {
 		{
 			name: "Success",
 
-			request: validRequest,
+			request: request,
 
-			daoMock: &daoMock[*dao.Scene]{resp: updated},
+			selectMock:  &daoMock[*dao.Scene]{resp: daoScene(sceneID2, 1)},
+			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
+			updateMock:  &daoMock[*dao.Scene]{resp: daoScene(sceneID2, 1)},
 
-			expect: &core.Scene{
-				ID: sceneID1, ProjectID: projectID, Title: "Ouverture", Color: "#e0457b",
-				Description: "Marie attend.", Prompt: "Garder le suspense.", UpdatedAt: updatedAt,
-			},
+			expect: coreScene(sceneID2, 1),
 		},
 		{
-			name: "Error/InvalidColor",
+			name: "Error/InvalidRequest",
 
-			request: &core.SceneUpdateRequest{OwnerID: ownerID, ID: sceneID1, Title: "Ouverture", Color: "#e04"},
+			request: &core.SceneUpdateRequest{OwnerID: ownerID, ID: sceneID2, Color: "#4A90D9"},
 
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
 			name: "Error/NotFound",
 
-			request: validRequest,
+			request: request,
 
-			daoMock: &daoMock[*dao.Scene]{err: dao.ErrSceneUpdateNotFound},
+			selectMock: &daoMock[*dao.Scene]{err: dao.ErrSceneSelectNotFound},
 
 			expectErr: core.ErrSceneNotFound,
 		},
 		{
-			name: "Error/Internal",
+			name: "Error/OtherOwner",
 
-			request: validRequest,
+			request: request,
 
-			daoMock: &daoMock[*dao.Scene]{err: errFoo},
+			selectMock:  &daoMock[*dao.Scene]{resp: daoScene(sceneID2, 1)},
+			projectMock: &daoMock[*dao.Project]{resp: foreignProject()},
+
+			expectErr: core.ErrSceneNotFound,
+		},
+		{
+			name: "Error/DeletedMeanwhile",
+
+			request: request,
+
+			selectMock:  &daoMock[*dao.Scene]{resp: daoScene(sceneID2, 1)},
+			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
+			updateMock:  &daoMock[*dao.Scene]{err: dao.ErrSceneUpdateNotFound},
+
+			expectErr: core.ErrSceneNotFound,
+		},
+		{
+			name: "Error/Update",
+
+			request: request,
+
+			selectMock:  &daoMock[*dao.Scene]{resp: daoScene(sceneID2, 1)},
+			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
+			updateMock:  &daoMock[*dao.Scene]{err: errFoo},
 
 			expectErr: errFoo,
 		},
@@ -81,26 +96,39 @@ func TestSceneUpdate(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockDao := coremocks.NewMockSceneUpdateDao(t)
+			mockSelect := coremocks.NewMockSceneUpdateDaoSelect(t)
+			mockProject := coremocks.NewMockSceneUpdateDaoProject(t)
+			mockUpdate := coremocks.NewMockSceneUpdateDao(t)
 
-			if testCase.daoMock != nil {
-				mockDao.EXPECT().
-					Exec(mock.Anything, mock.MatchedBy(func(req *dao.SceneUpdateRequest) bool {
-						// The color is stored in lowercase.
-						return req.ID == sceneID1 && req.OwnerID == ownerID && req.Title == "Ouverture" &&
-							req.Color == "#e0457b" && req.Description == "Marie attend." &&
-							req.Prompt == "Garder le suspense." && recent(req.Now)
-					})).
-					Return(testCase.daoMock.resp, testCase.daoMock.err)
+			if testCase.selectMock != nil {
+				mockSelect.EXPECT().
+					Exec(mock.Anything, &dao.SceneSelectRequest{ID: sceneID2}).
+					Return(testCase.selectMock.resp, testCase.selectMock.err)
 			}
 
-			service := core.NewSceneUpdate(mockDao)
+			if testCase.projectMock != nil {
+				mockProject.EXPECT().
+					Exec(mock.Anything, &dao.ProjectSelectRequest{ID: projectID}).
+					Return(testCase.projectMock.resp, testCase.projectMock.err)
+			}
+
+			if testCase.updateMock != nil {
+				mockUpdate.EXPECT().
+					Exec(mock.Anything, mock.MatchedBy(func(req *dao.SceneUpdateRequest) bool {
+						return req.ID == sceneID2 && req.Title == "Scene" && req.Color == sceneColor && recent(req.Now)
+					})).
+					Return(testCase.updateMock.resp, testCase.updateMock.err)
+			}
+
+			service := core.NewSceneUpdate(mockSelect, mockProject, mockUpdate)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
 
-			mockDao.AssertExpectations(t)
+			mockSelect.AssertExpectations(t)
+			mockProject.AssertExpectations(t)
+			mockUpdate.AssertExpectations(t)
 		})
 	}
 }

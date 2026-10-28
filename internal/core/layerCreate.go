@@ -4,11 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/a-novel-kit/golib/otel"
@@ -22,19 +20,14 @@ type LayerCreateDaoLock interface {
 	Exec(ctx context.Context, request *dao.ProjectLockRequest) (*dao.Project, error)
 }
 
-// LayerCreateDaoList reads the project's layers in order.
-type LayerCreateDaoList interface {
-	Exec(ctx context.Context, request *dao.LayerListRequest) ([]*dao.Layer, error)
+// LayerCreateDaoSelect reads the layer the new one follows.
+type LayerCreateDaoSelect interface {
+	Exec(ctx context.Context, request *dao.LayerSelectRequest) (*dao.Layer, error)
 }
 
-// LayerCreateDaoInsert inserts the layer.
+// LayerCreateDaoInsert inserts the layer, and moves the layers at or after its position down.
 type LayerCreateDaoInsert interface {
 	Exec(ctx context.Context, request *dao.LayerInsertRequest) (*dao.Layer, error)
-}
-
-// LayerCreateDaoReorder moves the layer to its place.
-type LayerCreateDaoReorder interface {
-	Exec(ctx context.Context, request *dao.LayerReorderRequest) ([]*dao.Layer, error)
 }
 
 // LayerCreateRequest carries a new layer and its place in the project.
@@ -47,29 +40,21 @@ type LayerCreateRequest struct {
 	Description string `validate:"max=20000"`
 }
 
-// LayerCreate adds a notes layer to a project, at the place the caller names.
+// LayerCreate adds a notes layer to a project, right after the layer the caller names.
 type LayerCreate struct {
 	daoLock    LayerCreateDaoLock
-	daoList    LayerCreateDaoList
+	daoSelect  LayerCreateDaoSelect
 	daoInsert  LayerCreateDaoInsert
-	daoReorder LayerCreateDaoReorder
 	transactor transaction.Transactor
 }
 
 func NewLayerCreate(
 	daoLock LayerCreateDaoLock,
-	daoList LayerCreateDaoList,
+	daoSelect LayerCreateDaoSelect,
 	daoInsert LayerCreateDaoInsert,
-	daoReorder LayerCreateDaoReorder,
 	transactor transaction.Transactor,
 ) *LayerCreate {
-	return &LayerCreate{
-		daoLock:    daoLock,
-		daoList:    daoList,
-		daoInsert:  daoInsert,
-		daoReorder: daoReorder,
-		transactor: transactor,
-	}
+	return &LayerCreate{daoLock: daoLock, daoSelect: daoSelect, daoInsert: daoInsert, transactor: transactor}
 }
 
 func (service *LayerCreate) Exec(ctx context.Context, request *LayerCreateRequest) (*Layer, error) {
@@ -95,7 +80,7 @@ func (service *LayerCreate) Exec(ctx context.Context, request *LayerCreateReques
 	var layer *Layer
 
 	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
-		_, err := service.daoLock.Exec(ctx, &dao.ProjectLockRequest{ID: request.ProjectID, OwnerID: request.OwnerID})
+		project, err := service.daoLock.Exec(ctx, &dao.ProjectLockRequest{ID: request.ProjectID})
 		if errors.Is(err, dao.ErrProjectLockNotFound) {
 			err = errors.Join(err, ErrProjectNotFound)
 		}
@@ -104,22 +89,26 @@ func (service *LayerCreate) Exec(ctx context.Context, request *LayerCreateReques
 			return fmt.Errorf("lock project: %w", err)
 		}
 
-		layers, err := service.daoList.Exec(ctx, &dao.LayerListRequest{ProjectID: request.ProjectID})
-		if err != nil {
-			return fmt.Errorf("list layers: %w", err)
-		}
-
-		ids := append(lo.Map(layers, layerID), id)
-
-		order, err := moveAfter(ids, id, request.After)
+		err = checkOwner(project, request.OwnerID, ErrProjectNotFound)
 		if err != nil {
 			return err
+		}
+
+		position := 0
+
+		if request.After != uuid.Nil {
+			anchor, err := layerAnchor(ctx, service.daoSelect, project.ID, request.After)
+			if err != nil {
+				return err
+			}
+
+			position = anchor.Position + 1
 		}
 
 		inserted, err := service.daoInsert.Exec(ctx, &dao.LayerInsertRequest{
 			ID:          id,
 			ProjectID:   request.ProjectID,
-			Position:    len(layers),
+			Position:    position,
 			Kind:        LayerKindNotes,
 			Name:        request.Name,
 			Description: request.Description,
@@ -135,17 +124,6 @@ func (service *LayerCreate) Exec(ctx context.Context, request *LayerCreateReques
 
 		layer = newLayer(inserted, 0)
 
-		if slices.Equal(order, ids) {
-			return nil
-		}
-
-		_, err = service.daoReorder.Exec(ctx, &dao.LayerReorderRequest{ProjectID: request.ProjectID, IDs: order})
-		if err != nil {
-			return fmt.Errorf("reorder layers: %w", err)
-		}
-
-		layer.Position = slices.Index(order, id)
-
 		return nil
 	})
 	if err != nil {
@@ -153,9 +131,4 @@ func (service *LayerCreate) Exec(ctx context.Context, request *LayerCreateReques
 	}
 
 	return layer, nil
-}
-
-// layerID adapts a layer to lo.Map, returning its ID.
-func layerID(layer *dao.Layer, _ int) uuid.UUID {
-	return layer.ID
 }
