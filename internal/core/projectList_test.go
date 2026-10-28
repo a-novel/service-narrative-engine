@@ -25,8 +25,9 @@ func TestProjectList(t *testing.T) {
 
 		daoRequest *dao.ProjectListRequest
 		daoMock    *daoMock[[]*dao.Project]
+		countMock  *daoMock[*dao.ProjectCount]
 
-		expect    []*core.Project
+		expect    *core.ProjectPage
 		expectErr error
 	}{
 		{
@@ -36,12 +37,16 @@ func TestProjectList(t *testing.T) {
 
 			daoRequest: &dao.ProjectListRequest{OwnerID: ownerID, Limit: 10, After: projectID},
 			daoMock:    &daoMock[[]*dao.Project]{resp: []*dao.Project{daoProject()}},
+			countMock:  &daoMock[*dao.ProjectCount]{resp: &dao.ProjectCount{Count: 3}},
 
-			expect: []*core.Project{
-				{
-					ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr",
-					CreatedAt: createdAt, UpdatedAt: updatedAt,
+			expect: &core.ProjectPage{
+				Projects: []*core.Project{
+					{
+						ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr",
+						CreatedAt: createdAt, UpdatedAt: updatedAt,
+					},
 				},
+				Total: 3,
 			},
 		},
 		{
@@ -51,8 +56,9 @@ func TestProjectList(t *testing.T) {
 
 			daoRequest: &dao.ProjectListRequest{OwnerID: ownerID, Limit: core.ProjectListDefaultSize, After: uuid.Max},
 			daoMock:    &daoMock[[]*dao.Project]{resp: []*dao.Project{}},
+			countMock:  &daoMock[*dao.ProjectCount]{resp: &dao.ProjectCount{}},
 
-			expect: []*core.Project{},
+			expect: &core.ProjectPage{Projects: []*core.Project{}},
 		},
 		{
 			name: "Error/LimitTooHigh",
@@ -71,6 +77,17 @@ func TestProjectList(t *testing.T) {
 
 			expectErr: errFoo,
 		},
+		{
+			name: "Error/Count",
+
+			request: &core.ProjectListRequest{OwnerID: ownerID},
+
+			daoRequest: &dao.ProjectListRequest{OwnerID: ownerID, Limit: core.ProjectListDefaultSize, After: uuid.Max},
+			daoMock:    &daoMock[[]*dao.Project]{resp: []*dao.Project{}},
+			countMock:  &daoMock[*dao.ProjectCount]{err: errFoo},
+
+			expectErr: errFoo,
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -78,6 +95,7 @@ func TestProjectList(t *testing.T) {
 			t.Parallel()
 
 			mockDao := coremocks.NewMockProjectListDao(t)
+			mockCount := coremocks.NewMockProjectListDaoCount(t)
 
 			if testCase.daoMock != nil {
 				mockDao.EXPECT().
@@ -85,13 +103,20 @@ func TestProjectList(t *testing.T) {
 					Return(testCase.daoMock.resp, testCase.daoMock.err)
 			}
 
-			service := core.NewProjectList(mockDao)
+			if testCase.countMock != nil {
+				mockCount.EXPECT().
+					Exec(mock.Anything, &dao.ProjectCountRequest{OwnerID: ownerID}).
+					Return(testCase.countMock.resp, testCase.countMock.err)
+			}
+
+			service := core.NewProjectList(mockDao, mockCount)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
 
 			mockDao.AssertExpectations(t)
+			mockCount.AssertExpectations(t)
 		})
 	}
 }

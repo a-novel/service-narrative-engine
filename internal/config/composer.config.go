@@ -1,7 +1,7 @@
 package config
 
 // Composer bounds what one request writes to a project's Scenes Composer. The schema caps a project
-// at 500 scenes and 20 layers.
+// at 500 scenes and 1000 layers.
 type Composer struct {
 	// MaxSeedScenes caps the scenes a project starts with.
 	MaxSeedScenes int `json:"maxSeedScenes" yaml:"maxSeedScenes"`

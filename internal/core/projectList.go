@@ -19,6 +19,11 @@ type ProjectListDao interface {
 	Exec(ctx context.Context, request *dao.ProjectListRequest) ([]*dao.Project, error)
 }
 
+// ProjectListDaoCount counts the caller's projects.
+type ProjectListDaoCount interface {
+	Exec(ctx context.Context, request *dao.ProjectCountRequest) (*dao.ProjectCount, error)
+}
+
 // ProjectListDefaultSize is the page size of a [ProjectListRequest] whose Limit is zero or negative.
 const ProjectListDefaultSize = 20
 
@@ -33,16 +38,17 @@ type ProjectListRequest struct {
 	After uuid.UUID
 }
 
-// ProjectList reads the caller's projects, newest first.
+// ProjectList reads the caller's projects page by page, newest first. Each page carries the total.
 type ProjectList struct {
-	dao ProjectListDao
+	dao      ProjectListDao
+	daoCount ProjectListDaoCount
 }
 
-func NewProjectList(dao ProjectListDao) *ProjectList {
-	return &ProjectList{dao: dao}
+func NewProjectList(dao ProjectListDao, daoCount ProjectListDaoCount) *ProjectList {
+	return &ProjectList{dao: dao, daoCount: daoCount}
 }
 
-func (service *ProjectList) Exec(ctx context.Context, request *ProjectListRequest) ([]*Project, error) {
+func (service *ProjectList) Exec(ctx context.Context, request *ProjectListRequest) (*ProjectPage, error) {
 	ctx, span := otel.Tracer().Start(ctx, "core.ProjectList")
 	defer span.End()
 
@@ -73,5 +79,13 @@ func (service *ProjectList) Exec(ctx context.Context, request *ProjectListReques
 		return nil, otel.ReportError(span, fmt.Errorf("list projects: %w", err))
 	}
 
-	return lo.Map(entities, func(entity *dao.Project, _ int) *Project { return newProject(entity) }), nil
+	count, err := service.daoCount.Exec(ctx, &dao.ProjectCountRequest{OwnerID: request.OwnerID})
+	if err != nil {
+		return nil, otel.ReportError(span, fmt.Errorf("count projects: %w", err))
+	}
+
+	return &ProjectPage{
+		Projects: lo.Map(entities, func(entity *dao.Project, _ int) *Project { return newProject(entity) }),
+		Total:    count.Count,
+	}, nil
 }

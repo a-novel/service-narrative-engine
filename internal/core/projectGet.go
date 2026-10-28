@@ -29,36 +29,29 @@ type ProjectGetDaoLayers interface {
 	Exec(ctx context.Context, request *dao.LayerListRequest) ([]*dao.Layer, error)
 }
 
-// ProjectGetDaoCells reads the project's cells.
-type ProjectGetDaoCells interface {
-	Exec(ctx context.Context, request *dao.CellListRequest) ([]*dao.Cell, error)
-}
-
 // ProjectGetRequest names a project of the caller.
 type ProjectGetRequest struct {
 	OwnerID uuid.UUID `validate:"required"`
 	ID      uuid.UUID `validate:"required"`
 }
 
-// ProjectGet reads a project with its whole Scenes Composer, so a client loads it in one call.
+// ProjectGet reads a project with the layout of its Scenes Composer, so a client loads it in one
+// call before paging through its cells with [CellList].
 type ProjectGet struct {
 	daoProject ProjectGetDaoProject
 	daoScenes  ProjectGetDaoScenes
 	daoLayers  ProjectGetDaoLayers
-	daoCells   ProjectGetDaoCells
 }
 
 func NewProjectGet(
 	daoProject ProjectGetDaoProject,
 	daoScenes ProjectGetDaoScenes,
 	daoLayers ProjectGetDaoLayers,
-	daoCells ProjectGetDaoCells,
 ) *ProjectGet {
 	return &ProjectGet{
 		daoProject: daoProject,
 		daoScenes:  daoScenes,
 		daoLayers:  daoLayers,
-		daoCells:   daoCells,
 	}
 }
 
@@ -95,15 +88,9 @@ func (service *ProjectGet) Exec(ctx context.Context, request *ProjectGetRequest)
 		return nil, otel.ReportError(span, fmt.Errorf("list layers: %w", err))
 	}
 
-	cells, err := service.daoCells.Exec(ctx, &dao.CellListRequest{ProjectID: project.ID})
-	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("list cells: %w", err))
-	}
-
 	return &ProjectComposer{
 		Project: newProject(project),
 		Scenes:  lo.Map(scenes, newScene),
 		Layers:  lo.Map(layers, newLayer),
-		Cells:   lo.Map(cells, newCell),
 	}, nil
 }

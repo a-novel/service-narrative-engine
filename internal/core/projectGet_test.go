@@ -1,7 +1,6 @@
 package core_test
 
 import (
-	"encoding/json"
 	"errors"
 	"testing"
 
@@ -18,9 +17,6 @@ func TestProjectGet(t *testing.T) {
 
 	errFoo := errors.New("foo")
 
-	content := json.RawMessage(`{"text":"Marie"}`)
-	cell := &dao.Cell{SceneID: sceneID1, LayerID: layerID2, Content: content, UpdatedAt: updatedAt}
-
 	testCases := []struct {
 		name string
 
@@ -29,7 +25,6 @@ func TestProjectGet(t *testing.T) {
 		projectMock *daoMock[*dao.Project]
 		scenesMock  *daoMock[[]*dao.Scene]
 		layersMock  *daoMock[[]*dao.Layer]
-		cellsMock   *daoMock[[]*dao.Cell]
 
 		expect    *core.ProjectComposer
 		expectErr error
@@ -42,7 +37,6 @@ func TestProjectGet(t *testing.T) {
 			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
 			scenesMock:  &daoMock[[]*dao.Scene]{resp: []*dao.Scene{daoScene(sceneID1, 0)}},
 			layersMock:  &daoMock[[]*dao.Layer]{resp: []*dao.Layer{notesLayer(layerID2, 0)}},
-			cellsMock:   &daoMock[[]*dao.Cell]{resp: []*dao.Cell{cell}},
 
 			expect: &core.ProjectComposer{
 				Project: &core.Project{
@@ -57,9 +51,6 @@ func TestProjectGet(t *testing.T) {
 						ID: layerID2, ProjectID: projectID, Kind: core.LayerKindNotes, Name: "Layer",
 						UpdatedAt: updatedAt,
 					},
-				},
-				Cells: []*core.Cell{
-					{SceneID: sceneID1, LayerID: layerID2, Content: content, UpdatedAt: updatedAt},
 				},
 			},
 		},
@@ -100,18 +91,6 @@ func TestProjectGet(t *testing.T) {
 
 			expectErr: errFoo,
 		},
-		{
-			name: "Error/ListCells",
-
-			request: &core.ProjectGetRequest{OwnerID: ownerID, ID: projectID},
-
-			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
-			scenesMock:  &daoMock[[]*dao.Scene]{},
-			layersMock:  &daoMock[[]*dao.Layer]{},
-			cellsMock:   &daoMock[[]*dao.Cell]{err: errFoo},
-
-			expectErr: errFoo,
-		},
 	}
 
 	for _, testCase := range testCases {
@@ -121,7 +100,6 @@ func TestProjectGet(t *testing.T) {
 			daoProjectMock := coremocks.NewMockProjectGetDaoProject(t)
 			daoScenesMock := coremocks.NewMockProjectGetDaoScenes(t)
 			daoLayersMock := coremocks.NewMockProjectGetDaoLayers(t)
-			daoCellsMock := coremocks.NewMockProjectGetDaoCells(t)
 
 			if testCase.projectMock != nil {
 				daoProjectMock.EXPECT().
@@ -141,13 +119,7 @@ func TestProjectGet(t *testing.T) {
 					Return(testCase.layersMock.resp, testCase.layersMock.err)
 			}
 
-			if testCase.cellsMock != nil {
-				daoCellsMock.EXPECT().
-					Exec(mock.Anything, &dao.CellListRequest{ProjectID: projectID}).
-					Return(testCase.cellsMock.resp, testCase.cellsMock.err)
-			}
-
-			service := core.NewProjectGet(daoProjectMock, daoScenesMock, daoLayersMock, daoCellsMock)
+			service := core.NewProjectGet(daoProjectMock, daoScenesMock, daoLayersMock)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
@@ -156,7 +128,6 @@ func TestProjectGet(t *testing.T) {
 			daoProjectMock.AssertExpectations(t)
 			daoScenesMock.AssertExpectations(t)
 			daoLayersMock.AssertExpectations(t)
-			daoCellsMock.AssertExpectations(t)
 		})
 	}
 }
