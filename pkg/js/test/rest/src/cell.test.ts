@@ -4,11 +4,13 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { expectStatus } from "@a-novel-kit/nodelib-test/http";
 import {
+  type Cell,
   Language,
   type Layer,
   ManuscriptContentSchema,
   NarrativeEngineApi,
   type ProjectComposer,
+  cellList,
   cellWrite,
   layerCreate,
   projectCreate,
@@ -17,6 +19,8 @@ import {
 } from "@a-novel/service-narrative-engine-rest";
 
 const api = new NarrativeEngineApi(process.env.REST_URL!);
+
+const ABSENT_ID = "01920000-0000-7000-8000-000000000000";
 const accessToken = await superAdminAccessToken();
 
 let project: ProjectComposer;
@@ -65,7 +69,7 @@ describe("cellWrite", () => {
     const rewritten = await cellWrite(api, accessToken, { ...request, content: { blocks: [] } });
     expect(rewritten.content).toEqual({ blocks: [] });
 
-    const stored = (await projectGet(api, accessToken, project)).cells;
+    const stored = (await cellList(api, accessToken, { projectID: project.id })).cells;
     expect(stored).toContainEqual(rewritten);
   });
 
@@ -87,5 +91,52 @@ describe("cellWrite", () => {
   it("returns 404 for a scene and a layer of two projects", async () => {
     const request = { sceneID: other.scenes[0].id, layerID: notes.id, content: { text: "Marie" } };
     await expectStatus(cellWrite(api, accessToken, request), 404);
+  });
+});
+
+describe("cellList", () => {
+  it("pages through the cells of a project, with their total", async () => {
+    const paged = await projectCreate(api, accessToken, {
+      title: "Paged",
+      language: Language.En,
+      scenes: [
+        { title: "One", color: "#4a90d9" },
+        { title: "Two", color: "#4a90d9" },
+        { title: "Three", color: "#4a90d9" },
+      ],
+    });
+
+    const written: Cell[] = [];
+    for (const scene of paged.scenes) {
+      const request = { sceneID: scene.id, layerID: paged.layers[0].id, content: { blocks: [] } };
+      written.push(await cellWrite(api, accessToken, request));
+    }
+
+    const first = await cellList(api, accessToken, { projectID: paged.id, limit: 2 });
+    expect(first.total).toBe(3);
+    expect(first.cells).toHaveLength(2);
+
+    const last = first.cells[1];
+    const second = await cellList(api, accessToken, {
+      projectID: paged.id,
+      limit: 2,
+      afterSceneID: last.sceneID,
+      afterLayerID: last.layerID,
+    });
+    expect(second.total).toBe(3);
+
+    const all = [...first.cells, ...second.cells];
+    expect(all).toHaveLength(3);
+    expect(all).toEqual(expect.arrayContaining(written));
+
+    await projectDelete(api, accessToken, paged);
+  });
+
+  it("returns 400 for a page over 500 cells", async () => {
+    await expectStatus(cellList(api, accessToken, { projectID: project.id, limit: 501 }), 400);
+  });
+
+  it("returns 404 for an absent project", async () => {
+    await expectStatus(cellList(api, accessToken, { projectID: ABSENT_ID }), 404);
   });
 });

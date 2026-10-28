@@ -76,7 +76,7 @@ export type LayerDeleteRequest = z.infer<typeof LayerDeleteRequestSchema>;
 /**
  * Adds a notes layer to a project and returns it at its place. Throws on HTTP 400 when `after` names
  * no layer of the project, 404 when the caller owns no such project, and 422 when the project holds
- * 20 layers already.
+ * 1000 layers already.
  */
 export async function layerCreate(
   api: NarrativeEngineApi,

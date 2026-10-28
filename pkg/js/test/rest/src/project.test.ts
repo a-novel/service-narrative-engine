@@ -7,7 +7,6 @@ import {
   Language,
   LayerKind,
   NarrativeEngineApi,
-  cellWrite,
   projectCreate,
   projectDelete,
   projectGet,
@@ -42,7 +41,6 @@ describe("projectCreate", () => {
       [1, "Le thème", "#e0457b", "Paul ment."],
     ]);
     expect(project.layers.map((layer) => layer.kind)).toEqual([LayerKind.Manuscript]);
-    expect(project.cells).toEqual([]);
 
     await projectDelete(api, accessToken, project);
   });
@@ -64,23 +62,17 @@ describe("projectCreate", () => {
 });
 
 describe("projectGet", () => {
-  it("returns the project with its Scenes Composer", async () => {
+  it("returns the project with its scenes and layers", async () => {
     const created = await projectCreate(api, accessToken, {
       title: "Clear Hours",
       language: Language.En,
       scenes: [{ title: "Opening", color: "#4a90d9" }],
-    });
-    const cell = await cellWrite(api, accessToken, {
-      sceneID: created.scenes[0].id,
-      layerID: created.layers[0].id,
-      content: { blocks: [{ id: "b1", kind: "narration", text: "It rained." }] },
     });
 
     const project = await projectGet(api, accessToken, { id: created.id });
     expect(project.id).toBe(created.id);
     expect(project.scenes).toEqual(created.scenes);
     expect(project.layers).toEqual(created.layers);
-    expect(project.cells).toEqual([cell]);
 
     await projectDelete(api, accessToken, project);
   });
@@ -95,21 +87,23 @@ describe("projectGet", () => {
 });
 
 describe("projectList", () => {
-  it("lists projects newest first, a page at a time", async () => {
+  it("lists projects newest first, a page at a time, with their total", async () => {
     const older = await projectCreate(api, accessToken, { title: "Older", language: Language.En });
     const newer = await projectCreate(api, accessToken, { title: "Newer", language: Language.En });
 
-    const ids = (await projectList(api, accessToken)).map((project) => project.id);
+    const ids = (await projectList(api, accessToken)).projects.map((project) => project.id);
     expect(ids.indexOf(newer.id)).toBeGreaterThanOrEqual(0);
     expect(ids.indexOf(newer.id)).toBeLessThan(ids.indexOf(older.id));
 
-    const nextPage = (await projectList(api, accessToken, { after: newer.id, limit: 100 })).map(
+    const nextPage = (await projectList(api, accessToken, { after: newer.id, limit: 100 })).projects.map(
       (project) => project.id
     );
     expect(nextPage).toContain(older.id);
     expect(nextPage).not.toContain(newer.id);
 
-    await expect(projectList(api, accessToken, { limit: 1 })).resolves.toHaveLength(1);
+    const firstPage = await projectList(api, accessToken, { limit: 1 });
+    expect(firstPage.projects).toHaveLength(1);
+    expect(firstPage.total).toBeGreaterThanOrEqual(2);
 
     await projectDelete(api, accessToken, older);
     await projectDelete(api, accessToken, newer);

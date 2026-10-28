@@ -1,5 +1,4 @@
 import type { NarrativeEngineApi } from "./api";
-import { CellSchema } from "./cell";
 import { LayerSchema } from "./layer";
 import { SceneFieldsSchema, SceneSchema } from "./scene";
 
@@ -31,15 +30,26 @@ export const ProjectSchema = z.object({
 /** The value {@link ProjectSchema} validates. */
 export type Project = z.infer<typeof ProjectSchema>;
 
-/** A project with every scene and layer, each list in its order, and every cell written so far. */
+/**
+ * A project with every scene and layer, each list in its order. Its cells come page by page from
+ * `cellList`.
+ */
 export const ProjectComposerSchema = ProjectSchema.extend({
   scenes: z.array(SceneSchema),
   layers: z.array(LayerSchema),
-  cells: z.array(CellSchema),
 });
 
 /** The value {@link ProjectComposerSchema} validates. */
 export type ProjectComposer = z.infer<typeof ProjectComposerSchema>;
+
+/** A page of the caller's projects, with how many the caller holds in all. */
+export const ProjectPageSchema = z.object({
+  projects: z.array(ProjectSchema),
+  total: z.int(),
+});
+
+/** The value {@link ProjectPageSchema} validates. */
+export type ProjectPage = z.infer<typeof ProjectPageSchema>;
 
 /** The title of a project, which is not blank. */
 export const ProjectTitleSchema = z.string().max(200).regex(/\S/);
@@ -107,7 +117,10 @@ export async function projectCreate(
   });
 }
 
-/** Returns a project with its whole Scenes Composer. Throws on HTTP 404 when the caller owns no such project. */
+/**
+ * Returns a project with its scenes and layers, each list in its order. Read its cells with
+ * `cellList`. Throws on HTTP 404 when the caller owns no such project.
+ */
 export async function projectGet(
   api: NarrativeEngineApi,
   accessToken: string,
@@ -120,17 +133,20 @@ export async function projectGet(
   });
 }
 
-/** Lists the caller's projects, newest first. Pass the ID of the last project received as `after` for the next page. */
+/**
+ * Lists a page of the caller's projects, newest first, with their total. Pass the ID of the last
+ * project received as `after` for the next page.
+ */
 export async function projectList(
   api: NarrativeEngineApi,
   accessToken: string,
   request: ProjectListRequest = {}
-): Promise<Project[]> {
+): Promise<ProjectPage> {
   const params = new URLSearchParams();
   if (request.limit) params.set("limit", `${request.limit}`);
   if (request.after) params.set("after", request.after);
   const query = params.toString();
-  return await api.fetch(`/v1/projects${query ? `?${query}` : ""}`, z.array(ProjectSchema), {
+  return await api.fetch(`/v1/projects${query ? `?${query}` : ""}`, ProjectPageSchema, {
     method: "GET",
     headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
   });
