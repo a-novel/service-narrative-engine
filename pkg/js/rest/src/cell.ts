@@ -21,6 +21,16 @@ export const CellSchema = z.object({
 /** The value {@link CellSchema} validates. */
 export type Cell = z.infer<typeof CellSchema>;
 
+/** A cell a write just stored, without the content the client already holds. */
+export const WrittenCellSchema = z.object({
+  sceneID: z.uuid(),
+  layerID: z.uuid(),
+  updatedAt: z.iso.datetime().transform((value) => new Date(value)),
+});
+
+/** The value {@link WrittenCellSchema} validates. */
+export type WrittenCell = z.infer<typeof WrittenCellSchema>;
+
 /**
  * A page of a project's cells, by the position of their scene, then of their layer, with how many the
  * project holds in all.
@@ -63,8 +73,9 @@ export const CellWriteRequestSchema = z.object({
 export type CellWriteRequest = z.infer<typeof CellWriteRequestSchema>;
 
 /**
- * Writes cells where scenes and layers of the project cross, and returns them in the order of the
- * request. The first write of a cell creates it, and the cells are all written or none are. Throws on
+ * Writes cells where scenes and layers of the project cross, and returns each written cell, without its
+ * content, in the order of the request. The first write of a cell creates it, and the cells are all
+ * written or none are. Throws on
  * HTTP 400 when a content breaks the schema of its layer's kind or weighs over 2 MiB, and 404 when the
  * caller owns no such project, or the project holds one of the scenes or layers not.
  */
@@ -72,8 +83,8 @@ export async function cellWrite(
   api: NarrativeEngineApi,
   accessToken: string,
   request: CellWriteRequest
-): Promise<Cell[]> {
-  return await api.fetch("/v1/cells", z.array(CellSchema), {
+): Promise<WrittenCell[]> {
+  return await api.fetch("/v1/cells", z.array(WrittenCellSchema), {
     method: "PUT",
     headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
     body: JSON.stringify(request),

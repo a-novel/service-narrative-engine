@@ -4,6 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { expectStatus } from "@a-novel-kit/nodelib-test/http";
 import {
+  type Cell,
   Language,
   type Layer,
   LayerKind,
@@ -42,6 +43,13 @@ async function projectWithScenes(title: string, titles: string[]): Promise<[Proj
   return [created, createdScenes];
 }
 
+/** Returns the stored cell of the test project where a scene and a layer cross. */
+async function storedCell(sceneID: string, layerID: string): Promise<Cell | undefined> {
+  const { cells } = await cellList(api, accessToken, { projectID: project.id, limit: 500 });
+
+  return cells.find((cell) => cell.sceneID === sceneID && cell.layerID === layerID);
+}
+
 beforeAll(async () => {
   [project, scenes] = await projectWithScenes("Cells", ["Opening", "Ending"]);
   [other, otherScenes] = await projectWithScenes("Other", ["Only"]);
@@ -72,16 +80,19 @@ describe("cellWrite", () => {
     };
 
     const [written] = await cellWrite(api, accessToken, { projectID: project.id, cells: [cell] });
-    expect(ManuscriptContentSchema.parse(written.content)).toEqual(cell.content);
+    expect(written).toEqual({ sceneID: cell.sceneID, layerID: cell.layerID, updatedAt: expect.any(Date) });
+    expect(ManuscriptContentSchema.parse((await storedCell(cell.sceneID, cell.layerID))?.content)).toEqual(
+      cell.content
+    );
 
     const [rewritten] = await cellWrite(api, accessToken, {
       projectID: project.id,
       cells: [{ ...cell, content: { blocks: [] } }],
     });
-    expect(rewritten.content).toEqual({ blocks: [] });
-
-    const stored = (await cellList(api, accessToken, { projectID: project.id })).cells;
-    expect(stored).toContainEqual(rewritten);
+    await expect(storedCell(cell.sceneID, cell.layerID)).resolves.toMatchObject({
+      content: { blocks: [] },
+      updatedAt: rewritten.updatedAt,
+    });
   });
 
   it("writes cells of several layers at once, in the order of the request", async () => {
@@ -93,10 +104,8 @@ describe("cellWrite", () => {
       ],
     });
 
-    expect(written.map((cell) => [cell.layerID, cell.content])).toEqual([
-      [notes.id, { text: "Marie" }],
-      [project.layers[0].id, { blocks: [] }],
-    ]);
+    expect(written.map((cell) => cell.layerID)).toEqual([notes.id, project.layers[0].id]);
+    await expect(storedCell(scenes[1].id, notes.id)).resolves.toMatchObject({ content: { text: "Marie" } });
   });
 
   it("returns 400 for content outside the schema of the layer's kind, and writes none of the cells", async () => {
@@ -141,14 +150,15 @@ describe("cellList", () => {
       cells: pagedScenes.map((scene) => ({ sceneID: scene.id, layerID: paged.layers[0].id, content: { blocks: [] } })),
     });
 
-    await expect(cellList(api, accessToken, { projectID: paged.id, limit: 2 })).resolves.toEqual({
-      cells: written.slice(0, 2),
-      total: 3,
-    });
-    await expect(cellList(api, accessToken, { projectID: paged.id, limit: 2, offset: 2 })).resolves.toEqual({
-      cells: written.slice(2),
-      total: 3,
-    });
+    const keys = (cells: { sceneID: string; layerID: string }[]) => cells.map((cell) => [cell.sceneID, cell.layerID]);
+
+    const first = await cellList(api, accessToken, { projectID: paged.id, limit: 2 });
+    expect(first.total).toBe(3);
+    expect(keys(first.cells)).toEqual(keys(written.slice(0, 2)));
+
+    const second = await cellList(api, accessToken, { projectID: paged.id, limit: 2, offset: 2 });
+    expect(second.total).toBe(3);
+    expect(keys(second.cells)).toEqual(keys(written.slice(2)));
 
     await projectDelete(api, accessToken, paged);
   });

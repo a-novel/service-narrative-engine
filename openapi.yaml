@@ -571,10 +571,11 @@ paths:
       operationId: cellWrite
       summary: Write cells.
       description: |
-        Writes up to 100 cells where scenes and layers of the project cross, and returns them in the order of
-        the request. Each content follows the content schema of its layer's kind and weighs at most 2 MiB,
-        and the whole body at most 4 MiB. The first write of a cell creates it. The cells are all written,
-        or none are.
+        Writes up to 100 cells where scenes and layers of the project cross, and returns each written cell's
+        scene, layer and write time, in the order of the request, without the content the client already
+        holds. Each content follows the content schema of its layer's kind and weighs at most 2 MiB, and the
+        whole body at most 4 MiB. The first write of a cell creates it. The cells are all written, or none
+        are.
       tags: [cell]
       requestBody:
         required: true
@@ -584,7 +585,7 @@ paths:
               $ref: "#/components/schemas/cellWriteRequest"
       responses:
         "200":
-          $ref: "#/components/responses/cells"
+          $ref: "#/components/responses/writtenCells"
         "400":
           $ref: "#/components/responses/badRequest"
         "401":
@@ -711,14 +712,14 @@ components:
             items:
               $ref: "#/components/schemas/layer"
 
-    cells:
-      description: Cells, in the order of the request.
+    writtenCells:
+      description: The written cells, in the order of the request, without their content.
       content:
         application/json:
           schema:
             type: array
             items:
-              $ref: "#/components/schemas/cell"
+              $ref: "#/components/schemas/writtenCell"
 
     cellPage:
       description: A page of a project's cells, by the position of their scene, then of their layer, with their total.
@@ -1000,6 +1001,19 @@ components:
           description: When the cell was last written.
           format: date-time
           examples: ["2021-01-02T00:00:00Z"]
+
+    writtenCell:
+      type: object
+      description: A cell a write just stored, without its content.
+      required: [sceneID, layerID, updatedAt]
+      additionalProperties: false
+      properties:
+        sceneID:
+          $ref: "#/components/schemas/sceneID"
+        layerID:
+          $ref: "#/components/schemas/layerID"
+        updatedAt:
+          $ref: "#/components/schemas/cell/properties/updatedAt"
 
     scenePage:
       type: object
