@@ -86,11 +86,11 @@ func composerFixtures() fixtures {
 		},
 		cells: []*dao.Cell{
 			{
-				SceneID: sceneID1, LayerID: manuscriptLayerID, Content: json.RawMessage(`{"blocks": []}`),
+				ProjectID: projectID, SceneID: sceneID1, LayerID: manuscriptLayerID, Content: json.RawMessage(`{"blocks": []}`),
 				UpdatedAt: updatedAt,
 			},
 			{
-				SceneID: sceneID1, LayerID: notesLayerID, Content: json.RawMessage(`{"text": "Marie"}`),
+				ProjectID: projectID, SceneID: sceneID1, LayerID: notesLayerID, Content: json.RawMessage(`{"text": "Marie"}`),
 				UpdatedAt: updatedAt,
 			},
 		},
@@ -133,6 +133,7 @@ func requireCellsEqual(t *testing.T, expect, actual []*dao.Cell) {
 	require.Len(t, actual, len(expect))
 
 	for i := range expect {
+		require.Equal(t, expect[i].ProjectID, actual[i].ProjectID)
 		require.Equal(t, expect[i].SceneID, actual[i].SceneID)
 		require.Equal(t, expect[i].LayerID, actual[i].LayerID)
 		require.Equal(t, expect[i].UpdatedAt, actual[i].UpdatedAt)

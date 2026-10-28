@@ -1,6 +1,7 @@
-migration-history	sha256:4b77a927843b20f5afd8a6ab986f1c44fe52d9eda2c5a29af552a19cb78f8ca0
+migration-history	sha256:97aecc18feb2cd5a25b19a0af9dd003cc4a31006eacea705e659638c50607ca2
 column	cells.content	jsonb NOT NULL
 column	cells.layer_id	uuid NOT NULL
+column	cells.project_id	uuid NOT NULL
 column	cells.scene_id	uuid NOT NULL
 column	cells.updated_at	timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
 column	layers.description	text NOT NULL DEFAULT ''::text
@@ -27,10 +28,11 @@ column	scenes.title	text NOT NULL
 column	scenes.updated_at	timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
 comment	schema public	standard public schema
 constraint	cells.cells_content_not_null	NOT NULL content
-constraint	cells.cells_layer_id_fkey	FOREIGN KEY (layer_id) REFERENCES layers(id) ON DELETE CASCADE
+constraint	cells.cells_layer_fkey	FOREIGN KEY (project_id, layer_id) REFERENCES layers(project_id, id) ON DELETE CASCADE
 constraint	cells.cells_layer_id_not_null	NOT NULL layer_id
 constraint	cells.cells_pkey	PRIMARY KEY (scene_id, layer_id)
-constraint	cells.cells_scene_id_fkey	FOREIGN KEY (scene_id) REFERENCES scenes(id) ON DELETE CASCADE
+constraint	cells.cells_project_id_not_null	NOT NULL project_id
+constraint	cells.cells_scene_fkey	FOREIGN KEY (project_id, scene_id) REFERENCES scenes(project_id, id) ON DELETE CASCADE
 constraint	cells.cells_scene_id_not_null	NOT NULL scene_id
 constraint	cells.cells_updated_at_not_null	NOT NULL updated_at
 constraint	layers.layers_description_not_null	NOT NULL description
@@ -43,6 +45,7 @@ constraint	layers.layers_pkey	PRIMARY KEY (id)
 constraint	layers.layers_position_check	CHECK ((("position" >= 0) AND ("position" < 1000)))
 constraint	layers.layers_position_not_null	NOT NULL "position"
 constraint	layers.layers_project_id_fkey	FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+constraint	layers.layers_project_id_id_key	UNIQUE (project_id, id)
 constraint	layers.layers_project_id_not_null	NOT NULL project_id
 constraint	layers.layers_project_id_position_key	UNIQUE (project_id, "position") DEFERRABLE INITIALLY DEFERRED
 constraint	layers.layers_updated_at_not_null	NOT NULL updated_at
@@ -63,6 +66,7 @@ constraint	scenes.scenes_pkey	PRIMARY KEY (id)
 constraint	scenes.scenes_position_check	CHECK ((("position" >= 0) AND ("position" < 500)))
 constraint	scenes.scenes_position_not_null	NOT NULL "position"
 constraint	scenes.scenes_project_id_fkey	FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+constraint	scenes.scenes_project_id_id_key	UNIQUE (project_id, id)
 constraint	scenes.scenes_project_id_not_null	NOT NULL project_id
 constraint	scenes.scenes_project_id_position_key	UNIQUE (project_id, "position") DEFERRABLE INITIALLY DEFERRED
 constraint	scenes.scenes_prompt_not_null	NOT NULL prompt
@@ -70,14 +74,16 @@ constraint	scenes.scenes_title_check	CHECK ((title <> ''::text))
 constraint	scenes.scenes_title_not_null	NOT NULL title
 constraint	scenes.scenes_updated_at_not_null	NOT NULL updated_at
 extension	plpgsql	1.0
-index	cells_layer_id_idx	CREATE INDEX cells_layer_id_idx ON public.cells USING btree (layer_id)
 index	cells_pkey	CREATE UNIQUE INDEX cells_pkey ON public.cells USING btree (scene_id, layer_id)
+index	cells_project_id_layer_id_idx	CREATE INDEX cells_project_id_layer_id_idx ON public.cells USING btree (project_id, layer_id)
 index	layers_pkey	CREATE UNIQUE INDEX layers_pkey ON public.layers USING btree (id)
+index	layers_project_id_id_key	CREATE UNIQUE INDEX layers_project_id_id_key ON public.layers USING btree (project_id, id)
 index	layers_project_id_manuscript_idx	CREATE UNIQUE INDEX layers_project_id_manuscript_idx ON public.layers USING btree (project_id) WHERE (kind = 'manuscript'::text)
 index	layers_project_id_position_key	CREATE UNIQUE INDEX layers_project_id_position_key ON public.layers USING btree (project_id, "position")
 index	projects_owner_id_idx	CREATE INDEX projects_owner_id_idx ON public.projects USING btree (owner_id, id DESC)
 index	projects_pkey	CREATE UNIQUE INDEX projects_pkey ON public.projects USING btree (id)
 index	scenes_pkey	CREATE UNIQUE INDEX scenes_pkey ON public.scenes USING btree (id)
+index	scenes_project_id_id_key	CREATE UNIQUE INDEX scenes_project_id_id_key ON public.scenes USING btree (project_id, id)
 index	scenes_project_id_position_key	CREATE UNIQUE INDEX scenes_project_id_position_key ON public.scenes USING btree (project_id, "position")
 relation	cells	r
 relation	layers	r

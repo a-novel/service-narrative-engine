@@ -25,7 +25,7 @@ type CellCount struct {
 	Count int `bun:"count"`
 }
 
-// PgCellCount counts the cells of a project, so a client paging through them knows how many to expect.
+// PgCellCount counts the cells of a project, for its metrics. A page of cells carries its own total.
 type PgCellCount struct{}
 
 func NewPgCellCount() *PgCellCount {

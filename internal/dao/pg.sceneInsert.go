@@ -81,7 +81,7 @@ func (dao *PgSceneInsert) Exec(ctx context.Context, request *SceneInsertRequest)
 		request.ProjectID, request.Position, bun.List(ids), bun.List(titles), bun.List(colors),
 		bun.List(descriptions), bun.List(prompts), request.Now,
 	).Scan(ctx, &entities)
-	if isCheckViolation(err, "scenes_position_check") {
+	if isViolation(err, pgCheckViolation, "scenes_position_check") {
 		err = errors.Join(err, ErrSceneInsertFull)
 	}
 

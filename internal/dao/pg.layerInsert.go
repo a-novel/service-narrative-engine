@@ -64,7 +64,7 @@ func (dao *PgLayerInsert) Exec(ctx context.Context, request *LayerInsertRequest)
 		request.ID, request.ProjectID, request.Position, request.Kind,
 		request.Name, request.Description, request.Now,
 	).Scan(ctx, entity)
-	if isCheckViolation(err, "layers_position_check") {
+	if isViolation(err, pgCheckViolation, "layers_position_check") {
 		err = errors.Join(err, ErrLayerInsertFull)
 	}
 
