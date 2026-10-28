@@ -47,8 +47,7 @@ var AppPresetDefault = App{
 		Name:          env.AppName,
 		DowntimeStart: env.DowntimeStart,
 	},
-	Composer: ComposerPresetDefault,
-	Rest:     env.Rest,
+	Rest: env.Rest,
 
 	Otel:   OtelPresetDefault,
 	Sentry: env.Sentry,
