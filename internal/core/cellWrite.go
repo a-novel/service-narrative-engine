@@ -29,7 +29,7 @@ type CellWriteDaoKind interface {
 
 // CellWriteDao writes the cells. It refuses a scene or a layer of another project.
 type CellWriteDao interface {
-	Exec(ctx context.Context, request *dao.CellUpsertRequest) ([]*dao.Cell, error)
+	Exec(ctx context.Context, request *dao.CellUpsertRequest) ([]*dao.CellUpsertRow, error)
 }
 
 // CellWriteItem is one cell of a [CellWriteRequest].
@@ -52,8 +52,8 @@ type CellWriteRequest struct {
 }
 
 // CellWrite writes the content of cells, which it validates against the content schema of each
-// layer's kind, and returns them in the order of the request. The first write of a cell creates it.
-// It writes all of them or none.
+// layer's kind, and returns the written cells in the order of the request, without their content. The
+// first write of a cell creates it, and it writes all of them or none.
 type CellWrite struct {
 	daoOwner CellWriteDaoOwner
 	daoKind  CellWriteDaoKind
@@ -64,7 +64,7 @@ func NewCellWrite(daoOwner CellWriteDaoOwner, daoKind CellWriteDaoKind, dao Cell
 	return &CellWrite{daoOwner: daoOwner, daoKind: daoKind, dao: dao}
 }
 
-func (service *CellWrite) Exec(ctx context.Context, request *CellWriteRequest) ([]*Cell, error) {
+func (service *CellWrite) Exec(ctx context.Context, request *CellWriteRequest) ([]*WrittenCell, error) {
 	ctx, span := otel.Tracer().Start(ctx, "core.CellWrite")
 	defer span.End()
 
@@ -133,11 +133,11 @@ func (service *CellWrite) Exec(ctx context.Context, request *CellWriteRequest) (
 		return nil, otel.ReportError(span, fmt.Errorf("write cells: %w", err))
 	}
 
-	written := lo.KeyBy(entities, func(entity *dao.Cell) [2]uuid.UUID {
-		return [2]uuid.UUID{entity.SceneID, entity.LayerID}
+	written := lo.KeyBy(entities, func(row *dao.CellUpsertRow) [2]uuid.UUID {
+		return [2]uuid.UUID{row.SceneID, row.LayerID}
 	})
 
-	return lo.Map(request.Cells, func(cell CellWriteItem, _ int) *Cell {
-		return newCell(written[[2]uuid.UUID{cell.SceneID, cell.LayerID}])
+	return lo.Map(request.Cells, func(cell CellWriteItem, _ int) *WrittenCell {
+		return newWrittenCell(written[[2]uuid.UUID{cell.SceneID, cell.LayerID}])
 	}), nil
 }

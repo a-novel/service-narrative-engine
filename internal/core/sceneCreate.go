@@ -19,14 +19,9 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// SceneCreateDaoOwner checks that the user owns the project.
-type SceneCreateDaoOwner interface {
-	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
-}
-
-// SceneCreateDaoLock locks the project, so changes to its order run one at a time.
+// SceneCreateDaoLock locks the project its owner names, so changes to its order run one at a time.
 type SceneCreateDaoLock interface {
-	Exec(ctx context.Context, request *dao.ProjectLockRequest) (*dao.Project, error)
+	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
 }
 
 // SceneCreateDaoInsert inserts the scenes, and moves the scenes at or after their position down.
@@ -61,19 +56,17 @@ type SceneCreateRequest struct {
 // SceneCreate adds scenes to a project at the position the caller names. The scenes from that
 // position on move down to make room.
 type SceneCreate struct {
-	daoOwner   SceneCreateDaoOwner
 	daoLock    SceneCreateDaoLock
 	daoInsert  SceneCreateDaoInsert
 	transactor transaction.Transactor
 }
 
 func NewSceneCreate(
-	daoOwner SceneCreateDaoOwner,
 	daoLock SceneCreateDaoLock,
 	daoInsert SceneCreateDaoInsert,
 	transactor transaction.Transactor,
 ) *SceneCreate {
-	return &SceneCreate{daoOwner: daoOwner, daoLock: daoLock, daoInsert: daoInsert, transactor: transactor}
+	return &SceneCreate{daoLock: daoLock, daoInsert: daoInsert, transactor: transactor}
 }
 
 func (service *SceneCreate) Exec(ctx context.Context, request *SceneCreateRequest) ([]*Scene, error) {
@@ -92,14 +85,6 @@ func (service *SceneCreate) Exec(ctx context.Context, request *SceneCreateReques
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	err = checkProjectOwnership(ctx, service.daoOwner, projectOwnershipOpts{
-		projectID: request.ProjectID,
-		ownerID:   request.OwnerID,
-	})
-	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("check owner: %w", err))
-	}
-
 	ids, err := newIDs(ctx, len(request.Scenes))
 	if err != nil {
 		return nil, otel.ReportError(span, err)
@@ -108,7 +93,10 @@ func (service *SceneCreate) Exec(ctx context.Context, request *SceneCreateReques
 	var scenes []*Scene
 
 	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
-		_, err := service.daoLock.Exec(ctx, &dao.ProjectLockRequest{ID: request.ProjectID})
+		err := lockOwnedProject(ctx, service.daoLock, projectOwnershipOpts{
+			projectID: request.ProjectID,
+			ownerID:   request.OwnerID,
+		})
 		if err != nil {
 			return fmt.Errorf("lock project: %w", err)
 		}

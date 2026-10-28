@@ -17,14 +17,9 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// LayerDeleteDaoOwner checks that the user owns the project.
-type LayerDeleteDaoOwner interface {
-	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
-}
-
-// LayerDeleteDaoLock locks the project, so changes to its layers run one at a time.
+// LayerDeleteDaoLock locks the project its owner names, so changes to its order run one at a time.
 type LayerDeleteDaoLock interface {
-	Exec(ctx context.Context, request *dao.ProjectLockRequest) (*dao.Project, error)
+	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
 }
 
 // LayerDeleteDaoKind reads the kinds of the layers to delete, and how many layers share each.
@@ -49,7 +44,6 @@ type LayerDeleteRequest struct {
 // deletes all of them or none, and refuses with [ErrRequiredLayer] to remove the last layer of a
 // required kind, such as the manuscript.
 type LayerDelete struct {
-	daoOwner   LayerDeleteDaoOwner
 	daoLock    LayerDeleteDaoLock
 	daoKind    LayerDeleteDaoKind
 	dao        LayerDeleteDao
@@ -57,13 +51,12 @@ type LayerDelete struct {
 }
 
 func NewLayerDelete(
-	daoOwner LayerDeleteDaoOwner,
 	daoLock LayerDeleteDaoLock,
 	daoKind LayerDeleteDaoKind,
 	dao LayerDeleteDao,
 	transactor transaction.Transactor,
 ) *LayerDelete {
-	return &LayerDelete{daoOwner: daoOwner, daoLock: daoLock, daoKind: daoKind, dao: dao, transactor: transactor}
+	return &LayerDelete{daoLock: daoLock, daoKind: daoKind, dao: dao, transactor: transactor}
 }
 
 func (service *LayerDelete) Exec(ctx context.Context, request *LayerDeleteRequest) ([]*Layer, error) {
@@ -81,18 +74,13 @@ func (service *LayerDelete) Exec(ctx context.Context, request *LayerDeleteReques
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	err = checkProjectOwnership(ctx, service.daoOwner, projectOwnershipOpts{
-		projectID: request.ProjectID,
-		ownerID:   request.OwnerID,
-	})
-	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("check owner: %w", err))
-	}
-
 	var layers []*Layer
 
 	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
-		_, err := service.daoLock.Exec(ctx, &dao.ProjectLockRequest{ID: request.ProjectID})
+		err := lockOwnedProject(ctx, service.daoLock, projectOwnershipOpts{
+			projectID: request.ProjectID,
+			ownerID:   request.OwnerID,
+		})
 		if err != nil {
 			return fmt.Errorf("lock project: %w", err)
 		}

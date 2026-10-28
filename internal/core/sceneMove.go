@@ -14,14 +14,9 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// SceneMoveDaoOwner checks that the user owns the project.
-type SceneMoveDaoOwner interface {
-	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
-}
-
-// SceneMoveDaoLock locks the project, so changes to its order run one at a time.
+// SceneMoveDaoLock locks the project its owner names, so changes to its order run one at a time.
 type SceneMoveDaoLock interface {
-	Exec(ctx context.Context, request *dao.ProjectLockRequest) (*dao.Project, error)
+	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
 }
 
 // SceneMoveDao moves the scene, and shifts the scenes between its old and new position.
@@ -43,19 +38,17 @@ type SceneMoveRequest struct {
 // SceneMove moves a scene within its project, and returns it at its new position. The scenes between its
 // old and new position shift by one.
 type SceneMove struct {
-	daoOwner   SceneMoveDaoOwner
 	daoLock    SceneMoveDaoLock
 	dao        SceneMoveDao
 	transactor transaction.Transactor
 }
 
 func NewSceneMove(
-	daoOwner SceneMoveDaoOwner,
 	daoLock SceneMoveDaoLock,
 	dao SceneMoveDao,
 	transactor transaction.Transactor,
 ) *SceneMove {
-	return &SceneMove{daoOwner: daoOwner, daoLock: daoLock, dao: dao, transactor: transactor}
+	return &SceneMove{daoLock: daoLock, dao: dao, transactor: transactor}
 }
 
 func (service *SceneMove) Exec(ctx context.Context, request *SceneMoveRequest) (*Scene, error) {
@@ -74,18 +67,13 @@ func (service *SceneMove) Exec(ctx context.Context, request *SceneMoveRequest) (
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	err = checkProjectOwnership(ctx, service.daoOwner, projectOwnershipOpts{
-		projectID: request.ProjectID,
-		ownerID:   request.OwnerID,
-	})
-	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("check owner: %w", err))
-	}
-
 	var scene *Scene
 
 	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
-		_, err := service.daoLock.Exec(ctx, &dao.ProjectLockRequest{ID: request.ProjectID})
+		err := lockOwnedProject(ctx, service.daoLock, projectOwnershipOpts{
+			projectID: request.ProjectID,
+			ownerID:   request.OwnerID,
+		})
 		if err != nil {
 			return fmt.Errorf("lock project: %w", err)
 		}

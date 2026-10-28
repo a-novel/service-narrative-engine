@@ -41,8 +41,7 @@ func TestLayerDelete(t *testing.T) {
 
 		request *core.LayerDeleteRequest
 
-		ownerMock  *daoMock[bool]
-		lockMock   *daoMock[*dao.Project]
+		lockMock   *daoMock[bool]
 		kindMock   *daoMock[[]*dao.LayerKind]
 		deleteMock *daoMock[[]*dao.Layer]
 		transactor transaction.Transactor
@@ -56,8 +55,7 @@ func TestLayerDelete(t *testing.T) {
 
 			request: request(layerID2),
 
-			ownerMock:  &daoMock[bool]{resp: true},
-			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
+			lockMock:   &daoMock[bool]{resp: true},
 			kindMock:   &daoMock[[]*dao.LayerKind]{resp: kinds(core.LayerKindNotes, 1, layerID2)},
 			deleteMock: &daoMock[[]*dao.Layer]{resp: []*dao.Layer{notesLayer(layerID2, 1)}},
 
@@ -68,9 +66,8 @@ func TestLayerDelete(t *testing.T) {
 
 			request: request(layerID1),
 
-			ownerMock: &daoMock[bool]{resp: true},
-			lockMock:  &daoMock[*dao.Project]{resp: daoProject()},
-			kindMock:  &daoMock[[]*dao.LayerKind]{resp: kinds(core.LayerKindManuscript, 2, layerID1)},
+			lockMock: &daoMock[bool]{resp: true},
+			kindMock: &daoMock[[]*dao.LayerKind]{resp: kinds(core.LayerKindManuscript, 2, layerID1)},
 			deleteMock: &daoMock[[]*dao.Layer]{resp: []*dao.Layer{
 				daoLayer(layerID1, 0, core.LayerKindManuscript),
 			}},
@@ -82,8 +79,7 @@ func TestLayerDelete(t *testing.T) {
 
 			request: request(layerID3, layerID1),
 
-			ownerMock: &daoMock[bool]{resp: true},
-			lockMock:  &daoMock[*dao.Project]{resp: daoProject()},
+			lockMock: &daoMock[bool]{resp: true},
 			kindMock: &daoMock[[]*dao.LayerKind]{resp: append(
 				kinds(core.LayerKindNotes, 1, layerID3), kinds(core.LayerKindManuscript, 2, layerID1)...,
 			)},
@@ -120,26 +116,16 @@ func TestLayerDelete(t *testing.T) {
 
 			request: request(layerID2),
 
-			ownerMock: &daoMock[bool]{resp: false},
+			lockMock: &daoMock[bool]{resp: false},
 
 			expectErr: core.ErrProjectNotFound,
-		},
-		{
-			name: "Error/CheckOwner",
-
-			request: request(layerID2),
-
-			ownerMock: &daoMock[bool]{err: errFoo},
-
-			expectErr: errFoo,
 		},
 		{
 			name: "Error/Lock",
 
 			request: request(layerID2),
 
-			ownerMock: &daoMock[bool]{resp: true},
-			lockMock:  &daoMock[*dao.Project]{err: errFoo},
+			lockMock: &daoMock[bool]{err: errFoo},
 
 			expectErr: errFoo,
 		},
@@ -148,9 +134,8 @@ func TestLayerDelete(t *testing.T) {
 
 			request: request(layerID2),
 
-			ownerMock: &daoMock[bool]{resp: true},
-			lockMock:  &daoMock[*dao.Project]{resp: daoProject()},
-			kindMock:  &daoMock[[]*dao.LayerKind]{err: errFoo},
+			lockMock: &daoMock[bool]{resp: true},
+			kindMock: &daoMock[[]*dao.LayerKind]{err: errFoo},
 
 			expectErr: errFoo,
 		},
@@ -159,9 +144,8 @@ func TestLayerDelete(t *testing.T) {
 
 			request: request(layerID2, layerID3),
 
-			ownerMock: &daoMock[bool]{resp: true},
-			lockMock:  &daoMock[*dao.Project]{resp: daoProject()},
-			kindMock:  &daoMock[[]*dao.LayerKind]{resp: kinds(core.LayerKindNotes, 1, layerID2)},
+			lockMock: &daoMock[bool]{resp: true},
+			kindMock: &daoMock[[]*dao.LayerKind]{resp: kinds(core.LayerKindNotes, 1, layerID2)},
 
 			expectErr: core.ErrLayerNotFound,
 		},
@@ -170,9 +154,8 @@ func TestLayerDelete(t *testing.T) {
 
 			request: request(layerID1),
 
-			ownerMock: &daoMock[bool]{resp: true},
-			lockMock:  &daoMock[*dao.Project]{resp: daoProject()},
-			kindMock:  &daoMock[[]*dao.LayerKind]{resp: kinds(core.LayerKindManuscript, 1, layerID1)},
+			lockMock: &daoMock[bool]{resp: true},
+			kindMock: &daoMock[[]*dao.LayerKind]{resp: kinds(core.LayerKindManuscript, 1, layerID1)},
 
 			expectErr: core.ErrRequiredLayer,
 		},
@@ -181,9 +164,8 @@ func TestLayerDelete(t *testing.T) {
 
 			request: request(layerID1, layerID2),
 
-			ownerMock: &daoMock[bool]{resp: true},
-			lockMock:  &daoMock[*dao.Project]{resp: daoProject()},
-			kindMock:  &daoMock[[]*dao.LayerKind]{resp: kinds(core.LayerKindManuscript, 2, layerID1, layerID2)},
+			lockMock: &daoMock[bool]{resp: true},
+			kindMock: &daoMock[[]*dao.LayerKind]{resp: kinds(core.LayerKindManuscript, 2, layerID1, layerID2)},
 
 			expectErr: core.ErrRequiredLayer,
 		},
@@ -192,8 +174,7 @@ func TestLayerDelete(t *testing.T) {
 
 			request: request(layerID2),
 
-			ownerMock:  &daoMock[bool]{resp: true},
-			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
+			lockMock:   &daoMock[bool]{resp: true},
 			kindMock:   &daoMock[[]*dao.LayerKind]{resp: kinds(core.LayerKindNotes, 1, layerID2)},
 			deleteMock: &daoMock[[]*dao.Layer]{err: errFoo},
 
@@ -204,7 +185,6 @@ func TestLayerDelete(t *testing.T) {
 
 			request: request(layerID2),
 
-			ownerMock:  &daoMock[bool]{resp: true},
 			transactor: transactiontest.NewFailingTransactor(errFoo),
 
 			expectErr: errFoo,
@@ -215,20 +195,13 @@ func TestLayerDelete(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockOwner := coremocks.NewMockLayerDeleteDaoOwner(t)
 			mockLock := coremocks.NewMockLayerDeleteDaoLock(t)
 			mockKind := coremocks.NewMockLayerDeleteDaoKind(t)
 			mockDelete := coremocks.NewMockLayerDeleteDao(t)
 
-			if testCase.ownerMock != nil {
-				mockOwner.EXPECT().
-					Exec(mock.Anything, &dao.ProjectOwnedRequest{ID: projectID, OwnerID: ownerID}).
-					Return(testCase.ownerMock.resp, testCase.ownerMock.err)
-			}
-
 			if testCase.lockMock != nil {
 				mockLock.EXPECT().
-					Exec(mock.Anything, &dao.ProjectLockRequest{ID: projectID}).
+					Exec(mock.Anything, &dao.ProjectLockRequest{ID: projectID, OwnerID: ownerID}).
 					Return(testCase.lockMock.resp, testCase.lockMock.err)
 			}
 
@@ -249,13 +222,12 @@ func TestLayerDelete(t *testing.T) {
 				transactor = transactiontest.NewTransactor()
 			}
 
-			service := core.NewLayerDelete(mockOwner, mockLock, mockKind, mockDelete, transactor)
+			service := core.NewLayerDelete(mockLock, mockKind, mockDelete, transactor)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
 
-			mockOwner.AssertExpectations(t)
 			mockLock.AssertExpectations(t)
 			mockKind.AssertExpectations(t)
 			mockDelete.AssertExpectations(t)

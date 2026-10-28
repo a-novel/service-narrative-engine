@@ -29,8 +29,7 @@ func TestSceneMove(t *testing.T) {
 
 		request *core.SceneMoveRequest
 
-		ownerMock  *daoMock[bool]
-		lockMock   *daoMock[*dao.Project]
+		lockMock   *daoMock[bool]
 		moveMock   *daoMock[*dao.Scene]
 		transactor transaction.Transactor
 
@@ -42,9 +41,8 @@ func TestSceneMove(t *testing.T) {
 
 			request: request(2),
 
-			ownerMock: &daoMock[bool]{resp: true},
-			lockMock:  &daoMock[*dao.Project]{resp: daoProject()},
-			moveMock:  &daoMock[*dao.Scene]{resp: daoScene(sceneID2, 2)},
+			lockMock: &daoMock[bool]{resp: true},
+			moveMock: &daoMock[*dao.Scene]{resp: daoScene(sceneID2, 2)},
 
 			expect: coreScene(sceneID2, 2),
 		},
@@ -53,9 +51,8 @@ func TestSceneMove(t *testing.T) {
 
 			request: request(0),
 
-			ownerMock: &daoMock[bool]{resp: true},
-			lockMock:  &daoMock[*dao.Project]{resp: daoProject()},
-			moveMock:  &daoMock[*dao.Scene]{resp: daoScene(sceneID2, 0)},
+			lockMock: &daoMock[bool]{resp: true},
+			moveMock: &daoMock[*dao.Scene]{resp: daoScene(sceneID2, 0)},
 
 			expect: coreScene(sceneID2, 0),
 		},
@@ -78,26 +75,16 @@ func TestSceneMove(t *testing.T) {
 
 			request: request(0),
 
-			ownerMock: &daoMock[bool]{resp: false},
+			lockMock: &daoMock[bool]{resp: false},
 
 			expectErr: core.ErrProjectNotFound,
-		},
-		{
-			name: "Error/CheckOwner",
-
-			request: request(0),
-
-			ownerMock: &daoMock[bool]{err: errFoo},
-
-			expectErr: errFoo,
 		},
 		{
 			name: "Error/Lock",
 
 			request: request(0),
 
-			ownerMock: &daoMock[bool]{resp: true},
-			lockMock:  &daoMock[*dao.Project]{err: errFoo},
+			lockMock: &daoMock[bool]{err: errFoo},
 
 			expectErr: errFoo,
 		},
@@ -106,9 +93,8 @@ func TestSceneMove(t *testing.T) {
 
 			request: request(0),
 
-			ownerMock: &daoMock[bool]{resp: true},
-			lockMock:  &daoMock[*dao.Project]{resp: daoProject()},
-			moveMock:  &daoMock[*dao.Scene]{err: dao.ErrSceneMoveNotFound},
+			lockMock: &daoMock[bool]{resp: true},
+			moveMock: &daoMock[*dao.Scene]{err: dao.ErrSceneMoveNotFound},
 
 			expectErr: core.ErrSceneNotFound,
 		},
@@ -117,9 +103,8 @@ func TestSceneMove(t *testing.T) {
 
 			request: request(0),
 
-			ownerMock: &daoMock[bool]{resp: true},
-			lockMock:  &daoMock[*dao.Project]{resp: daoProject()},
-			moveMock:  &daoMock[*dao.Scene]{err: errFoo},
+			lockMock: &daoMock[bool]{resp: true},
+			moveMock: &daoMock[*dao.Scene]{err: errFoo},
 
 			expectErr: errFoo,
 		},
@@ -128,7 +113,6 @@ func TestSceneMove(t *testing.T) {
 
 			request: request(0),
 
-			ownerMock:  &daoMock[bool]{resp: true},
 			transactor: transactiontest.NewFailingTransactor(errFoo),
 
 			expectErr: errFoo,
@@ -139,19 +123,12 @@ func TestSceneMove(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockOwner := coremocks.NewMockSceneMoveDaoOwner(t)
 			mockLock := coremocks.NewMockSceneMoveDaoLock(t)
 			mockMove := coremocks.NewMockSceneMoveDao(t)
 
-			if testCase.ownerMock != nil {
-				mockOwner.EXPECT().
-					Exec(mock.Anything, &dao.ProjectOwnedRequest{ID: projectID, OwnerID: ownerID}).
-					Return(testCase.ownerMock.resp, testCase.ownerMock.err)
-			}
-
 			if testCase.lockMock != nil {
 				mockLock.EXPECT().
-					Exec(mock.Anything, &dao.ProjectLockRequest{ID: projectID}).
+					Exec(mock.Anything, &dao.ProjectLockRequest{ID: projectID, OwnerID: ownerID}).
 					Return(testCase.lockMock.resp, testCase.lockMock.err)
 			}
 
@@ -168,13 +145,12 @@ func TestSceneMove(t *testing.T) {
 				transactor = transactiontest.NewTransactor()
 			}
 
-			service := core.NewSceneMove(mockOwner, mockLock, mockMove, transactor)
+			service := core.NewSceneMove(mockLock, mockMove, transactor)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
 
-			mockOwner.AssertExpectations(t)
 			mockLock.AssertExpectations(t)
 			mockMove.AssertExpectations(t)
 		})

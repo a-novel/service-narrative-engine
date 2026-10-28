@@ -31,8 +31,7 @@ func TestSceneDelete(t *testing.T) {
 
 		request *core.SceneDeleteRequest
 
-		ownerMock  *daoMock[bool]
-		lockMock   *daoMock[*dao.Project]
+		lockMock   *daoMock[bool]
 		deleteMock *daoMock[[]*dao.Scene]
 		transactor transaction.Transactor
 
@@ -44,8 +43,7 @@ func TestSceneDelete(t *testing.T) {
 
 			request: request(sceneID2),
 
-			ownerMock:  &daoMock[bool]{resp: true},
-			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
+			lockMock:   &daoMock[bool]{resp: true},
 			deleteMock: &daoMock[[]*dao.Scene]{resp: []*dao.Scene{daoScene(sceneID2, 1)}},
 
 			expect: []*core.Scene{coreScene(sceneID2, 1)},
@@ -55,8 +53,7 @@ func TestSceneDelete(t *testing.T) {
 
 			request: request(sceneID3, sceneID1),
 
-			ownerMock: &daoMock[bool]{resp: true},
-			lockMock:  &daoMock[*dao.Project]{resp: daoProject()},
+			lockMock: &daoMock[bool]{resp: true},
 			// The delete returns its rows in no particular order.
 			deleteMock: &daoMock[[]*dao.Scene]{resp: []*dao.Scene{daoScene(sceneID3, 2), daoScene(sceneID1, 0)}},
 
@@ -88,26 +85,16 @@ func TestSceneDelete(t *testing.T) {
 
 			request: request(sceneID2),
 
-			ownerMock: &daoMock[bool]{resp: false},
+			lockMock: &daoMock[bool]{resp: false},
 
 			expectErr: core.ErrProjectNotFound,
-		},
-		{
-			name: "Error/CheckOwner",
-
-			request: request(sceneID2),
-
-			ownerMock: &daoMock[bool]{err: errFoo},
-
-			expectErr: errFoo,
 		},
 		{
 			name: "Error/Lock",
 
 			request: request(sceneID2),
 
-			ownerMock: &daoMock[bool]{resp: true},
-			lockMock:  &daoMock[*dao.Project]{err: errFoo},
+			lockMock: &daoMock[bool]{err: errFoo},
 
 			expectErr: errFoo,
 		},
@@ -116,8 +103,7 @@ func TestSceneDelete(t *testing.T) {
 
 			request: request(sceneID2, sceneID3),
 
-			ownerMock: &daoMock[bool]{resp: true},
-			lockMock:  &daoMock[*dao.Project]{resp: daoProject()},
+			lockMock: &daoMock[bool]{resp: true},
 			// One scene is missing, so the whole delete rolls back.
 			deleteMock: &daoMock[[]*dao.Scene]{resp: []*dao.Scene{daoScene(sceneID2, 1)}},
 
@@ -128,8 +114,7 @@ func TestSceneDelete(t *testing.T) {
 
 			request: request(sceneID2),
 
-			ownerMock:  &daoMock[bool]{resp: true},
-			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
+			lockMock:   &daoMock[bool]{resp: true},
 			deleteMock: &daoMock[[]*dao.Scene]{err: errFoo},
 
 			expectErr: errFoo,
@@ -139,7 +124,6 @@ func TestSceneDelete(t *testing.T) {
 
 			request: request(sceneID2),
 
-			ownerMock:  &daoMock[bool]{resp: true},
 			transactor: transactiontest.NewFailingTransactor(errFoo),
 
 			expectErr: errFoo,
@@ -150,19 +134,12 @@ func TestSceneDelete(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockOwner := coremocks.NewMockSceneDeleteDaoOwner(t)
 			mockLock := coremocks.NewMockSceneDeleteDaoLock(t)
 			mockDelete := coremocks.NewMockSceneDeleteDao(t)
 
-			if testCase.ownerMock != nil {
-				mockOwner.EXPECT().
-					Exec(mock.Anything, &dao.ProjectOwnedRequest{ID: projectID, OwnerID: ownerID}).
-					Return(testCase.ownerMock.resp, testCase.ownerMock.err)
-			}
-
 			if testCase.lockMock != nil {
 				mockLock.EXPECT().
-					Exec(mock.Anything, &dao.ProjectLockRequest{ID: projectID}).
+					Exec(mock.Anything, &dao.ProjectLockRequest{ID: projectID, OwnerID: ownerID}).
 					Return(testCase.lockMock.resp, testCase.lockMock.err)
 			}
 
@@ -177,13 +154,12 @@ func TestSceneDelete(t *testing.T) {
 				transactor = transactiontest.NewTransactor()
 			}
 
-			service := core.NewSceneDelete(mockOwner, mockLock, mockDelete, transactor)
+			service := core.NewSceneDelete(mockLock, mockDelete, transactor)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
 
-			mockOwner.AssertExpectations(t)
 			mockLock.AssertExpectations(t)
 			mockDelete.AssertExpectations(t)
 		})

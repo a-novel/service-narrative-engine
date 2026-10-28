@@ -39,18 +39,12 @@ func TestCellWrite(t *testing.T) {
 		return &core.CellWriteRequest{OwnerID: ownerID, ProjectID: projectID, Cells: cells}
 	}
 
-	daoCell := func(cell core.CellWriteItem) *dao.Cell {
-		return &dao.Cell{
-			ProjectID: projectID, SceneID: cell.SceneID, LayerID: cell.LayerID, Content: cell.Content,
-			UpdatedAt: updatedAt,
-		}
+	daoRow := func(cell core.CellWriteItem) *dao.CellUpsertRow {
+		return &dao.CellUpsertRow{SceneID: cell.SceneID, LayerID: cell.LayerID, UpdatedAt: updatedAt}
 	}
 
-	coreCell := func(cell core.CellWriteItem) *core.Cell {
-		return &core.Cell{
-			ProjectID: projectID, SceneID: cell.SceneID, LayerID: cell.LayerID, Content: cell.Content,
-			UpdatedAt: updatedAt,
-		}
+	writtenCell := func(cell core.CellWriteItem) *core.WrittenCell {
+		return &core.WrittenCell{SceneID: cell.SceneID, LayerID: cell.LayerID, UpdatedAt: updatedAt}
 	}
 
 	testCases := []struct {
@@ -60,9 +54,9 @@ func TestCellWrite(t *testing.T) {
 
 		ownerMock *daoMock[bool]
 		kindMock  *daoMock[[]*dao.LayerKind]
-		daoMock   *daoMock[[]*dao.Cell]
+		daoMock   *daoMock[[]*dao.CellUpsertRow]
 
-		expect    []*core.Cell
+		expect    []*core.WrittenCell
 		expectErr error
 	}{
 		{
@@ -72,9 +66,9 @@ func TestCellWrite(t *testing.T) {
 
 			ownerMock: &daoMock[bool]{resp: true},
 			kindMock:  &daoMock[[]*dao.LayerKind]{resp: []*dao.LayerKind{notesKind}},
-			daoMock:   &daoMock[[]*dao.Cell]{resp: []*dao.Cell{daoCell(notesCell)}},
+			daoMock:   &daoMock[[]*dao.CellUpsertRow]{resp: []*dao.CellUpsertRow{daoRow(notesCell)}},
 
-			expect: []*core.Cell{coreCell(notesCell)},
+			expect: []*core.WrittenCell{writtenCell(notesCell)},
 		},
 		{
 			name: "Success/Manuscript",
@@ -83,9 +77,9 @@ func TestCellWrite(t *testing.T) {
 
 			ownerMock: &daoMock[bool]{resp: true},
 			kindMock:  &daoMock[[]*dao.LayerKind]{resp: []*dao.LayerKind{manuscriptKind}},
-			daoMock:   &daoMock[[]*dao.Cell]{resp: []*dao.Cell{daoCell(manuscriptCell)}},
+			daoMock:   &daoMock[[]*dao.CellUpsertRow]{resp: []*dao.CellUpsertRow{daoRow(manuscriptCell)}},
 
-			expect: []*core.Cell{coreCell(manuscriptCell)},
+			expect: []*core.WrittenCell{writtenCell(manuscriptCell)},
 		},
 		{
 			name: "Success/Batch",
@@ -93,13 +87,13 @@ func TestCellWrite(t *testing.T) {
 			request: request(notesCell, manuscriptCell, nextNotesCell),
 
 			ownerMock: &daoMock[bool]{resp: true},
-			// Both reads return their rows in no particular order.
+			// The kind read and the write return their rows in no particular order.
 			kindMock: &daoMock[[]*dao.LayerKind]{resp: []*dao.LayerKind{manuscriptKind, notesKind}},
-			daoMock: &daoMock[[]*dao.Cell]{resp: []*dao.Cell{
-				daoCell(nextNotesCell), daoCell(manuscriptCell), daoCell(notesCell),
+			daoMock: &daoMock[[]*dao.CellUpsertRow]{resp: []*dao.CellUpsertRow{
+				daoRow(nextNotesCell), daoRow(manuscriptCell), daoRow(notesCell),
 			}},
 
-			expect: []*core.Cell{coreCell(notesCell), coreCell(manuscriptCell), coreCell(nextNotesCell)},
+			expect: []*core.WrittenCell{writtenCell(notesCell), writtenCell(manuscriptCell), writtenCell(nextNotesCell)},
 		},
 		{
 			name: "Error/MissingContent",
@@ -194,7 +188,7 @@ func TestCellWrite(t *testing.T) {
 
 			ownerMock: &daoMock[bool]{resp: true},
 			kindMock:  &daoMock[[]*dao.LayerKind]{resp: []*dao.LayerKind{notesKind}},
-			daoMock:   &daoMock[[]*dao.Cell]{err: dao.ErrCellUpsertSceneNotFound},
+			daoMock:   &daoMock[[]*dao.CellUpsertRow]{err: dao.ErrCellUpsertSceneNotFound},
 
 			expectErr: core.ErrSceneNotFound,
 		},
@@ -205,7 +199,7 @@ func TestCellWrite(t *testing.T) {
 
 			ownerMock: &daoMock[bool]{resp: true},
 			kindMock:  &daoMock[[]*dao.LayerKind]{resp: []*dao.LayerKind{notesKind}},
-			daoMock:   &daoMock[[]*dao.Cell]{err: dao.ErrCellUpsertLayerNotFound},
+			daoMock:   &daoMock[[]*dao.CellUpsertRow]{err: dao.ErrCellUpsertLayerNotFound},
 
 			expectErr: core.ErrLayerNotFound,
 		},
@@ -216,7 +210,7 @@ func TestCellWrite(t *testing.T) {
 
 			ownerMock: &daoMock[bool]{resp: true},
 			kindMock:  &daoMock[[]*dao.LayerKind]{resp: []*dao.LayerKind{notesKind}},
-			daoMock:   &daoMock[[]*dao.Cell]{err: errFoo},
+			daoMock:   &daoMock[[]*dao.CellUpsertRow]{err: errFoo},
 
 			expectErr: errFoo,
 		},

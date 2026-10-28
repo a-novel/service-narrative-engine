@@ -40,8 +40,7 @@ func TestLayerCreate(t *testing.T) {
 
 		request *core.LayerCreateRequest
 
-		ownerMock  *daoMock[bool]
-		lockMock   *daoMock[*dao.Project]
+		lockMock   *daoMock[bool]
 		insertMock *daoMock[[]*dao.Layer]
 		// insertLayers are the layers the insert receives, without their generated IDs.
 		insertLayers []dao.LayerInsertItem
@@ -55,8 +54,7 @@ func TestLayerCreate(t *testing.T) {
 
 			request: request(0, layer),
 
-			ownerMock:    &daoMock[bool]{resp: true},
-			lockMock:     &daoMock[*dao.Project]{resp: daoProject()},
+			lockMock:     &daoMock[bool]{resp: true},
 			insertMock:   &daoMock[[]*dao.Layer]{resp: []*dao.Layer{notesLayer(layerID3, 0)}},
 			insertLayers: []dao.LayerInsertItem{insertLayer},
 
@@ -67,8 +65,7 @@ func TestLayerCreate(t *testing.T) {
 
 			request: request(2, layer),
 
-			ownerMock:    &daoMock[bool]{resp: true},
-			lockMock:     &daoMock[*dao.Project]{resp: daoProject()},
+			lockMock:     &daoMock[bool]{resp: true},
 			insertMock:   &daoMock[[]*dao.Layer]{resp: []*dao.Layer{notesLayer(layerID3, 2)}},
 			insertLayers: []dao.LayerInsertItem{insertLayer},
 
@@ -82,8 +79,7 @@ func TestLayerCreate(t *testing.T) {
 				core.LayerCreateItem{Kind: core.LayerKindNotes, Name: "Layer", Description: "Who appears."},
 			),
 
-			ownerMock: &daoMock[bool]{resp: true},
-			lockMock:  &daoMock[*dao.Project]{resp: daoProject()},
+			lockMock: &daoMock[bool]{resp: true},
 			// The insert returns its rows in no particular order.
 			insertMock: &daoMock[[]*dao.Layer]{resp: []*dao.Layer{
 				notesLayer(layerID2, 2), daoLayer(layerID1, 1, core.LayerKindManuscript),
@@ -135,26 +131,16 @@ func TestLayerCreate(t *testing.T) {
 
 			request: request(0, layer),
 
-			ownerMock: &daoMock[bool]{resp: false},
+			lockMock: &daoMock[bool]{resp: false},
 
 			expectErr: core.ErrProjectNotFound,
-		},
-		{
-			name: "Error/CheckOwner",
-
-			request: request(0, layer),
-
-			ownerMock: &daoMock[bool]{err: errFoo},
-
-			expectErr: errFoo,
 		},
 		{
 			name: "Error/Lock",
 
 			request: request(0, layer),
 
-			ownerMock: &daoMock[bool]{resp: true},
-			lockMock:  &daoMock[*dao.Project]{err: errFoo},
+			lockMock: &daoMock[bool]{err: errFoo},
 
 			expectErr: errFoo,
 		},
@@ -163,8 +149,7 @@ func TestLayerCreate(t *testing.T) {
 
 			request: request(0, layer),
 
-			ownerMock:    &daoMock[bool]{resp: true},
-			lockMock:     &daoMock[*dao.Project]{resp: daoProject()},
+			lockMock:     &daoMock[bool]{resp: true},
 			insertMock:   &daoMock[[]*dao.Layer]{err: dao.ErrLayerInsertFull},
 			insertLayers: []dao.LayerInsertItem{insertLayer},
 
@@ -175,8 +160,7 @@ func TestLayerCreate(t *testing.T) {
 
 			request: request(0, layer),
 
-			ownerMock:    &daoMock[bool]{resp: true},
-			lockMock:     &daoMock[*dao.Project]{resp: daoProject()},
+			lockMock:     &daoMock[bool]{resp: true},
 			insertMock:   &daoMock[[]*dao.Layer]{err: errFoo},
 			insertLayers: []dao.LayerInsertItem{insertLayer},
 
@@ -187,7 +171,6 @@ func TestLayerCreate(t *testing.T) {
 
 			request: request(0, layer),
 
-			ownerMock:  &daoMock[bool]{resp: true},
 			transactor: transactiontest.NewFailingTransactor(errFoo),
 
 			expectErr: errFoo,
@@ -198,19 +181,12 @@ func TestLayerCreate(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockOwner := coremocks.NewMockLayerCreateDaoOwner(t)
 			mockLock := coremocks.NewMockLayerCreateDaoLock(t)
 			mockInsert := coremocks.NewMockLayerCreateDaoInsert(t)
 
-			if testCase.ownerMock != nil {
-				mockOwner.EXPECT().
-					Exec(mock.Anything, &dao.ProjectOwnedRequest{ID: projectID, OwnerID: ownerID}).
-					Return(testCase.ownerMock.resp, testCase.ownerMock.err)
-			}
-
 			if testCase.lockMock != nil {
 				mockLock.EXPECT().
-					Exec(mock.Anything, &dao.ProjectLockRequest{ID: projectID}).
+					Exec(mock.Anything, &dao.ProjectLockRequest{ID: projectID, OwnerID: ownerID}).
 					Return(testCase.lockMock.resp, testCase.lockMock.err)
 			}
 
@@ -235,13 +211,12 @@ func TestLayerCreate(t *testing.T) {
 				transactor = transactiontest.NewTransactor()
 			}
 
-			service := core.NewLayerCreate(mockOwner, mockLock, mockInsert, transactor)
+			service := core.NewLayerCreate(mockLock, mockInsert, transactor)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
 
-			mockOwner.AssertExpectations(t)
 			mockLock.AssertExpectations(t)
 			mockInsert.AssertExpectations(t)
 		})

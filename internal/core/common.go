@@ -56,6 +56,30 @@ func checkProjectOwnership(ctx context.Context, daoOwner projectOwnerDao, opts p
 	return nil
 }
 
+// projectLockDao locks a project its owner names until the transaction ends. Each service names its own
+// interface, and every one satisfies this.
+type projectLockDao interface {
+	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
+}
+
+// lockOwnedProject locks the project for the rest of the transaction, so changes to its order run one at a
+// time, and returns [ErrProjectNotFound] unless the user owns it. One query does both.
+func lockOwnedProject(ctx context.Context, daoLock projectLockDao, opts projectOwnershipOpts) error {
+	ctx, span := otel.Tracer().Start(ctx, "core.lockOwnedProject")
+	defer span.End()
+
+	owned, err := daoLock.Exec(ctx, &dao.ProjectLockRequest{ID: opts.projectID, OwnerID: opts.ownerID})
+	if err != nil {
+		return otel.ReportError(span, err)
+	}
+
+	if !owned {
+		return otel.ReportError(span, ErrProjectNotFound)
+	}
+
+	return nil
+}
+
 // newIDs generates count UUIDv7 identifiers.
 func newIDs(ctx context.Context, count int) ([]uuid.UUID, error) {
 	_, span := otel.Tracer().Start(ctx, "core.newIDs")

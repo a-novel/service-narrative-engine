@@ -18,14 +18,9 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// LayerCreateDaoOwner checks that the user owns the project.
-type LayerCreateDaoOwner interface {
-	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
-}
-
-// LayerCreateDaoLock locks the project, so changes to its order run one at a time.
+// LayerCreateDaoLock locks the project its owner names, so changes to its order run one at a time.
 type LayerCreateDaoLock interface {
-	Exec(ctx context.Context, request *dao.ProjectLockRequest) (*dao.Project, error)
+	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
 }
 
 // LayerCreateDaoInsert inserts the layers, and moves the layers at or after their position down.
@@ -59,19 +54,17 @@ type LayerCreateRequest struct {
 // LayerCreate adds layers to a project at the position the caller names. The layers from that
 // position on move down to make room.
 type LayerCreate struct {
-	daoOwner   LayerCreateDaoOwner
 	daoLock    LayerCreateDaoLock
 	daoInsert  LayerCreateDaoInsert
 	transactor transaction.Transactor
 }
 
 func NewLayerCreate(
-	daoOwner LayerCreateDaoOwner,
 	daoLock LayerCreateDaoLock,
 	daoInsert LayerCreateDaoInsert,
 	transactor transaction.Transactor,
 ) *LayerCreate {
-	return &LayerCreate{daoOwner: daoOwner, daoLock: daoLock, daoInsert: daoInsert, transactor: transactor}
+	return &LayerCreate{daoLock: daoLock, daoInsert: daoInsert, transactor: transactor}
 }
 
 func (service *LayerCreate) Exec(ctx context.Context, request *LayerCreateRequest) ([]*Layer, error) {
@@ -90,14 +83,6 @@ func (service *LayerCreate) Exec(ctx context.Context, request *LayerCreateReques
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	err = checkProjectOwnership(ctx, service.daoOwner, projectOwnershipOpts{
-		projectID: request.ProjectID,
-		ownerID:   request.OwnerID,
-	})
-	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("check owner: %w", err))
-	}
-
 	ids, err := newIDs(ctx, len(request.Layers))
 	if err != nil {
 		return nil, otel.ReportError(span, err)
@@ -106,7 +91,10 @@ func (service *LayerCreate) Exec(ctx context.Context, request *LayerCreateReques
 	var layers []*Layer
 
 	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
-		_, err := service.daoLock.Exec(ctx, &dao.ProjectLockRequest{ID: request.ProjectID})
+		err := lockOwnedProject(ctx, service.daoLock, projectOwnershipOpts{
+			projectID: request.ProjectID,
+			ownerID:   request.OwnerID,
+		})
 		if err != nil {
 			return fmt.Errorf("lock project: %w", err)
 		}

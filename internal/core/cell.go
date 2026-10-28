@@ -33,3 +33,17 @@ func newCell(entity *dao.Cell) *Cell {
 		UpdatedAt: entity.UpdatedAt,
 	}
 }
+
+// WrittenCell names a cell [CellWrite] wrote, and when. The caller already holds its content.
+type WrittenCell struct {
+	// SceneID is the scene whose column holds the cell.
+	SceneID uuid.UUID
+	// LayerID is the layer whose row holds the cell.
+	LayerID uuid.UUID
+
+	UpdatedAt time.Time
+}
+
+func newWrittenCell(row *dao.CellUpsertRow) *WrittenCell {
+	return &WrittenCell{SceneID: row.SceneID, LayerID: row.LayerID, UpdatedAt: row.UpdatedAt}
+}
