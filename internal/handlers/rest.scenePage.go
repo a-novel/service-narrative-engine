@@ -9,6 +9,7 @@ import (
 // ScenePage is the REST representation of a page of a project's scenes.
 type ScenePage struct {
 	Scenes []Scene `json:"scenes"`
+
 	// Total counts every scene of the project, so a client paging through them knows when it holds
 	// them all.
 	Total int `json:"total"`
@@ -16,7 +17,7 @@ type ScenePage struct {
 
 func loadScenePage(page *core.ScenePage) ScenePage {
 	return ScenePage{
-		Scenes: lo.Map(page.Scenes, loadSceneMap),
+		Scenes: lo.Map(page.Scenes, func(scene *core.Scene, _ int) Scene { return loadScene(scene) }),
 		Total:  page.Total,
 	}
 }

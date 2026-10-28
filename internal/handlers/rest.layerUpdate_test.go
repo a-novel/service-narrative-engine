@@ -23,6 +23,7 @@ func TestRestLayerUpdate(t *testing.T) {
 		t.Helper()
 
 		return newRequest(t, http.MethodPut, "/v1/layer", map[string]any{
+			"projectID":   projectID,
 			"id":          layerID,
 			"name":        "Characters",
 			"description": "Who appears",
@@ -109,6 +110,7 @@ func TestRestLayerUpdate(t *testing.T) {
 				service.EXPECT().
 					Exec(mock.Anything, &core.LayerUpdateRequest{
 						OwnerID:     ownerID,
+						ProjectID:   projectID,
 						ID:          layerID,
 						Name:        "Characters",
 						Description: "Who appears",

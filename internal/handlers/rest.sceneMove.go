@@ -20,7 +20,10 @@ type RestSceneMoveService interface {
 
 // RestSceneMoveRequest is the JSON body the move-scene endpoint accepts.
 type RestSceneMoveRequest struct {
-	ID    uuid.UUID `json:"id"`
+	ProjectID uuid.UUID `json:"projectID"`
+	ID        uuid.UUID `json:"id"`
+
+	// After is the scene the moved one follows. The nil UUID places it first.
 	After uuid.UUID `json:"after"`
 }
 
@@ -56,9 +59,10 @@ func (handler *RestSceneMove) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	}
 
 	serviceRequest := &core.SceneMoveRequest{
-		OwnerID: ownerID,
-		ID:      request.ID,
-		After:   request.After,
+		OwnerID:   ownerID,
+		ProjectID: request.ProjectID,
+		ID:        request.ID,
+		After:     request.After,
 	}
 
 	result, err := handler.service.Exec(ctx, serviceRequest)

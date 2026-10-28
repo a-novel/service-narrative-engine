@@ -18,7 +18,9 @@ type RestProjectListService interface {
 
 // RestProjectListRequest is the query parameters the list-projects endpoint accepts.
 type RestProjectListRequest struct {
-	Limit  int `schema:"limit"`
+	// Limit caps the page. Zero takes the default size.
+	Limit int `schema:"limit"`
+	// Offset is how many projects come before the page, newest first.
 	Offset int `schema:"offset"`
 }
 

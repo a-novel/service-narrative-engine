@@ -23,8 +23,9 @@ func TestRestSceneMove(t *testing.T) {
 		t.Helper()
 
 		return newRequest(t, http.MethodPost, "/v1/scene/move", map[string]any{
-			"id":    sceneID,
-			"after": anchorID,
+			"projectID": projectID,
+			"id":        sceneID,
+			"after":     anchorID,
 		})
 	}
 
@@ -116,7 +117,7 @@ func TestRestSceneMove(t *testing.T) {
 				}
 
 				service.EXPECT().
-					Exec(mock.Anything, &core.SceneMoveRequest{OwnerID: ownerID, ID: sceneID, After: anchorID}).
+					Exec(mock.Anything, &core.SceneMoveRequest{OwnerID: ownerID, ProjectID: projectID, ID: sceneID, After: anchorID}).
 					Return(resp, testCase.serviceErr)
 			}
 

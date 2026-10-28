@@ -78,6 +78,7 @@ func main() {
 
 	daoProjectInsert := dao.NewPgProjectInsert()
 	daoProjectSelect := dao.NewPgProjectSelect()
+	daoProjectOwned := dao.NewPgProjectOwned()
 	daoProjectLock := dao.NewPgProjectLock()
 	daoProjectList := dao.NewPgProjectList()
 	daoProjectUpdate := dao.NewPgProjectUpdate()
@@ -102,25 +103,23 @@ func main() {
 	// SERVICES
 	// =================================================================================================================
 
-	serviceProjectCreate := core.NewProjectCreate(
-		daoProjectInsert, daoLayerInsert, daoSceneInsert, transactor, cfg.Composer,
-	)
+	serviceProjectCreate := core.NewProjectCreate(daoProjectInsert, daoLayerInsert, daoSceneInsert, transactor)
 	serviceProjectGet := core.NewProjectGet(daoProjectSelect)
 	serviceProjectList := core.NewProjectList(daoProjectList)
-	serviceProjectUpdate := core.NewProjectUpdate(daoProjectSelect, daoProjectUpdate)
-	serviceProjectDelete := core.NewProjectDelete(daoProjectSelect, daoProjectDelete)
-	serviceSceneCreate := core.NewSceneCreate(daoProjectLock, daoSceneSelect, daoSceneInsert, transactor)
-	serviceSceneList := core.NewSceneList(daoProjectSelect, daoSceneList)
-	serviceSceneUpdate := core.NewSceneUpdate(daoSceneSelect, daoProjectSelect, daoSceneUpdate)
-	serviceSceneMove := core.NewSceneMove(daoSceneSelect, daoProjectLock, daoSceneMove, transactor)
-	serviceSceneDelete := core.NewSceneDelete(daoSceneSelect, daoProjectLock, daoSceneDelete, transactor)
-	serviceLayerCreate := core.NewLayerCreate(daoProjectLock, daoLayerSelect, daoLayerInsert, transactor)
-	serviceLayerList := core.NewLayerList(daoProjectSelect, daoLayerList)
-	serviceLayerUpdate := core.NewLayerUpdate(daoLayerSelect, daoProjectSelect, daoLayerUpdate)
-	serviceLayerMove := core.NewLayerMove(daoLayerSelect, daoProjectLock, daoLayerMove, transactor)
-	serviceLayerDelete := core.NewLayerDelete(daoLayerSelect, daoProjectLock, daoLayerDelete, transactor)
-	serviceCellList := core.NewCellList(daoProjectSelect, daoCellList)
-	serviceCellWrite := core.NewCellWrite(daoSceneSelect, daoLayerSelect, daoProjectSelect, daoCellUpsert, cfg.Composer)
+	serviceProjectUpdate := core.NewProjectUpdate(daoProjectOwned, daoProjectUpdate)
+	serviceProjectDelete := core.NewProjectDelete(daoProjectOwned, daoProjectDelete)
+	serviceSceneCreate := core.NewSceneCreate(daoProjectOwned, daoProjectLock, daoSceneSelect, daoSceneInsert, transactor)
+	serviceSceneList := core.NewSceneList(daoProjectOwned, daoSceneList)
+	serviceSceneUpdate := core.NewSceneUpdate(daoProjectOwned, daoSceneUpdate)
+	serviceSceneMove := core.NewSceneMove(daoProjectOwned, daoProjectLock, daoSceneSelect, daoSceneMove, transactor)
+	serviceSceneDelete := core.NewSceneDelete(daoProjectOwned, daoProjectLock, daoSceneDelete, transactor)
+	serviceLayerCreate := core.NewLayerCreate(daoProjectOwned, daoProjectLock, daoLayerSelect, daoLayerInsert, transactor)
+	serviceLayerList := core.NewLayerList(daoProjectOwned, daoLayerList)
+	serviceLayerUpdate := core.NewLayerUpdate(daoProjectOwned, daoLayerUpdate)
+	serviceLayerMove := core.NewLayerMove(daoProjectOwned, daoProjectLock, daoLayerSelect, daoLayerMove, transactor)
+	serviceLayerDelete := core.NewLayerDelete(daoProjectOwned, daoLayerSelect, daoProjectLock, daoLayerDelete, transactor)
+	serviceCellList := core.NewCellList(daoProjectOwned, daoCellList)
+	serviceCellWrite := core.NewCellWrite(daoProjectOwned, daoLayerSelect, daoCellUpsert)
 
 	// =================================================================================================================
 	// HANDLERS

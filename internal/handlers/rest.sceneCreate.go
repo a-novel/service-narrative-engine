@@ -20,12 +20,19 @@ type RestSceneCreateService interface {
 
 // RestSceneCreateRequest is the JSON body the create-scene endpoint accepts.
 type RestSceneCreateRequest struct {
-	ProjectID   uuid.UUID `json:"projectID"`
-	After       uuid.UUID `json:"after"`
-	Title       string    `json:"title"`
-	Color       string    `json:"color"`
-	Description string    `json:"description"`
-	Prompt      string    `json:"prompt"`
+	ProjectID uuid.UUID `json:"projectID"`
+
+	// After is the scene the new one follows. The nil UUID places it first.
+	After uuid.UUID `json:"after"`
+
+	// Title names the scene in the composer.
+	Title string `json:"title"`
+	// Color is the scene's color in the composer, as a #rrggbb hex code in either case.
+	Color string `json:"color"`
+	// Description says what the scene is for, written for the author.
+	Description string `json:"description"`
+	// Prompt holds extra instructions for the model when it writes about the scene.
+	Prompt string `json:"prompt"`
 }
 
 // RestSceneCreate is the HTTP handler for the create-scene endpoint. It responds 201 with the scene at

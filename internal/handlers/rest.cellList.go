@@ -22,7 +22,9 @@ type RestCellListService interface {
 type RestCellListRequest struct {
 	ProjectID uuid.UUID `schema:"projectID"`
 
-	Limit  int `schema:"limit"`
+	// Limit caps the page. Zero takes the default size.
+	Limit int `schema:"limit"`
+	// Offset is how many cells come before the page, by the position of their scene, then of their layer.
 	Offset int `schema:"offset"`
 }
 

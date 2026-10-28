@@ -10,13 +10,21 @@ import (
 
 // Layer is the REST representation of a layer.
 type Layer struct {
-	ID          uuid.UUID `json:"id"`
-	ProjectID   uuid.UUID `json:"projectID"`
-	Position    int       `json:"position"`
-	Kind        string    `json:"kind"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	UpdatedAt   time.Time `json:"updatedAt"`
+	ID uuid.UUID `json:"id"`
+	// ProjectID is the project the layer belongs to.
+	ProjectID uuid.UUID `json:"projectID"`
+
+	// Position orders the project's layers, from 0.
+	Position int `json:"position"`
+	// Kind names the content schema the layer's cells follow.
+	Kind string `json:"kind"`
+
+	// Name labels the layer's row in the composer.
+	Name string `json:"name"`
+	// Description says what the layer records.
+	Description string `json:"description"`
+
+	UpdatedAt time.Time `json:"updatedAt"`
 }
 
 func loadLayer(layer *core.Layer) Layer {
@@ -29,9 +37,4 @@ func loadLayer(layer *core.Layer) Layer {
 		Description: layer.Description,
 		UpdatedAt:   layer.UpdatedAt,
 	}
-}
-
-// loadLayerMap adapts loadLayer to lo.Map, ignoring the slice index.
-func loadLayerMap(layer *core.Layer, _ int) Layer {
-	return loadLayer(layer)
 }

@@ -9,6 +9,7 @@ import (
 // LayerPage is the REST representation of a page of a project's layers.
 type LayerPage struct {
 	Layers []Layer `json:"layers"`
+
 	// Total counts every layer of the project, so a client paging through them knows when it holds
 	// them all.
 	Total int `json:"total"`
@@ -16,7 +17,7 @@ type LayerPage struct {
 
 func loadLayerPage(page *core.LayerPage) LayerPage {
 	return LayerPage{
-		Layers: lo.Map(page.Layers, loadLayerMap),
+		Layers: lo.Map(page.Layers, func(layer *core.Layer, _ int) Layer { return loadLayer(layer) }),
 		Total:  page.Total,
 	}
 }

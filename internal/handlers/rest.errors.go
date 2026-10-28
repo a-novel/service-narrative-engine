@@ -18,7 +18,6 @@ var composerErrors = httpf.ErrMap{
 	core.ErrProjectNotFound: http.StatusNotFound,
 	core.ErrSceneNotFound:   http.StatusNotFound,
 	core.ErrLayerNotFound:   http.StatusNotFound,
-	core.ErrCellNotFound:    http.StatusNotFound,
 	core.ErrProjectFull:     http.StatusUnprocessableEntity,
 	core.ErrManuscriptLayer: http.StatusUnprocessableEntity,
 }

@@ -23,7 +23,8 @@ func TestRestLayerMove(t *testing.T) {
 		t.Helper()
 
 		return newRequest(t, http.MethodPost, "/v1/layer/move", map[string]any{
-			"id": layerID,
+			"projectID": projectID,
+			"id":        layerID,
 		})
 	}
 
@@ -105,7 +106,7 @@ func TestRestLayerMove(t *testing.T) {
 				}
 
 				service.EXPECT().
-					Exec(mock.Anything, &core.LayerMoveRequest{OwnerID: ownerID, ID: layerID}).
+					Exec(mock.Anything, &core.LayerMoveRequest{OwnerID: ownerID, ProjectID: projectID, ID: layerID}).
 					Return(resp, testCase.serviceErr)
 			}
 

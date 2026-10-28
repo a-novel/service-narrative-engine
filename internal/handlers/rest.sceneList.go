@@ -22,7 +22,9 @@ type RestSceneListService interface {
 type RestSceneListRequest struct {
 	ProjectID uuid.UUID `schema:"projectID"`
 
-	Limit  int `schema:"limit"`
+	// Limit caps the page. Zero takes the default size.
+	Limit int `schema:"limit"`
+	// Offset is how many scenes come before the page, in narrative order.
 	Offset int `schema:"offset"`
 }
 

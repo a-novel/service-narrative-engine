@@ -22,7 +22,9 @@ type RestLayerListService interface {
 type RestLayerListRequest struct {
 	ProjectID uuid.UUID `schema:"projectID"`
 
-	Limit  int `schema:"limit"`
+	// Limit caps the page. Zero takes the default size.
+	Limit int `schema:"limit"`
+	// Offset is how many layers come before the page, in order.
 	Offset int `schema:"offset"`
 }
 

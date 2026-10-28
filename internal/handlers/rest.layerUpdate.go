@@ -20,9 +20,13 @@ type RestLayerUpdateService interface {
 
 // RestLayerUpdateRequest is the JSON body the update-layer endpoint accepts.
 type RestLayerUpdateRequest struct {
-	ID          uuid.UUID `json:"id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
+	ProjectID uuid.UUID `json:"projectID"`
+	ID        uuid.UUID `json:"id"`
+
+	// Name labels the layer's row in the composer.
+	Name string `json:"name"`
+	// Description says what the layer records.
+	Description string `json:"description"`
 }
 
 // RestLayerUpdate is the HTTP handler for the update-layer endpoint. It responds with the updated
@@ -58,6 +62,7 @@ func (handler *RestLayerUpdate) ServeHTTP(w http.ResponseWriter, r *http.Request
 
 	serviceRequest := &core.LayerUpdateRequest{
 		OwnerID:     ownerID,
+		ProjectID:   request.ProjectID,
 		ID:          request.ID,
 		Name:        request.Name,
 		Description: request.Description,

@@ -20,10 +20,15 @@ type RestLayerCreateService interface {
 
 // RestLayerCreateRequest is the JSON body the create-layer endpoint accepts.
 type RestLayerCreateRequest struct {
-	ProjectID   uuid.UUID `json:"projectID"`
-	After       uuid.UUID `json:"after"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
+	ProjectID uuid.UUID `json:"projectID"`
+
+	// After is the layer the new one follows. The nil UUID places it first.
+	After uuid.UUID `json:"after"`
+
+	// Name labels the layer's row in the composer.
+	Name string `json:"name"`
+	// Description says what the layer records.
+	Description string `json:"description"`
 }
 
 // RestLayerCreate is the HTTP handler for the create-layer endpoint. It responds 201 with the notes

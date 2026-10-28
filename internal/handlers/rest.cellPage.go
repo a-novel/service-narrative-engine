@@ -9,6 +9,7 @@ import (
 // CellPage is the REST representation of a page of a project's cells.
 type CellPage struct {
 	Cells []Cell `json:"cells"`
+
 	// Total counts every cell of the project, so a client paging through them knows when it holds them
 	// all.
 	Total int `json:"total"`
@@ -16,7 +17,7 @@ type CellPage struct {
 
 func loadCellPage(page *core.CellPage) CellPage {
 	return CellPage{
-		Cells: lo.Map(page.Cells, loadCellMap),
+		Cells: lo.Map(page.Cells, func(cell *core.Cell, _ int) Cell { return loadCell(cell) }),
 		Total: page.Total,
 	}
 }

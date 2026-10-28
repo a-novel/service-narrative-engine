@@ -20,7 +20,8 @@ type RestLayerDeleteService interface {
 
 // RestLayerDeleteRequest is the query parameters the delete-layer endpoint accepts.
 type RestLayerDeleteRequest struct {
-	ID uuid.UUID `schema:"id"`
+	ProjectID uuid.UUID `schema:"projectID"`
+	ID        uuid.UUID `schema:"id"`
 }
 
 // RestLayerDelete is the HTTP handler for the delete-layer endpoint. It responds with the deleted
@@ -55,8 +56,9 @@ func (handler *RestLayerDelete) ServeHTTP(w http.ResponseWriter, r *http.Request
 	}
 
 	serviceRequest := &core.LayerDeleteRequest{
-		OwnerID: ownerID,
-		ID:      request.ID,
+		OwnerID:   ownerID,
+		ProjectID: request.ProjectID,
+		ID:        request.ID,
 	}
 
 	result, err := handler.service.Exec(ctx, serviceRequest)

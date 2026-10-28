@@ -10,10 +10,15 @@ import (
 
 // Project is the REST representation of a project.
 type Project struct {
-	ID        uuid.UUID `json:"id"`
-	Title     string    `json:"title"`
-	Premise   string    `json:"premise"`
-	Language  string    `json:"language"`
+	ID uuid.UUID `json:"id"`
+
+	// Title names the narrative.
+	Title string `json:"title"`
+	// Premise says what the narrative is about, in a few sentences.
+	Premise string `json:"premise"`
+	// Language is the language the project is written in: en or fr.
+	Language string `json:"language"`
+
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
 }
@@ -27,9 +32,4 @@ func loadProject(project *core.Project) Project {
 		CreatedAt: project.CreatedAt,
 		UpdatedAt: project.UpdatedAt,
 	}
-}
-
-// loadProjectMap adapts loadProject to lo.Map, ignoring the slice index.
-func loadProjectMap(project *core.Project, _ int) Project {
-	return loadProject(project)
 }

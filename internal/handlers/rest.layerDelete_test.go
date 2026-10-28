@@ -22,7 +22,7 @@ func TestRestLayerDelete(t *testing.T) {
 	validRequest := func(t *testing.T) *http.Request {
 		t.Helper()
 
-		return newRequest(t, http.MethodDelete, "/v1/layer?id="+layerID.String(), nil)
+		return newRequest(t, http.MethodDelete, "/v1/layer?projectID="+projectID.String()+"&id="+layerID.String(), nil)
 	}
 
 	testCases := []struct {
@@ -103,7 +103,7 @@ func TestRestLayerDelete(t *testing.T) {
 				}
 
 				service.EXPECT().
-					Exec(mock.Anything, &core.LayerDeleteRequest{OwnerID: ownerID, ID: layerID}).
+					Exec(mock.Anything, &core.LayerDeleteRequest{OwnerID: ownerID, ProjectID: projectID, ID: layerID}).
 					Return(resp, testCase.serviceErr)
 			}
 

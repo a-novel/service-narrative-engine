@@ -58,11 +58,12 @@ var (
 	}
 
 	coreCell = &core.Cell{
-		SceneID: sceneID, LayerID: layerID, Content: json.RawMessage(`{"text":"Marie"}`),
+		ProjectID: projectID, SceneID: sceneID, LayerID: layerID, Content: json.RawMessage(`{"text":"Marie"}`),
 		UpdatedAt: updatedAt,
 	}
 	jsonCell = map[string]any{
-		"sceneID": sceneID.String(), "layerID": layerID.String(), "content": map[string]any{"text": "Marie"},
+		"projectID": projectID.String(), "sceneID": sceneID.String(), "layerID": layerID.String(),
+		"content":   map[string]any{"text": "Marie"},
 		"updatedAt": "2021-01-02T00:00:00Z",
 	}
 )

@@ -20,11 +20,17 @@ type RestSceneUpdateService interface {
 
 // RestSceneUpdateRequest is the JSON body the update-scene endpoint accepts.
 type RestSceneUpdateRequest struct {
-	ID          uuid.UUID `json:"id"`
-	Title       string    `json:"title"`
-	Color       string    `json:"color"`
-	Description string    `json:"description"`
-	Prompt      string    `json:"prompt"`
+	ProjectID uuid.UUID `json:"projectID"`
+	ID        uuid.UUID `json:"id"`
+
+	// Title names the scene in the composer.
+	Title string `json:"title"`
+	// Color is the scene's color in the composer, as a #rrggbb hex code in either case.
+	Color string `json:"color"`
+	// Description says what the scene is for, written for the author.
+	Description string `json:"description"`
+	// Prompt holds extra instructions for the model when it writes about the scene.
+	Prompt string `json:"prompt"`
 }
 
 // RestSceneUpdate is the HTTP handler for the update-scene endpoint. It responds with the updated
@@ -60,6 +66,7 @@ func (handler *RestSceneUpdate) ServeHTTP(w http.ResponseWriter, r *http.Request
 
 	serviceRequest := &core.SceneUpdateRequest{
 		OwnerID:     ownerID,
+		ProjectID:   request.ProjectID,
 		ID:          request.ID,
 		Title:       request.Title,
 		Color:       request.Color,

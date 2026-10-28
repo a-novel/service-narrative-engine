@@ -11,14 +11,16 @@ import (
 type ProjectComposer struct {
 	Project
 
+	// Scenes are the project's scenes, in narrative order.
 	Scenes []Scene `json:"scenes"`
+	// Layers are the project's layers, in order.
 	Layers []Layer `json:"layers"`
 }
 
 func loadProjectComposer(composer *core.ProjectComposer) ProjectComposer {
 	return ProjectComposer{
 		Project: loadProject(composer.Project),
-		Scenes:  lo.Map(composer.Scenes, loadSceneMap),
-		Layers:  lo.Map(composer.Layers, loadLayerMap),
+		Scenes:  lo.Map(composer.Scenes, func(scene *core.Scene, _ int) Scene { return loadScene(scene) }),
+		Layers:  lo.Map(composer.Layers, func(layer *core.Layer, _ int) Layer { return loadLayer(layer) }),
 	}
 }

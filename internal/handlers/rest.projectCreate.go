@@ -20,10 +20,15 @@ type RestProjectCreateService interface {
 
 // RestProjectCreateRequest is the JSON body the create-project endpoint accepts.
 type RestProjectCreateRequest struct {
-	Title    string                   `json:"title"`
-	Premise  string                   `json:"premise"`
-	Language string                   `json:"language"`
-	Scenes   []RestProjectCreateScene `json:"scenes"`
+	// Title names the narrative.
+	Title string `json:"title"`
+	// Premise says what the narrative is about, in a few sentences.
+	Premise string `json:"premise"`
+	// Language is the language the project is written in: en or fr.
+	Language string `json:"language"`
+
+	// Scenes are the scenes the project starts with, in order.
+	Scenes []RestProjectCreateScene `json:"scenes"`
 }
 
 // RestProjectCreate is the HTTP handler for the create-project endpoint. It responds 201 with the
@@ -77,10 +82,14 @@ func (handler *RestProjectCreate) ServeHTTP(w http.ResponseWriter, r *http.Reque
 
 // RestProjectCreateScene is a scene a new project starts with, such as one a preset seeds.
 type RestProjectCreateScene struct {
-	Title       string `json:"title"`
-	Color       string `json:"color"`
+	// Title names the scene in the composer.
+	Title string `json:"title"`
+	// Color is the scene's color in the composer, as a #rrggbb hex code in either case.
+	Color string `json:"color"`
+	// Description says what the scene is for, written for the author.
 	Description string `json:"description"`
-	Prompt      string `json:"prompt"`
+	// Prompt holds extra instructions for the model when it writes about the scene.
+	Prompt string `json:"prompt"`
 }
 
 // loadProjectCreateScene adapts a seed scene of the request to lo.Map.

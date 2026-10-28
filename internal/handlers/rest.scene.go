@@ -10,14 +10,23 @@ import (
 
 // Scene is the REST representation of a scene.
 type Scene struct {
-	ID          uuid.UUID `json:"id"`
-	ProjectID   uuid.UUID `json:"projectID"`
-	Position    int       `json:"position"`
-	Title       string    `json:"title"`
-	Color       string    `json:"color"`
-	Description string    `json:"description"`
-	Prompt      string    `json:"prompt"`
-	UpdatedAt   time.Time `json:"updatedAt"`
+	ID uuid.UUID `json:"id"`
+	// ProjectID is the project the scene belongs to.
+	ProjectID uuid.UUID `json:"projectID"`
+
+	// Position orders the project's scenes, from 0.
+	Position int `json:"position"`
+
+	// Title names the scene in the composer.
+	Title string `json:"title"`
+	// Color is the scene's color in the composer, as a lowercase #rrggbb hex code.
+	Color string `json:"color"`
+	// Description says what the scene is for, written for the author.
+	Description string `json:"description"`
+	// Prompt holds extra instructions for the model when it writes about the scene.
+	Prompt string `json:"prompt"`
+
+	UpdatedAt time.Time `json:"updatedAt"`
 }
 
 func loadScene(scene *core.Scene) Scene {
@@ -31,9 +40,4 @@ func loadScene(scene *core.Scene) Scene {
 		Prompt:      scene.Prompt,
 		UpdatedAt:   scene.UpdatedAt,
 	}
-}
-
-// loadSceneMap adapts loadScene to lo.Map, ignoring the slice index.
-func loadSceneMap(scene *core.Scene, _ int) Scene {
-	return loadScene(scene)
 }

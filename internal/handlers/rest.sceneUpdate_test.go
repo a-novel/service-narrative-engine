@@ -23,6 +23,7 @@ func TestRestSceneUpdate(t *testing.T) {
 		t.Helper()
 
 		return newRequest(t, http.MethodPut, "/v1/scene", map[string]any{
+			"projectID":   projectID,
 			"id":          sceneID,
 			"title":       "Ouverture",
 			"color":       "#e0457b",
@@ -111,6 +112,7 @@ func TestRestSceneUpdate(t *testing.T) {
 				service.EXPECT().
 					Exec(mock.Anything, &core.SceneUpdateRequest{
 						OwnerID:     ownerID,
+						ProjectID:   projectID,
 						ID:          sceneID,
 						Title:       "Ouverture",
 						Color:       "#e0457b",

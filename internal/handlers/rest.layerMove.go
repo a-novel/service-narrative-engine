@@ -20,7 +20,10 @@ type RestLayerMoveService interface {
 
 // RestLayerMoveRequest is the JSON body the move-layer endpoint accepts.
 type RestLayerMoveRequest struct {
-	ID    uuid.UUID `json:"id"`
+	ProjectID uuid.UUID `json:"projectID"`
+	ID        uuid.UUID `json:"id"`
+
+	// After is the layer the moved one follows. The nil UUID places it first.
 	After uuid.UUID `json:"after"`
 }
 
@@ -56,9 +59,10 @@ func (handler *RestLayerMove) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	}
 
 	serviceRequest := &core.LayerMoveRequest{
-		OwnerID: ownerID,
-		ID:      request.ID,
-		After:   request.After,
+		OwnerID:   ownerID,
+		ProjectID: request.ProjectID,
+		ID:        request.ID,
+		After:     request.After,
 	}
 
 	result, err := handler.service.Exec(ctx, serviceRequest)

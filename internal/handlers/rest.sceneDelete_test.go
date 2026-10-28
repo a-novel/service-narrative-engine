@@ -22,7 +22,7 @@ func TestRestSceneDelete(t *testing.T) {
 	validRequest := func(t *testing.T) *http.Request {
 		t.Helper()
 
-		return newRequest(t, http.MethodDelete, "/v1/scene?id="+sceneID.String(), nil)
+		return newRequest(t, http.MethodDelete, "/v1/scene?projectID="+projectID.String()+"&id="+sceneID.String(), nil)
 	}
 
 	testCases := []struct {
@@ -103,7 +103,7 @@ func TestRestSceneDelete(t *testing.T) {
 				}
 
 				service.EXPECT().
-					Exec(mock.Anything, &core.SceneDeleteRequest{OwnerID: ownerID, ID: sceneID}).
+					Exec(mock.Anything, &core.SceneDeleteRequest{OwnerID: ownerID, ProjectID: projectID, ID: sceneID}).
 					Return(resp, testCase.serviceErr)
 			}
 
