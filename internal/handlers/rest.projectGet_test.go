@@ -44,7 +44,7 @@ func TestRestProjectGet(t *testing.T) {
 			serviceCalled: true,
 
 			expectStatus:   http.StatusOK,
-			expectResponse: withComposer(jsonProject, []any{}, []any{}, []any{jsonCell}),
+			expectResponse: withComposer(jsonProject, []any{jsonScene}, []any{jsonLayer}),
 		},
 		{
 			name: "Error/Anonymous",
@@ -99,7 +99,9 @@ func TestRestProjectGet(t *testing.T) {
 			if testCase.serviceCalled {
 				var resp *core.ProjectComposer
 				if testCase.serviceErr == nil {
-					resp = &core.ProjectComposer{Project: coreProject, Cells: []*core.Cell{coreCell}}
+					resp = &core.ProjectComposer{
+						Project: coreProject, Scenes: []*core.Scene{coreScene}, Layers: []*core.Layer{coreLayer},
+					}
 				}
 
 				service.EXPECT().

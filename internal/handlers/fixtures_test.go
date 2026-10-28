@@ -67,12 +67,11 @@ var (
 	}
 )
 
-// withComposer returns the JSON of a project carrying its Scenes Composer.
-func withComposer(project map[string]any, scenes, layers, cells []any) map[string]any {
+// withComposer returns the JSON of a project carrying the layout of its Scenes Composer.
+func withComposer(project map[string]any, scenes, layers []any) map[string]any {
 	composer := maps.Clone(project)
 	composer["scenes"] = scenes
 	composer["layers"] = layers
-	composer["cells"] = cells
 
 	return composer
 }

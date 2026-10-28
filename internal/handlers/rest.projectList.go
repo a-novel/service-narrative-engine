@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 
 	"github.com/a-novel-kit/golib/httpf"
 	"github.com/a-novel-kit/golib/logging"
@@ -16,7 +15,7 @@ import (
 
 // RestProjectListService is the core operation [RestProjectList] delegates to.
 type RestProjectListService interface {
-	Exec(ctx context.Context, request *core.ProjectListRequest) ([]*core.Project, error)
+	Exec(ctx context.Context, request *core.ProjectListRequest) (*core.ProjectPage, error)
 }
 
 // RestProjectListRequest is the query parameters the list-projects endpoint accepts.
@@ -26,7 +25,7 @@ type RestProjectListRequest struct {
 }
 
 // RestProjectList is the HTTP handler for the list-projects endpoint. It responds with a page of the
-// caller's projects, newest first.
+// caller's projects, newest first, and their total.
 type RestProjectList struct {
 	service RestProjectListService
 	logger  logging.Log
@@ -69,5 +68,5 @@ func (handler *RestProjectList) ServeHTTP(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	httpf.SendJSONStatus(w, span, http.StatusOK, lo.Map(result, loadProjectMap))
+	httpf.SendJSONStatus(w, span, http.StatusOK, loadProjectPage(result))
 }

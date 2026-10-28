@@ -44,7 +44,7 @@ func TestRestProjectList(t *testing.T) {
 			serviceCalled: true,
 
 			expectStatus:   http.StatusOK,
-			expectResponse: []any{jsonProject},
+			expectResponse: map[string]any{"projects": []any{jsonProject}, "total": 3.0},
 		},
 		{
 			name: "Error/Anonymous",
@@ -97,9 +97,9 @@ func TestRestProjectList(t *testing.T) {
 			service := handlersmocks.NewMockRestProjectListService(t)
 
 			if testCase.serviceCalled {
-				var resp []*core.Project
+				var resp *core.ProjectPage
 				if testCase.serviceErr == nil {
-					resp = []*core.Project{coreProject}
+					resp = &core.ProjectPage{Projects: []*core.Project{coreProject}, Total: 3}
 				}
 
 				service.EXPECT().

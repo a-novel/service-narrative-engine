@@ -49,7 +49,7 @@ func TestRestProjectCreate(t *testing.T) {
 			serviceCalled: true,
 
 			expectStatus:   http.StatusCreated,
-			expectResponse: withComposer(jsonProject, []any{jsonScene}, []any{jsonLayer}, []any{}),
+			expectResponse: withComposer(jsonProject, []any{jsonScene}, []any{jsonLayer}),
 		},
 		{
 			name: "Error/Anonymous",

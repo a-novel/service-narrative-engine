@@ -80,6 +80,7 @@ func main() {
 	daoProjectSelect := dao.NewPgProjectSelect()
 	daoProjectLock := dao.NewPgProjectLock()
 	daoProjectList := dao.NewPgProjectList()
+	daoProjectCount := dao.NewPgProjectCount()
 	daoProjectUpdate := dao.NewPgProjectUpdate()
 	daoProjectDelete := dao.NewPgProjectDelete()
 	daoSceneInsert := dao.NewPgSceneInsert()
@@ -96,6 +97,7 @@ func main() {
 	daoLayerReorder := dao.NewPgLayerReorder()
 	daoCellUpsert := dao.NewPgCellUpsert()
 	daoCellList := dao.NewPgCellList()
+	daoCellCount := dao.NewPgCellCount()
 	transactor := postgres.NewTransactor(nil)
 
 	// =================================================================================================================
@@ -105,8 +107,8 @@ func main() {
 	serviceProjectCreate := core.NewProjectCreate(
 		daoProjectInsert, daoLayerInsert, daoSceneInsert, transactor, cfg.Composer,
 	)
-	serviceProjectGet := core.NewProjectGet(daoProjectSelect, daoSceneList, daoLayerList, daoCellList)
-	serviceProjectList := core.NewProjectList(daoProjectList)
+	serviceProjectGet := core.NewProjectGet(daoProjectSelect, daoSceneList, daoLayerList)
+	serviceProjectList := core.NewProjectList(daoProjectList, daoProjectCount)
 	serviceProjectUpdate := core.NewProjectUpdate(daoProjectUpdate)
 	serviceProjectDelete := core.NewProjectDelete(daoProjectDelete)
 	serviceSceneCreate := core.NewSceneCreate(daoProjectLock, daoSceneList, daoSceneInsert, daoSceneReorder, transactor)
@@ -121,6 +123,7 @@ func main() {
 	serviceLayerDelete := core.NewLayerDelete(
 		daoLayerSelect, daoProjectLock, daoLayerDelete, daoLayerList, daoLayerReorder, transactor,
 	)
+	serviceCellList := core.NewCellList(daoProjectSelect, daoCellList, daoCellCount)
 	serviceCellWrite := core.NewCellWrite(daoSceneSelect, daoLayerSelect, daoCellUpsert, cfg.Composer)
 
 	// =================================================================================================================
@@ -142,6 +145,7 @@ func main() {
 	handlerLayerUpdate := handlers.NewRestLayerUpdate(serviceLayerUpdate, cfg.Logger)
 	handlerLayerMove := handlers.NewRestLayerMove(serviceLayerMove, cfg.Logger)
 	handlerLayerDelete := handlers.NewRestLayerDelete(serviceLayerDelete, cfg.Logger)
+	handlerCellList := handlers.NewRestCellList(serviceCellList, cfg.Logger)
 	handlerCellWrite := handlers.NewRestCellWrite(serviceCellWrite, cfg.Logger)
 
 	// =================================================================================================================
@@ -170,6 +174,7 @@ func main() {
 		withAuth(api, config.PermissionProjectWrite).Post("/layer/move", handlerLayerMove.ServeHTTP)
 		withAuth(api, config.PermissionProjectWrite).Delete("/layer", handlerLayerDelete.ServeHTTP)
 
+		withAuth(api, config.PermissionProjectRead).Get("/cells", handlerCellList.ServeHTTP)
 		withAuth(api, config.PermissionProjectWrite).Put("/cell", handlerCellWrite.ServeHTTP)
 	})
 
