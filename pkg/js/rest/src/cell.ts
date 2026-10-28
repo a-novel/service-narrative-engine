@@ -63,14 +63,40 @@ export const CellWriteItemSchema = z.object({
 /** The value {@link CellWriteItemSchema} validates. */
 export type CellWriteItem = z.infer<typeof CellWriteItemSchema>;
 
-/** Up to 100 cells to write. A scene and a layer meet in at most one of them. */
-export const CellWriteRequestSchema = z.object({
+/** The new content of one cell, where a scene and a layer of the project cross. */
+export const CellWriteRequestSchema = CellWriteItemSchema.extend({
   projectID: z.uuid(),
-  cells: z.array(CellWriteItemSchema).min(1).max(100),
 });
 
 /** The value {@link CellWriteRequestSchema} validates. */
 export type CellWriteRequest = z.infer<typeof CellWriteRequestSchema>;
+
+/** Up to 100 cells to write. A scene and a layer meet in at most one of them. */
+export const CellsWriteRequestSchema = z.object({
+  projectID: z.uuid(),
+  cells: z.array(CellWriteItemSchema).min(1).max(100),
+});
+
+/** The value {@link CellsWriteRequestSchema} validates. */
+export type CellsWriteRequest = z.infer<typeof CellsWriteRequestSchema>;
+
+/**
+ * Writes one cell where a scene and a layer of the project cross, and returns it without its content.
+ * The first write creates the cell. Throws on HTTP 400 when the content breaks the schema of the layer's
+ * kind or weighs over 2 MiB, and 404 when the caller owns no such project, or the project holds no such
+ * scene or layer. {@link cellsWrite} writes several at once.
+ */
+export async function cellWrite(
+  api: NarrativeEngineApi,
+  accessToken: string,
+  request: CellWriteRequest
+): Promise<WrittenCell> {
+  return await api.fetch("/v1/cell", WrittenCellSchema, {
+    method: "PUT",
+    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify(request),
+  });
+}
 
 /**
  * Writes cells where scenes and layers of the project cross, and returns each written cell, without its
@@ -79,10 +105,10 @@ export type CellWriteRequest = z.infer<typeof CellWriteRequestSchema>;
  * HTTP 400 when a content breaks the schema of its layer's kind or weighs over 2 MiB, and 404 when the
  * caller owns no such project, or the project holds one of the scenes or layers not.
  */
-export async function cellWrite(
+export async function cellsWrite(
   api: NarrativeEngineApi,
   accessToken: string,
-  request: CellWriteRequest
+  request: CellsWriteRequest
 ): Promise<WrittenCell[]> {
   return await api.fetch("/v1/cells", z.array(WrittenCellSchema), {
     method: "PUT",
