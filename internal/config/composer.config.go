@@ -1,11 +1,8 @@
 package config
 
-// Composer bounds the size of a project's Scenes Composer.
+// Composer bounds what one request writes to a project's Scenes Composer. The schema caps a project
+// at 500 scenes and 20 layers.
 type Composer struct {
-	// MaxScenes caps the scenes of one project.
-	MaxScenes int `json:"maxScenes" yaml:"maxScenes"`
-	// MaxLayers caps the layers of one project, the manuscript layer included.
-	MaxLayers int `json:"maxLayers" yaml:"maxLayers"`
 	// MaxSeedScenes caps the scenes a project starts with.
 	MaxSeedScenes int `json:"maxSeedScenes" yaml:"maxSeedScenes"`
 	// MaxCellBytes caps the size of one cell's content, encoded as JSON.

@@ -12,7 +12,6 @@ import (
 	"github.com/a-novel-kit/golib/otel"
 	"github.com/a-novel-kit/golib/transaction"
 
-	"github.com/a-novel/service-narrative-engine/internal/config"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
@@ -56,7 +55,6 @@ type LayerDelete struct {
 	daoList    LayerDeleteDaoList
 	daoReorder LayerDeleteDaoReorder
 	transactor transaction.Transactor
-	config     config.Composer
 }
 
 func NewLayerDelete(
@@ -66,7 +64,6 @@ func NewLayerDelete(
 	daoList LayerDeleteDaoList,
 	daoReorder LayerDeleteDaoReorder,
 	transactor transaction.Transactor,
-	config config.Composer,
 ) *LayerDelete {
 	return &LayerDelete{
 		daoSelect:  daoSelect,
@@ -75,7 +72,6 @@ func NewLayerDelete(
 		daoList:    daoList,
 		daoReorder: daoReorder,
 		transactor: transactor,
-		config:     config,
 	}
 }
 
@@ -124,10 +120,7 @@ func (service *LayerDelete) Exec(ctx context.Context, request *LayerDeleteReques
 			return fmt.Errorf("delete layer: %w", err)
 		}
 
-		remaining, err := service.daoList.Exec(ctx, &dao.LayerListRequest{
-			ProjectID: target.ProjectID,
-			Limit:     service.config.MaxLayers,
-		})
+		remaining, err := service.daoList.Exec(ctx, &dao.LayerListRequest{ProjectID: target.ProjectID})
 		if err != nil {
 			return fmt.Errorf("list layers: %w", err)
 		}

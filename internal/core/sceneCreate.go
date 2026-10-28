@@ -15,7 +15,6 @@ import (
 	"github.com/a-novel-kit/golib/otel"
 	"github.com/a-novel-kit/golib/transaction"
 
-	"github.com/a-novel/service-narrative-engine/internal/config"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
@@ -59,7 +58,6 @@ type SceneCreate struct {
 	daoInsert  SceneCreateDaoInsert
 	daoReorder SceneCreateDaoReorder
 	transactor transaction.Transactor
-	config     config.Composer
 }
 
 func NewSceneCreate(
@@ -68,7 +66,6 @@ func NewSceneCreate(
 	daoInsert SceneCreateDaoInsert,
 	daoReorder SceneCreateDaoReorder,
 	transactor transaction.Transactor,
-	config config.Composer,
 ) *SceneCreate {
 	return &SceneCreate{
 		daoLock:    daoLock,
@@ -76,7 +73,6 @@ func NewSceneCreate(
 		daoInsert:  daoInsert,
 		daoReorder: daoReorder,
 		transactor: transactor,
-		config:     config,
 	}
 }
 
@@ -112,16 +108,9 @@ func (service *SceneCreate) Exec(ctx context.Context, request *SceneCreateReques
 			return fmt.Errorf("lock project: %w", err)
 		}
 
-		scenes, err := service.daoList.Exec(ctx, &dao.SceneListRequest{
-			ProjectID: request.ProjectID,
-			Limit:     service.config.MaxScenes,
-		})
+		scenes, err := service.daoList.Exec(ctx, &dao.SceneListRequest{ProjectID: request.ProjectID})
 		if err != nil {
 			return fmt.Errorf("list scenes: %w", err)
-		}
-
-		if len(scenes) >= service.config.MaxScenes {
-			return fmt.Errorf("%w: %d scenes", ErrProjectFull, len(scenes))
 		}
 
 		ids := append(lo.Map(scenes, sceneID), id)
@@ -140,6 +129,10 @@ func (service *SceneCreate) Exec(ctx context.Context, request *SceneCreateReques
 			}},
 			Now: time.Now(),
 		})
+		if errors.Is(err, dao.ErrSceneInsertFull) {
+			err = errors.Join(err, ErrProjectFull)
+		}
+
 		if err != nil {
 			return fmt.Errorf("insert scene: %w", err)
 		}

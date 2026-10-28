@@ -112,8 +112,9 @@ func TestLayerCreate(t *testing.T) {
 
 			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID, Name: "Layer"},
 
-			lockMock: &daoMock[*dao.Project]{resp: daoProject()},
-			listMock: &daoMock[[]*dao.Layer]{resp: append(existing, notesLayer(layerID3, 2))},
+			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
+			listMock:   &daoMock[[]*dao.Layer]{resp: existing},
+			insertMock: &daoMock[*dao.Layer]{err: dao.ErrLayerInsertFull},
 
 			expectErr: core.ErrProjectFull,
 		},
@@ -178,7 +179,7 @@ func TestLayerCreate(t *testing.T) {
 
 			if testCase.listMock != nil {
 				mockList.EXPECT().
-					Exec(mock.Anything, &dao.LayerListRequest{ProjectID: projectID, Limit: testLimits.MaxLayers}).
+					Exec(mock.Anything, &dao.LayerListRequest{ProjectID: projectID}).
 					Return(testCase.listMock.resp, testCase.listMock.err)
 			}
 
@@ -202,7 +203,7 @@ func TestLayerCreate(t *testing.T) {
 				transactor = transactiontest.NewTransactor()
 			}
 
-			service := core.NewLayerCreate(mockLock, mockList, mockInsert, mockReorder, transactor, testLimits)
+			service := core.NewLayerCreate(mockLock, mockList, mockInsert, mockReorder, transactor)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)

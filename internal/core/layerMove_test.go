@@ -159,7 +159,7 @@ func TestLayerMove(t *testing.T) {
 
 			if testCase.listMock != nil {
 				mockList.EXPECT().
-					Exec(mock.Anything, &dao.LayerListRequest{ProjectID: projectID, Limit: testLimits.MaxLayers}).
+					Exec(mock.Anything, &dao.LayerListRequest{ProjectID: projectID}).
 					Return(testCase.listMock.resp, testCase.listMock.err)
 			}
 
@@ -174,7 +174,7 @@ func TestLayerMove(t *testing.T) {
 				transactor = transactiontest.NewTransactor()
 			}
 
-			service := core.NewLayerMove(mockSelect, mockLock, mockList, mockReorder, transactor, testLimits)
+			service := core.NewLayerMove(mockSelect, mockLock, mockList, mockReorder, transactor)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)

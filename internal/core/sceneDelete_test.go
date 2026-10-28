@@ -141,7 +141,7 @@ func TestSceneDelete(t *testing.T) {
 
 			if testCase.listMock != nil {
 				mockList.EXPECT().
-					Exec(mock.Anything, &dao.SceneListRequest{ProjectID: projectID, Limit: testLimits.MaxScenes}).
+					Exec(mock.Anything, &dao.SceneListRequest{ProjectID: projectID}).
 					Return(testCase.listMock.resp, testCase.listMock.err)
 			}
 
@@ -156,7 +156,7 @@ func TestSceneDelete(t *testing.T) {
 				transactor = transactiontest.NewTransactor()
 			}
 
-			service := core.NewSceneDelete(mockSelect, mockLock, mockDelete, mockList, mockReorder, transactor, testLimits)
+			service := core.NewSceneDelete(mockSelect, mockLock, mockDelete, mockList, mockReorder, transactor)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)

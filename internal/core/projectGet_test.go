@@ -131,26 +131,23 @@ func TestProjectGet(t *testing.T) {
 
 			if testCase.scenesMock != nil {
 				daoScenesMock.EXPECT().
-					Exec(mock.Anything, &dao.SceneListRequest{ProjectID: projectID, Limit: testLimits.MaxScenes}).
+					Exec(mock.Anything, &dao.SceneListRequest{ProjectID: projectID}).
 					Return(testCase.scenesMock.resp, testCase.scenesMock.err)
 			}
 
 			if testCase.layersMock != nil {
 				daoLayersMock.EXPECT().
-					Exec(mock.Anything, &dao.LayerListRequest{ProjectID: projectID, Limit: testLimits.MaxLayers}).
+					Exec(mock.Anything, &dao.LayerListRequest{ProjectID: projectID}).
 					Return(testCase.layersMock.resp, testCase.layersMock.err)
 			}
 
 			if testCase.cellsMock != nil {
 				daoCellsMock.EXPECT().
-					Exec(mock.Anything, &dao.CellListRequest{
-						ProjectID: projectID,
-						Limit:     testLimits.MaxScenes * testLimits.MaxLayers,
-					}).
+					Exec(mock.Anything, &dao.CellListRequest{ProjectID: projectID}).
 					Return(testCase.cellsMock.resp, testCase.cellsMock.err)
 			}
 
-			service := core.NewProjectGet(daoProjectMock, daoScenesMock, daoLayersMock, daoCellsMock, testLimits)
+			service := core.NewProjectGet(daoProjectMock, daoScenesMock, daoLayersMock, daoCellsMock)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)

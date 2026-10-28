@@ -14,7 +14,6 @@ import (
 	"github.com/a-novel-kit/golib/otel"
 	"github.com/a-novel-kit/golib/transaction"
 
-	"github.com/a-novel/service-narrative-engine/internal/config"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
@@ -54,7 +53,6 @@ type LayerMove struct {
 	daoList    LayerMoveDaoList
 	daoReorder LayerMoveDaoReorder
 	transactor transaction.Transactor
-	config     config.Composer
 }
 
 func NewLayerMove(
@@ -63,7 +61,6 @@ func NewLayerMove(
 	daoList LayerMoveDaoList,
 	daoReorder LayerMoveDaoReorder,
 	transactor transaction.Transactor,
-	config config.Composer,
 ) *LayerMove {
 	return &LayerMove{
 		daoSelect:  daoSelect,
@@ -71,7 +68,6 @@ func NewLayerMove(
 		daoList:    daoList,
 		daoReorder: daoReorder,
 		transactor: transactor,
-		config:     config,
 	}
 }
 
@@ -107,10 +103,7 @@ func (service *LayerMove) Exec(ctx context.Context, request *LayerMoveRequest) (
 			return fmt.Errorf("lock project: %w", err)
 		}
 
-		current, err := service.daoList.Exec(ctx, &dao.LayerListRequest{
-			ProjectID: layer.ProjectID,
-			Limit:     service.config.MaxLayers,
-		})
+		current, err := service.daoList.Exec(ctx, &dao.LayerListRequest{ProjectID: layer.ProjectID})
 		if err != nil {
 			return fmt.Errorf("list layers: %w", err)
 		}

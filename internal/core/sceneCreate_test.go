@@ -113,8 +113,9 @@ func TestSceneCreate(t *testing.T) {
 
 			request: &core.SceneCreateRequest{OwnerID: ownerID, ProjectID: projectID, Title: "Scene", Color: "#4A90D9"},
 
-			lockMock: &daoMock[*dao.Project]{resp: daoProject()},
-			listMock: &daoMock[[]*dao.Scene]{resp: append(existing, daoScene(sceneID3, 2))},
+			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
+			listMock:   &daoMock[[]*dao.Scene]{resp: existing},
+			insertMock: &daoMock[[]*dao.Scene]{err: dao.ErrSceneInsertFull},
 
 			expectErr: core.ErrProjectFull,
 		},
@@ -183,7 +184,7 @@ func TestSceneCreate(t *testing.T) {
 
 			if testCase.listMock != nil {
 				mockList.EXPECT().
-					Exec(mock.Anything, &dao.SceneListRequest{ProjectID: projectID, Limit: testLimits.MaxScenes}).
+					Exec(mock.Anything, &dao.SceneListRequest{ProjectID: projectID}).
 					Return(testCase.listMock.resp, testCase.listMock.err)
 			}
 
@@ -208,7 +209,7 @@ func TestSceneCreate(t *testing.T) {
 				transactor = transactiontest.NewTransactor()
 			}
 
-			service := core.NewSceneCreate(mockLock, mockList, mockInsert, mockReorder, transactor, testLimits)
+			service := core.NewSceneCreate(mockLock, mockList, mockInsert, mockReorder, transactor)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)

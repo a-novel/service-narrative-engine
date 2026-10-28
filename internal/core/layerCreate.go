@@ -14,7 +14,6 @@ import (
 	"github.com/a-novel-kit/golib/otel"
 	"github.com/a-novel-kit/golib/transaction"
 
-	"github.com/a-novel/service-narrative-engine/internal/config"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
@@ -55,7 +54,6 @@ type LayerCreate struct {
 	daoInsert  LayerCreateDaoInsert
 	daoReorder LayerCreateDaoReorder
 	transactor transaction.Transactor
-	config     config.Composer
 }
 
 func NewLayerCreate(
@@ -64,7 +62,6 @@ func NewLayerCreate(
 	daoInsert LayerCreateDaoInsert,
 	daoReorder LayerCreateDaoReorder,
 	transactor transaction.Transactor,
-	config config.Composer,
 ) *LayerCreate {
 	return &LayerCreate{
 		daoLock:    daoLock,
@@ -72,7 +69,6 @@ func NewLayerCreate(
 		daoInsert:  daoInsert,
 		daoReorder: daoReorder,
 		transactor: transactor,
-		config:     config,
 	}
 }
 
@@ -108,16 +104,9 @@ func (service *LayerCreate) Exec(ctx context.Context, request *LayerCreateReques
 			return fmt.Errorf("lock project: %w", err)
 		}
 
-		layers, err := service.daoList.Exec(ctx, &dao.LayerListRequest{
-			ProjectID: request.ProjectID,
-			Limit:     service.config.MaxLayers,
-		})
+		layers, err := service.daoList.Exec(ctx, &dao.LayerListRequest{ProjectID: request.ProjectID})
 		if err != nil {
 			return fmt.Errorf("list layers: %w", err)
-		}
-
-		if len(layers) >= service.config.MaxLayers {
-			return fmt.Errorf("%w: %d layers", ErrProjectFull, len(layers))
 		}
 
 		ids := append(lo.Map(layers, layerID), id)
@@ -136,6 +125,10 @@ func (service *LayerCreate) Exec(ctx context.Context, request *LayerCreateReques
 			Description: request.Description,
 			Now:         time.Now(),
 		})
+		if errors.Is(err, dao.ErrLayerInsertFull) {
+			err = errors.Join(err, ErrProjectFull)
+		}
+
 		if err != nil {
 			return fmt.Errorf("insert layer: %w", err)
 		}

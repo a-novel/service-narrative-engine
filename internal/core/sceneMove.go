@@ -14,7 +14,6 @@ import (
 	"github.com/a-novel-kit/golib/otel"
 	"github.com/a-novel-kit/golib/transaction"
 
-	"github.com/a-novel/service-narrative-engine/internal/config"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
@@ -54,7 +53,6 @@ type SceneMove struct {
 	daoList    SceneMoveDaoList
 	daoReorder SceneMoveDaoReorder
 	transactor transaction.Transactor
-	config     config.Composer
 }
 
 func NewSceneMove(
@@ -63,7 +61,6 @@ func NewSceneMove(
 	daoList SceneMoveDaoList,
 	daoReorder SceneMoveDaoReorder,
 	transactor transaction.Transactor,
-	config config.Composer,
 ) *SceneMove {
 	return &SceneMove{
 		daoSelect:  daoSelect,
@@ -71,7 +68,6 @@ func NewSceneMove(
 		daoList:    daoList,
 		daoReorder: daoReorder,
 		transactor: transactor,
-		config:     config,
 	}
 }
 
@@ -107,10 +103,7 @@ func (service *SceneMove) Exec(ctx context.Context, request *SceneMoveRequest) (
 			return fmt.Errorf("lock project: %w", err)
 		}
 
-		current, err := service.daoList.Exec(ctx, &dao.SceneListRequest{
-			ProjectID: scene.ProjectID,
-			Limit:     service.config.MaxScenes,
-		})
+		current, err := service.daoList.Exec(ctx, &dao.SceneListRequest{ProjectID: scene.ProjectID})
 		if err != nil {
 			return fmt.Errorf("list scenes: %w", err)
 		}

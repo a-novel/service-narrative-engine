@@ -11,7 +11,6 @@ import (
 
 	"github.com/a-novel-kit/golib/otel"
 
-	"github.com/a-novel/service-narrative-engine/internal/config"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
@@ -47,7 +46,6 @@ type ProjectGet struct {
 	daoScenes  ProjectGetDaoScenes
 	daoLayers  ProjectGetDaoLayers
 	daoCells   ProjectGetDaoCells
-	config     config.Composer
 }
 
 func NewProjectGet(
@@ -55,14 +53,12 @@ func NewProjectGet(
 	daoScenes ProjectGetDaoScenes,
 	daoLayers ProjectGetDaoLayers,
 	daoCells ProjectGetDaoCells,
-	config config.Composer,
 ) *ProjectGet {
 	return &ProjectGet{
 		daoProject: daoProject,
 		daoScenes:  daoScenes,
 		daoLayers:  daoLayers,
 		daoCells:   daoCells,
-		config:     config,
 	}
 }
 
@@ -89,26 +85,17 @@ func (service *ProjectGet) Exec(ctx context.Context, request *ProjectGetRequest)
 		return nil, otel.ReportError(span, fmt.Errorf("select project: %w", err))
 	}
 
-	scenes, err := service.daoScenes.Exec(ctx, &dao.SceneListRequest{
-		ProjectID: project.ID,
-		Limit:     service.config.MaxScenes,
-	})
+	scenes, err := service.daoScenes.Exec(ctx, &dao.SceneListRequest{ProjectID: project.ID})
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("list scenes: %w", err))
 	}
 
-	layers, err := service.daoLayers.Exec(ctx, &dao.LayerListRequest{
-		ProjectID: project.ID,
-		Limit:     service.config.MaxLayers,
-	})
+	layers, err := service.daoLayers.Exec(ctx, &dao.LayerListRequest{ProjectID: project.ID})
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("list layers: %w", err))
 	}
 
-	cells, err := service.daoCells.Exec(ctx, &dao.CellListRequest{
-		ProjectID: project.ID,
-		Limit:     service.config.MaxScenes * service.config.MaxLayers,
-	})
+	cells, err := service.daoCells.Exec(ctx, &dao.CellListRequest{ProjectID: project.ID})
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("list cells: %w", err))
 	}

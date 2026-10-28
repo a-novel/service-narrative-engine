@@ -34,7 +34,7 @@ type daoMock[Resp any] struct {
 }
 
 // testLimits holds small limits, so a case can reach them.
-var testLimits = config.Composer{MaxScenes: 3, MaxLayers: 3, MaxSeedScenes: 2, MaxCellBytes: 64}
+var testLimits = config.Composer{MaxSeedScenes: 2, MaxCellBytes: 64}
 
 // recent reports whether a request's instant was captured during the test.
 func recent(instant time.Time) bool {

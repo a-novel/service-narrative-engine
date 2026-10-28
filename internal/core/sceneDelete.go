@@ -12,7 +12,6 @@ import (
 	"github.com/a-novel-kit/golib/otel"
 	"github.com/a-novel-kit/golib/transaction"
 
-	"github.com/a-novel/service-narrative-engine/internal/config"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
@@ -55,7 +54,6 @@ type SceneDelete struct {
 	daoList    SceneDeleteDaoList
 	daoReorder SceneDeleteDaoReorder
 	transactor transaction.Transactor
-	config     config.Composer
 }
 
 func NewSceneDelete(
@@ -65,7 +63,6 @@ func NewSceneDelete(
 	daoList SceneDeleteDaoList,
 	daoReorder SceneDeleteDaoReorder,
 	transactor transaction.Transactor,
-	config config.Composer,
 ) *SceneDelete {
 	return &SceneDelete{
 		daoSelect:  daoSelect,
@@ -74,7 +71,6 @@ func NewSceneDelete(
 		daoList:    daoList,
 		daoReorder: daoReorder,
 		transactor: transactor,
-		config:     config,
 	}
 }
 
@@ -119,10 +115,7 @@ func (service *SceneDelete) Exec(ctx context.Context, request *SceneDeleteReques
 			return fmt.Errorf("delete scene: %w", err)
 		}
 
-		remaining, err := service.daoList.Exec(ctx, &dao.SceneListRequest{
-			ProjectID: target.ProjectID,
-			Limit:     service.config.MaxScenes,
-		})
+		remaining, err := service.daoList.Exec(ctx, &dao.SceneListRequest{ProjectID: target.ProjectID})
 		if err != nil {
 			return fmt.Errorf("list scenes: %w", err)
 		}
