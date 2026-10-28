@@ -1,9 +1,7 @@
 package dao_test
 
 import (
-	"cmp"
 	"context"
-	"slices"
 	"testing"
 
 	"github.com/google/uuid"
@@ -19,15 +17,14 @@ import (
 func TestPgLayerInsert(t *testing.T) {
 	t.Parallel()
 
-	newLayerID1 := uuid.MustParse("00000000-0000-0000-0000-000000000023")
-	newLayerID2 := uuid.MustParse("00000000-0000-0000-0000-000000000024")
+	newLayerID := uuid.MustParse("00000000-0000-0000-0000-000000000023")
 
 	testCases := []struct {
 		name string
 
 		request *dao.LayerInsertRequest
 
-		expect []*dao.Layer
+		expect *dao.Layer
 		// expectLayers is the project's order after the insert, when the case checks it.
 		expectLayers []*dao.Layer
 		// full fills the project up to its last position before the insert.
@@ -38,91 +35,66 @@ func TestPgLayerInsert(t *testing.T) {
 			name: "Success",
 
 			request: &dao.LayerInsertRequest{
-				ProjectID: projectID,
-				Position:  2,
-				Layers: []dao.LayerInsertItem{
-					{ID: newLayerID1, Kind: "notes", Name: "Places", Description: "Where it happens"},
-					{ID: newLayerID2, Kind: "notes", Name: "Objects"},
-				},
-				Now: now,
+				ID: newLayerID, ProjectID: projectID, Position: 2, Kind: "notes", Name: "Places",
+				Description: "Where it happens", Now: now,
 			},
 
-			expect: []*dao.Layer{
-				{
-					ID: newLayerID1, ProjectID: projectID, Position: 2, Kind: "notes", Name: "Places",
-					Description: "Where it happens", UpdatedAt: now,
-				},
-				{ID: newLayerID2, ProjectID: projectID, Position: 3, Kind: "notes", Name: "Objects", UpdatedAt: now},
+			expect: &dao.Layer{
+				ID: newLayerID, ProjectID: projectID, Position: 2, Kind: "notes", Name: "Places",
+				Description: "Where it happens", UpdatedAt: now,
 			},
 		},
 		{
 			name: "Success/PastTheEnd",
 
 			request: &dao.LayerInsertRequest{
-				ProjectID: projectID,
-				Position:  999,
-				Layers:    []dao.LayerInsertItem{{ID: newLayerID1, Kind: "notes", Name: "Places"}},
-				Now:       now,
+				ID: newLayerID, ProjectID: projectID, Position: 999, Kind: "notes", Name: "Places", Now: now,
 			},
 
-			expect: []*dao.Layer{
-				{ID: newLayerID1, ProjectID: projectID, Position: 2, Kind: "notes", Name: "Places", UpdatedAt: now},
-			},
-		},
-		{
-			name: "Success/SecondManuscript",
-
-			request: &dao.LayerInsertRequest{
-				ProjectID: projectID,
-				Position:  2,
-				Layers:    []dao.LayerInsertItem{{ID: newLayerID1, Kind: "manuscript", Name: "Draft"}},
-				Now:       now,
-			},
-
-			expect: []*dao.Layer{
-				{ID: newLayerID1, ProjectID: projectID, Position: 2, Kind: "manuscript", Name: "Draft", UpdatedAt: now},
-			},
-			expectLayers: []*dao.Layer{
-				composerFixtures().layers[0],
-				composerFixtures().layers[1],
-				{ID: newLayerID1, ProjectID: projectID, Position: 2, Kind: "manuscript", Name: "Draft", UpdatedAt: now},
+			expect: &dao.Layer{
+				ID: newLayerID, ProjectID: projectID, Position: 2, Kind: "notes", Name: "Places", UpdatedAt: now,
 			},
 		},
 		{
 			name: "Error/ProjectFull",
 
 			request: &dao.LayerInsertRequest{
-				ProjectID: projectID,
-				Position:  0,
-				Layers:    []dao.LayerInsertItem{{ID: newLayerID1, Kind: "notes", Name: "Places"}},
-				Now:       now,
+				ID: newLayerID, ProjectID: projectID, Position: 0, Kind: "notes", Name: "Places", Now: now,
 			},
 
 			full:      true,
 			expectErr: dao.ErrLayerInsertFull,
 		},
 		{
-			name: "Success/Shift",
+			name: "Success/SecondManuscript",
 
 			request: &dao.LayerInsertRequest{
-				ProjectID: projectID,
-				Position:  1,
-				Layers: []dao.LayerInsertItem{
-					{ID: newLayerID1, Kind: "notes", Name: "Places"},
-					{ID: newLayerID2, Kind: "notes", Name: "Objects"},
-				},
-				Now: now,
+				ID: newLayerID, ProjectID: projectID, Position: 2, Kind: "manuscript", Name: "Draft", Now: now,
 			},
 
-			expect: []*dao.Layer{
-				{ID: newLayerID1, ProjectID: projectID, Position: 1, Kind: "notes", Name: "Places", UpdatedAt: now},
-				{ID: newLayerID2, ProjectID: projectID, Position: 2, Kind: "notes", Name: "Objects", UpdatedAt: now},
+			expect: &dao.Layer{
+				ID: newLayerID, ProjectID: projectID, Position: 2, Kind: "manuscript", Name: "Draft", UpdatedAt: now,
 			},
 			expectLayers: []*dao.Layer{
 				composerFixtures().layers[0],
-				{ID: newLayerID1, ProjectID: projectID, Position: 1, Kind: "notes", Name: "Places", UpdatedAt: now},
-				{ID: newLayerID2, ProjectID: projectID, Position: 2, Kind: "notes", Name: "Objects", UpdatedAt: now},
-				layerAt(composerFixtures().layers[1], 3),
+				composerFixtures().layers[1],
+				{ID: newLayerID, ProjectID: projectID, Position: 2, Kind: "manuscript", Name: "Draft", UpdatedAt: now},
+			},
+		},
+		{
+			name: "Success/Shift",
+
+			request: &dao.LayerInsertRequest{
+				ID: newLayerID, ProjectID: projectID, Position: 1, Kind: "notes", Name: "Places", Now: now,
+			},
+
+			expect: &dao.Layer{
+				ID: newLayerID, ProjectID: projectID, Position: 1, Kind: "notes", Name: "Places", UpdatedAt: now,
+			},
+			expectLayers: []*dao.Layer{
+				composerFixtures().layers[0],
+				{ID: newLayerID, ProjectID: projectID, Position: 1, Kind: "notes", Name: "Places", UpdatedAt: now},
+				layerAt(composerFixtures().layers[1], 2),
 			},
 		},
 	}
@@ -145,8 +117,6 @@ func TestPgLayerInsert(t *testing.T) {
 
 				result, err := daoLayerInsert.Exec(ctx, testCase.request)
 				require.ErrorIs(t, err, testCase.expectErr)
-
-				slices.SortFunc(result, func(a, b *dao.Layer) int { return cmp.Compare(a.Position, b.Position) })
 				require.Equal(t, testCase.expect, result)
 
 				if testCase.expectLayers != nil {

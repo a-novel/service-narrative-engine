@@ -2,10 +2,8 @@ package dao_test
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
 	"github.com/a-novel-kit/golib/postgres/postgrestest"
@@ -18,77 +16,53 @@ import (
 func TestPgLayerDelete(t *testing.T) {
 	t.Parallel()
 
-	// Two more layers, the first with a cell, let a delete leave a gap before a layer that has to move up
-	// twice.
-	places := &dao.Layer{
-		ID: uuid.MustParse("00000000-0000-0000-0000-000000000023"), ProjectID: projectID, Position: 2,
-		Kind: "notes", Name: "Places", UpdatedAt: updatedAt,
-	}
-	objects := &dao.Layer{
-		ID: uuid.MustParse("00000000-0000-0000-0000-000000000024"), ProjectID: projectID, Position: 3,
-		Kind: "notes", Name: "Objects", UpdatedAt: updatedAt,
-	}
-	placesCell := &dao.Cell{
-		ProjectID: projectID, SceneID: sceneID1, LayerID: places.ID, Content: json.RawMessage(`{"text": "Paris"}`),
-		UpdatedAt: updatedAt,
-	}
-
-	// layers and cells are the test project's rows before the delete, in order.
-	fixtureLayers, fixtureCells := composerFixtures().layers, composerFixtures().cells
-	layers := []*dao.Layer{fixtureLayers[0], fixtureLayers[1], places, objects}
-	cells := []*dao.Cell{fixtureCells[0], fixtureCells[1], placesCell}
+	layers := composerFixtures().layers
 
 	testCases := []struct {
 		name string
 
 		request *dao.LayerDeleteRequest
 
-		expect       []*dao.Layer
+		expect       *dao.Layer
 		expectLayers []*dao.Layer
 		expectCells  []*dao.Cell
+		expectErr    error
 	}{
 		{
 			name: "Success",
 
-			request: &dao.LayerDeleteRequest{ProjectID: projectID, IDs: []uuid.UUID{notesLayerID}},
+			request: &dao.LayerDeleteRequest{ProjectID: projectID, ID: notesLayerID},
 
-			expect:       []*dao.Layer{layers[1]},
-			expectLayers: []*dao.Layer{layers[0], layerAt(places, 1), layerAt(objects, 2)},
-			expectCells:  []*dao.Cell{cells[0], placesCell},
+			expect:       layers[1],
+			expectLayers: []*dao.Layer{layers[0]},
+			expectCells:  composerFixtures().cells[:1],
 		},
 		{
 			name: "Success/First",
 
-			request: &dao.LayerDeleteRequest{ProjectID: projectID, IDs: []uuid.UUID{manuscriptLayerID}},
+			request: &dao.LayerDeleteRequest{ProjectID: projectID, ID: manuscriptLayerID},
 
-			expect:       []*dao.Layer{layers[0]},
-			expectLayers: []*dao.Layer{layerAt(layers[1], 0), layerAt(places, 1), layerAt(objects, 2)},
-			expectCells:  []*dao.Cell{cells[1], placesCell},
+			expect:       layers[0],
+			expectLayers: []*dao.Layer{layerAt(layers[1], 0)},
+			expectCells:  composerFixtures().cells[1:],
 		},
 		{
-			name: "Success/NonAdjacent",
+			name: "Error/NotFound",
 
-			request: &dao.LayerDeleteRequest{ProjectID: projectID, IDs: []uuid.UUID{manuscriptLayerID, places.ID}},
+			request: &dao.LayerDeleteRequest{ProjectID: projectID, ID: absentID},
 
-			expect:       []*dao.Layer{layers[0], places},
-			expectLayers: []*dao.Layer{layerAt(layers[1], 0), layerAt(objects, 1)},
-			expectCells:  []*dao.Cell{cells[1]},
+			expectLayers: layers[:2],
+			expectCells:  composerFixtures().cells,
+			expectErr:    dao.ErrLayerDeleteNotFound,
 		},
 		{
-			name: "Success/NotFound",
+			name: "Error/OtherProject",
 
-			request: &dao.LayerDeleteRequest{ProjectID: projectID, IDs: []uuid.UUID{absentID}},
+			request: &dao.LayerDeleteRequest{ProjectID: projectID, ID: otherLayerID},
 
-			expectLayers: layers,
-			expectCells:  cells,
-		},
-		{
-			name: "Success/OtherProject",
-
-			request: &dao.LayerDeleteRequest{ProjectID: projectID, IDs: []uuid.UUID{otherLayerID}},
-
-			expectLayers: layers,
-			expectCells:  cells,
+			expectLayers: layers[:2],
+			expectCells:  composerFixtures().cells,
+			expectErr:    dao.ErrLayerDeleteNotFound,
 		},
 	}
 
@@ -101,17 +75,13 @@ func TestPgLayerDelete(t *testing.T) {
 			postgrestest.RunDBTest(t, configtest.PostgresPreset, migrations.Migrations, func(ctx context.Context, t *testing.T) {
 				t.Helper()
 
-				data := composerFixtures()
-				data.layers = append(data.layers, places, objects)
-				data.cells = append(data.cells, placesCell)
-
-				insertFixtures(ctx, t, data)
+				insertFixtures(ctx, t, composerFixtures())
 
 				result, err := daoLayerDelete.Exec(ctx, testCase.request)
-				require.NoError(t, err)
-				require.ElementsMatch(t, testCase.expect, result)
+				require.ErrorIs(t, err, testCase.expectErr)
+				require.Equal(t, testCase.expect, result)
 
-				// The layers after the deleted ones move up, and their cells go with them.
+				// The layers after the deleted one move up, and its cells go with it.
 				require.Equal(t, testCase.expectLayers, listLayers(ctx, t, projectID))
 				requireCellsEqual(t, testCase.expectCells, listCells(ctx, t, projectID))
 			})

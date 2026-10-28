@@ -2,12 +2,12 @@ package dao
 
 import (
 	"context"
+	"database/sql"
 	_ "embed"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/uptrace/bun"
-	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/a-novel-kit/golib/otel"
 	"github.com/a-novel-kit/golib/postgres"
@@ -16,23 +16,23 @@ import (
 //go:embed pg.sceneDelete.sql
 var sceneDeleteQuery string
 
+// ErrSceneDeleteNotFound is returned by [PgSceneDelete.Exec] when the project holds no scene with the ID.
+var ErrSceneDeleteNotFound = errors.New("scene not found")
+
 // SceneDeleteRequest is the input to [PgSceneDelete.Exec].
 type SceneDeleteRequest struct {
 	ProjectID uuid.UUID
-	// IDs lists the scenes to delete.
-	IDs []uuid.UUID
+	ID        uuid.UUID
 }
 
-// PgSceneDelete removes scenes of a project with their cells, and moves the scenes after them up to close
-// the gaps. It returns the deleted scenes, in no particular order, and skips an ID the project does not
-// hold.
+// PgSceneDelete removes a scene with its cells, and moves the scenes after it up by one.
 type PgSceneDelete struct{}
 
 func NewPgSceneDelete() *PgSceneDelete {
 	return &PgSceneDelete{}
 }
 
-func (dao *PgSceneDelete) Exec(ctx context.Context, request *SceneDeleteRequest) ([]*Scene, error) {
+func (dao *PgSceneDelete) Exec(ctx context.Context, request *SceneDeleteRequest) (*Scene, error) {
 	ctx, span := otel.Tracer().Start(ctx, "dao.PgSceneDelete")
 	defer span.End()
 
@@ -41,14 +41,16 @@ func (dao *PgSceneDelete) Exec(ctx context.Context, request *SceneDeleteRequest)
 		return nil, otel.ReportError(span, fmt.Errorf("get postgres context: %w", err))
 	}
 
-	var entities []*Scene
+	entity := &Scene{}
 
-	err = db.NewRaw(sceneDeleteQuery, request.ProjectID, bun.List(request.IDs)).Scan(ctx, &entities)
+	err = db.NewRaw(sceneDeleteQuery, request.ProjectID, request.ID).Scan(ctx, entity)
+	if errors.Is(err, sql.ErrNoRows) {
+		err = errors.Join(err, ErrSceneDeleteNotFound)
+	}
+
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("execute query: %w", err))
 	}
 
-	span.SetAttributes(attribute.Int("scenes.count", len(entities)))
-
-	return entities, nil
+	return entity, nil
 }

@@ -3,20 +3,20 @@
 WITH
   start AS (
     SELECT
-      LEAST(?1, count(*))::integer AS position
+      LEAST(?2, count(*))::integer AS position
     FROM
       layers
     WHERE
-      project_id = ?0
+      project_id = ?1
   ),
   shifted AS (
     UPDATE layers
     SET
-      position = layers.position + cardinality(ARRAY[?2]::uuid[])
+      position = layers.position + 1
     FROM
       start
     WHERE
-      layers.project_id = ?0
+      layers.project_id = ?1
       AND layers.position >= start.position
   )
 INSERT INTO
@@ -30,20 +30,14 @@ INSERT INTO
     updated_at
   )
 SELECT
-  data.id,
   ?0,
-  start.position + (data.position - 1)::integer,
-  data.kind,
-  data.name,
-  data.description,
+  ?1,
+  start.position,
+  ?3,
+  ?4,
+  ?5,
   ?6
 FROM
-  unnest(
-    ARRAY[?2]::uuid[],
-    ARRAY[?3]::text[],
-    ARRAY[?4]::text[],
-    ARRAY[?5]::text[]
-  ) WITH ORDINALITY AS data (id, kind, name, description, position),
   start
 RETURNING
   *;

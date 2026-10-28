@@ -9,8 +9,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/samber/lo"
-	"github.com/uptrace/bun"
 
 	"github.com/a-novel-kit/golib/otel"
 	"github.com/a-novel-kit/golib/postgres"
@@ -28,7 +26,8 @@ var (
 	ErrCellUpsertLayerNotFound = errors.New("layer not found")
 )
 
-// CellUpsertRow names a cell [PgCellUpsert.Exec] wrote, and when. The caller already holds its content.
+// CellUpsertRow names a cell [PgCellUpsert.Exec] or [PgCellsUpsert.Exec] wrote, and when. The caller
+// already holds its content.
 type CellUpsertRow struct {
 	// SceneID is the scene whose column holds the cell.
 	SceneID uuid.UUID `bun:"scene_id,type:uuid"`
@@ -38,8 +37,9 @@ type CellUpsertRow struct {
 	UpdatedAt time.Time `bun:"updated_at"`
 }
 
-// CellUpsertItem is one cell of a [CellUpsertRequest].
-type CellUpsertItem struct {
+// CellUpsertRequest is the input to [PgCellUpsert.Exec].
+type CellUpsertRequest struct {
+	ProjectID uuid.UUID
 	// SceneID is the scene whose column holds the cell.
 	SceneID uuid.UUID
 	// LayerID is the layer whose row holds the cell.
@@ -47,28 +47,20 @@ type CellUpsertItem struct {
 
 	// Content is a JSON document that follows the content schema of the layer's kind.
 	Content json.RawMessage
-}
-
-// CellUpsertRequest is the input to [PgCellUpsert.Exec].
-type CellUpsertRequest struct {
-	ProjectID uuid.UUID
-	// Cells lists the cells to write. A scene and a layer meet in at most one of them.
-	Cells []CellUpsertItem
 
 	// Now is the instant stored as updated_at.
 	Now time.Time
 }
 
-// PgCellUpsert writes the content of cells, creating each cell on its first write, and returns the
-// written cells in no particular order. Every scene and layer must belong to the project, or nothing
-// is written.
+// PgCellUpsert writes a cell's content, creating the cell on its first write, and returns its keys and
+// write time. The scene and the layer must belong to the project.
 type PgCellUpsert struct{}
 
 func NewPgCellUpsert() *PgCellUpsert {
 	return &PgCellUpsert{}
 }
 
-func (dao *PgCellUpsert) Exec(ctx context.Context, request *CellUpsertRequest) ([]*CellUpsertRow, error) {
+func (dao *PgCellUpsert) Exec(ctx context.Context, request *CellUpsertRequest) (*CellUpsertRow, error) {
 	ctx, span := otel.Tracer().Start(ctx, "dao.PgCellUpsert")
 	defer span.End()
 
@@ -77,15 +69,11 @@ func (dao *PgCellUpsert) Exec(ctx context.Context, request *CellUpsertRequest) (
 		return nil, otel.ReportError(span, fmt.Errorf("get postgres context: %w", err))
 	}
 
-	scenes := lo.Map(request.Cells, func(item CellUpsertItem, _ int) uuid.UUID { return item.SceneID })
-	layers := lo.Map(request.Cells, func(item CellUpsertItem, _ int) uuid.UUID { return item.LayerID })
-	contents := lo.Map(request.Cells, func(item CellUpsertItem, _ int) string { return string(item.Content) })
-
-	var entities []*CellUpsertRow
+	entity := &CellUpsertRow{}
 
 	err = db.NewRaw(
-		cellUpsertQuery, request.ProjectID, bun.List(scenes), bun.List(layers), bun.List(contents), request.Now,
-	).Scan(ctx, &entities)
+		cellUpsertQuery, request.ProjectID, request.SceneID, request.LayerID, string(request.Content), request.Now,
+	).Scan(ctx, entity)
 
 	switch {
 	case isViolation(err, pgForeignKeyViolation, "cells_scene_fkey"):
@@ -98,5 +86,5 @@ func (dao *PgCellUpsert) Exec(ctx context.Context, request *CellUpsertRequest) (
 		return nil, otel.ReportError(span, fmt.Errorf("execute query: %w", err))
 	}
 
-	return entities, nil
+	return entity, nil
 }
