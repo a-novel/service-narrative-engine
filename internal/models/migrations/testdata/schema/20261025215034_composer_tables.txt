@@ -1,4 +1,4 @@
-migration-history	sha256:695b3246c43d1de573dd4c4c1aede6a4c977094c95e45bf19ec02b90f5cf61aa
+migration-history	sha256:4b77a927843b20f5afd8a6ab986f1c44fe52d9eda2c5a29af552a19cb78f8ca0
 column	cells.content	jsonb NOT NULL
 column	cells.layer_id	uuid NOT NULL
 column	cells.scene_id	uuid NOT NULL
@@ -40,7 +40,7 @@ constraint	layers.layers_kind_not_null	NOT NULL kind
 constraint	layers.layers_name_check	CHECK ((name <> ''::text))
 constraint	layers.layers_name_not_null	NOT NULL name
 constraint	layers.layers_pkey	PRIMARY KEY (id)
-constraint	layers.layers_position_check	CHECK ((("position" >= 0) AND ("position" < 20)))
+constraint	layers.layers_position_check	CHECK ((("position" >= 0) AND ("position" < 1000)))
 constraint	layers.layers_position_not_null	NOT NULL "position"
 constraint	layers.layers_project_id_fkey	FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 constraint	layers.layers_project_id_not_null	NOT NULL project_id

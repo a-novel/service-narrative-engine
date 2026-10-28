@@ -45,18 +45,18 @@ func TestPgLayerInsert(t *testing.T) {
 			name: "Success/LastPosition",
 
 			request: &dao.LayerInsertRequest{
-				ID: newLayerID, ProjectID: projectID, Position: 19, Kind: "notes", Name: "Places", Now: now,
+				ID: newLayerID, ProjectID: projectID, Position: 999, Kind: "notes", Name: "Places", Now: now,
 			},
 
 			expect: &dao.Layer{
-				ID: newLayerID, ProjectID: projectID, Position: 19, Kind: "notes", Name: "Places", UpdatedAt: now,
+				ID: newLayerID, ProjectID: projectID, Position: 999, Kind: "notes", Name: "Places", UpdatedAt: now,
 			},
 		},
 		{
 			name: "Error/ProjectFull",
 
 			request: &dao.LayerInsertRequest{
-				ID: newLayerID, ProjectID: projectID, Position: 20, Kind: "notes", Name: "Places", Now: now,
+				ID: newLayerID, ProjectID: projectID, Position: 1000, Kind: "notes", Name: "Places", Now: now,
 			},
 
 			expectErr: dao.ErrLayerInsertFull,

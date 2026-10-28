@@ -43,10 +43,10 @@ CREATE TABLE layers (
   id uuid PRIMARY KEY NOT NULL DEFAULT uuidv7(),
   project_id uuid NOT NULL REFERENCES projects (id) ON DELETE CASCADE,
   /* The layer's place among the project's rows, from 0. With the unique position key, the range
-  caps a project at 20 layers. */
+  caps a project at 1000 layers, so a read of every layer needs no pagination. */
   position integer NOT NULL CONSTRAINT layers_position_check CHECK (
     position >= 0
-    AND position < 20
+    AND position < 1000
   ),
   /* Names the content schema the layer's cells follow, as a lowercase kebab-case label. */
   kind text NOT NULL CHECK (kind ~ '^[a-z][a-z0-9]*(-[a-z0-9]+)*$'),

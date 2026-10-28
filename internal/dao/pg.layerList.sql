@@ -1,4 +1,4 @@
--- The position check caps a project at 20 layers, so this limit returns every one.
+-- The position check caps a project at 1000 layers, so this limit returns every one.
 SELECT
   *
 FROM
@@ -8,4 +8,4 @@ WHERE
 ORDER BY
   position
 LIMIT
-  20;
+  1000;

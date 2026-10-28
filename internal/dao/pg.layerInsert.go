@@ -17,7 +17,7 @@ import (
 var layerInsertQuery string
 
 // ErrLayerInsertFull is returned by [PgLayerInsert.Exec] when the layer would take a position past
-// 19, so the project would hold more than the 20 layers the schema allows.
+// 999, so the project would hold more than the 1000 layers the schema allows.
 var ErrLayerInsertFull = errors.New("project holds the most layers it can")
 
 // LayerInsertRequest is the input to [PgLayerInsert.Exec].
