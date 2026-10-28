@@ -1,4 +1,4 @@
-migration-history	sha256:97aecc18feb2cd5a25b19a0af9dd003cc4a31006eacea705e659638c50607ca2
+migration-history	sha256:f42e89d3478d554923159f078206073c6406275ff2b0338fad273bbf595b2640
 column	cells.content	jsonb NOT NULL
 column	cells.layer_id	uuid NOT NULL
 column	cells.project_id	uuid NOT NULL
@@ -78,7 +78,6 @@ index	cells_pkey	CREATE UNIQUE INDEX cells_pkey ON public.cells USING btree (sce
 index	cells_project_id_layer_id_idx	CREATE INDEX cells_project_id_layer_id_idx ON public.cells USING btree (project_id, layer_id)
 index	layers_pkey	CREATE UNIQUE INDEX layers_pkey ON public.layers USING btree (id)
 index	layers_project_id_id_key	CREATE UNIQUE INDEX layers_project_id_id_key ON public.layers USING btree (project_id, id)
-index	layers_project_id_manuscript_idx	CREATE UNIQUE INDEX layers_project_id_manuscript_idx ON public.layers USING btree (project_id) WHERE (kind = 'manuscript'::text)
 index	layers_project_id_position_key	CREATE UNIQUE INDEX layers_project_id_position_key ON public.layers USING btree (project_id, "position")
 index	projects_owner_id_idx	CREATE INDEX projects_owner_id_idx ON public.projects USING btree (owner_id, id DESC)
 index	projects_pkey	CREATE UNIQUE INDEX projects_pkey ON public.projects USING btree (id)

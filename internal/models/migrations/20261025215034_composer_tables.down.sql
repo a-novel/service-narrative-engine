@@ -2,8 +2,6 @@ DROP INDEX IF EXISTS cells_project_id_layer_id_idx;
 
 DROP TABLE IF EXISTS cells;
 
-DROP INDEX IF EXISTS layers_project_id_manuscript_idx;
-
 DROP TABLE IF EXISTS layers;
 
 DROP TABLE IF EXISTS scenes;

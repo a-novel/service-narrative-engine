@@ -61,11 +61,6 @@ CREATE TABLE layers (
   CONSTRAINT layers_project_id_id_key UNIQUE (project_id, id)
 );
 
--- The manuscript layer is the source of the export, so a project holds exactly one.
-CREATE UNIQUE INDEX layers_project_id_manuscript_idx ON layers (project_id)
-WHERE
-  kind = 'manuscript';
-
 CREATE TABLE cells (
   project_id uuid NOT NULL,
   scene_id uuid NOT NULL,
