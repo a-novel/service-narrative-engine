@@ -23,12 +23,19 @@ var ErrSceneUpdateNotFound = errors.New("scene not found")
 
 // SceneUpdateRequest is the input to [PgSceneUpdate.Exec].
 type SceneUpdateRequest struct {
-	ID          uuid.UUID
-	OwnerID     uuid.UUID
-	Title       string
-	Color       string
+	ID uuid.UUID
+	// OwnerID is the user who must own the scene's project. Another owner's scene reads as not found.
+	OwnerID uuid.UUID
+
+	// Title names the scene in the composer.
+	Title string
+	// Color is the scene's color in the composer, as a lowercase #rrggbb hex code.
+	Color string
+	// Description says what the scene is for, written for the author.
 	Description string
-	Prompt      string
+	// Prompt holds extra instructions for the model when it writes about the scene.
+	Prompt string
+
 	// Now is the instant stored as updated_at.
 	Now time.Time
 }

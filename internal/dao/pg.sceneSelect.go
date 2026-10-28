@@ -22,7 +22,8 @@ var ErrSceneSelectNotFound = errors.New("scene not found")
 
 // SceneSelectRequest is the input to [PgSceneSelect.Exec].
 type SceneSelectRequest struct {
-	ID      uuid.UUID
+	ID uuid.UUID
+	// OwnerID is the user who must own the scene's project. Another owner's scene reads as not found.
 	OwnerID uuid.UUID
 }
 

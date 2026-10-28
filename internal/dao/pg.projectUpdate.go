@@ -23,11 +23,17 @@ var ErrProjectUpdateNotFound = errors.New("project not found")
 
 // ProjectUpdateRequest is the input to [PgProjectUpdate.Exec].
 type ProjectUpdateRequest struct {
-	ID       uuid.UUID
-	OwnerID  uuid.UUID
-	Title    string
-	Premise  string
+	ID uuid.UUID
+	// OwnerID is the user who must own the project. Another owner's project reads as not found.
+	OwnerID uuid.UUID
+
+	// Title names the narrative.
+	Title string
+	// Premise says what the narrative is about, in a few sentences.
+	Premise string
+	// Language is the language the project is written in: en or fr.
 	Language string
+
 	// Now is the instant stored as updated_at.
 	Now time.Time
 }

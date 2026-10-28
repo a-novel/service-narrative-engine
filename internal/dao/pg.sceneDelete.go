@@ -22,7 +22,8 @@ var ErrSceneDeleteNotFound = errors.New("scene not found")
 
 // SceneDeleteRequest is the input to [PgSceneDelete.Exec].
 type SceneDeleteRequest struct {
-	ID      uuid.UUID
+	ID uuid.UUID
+	// OwnerID is the user who must own the scene's project. Another owner's scene reads as not found.
 	OwnerID uuid.UUID
 }
 

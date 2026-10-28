@@ -18,7 +18,9 @@ var layerReorderQuery string
 
 // LayerReorderRequest is the input to [PgLayerReorder.Exec].
 type LayerReorderRequest struct {
+	// ProjectID is the project whose layers to reorder.
 	ProjectID uuid.UUID
+
 	// IDs lists every layer of the project, in their new order.
 	IDs []uuid.UUID
 }

@@ -17,6 +17,7 @@ var layerListQuery string
 
 // LayerListRequest is the input to [PgLayerList.Exec].
 type LayerListRequest struct {
+	// ProjectID is the project whose layers to read.
 	ProjectID uuid.UUID
 }
 

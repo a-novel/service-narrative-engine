@@ -22,7 +22,8 @@ var ErrLayerDeleteNotFound = errors.New("layer not found")
 
 // LayerDeleteRequest is the input to [PgLayerDelete.Exec].
 type LayerDeleteRequest struct {
-	ID      uuid.UUID
+	ID uuid.UUID
+	// OwnerID is the user who must own the layer's project. Another owner's layer reads as not found.
 	OwnerID uuid.UUID
 }
 

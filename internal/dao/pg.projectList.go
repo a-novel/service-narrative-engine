@@ -17,8 +17,11 @@ var projectListQuery string
 
 // ProjectListRequest is the input to [PgProjectList.Exec].
 type ProjectListRequest struct {
+	// OwnerID is the user whose projects to read.
 	OwnerID uuid.UUID
-	Limit   int
+
+	// Limit caps the projects in the page.
+	Limit int
 	// After is the ID the page starts after, in descending order. uuid.Max starts at the newest project.
 	After uuid.UUID
 }

@@ -22,7 +22,8 @@ var ErrProjectDeleteNotFound = errors.New("project not found")
 
 // ProjectDeleteRequest is the input to [PgProjectDelete.Exec].
 type ProjectDeleteRequest struct {
-	ID      uuid.UUID
+	ID uuid.UUID
+	// OwnerID is the user who must own the project. Another owner's project reads as not found.
 	OwnerID uuid.UUID
 }
 

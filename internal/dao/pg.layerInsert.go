@@ -22,12 +22,20 @@ var ErrLayerInsertFull = errors.New("project holds the most layers it can")
 
 // LayerInsertRequest is the input to [PgLayerInsert.Exec].
 type LayerInsertRequest struct {
-	ID          uuid.UUID
-	ProjectID   uuid.UUID
-	Position    int
-	Kind        string
-	Name        string
+	ID uuid.UUID
+	// ProjectID is the project the layer joins.
+	ProjectID uuid.UUID
+
+	// Position is the layer's place among the project's rows, from 0.
+	Position int
+	// Kind names the content schema the layer's cells follow.
+	Kind string
+
+	// Name labels the layer's row in the composer.
+	Name string
+	// Description says what the layer records.
 	Description string
+
 	// Now is the instant stored as updated_at.
 	Now time.Time
 }

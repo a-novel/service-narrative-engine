@@ -23,10 +23,15 @@ var ErrLayerUpdateNotFound = errors.New("layer not found")
 
 // LayerUpdateRequest is the input to [PgLayerUpdate.Exec].
 type LayerUpdateRequest struct {
-	ID          uuid.UUID
-	OwnerID     uuid.UUID
-	Name        string
+	ID uuid.UUID
+	// OwnerID is the user who must own the layer's project. Another owner's layer reads as not found.
+	OwnerID uuid.UUID
+
+	// Name labels the layer's row in the composer.
+	Name string
+	// Description says what the layer records.
 	Description string
+
 	// Now is the instant stored as updated_at.
 	Now time.Time
 }

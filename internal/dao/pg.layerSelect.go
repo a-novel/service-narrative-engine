@@ -22,7 +22,8 @@ var ErrLayerSelectNotFound = errors.New("layer not found")
 
 // LayerSelectRequest is the input to [PgLayerSelect.Exec].
 type LayerSelectRequest struct {
-	ID      uuid.UUID
+	ID uuid.UUID
+	// OwnerID is the user who must own the layer's project. Another owner's layer reads as not found.
 	OwnerID uuid.UUID
 }
 

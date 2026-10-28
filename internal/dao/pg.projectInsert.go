@@ -17,11 +17,17 @@ var projectInsertQuery string
 
 // ProjectInsertRequest is the input to [PgProjectInsert.Exec].
 type ProjectInsertRequest struct {
-	ID       uuid.UUID
-	OwnerID  uuid.UUID
-	Title    string
-	Premise  string
+	ID uuid.UUID
+	// OwnerID is the user who owns the project, from the authentication service.
+	OwnerID uuid.UUID
+
+	// Title names the narrative.
+	Title string
+	// Premise says what the narrative is about, in a few sentences.
+	Premise string
+	// Language is the language the project is written in: en or fr.
 	Language string
+
 	// Now is the instant stored as both created_at and updated_at.
 	Now time.Time
 }

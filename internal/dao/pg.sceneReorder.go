@@ -18,7 +18,9 @@ var sceneReorderQuery string
 
 // SceneReorderRequest is the input to [PgSceneReorder.Exec].
 type SceneReorderRequest struct {
+	// ProjectID is the project whose scenes to reorder.
 	ProjectID uuid.UUID
+
 	// IDs lists every scene of the project, in their new order.
 	IDs []uuid.UUID
 }

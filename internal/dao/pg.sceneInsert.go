@@ -25,19 +25,28 @@ var ErrSceneInsertFull = errors.New("project holds the most scenes it can")
 
 // SceneInsertItem is one scene of a [SceneInsertRequest].
 type SceneInsertItem struct {
-	ID          uuid.UUID
-	Title       string
-	Color       string
+	ID uuid.UUID
+
+	// Title names the scene in the composer.
+	Title string
+	// Color is the scene's color in the composer, as a lowercase #rrggbb hex code.
+	Color string
+	// Description says what the scene is for, written for the author.
 	Description string
-	Prompt      string
+	// Prompt holds extra instructions for the model when it writes about the scene.
+	Prompt string
 }
 
 // SceneInsertRequest is the input to [PgSceneInsert.Exec].
 type SceneInsertRequest struct {
+	// ProjectID is the project the scenes join.
 	ProjectID uuid.UUID
+
 	// Position is the position of the first scene. The others follow it in order.
 	Position int
-	Scenes   []SceneInsertItem
+	// Scenes lists the scenes to create, in narrative order.
+	Scenes []SceneInsertItem
+
 	// Now is the instant stored as updated_at.
 	Now time.Time
 }

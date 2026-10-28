@@ -17,6 +17,7 @@ var sceneListQuery string
 
 // SceneListRequest is the input to [PgSceneList.Exec].
 type SceneListRequest struct {
+	// ProjectID is the project whose scenes to read.
 	ProjectID uuid.UUID
 }
 

@@ -22,7 +22,8 @@ var ErrProjectLockNotFound = errors.New("project not found")
 
 // ProjectLockRequest is the input to [PgProjectLock.Exec].
 type ProjectLockRequest struct {
-	ID      uuid.UUID
+	ID uuid.UUID
+	// OwnerID is the user who must own the project. Another owner's project reads as not found.
 	OwnerID uuid.UUID
 }
 

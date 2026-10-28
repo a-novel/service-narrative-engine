@@ -12,9 +12,13 @@ import (
 type Cell struct {
 	bun.BaseModel `bun:"table:cells,alias:cells"`
 
+	// SceneID is the scene whose column holds the cell.
 	SceneID uuid.UUID `bun:"scene_id,pk,type:uuid"`
+	// LayerID is the layer whose row holds the cell.
 	LayerID uuid.UUID `bun:"layer_id,pk,type:uuid"`
+
 	// Content is a JSON document that follows the content schema of the layer's kind.
-	Content   json.RawMessage `bun:"content,type:jsonb"`
-	UpdatedAt time.Time       `bun:"updated_at"`
+	Content json.RawMessage `bun:"content,type:jsonb"`
+
+	UpdatedAt time.Time `bun:"updated_at"`
 }

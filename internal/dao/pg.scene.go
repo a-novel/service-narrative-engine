@@ -11,16 +11,21 @@ import (
 type Scene struct {
 	bun.BaseModel `bun:"table:scenes,alias:scenes"`
 
-	ID        uuid.UUID `bun:"id,pk,type:uuid"`
+	ID uuid.UUID `bun:"id,pk,type:uuid"`
+	// ProjectID is the project the scene belongs to.
 	ProjectID uuid.UUID `bun:"project_id,type:uuid"`
+
 	// Position orders the project's scenes, from 0.
-	Position int    `bun:"position"`
-	Title    string `bun:"title"`
+	Position int `bun:"position"`
+
+	// Title names the scene in the composer.
+	Title string `bun:"title"`
 	// Color is the scene's color in the composer, as a lowercase #rrggbb hex code.
 	Color string `bun:"color"`
 	// Description says what the scene is for, written for the author.
 	Description string `bun:"description"`
 	// Prompt holds extra instructions for the model when it writes about the scene.
-	Prompt    string    `bun:"prompt"`
+	Prompt string `bun:"prompt"`
+
 	UpdatedAt time.Time `bun:"updated_at"`
 }

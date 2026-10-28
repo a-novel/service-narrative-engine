@@ -17,6 +17,7 @@ var cellListQuery string
 
 // CellListRequest is the input to [PgCellList.Exec].
 type CellListRequest struct {
+	// ProjectID is the project whose cells to read.
 	ProjectID uuid.UUID
 }
 
