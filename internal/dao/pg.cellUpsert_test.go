@@ -8,6 +8,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
 	"github.com/a-novel-kit/golib/postgres/postgrestest"
@@ -148,10 +149,20 @@ func TestPgCellUpsert(t *testing.T) {
 					return
 				}
 
-				slices.SortFunc(result, func(a, b *dao.Cell) int {
+				slices.SortFunc(result, func(a, b *dao.CellUpsertRow) int {
 					return cmp.Or(bytes.Compare(a.SceneID[:], b.SceneID[:]), bytes.Compare(a.LayerID[:], b.LayerID[:]))
 				})
-				requireCellsEqual(t, testCase.expect, result)
+				require.Equal(t, lo.Map(testCase.expect, func(cell *dao.Cell, _ int) *dao.CellUpsertRow {
+					return &dao.CellUpsertRow{SceneID: cell.SceneID, LayerID: cell.LayerID, UpdatedAt: cell.UpdatedAt}
+				}), result)
+
+				// The write returns the keys alone, so the stored cells carry the content.
+				stored := lo.Filter(listCells(ctx, t, projectID), func(cell *dao.Cell, _ int) bool {
+					return slices.ContainsFunc(testCase.expect, func(expect *dao.Cell) bool {
+						return expect.SceneID == cell.SceneID && expect.LayerID == cell.LayerID
+					})
+				})
+				requireCellsEqual(t, testCase.expect, stored)
 			})
 		})
 	}

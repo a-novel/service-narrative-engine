@@ -21,22 +21,28 @@ func TestPgProjectLock(t *testing.T) {
 
 		request *dao.ProjectLockRequest
 
-		expect    *dao.Project
-		expectErr error
+		expect bool
 	}{
 		{
 			name: "Success",
 
-			request: &dao.ProjectLockRequest{ID: projectID},
+			request: &dao.ProjectLockRequest{ID: projectID, OwnerID: ownerID},
 
-			expect: composerFixtures().projects[0],
+			expect: true,
 		},
 		{
-			name: "Error/NotFound",
+			name: "Success/OtherOwner",
 
-			request: &dao.ProjectLockRequest{ID: absentID},
+			request: &dao.ProjectLockRequest{ID: otherProjectID, OwnerID: ownerID},
 
-			expectErr: dao.ErrProjectLockNotFound,
+			expect: false,
+		},
+		{
+			name: "Success/NotFound",
+
+			request: &dao.ProjectLockRequest{ID: absentID, OwnerID: ownerID},
+
+			expect: false,
 		},
 	}
 
@@ -52,7 +58,7 @@ func TestPgProjectLock(t *testing.T) {
 				insertFixtures(ctx, t, composerFixtures())
 
 				result, err := daoProjectLock.Exec(ctx, testCase.request)
-				require.ErrorIs(t, err, testCase.expectErr)
+				require.NoError(t, err)
 				require.Equal(t, testCase.expect, result)
 			})
 		})

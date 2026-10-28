@@ -28,6 +28,16 @@ var (
 	ErrCellUpsertLayerNotFound = errors.New("layer not found")
 )
 
+// CellUpsertRow names a cell [PgCellUpsert.Exec] wrote, and when. The caller already holds its content.
+type CellUpsertRow struct {
+	// SceneID is the scene whose column holds the cell.
+	SceneID uuid.UUID `bun:"scene_id,type:uuid"`
+	// LayerID is the layer whose row holds the cell.
+	LayerID uuid.UUID `bun:"layer_id,type:uuid"`
+
+	UpdatedAt time.Time `bun:"updated_at"`
+}
+
 // CellUpsertItem is one cell of a [CellUpsertRequest].
 type CellUpsertItem struct {
 	// SceneID is the scene whose column holds the cell.
@@ -49,15 +59,16 @@ type CellUpsertRequest struct {
 	Now time.Time
 }
 
-// PgCellUpsert writes the content of cells, creating each cell on its first write, and returns them in
-// no particular order. Every scene and layer must belong to the project, or nothing is written.
+// PgCellUpsert writes the content of cells, creating each cell on its first write, and returns the
+// written cells in no particular order. Every scene and layer must belong to the project, or nothing
+// is written.
 type PgCellUpsert struct{}
 
 func NewPgCellUpsert() *PgCellUpsert {
 	return &PgCellUpsert{}
 }
 
-func (dao *PgCellUpsert) Exec(ctx context.Context, request *CellUpsertRequest) ([]*Cell, error) {
+func (dao *PgCellUpsert) Exec(ctx context.Context, request *CellUpsertRequest) ([]*CellUpsertRow, error) {
 	ctx, span := otel.Tracer().Start(ctx, "dao.PgCellUpsert")
 	defer span.End()
 
@@ -70,7 +81,7 @@ func (dao *PgCellUpsert) Exec(ctx context.Context, request *CellUpsertRequest) (
 	layers := lo.Map(request.Cells, func(item CellUpsertItem, _ int) uuid.UUID { return item.LayerID })
 	contents := lo.Map(request.Cells, func(item CellUpsertItem, _ int) string { return string(item.Content) })
 
-	var entities []*Cell
+	var entities []*CellUpsertRow
 
 	err = db.NewRaw(
 		cellUpsertQuery, request.ProjectID, bun.List(scenes), bun.List(layers), bun.List(contents), request.Now,

@@ -23,4 +23,6 @@ SET
   content = EXCLUDED.content,
   updated_at = EXCLUDED.updated_at
 RETURNING
-  *;
+  scene_id,
+  layer_id,
+  updated_at;
