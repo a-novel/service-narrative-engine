@@ -24,7 +24,7 @@ func TestRestSceneCreate(t *testing.T) {
 
 		return newRequest(t, http.MethodPost, "/v1/scenes", map[string]any{
 			"projectID":   projectID,
-			"after":       anchorID,
+			"position":    2,
 			"title":       "Ouverture",
 			"color":       "#e0457b",
 			"description": "Marie attend.",
@@ -123,7 +123,7 @@ func TestRestSceneCreate(t *testing.T) {
 					Exec(mock.Anything, &core.SceneCreateRequest{
 						OwnerID:     ownerID,
 						ProjectID:   projectID,
-						After:       anchorID,
+						Position:    2,
 						Title:       "Ouverture",
 						Color:       "#e0457b",
 						Description: "Marie attend.",

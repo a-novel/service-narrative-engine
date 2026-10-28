@@ -24,8 +24,6 @@ var (
 	projectID = uuid.MustParse("00000000-0000-0000-0000-000000000001")
 	sceneID   = uuid.MustParse("00000000-0000-0000-0000-000000000011")
 	layerID   = uuid.MustParse("00000000-0000-0000-0000-000000000021")
-	// anchorID is the scene or layer a new or moved one lands after.
-	anchorID = uuid.MustParse("00000000-0000-0000-0000-000000000031")
 
 	createdAt = time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
 	updatedAt = time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC)

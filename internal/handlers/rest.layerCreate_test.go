@@ -24,7 +24,7 @@ func TestRestLayerCreate(t *testing.T) {
 
 		return newRequest(t, http.MethodPost, "/v1/layers", map[string]any{
 			"projectID":   projectID,
-			"after":       anchorID,
+			"position":    2,
 			"name":        "Characters",
 			"description": "Who appears",
 		})
@@ -121,7 +121,7 @@ func TestRestLayerCreate(t *testing.T) {
 					Exec(mock.Anything, &core.LayerCreateRequest{
 						OwnerID:     ownerID,
 						ProjectID:   projectID,
-						After:       anchorID,
+						Position:    2,
 						Name:        "Characters",
 						Description: "Who appears",
 					}).

@@ -23,8 +23,9 @@ type RestSceneMoveRequest struct {
 	ProjectID uuid.UUID `json:"projectID"`
 	ID        uuid.UUID `json:"id"`
 
-	// After is the scene the moved one follows. The nil UUID places it first.
-	After uuid.UUID `json:"after"`
+	// Position is the scene's place in narrative order after the move, from 0. A position past the last
+	// scene moves it last.
+	Position int `json:"position"`
 }
 
 // RestSceneMove is the HTTP handler for the move-scene endpoint. It responds with the scene at its new
@@ -62,7 +63,7 @@ func (handler *RestSceneMove) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		OwnerID:   ownerID,
 		ProjectID: request.ProjectID,
 		ID:        request.ID,
-		After:     request.After,
+		Position:  request.Position,
 	}
 
 	result, err := handler.service.Exec(ctx, serviceRequest)

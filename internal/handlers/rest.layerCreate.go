@@ -22,8 +22,9 @@ type RestLayerCreateService interface {
 type RestLayerCreateRequest struct {
 	ProjectID uuid.UUID `json:"projectID"`
 
-	// After is the layer the new one follows. The nil UUID places it first.
-	After uuid.UUID `json:"after"`
+	// Position is the layer's place among the project's rows, from 0. A position past the last layer
+	// appends it.
+	Position int `json:"position"`
 
 	// Name labels the layer's row in the composer.
 	Name string `json:"name"`
@@ -65,7 +66,7 @@ func (handler *RestLayerCreate) ServeHTTP(w http.ResponseWriter, r *http.Request
 	serviceRequest := &core.LayerCreateRequest{
 		OwnerID:     ownerID,
 		ProjectID:   request.ProjectID,
-		After:       request.After,
+		Position:    request.Position,
 		Name:        request.Name,
 		Description: request.Description,
 	}

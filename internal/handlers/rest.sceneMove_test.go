@@ -25,7 +25,7 @@ func TestRestSceneMove(t *testing.T) {
 		return newRequest(t, http.MethodPost, "/v1/scene/move", map[string]any{
 			"projectID": projectID,
 			"id":        sceneID,
-			"after":     anchorID,
+			"position":  2,
 		})
 	}
 
@@ -83,7 +83,7 @@ func TestRestSceneMove(t *testing.T) {
 			expectStatus: http.StatusNotFound,
 		},
 		{
-			name: "Error/UnknownAnchor",
+			name: "Error/InvalidRequest",
 
 			request: validRequest,
 
@@ -117,7 +117,7 @@ func TestRestSceneMove(t *testing.T) {
 				}
 
 				service.EXPECT().
-					Exec(mock.Anything, &core.SceneMoveRequest{OwnerID: ownerID, ProjectID: projectID, ID: sceneID, After: anchorID}).
+					Exec(mock.Anything, &core.SceneMoveRequest{OwnerID: ownerID, ProjectID: projectID, ID: sceneID, Position: 2}).
 					Return(resp, testCase.serviceErr)
 			}
 

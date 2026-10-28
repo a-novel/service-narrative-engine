@@ -69,12 +69,12 @@ func TestRestLayerDelete(t *testing.T) {
 			expectStatus: http.StatusBadRequest,
 		},
 		{
-			name: "Error/ManuscriptLayer",
+			name: "Error/RequiredLayer",
 
 			request: validRequest,
 
 			serviceCalled: true,
-			serviceErr:    core.ErrManuscriptLayer,
+			serviceErr:    core.ErrRequiredLayer,
 
 			expectStatus: http.StatusUnprocessableEntity,
 		},

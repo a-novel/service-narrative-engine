@@ -22,8 +22,9 @@ type RestSceneCreateService interface {
 type RestSceneCreateRequest struct {
 	ProjectID uuid.UUID `json:"projectID"`
 
-	// After is the scene the new one follows. The nil UUID places it first.
-	After uuid.UUID `json:"after"`
+	// Position is the scene's place in narrative order, from 0. A position past the last scene appends
+	// it.
+	Position int `json:"position"`
 
 	// Title names the scene in the composer.
 	Title string `json:"title"`
@@ -69,7 +70,7 @@ func (handler *RestSceneCreate) ServeHTTP(w http.ResponseWriter, r *http.Request
 	serviceRequest := &core.SceneCreateRequest{
 		OwnerID:     ownerID,
 		ProjectID:   request.ProjectID,
-		After:       request.After,
+		Position:    request.Position,
 		Title:       request.Title,
 		Color:       request.Color,
 		Description: request.Description,

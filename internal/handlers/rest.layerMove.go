@@ -23,8 +23,9 @@ type RestLayerMoveRequest struct {
 	ProjectID uuid.UUID `json:"projectID"`
 	ID        uuid.UUID `json:"id"`
 
-	// After is the layer the moved one follows. The nil UUID places it first.
-	After uuid.UUID `json:"after"`
+	// Position is the layer's place among the project's rows after the move, from 0. A position past
+	// the last layer moves it last.
+	Position int `json:"position"`
 }
 
 // RestLayerMove is the HTTP handler for the move-layer endpoint. It responds with the layer at its new
@@ -62,7 +63,7 @@ func (handler *RestLayerMove) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		OwnerID:   ownerID,
 		ProjectID: request.ProjectID,
 		ID:        request.ID,
-		After:     request.After,
+		Position:  request.Position,
 	}
 
 	result, err := handler.service.Exec(ctx, serviceRequest)
