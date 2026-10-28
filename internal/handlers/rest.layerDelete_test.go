@@ -2,12 +2,10 @@ package handlers_test
 
 import (
 	"errors"
-	"maps"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
 
 	"github.com/a-novel/service-narrative-engine/internal/config"
@@ -21,19 +19,10 @@ func TestRestLayerDelete(t *testing.T) {
 
 	errFoo := errors.New("foo")
 
-	// The request deletes a second layer too, so its id parameter repeats.
-	otherLayer := *coreLayer
-	otherLayer.ID, otherLayer.Position = uuid.MustParse("00000000-0000-0000-0000-000000000022"), 2
-
-	otherJSON := maps.Clone(jsonLayer)
-	otherJSON["id"], otherJSON["position"] = otherLayer.ID.String(), 2.0
-
-	target := "/v1/layers?projectID=" + projectID.String() + "&id=" + layerID.String() + "&id=" + otherLayer.ID.String()
-
 	validRequest := func(t *testing.T) *http.Request {
 		t.Helper()
 
-		return newRequest(t, http.MethodDelete, target, nil)
+		return newRequest(t, http.MethodDelete, "/v1/layer?projectID="+projectID.String()+"&id="+layerID.String(), nil)
 	}
 
 	testCases := []struct {
@@ -55,7 +44,7 @@ func TestRestLayerDelete(t *testing.T) {
 			serviceCalled: true,
 
 			expectStatus:   http.StatusOK,
-			expectResponse: []any{jsonLayer, otherJSON},
+			expectResponse: jsonLayer,
 		},
 		{
 			name: "Error/Anonymous",
@@ -74,7 +63,7 @@ func TestRestLayerDelete(t *testing.T) {
 			request: func(t *testing.T) *http.Request {
 				t.Helper()
 
-				return newRequest(t, http.MethodDelete, "/v1/layers?projectID="+projectID.String()+"&id=not-a-uuid", nil)
+				return newRequest(t, http.MethodDelete, "/v1/layer?id=not-a-uuid", nil)
 			},
 
 			expectStatus: http.StatusBadRequest,
@@ -108,15 +97,13 @@ func TestRestLayerDelete(t *testing.T) {
 			service := handlersmocks.NewMockRestLayerDeleteService(t)
 
 			if testCase.serviceCalled {
-				var resp []*core.Layer
+				var resp *core.Layer
 				if testCase.serviceErr == nil {
-					resp = []*core.Layer{coreLayer, &otherLayer}
+					resp = coreLayer
 				}
 
 				service.EXPECT().
-					Exec(mock.Anything, &core.LayerDeleteRequest{
-						OwnerID: ownerID, ProjectID: projectID, IDs: []uuid.UUID{layerID, otherLayer.ID},
-					}).
+					Exec(mock.Anything, &core.LayerDeleteRequest{OwnerID: ownerID, ProjectID: projectID, ID: layerID}).
 					Return(resp, testCase.serviceErr)
 			}
 

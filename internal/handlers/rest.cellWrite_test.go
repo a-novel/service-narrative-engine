@@ -22,9 +22,11 @@ func TestRestCellWrite(t *testing.T) {
 	validRequest := func(t *testing.T) *http.Request {
 		t.Helper()
 
-		return newRequest(t, http.MethodPut, "/v1/cells", map[string]any{
+		return newRequest(t, http.MethodPut, "/v1/cell", map[string]any{
 			"projectID": projectID,
-			"cells":     []any{map[string]any{"sceneID": sceneID, "layerID": layerID, "content": coreCell.Content}},
+			"sceneID":   sceneID,
+			"layerID":   layerID,
+			"content":   coreCell.Content,
 		})
 	}
 
@@ -47,7 +49,7 @@ func TestRestCellWrite(t *testing.T) {
 			serviceCalled: true,
 
 			expectStatus:   http.StatusOK,
-			expectResponse: []any{jsonWrittenCell},
+			expectResponse: jsonWrittenCell,
 		},
 		{
 			name: "Error/Anonymous",
@@ -66,7 +68,7 @@ func TestRestCellWrite(t *testing.T) {
 			request: func(t *testing.T) *http.Request {
 				t.Helper()
 
-				return newRequest(t, http.MethodPut, "/v1/cells", "not an object")
+				return newRequest(t, http.MethodPut, "/v1/cell", "not an object")
 			},
 
 			expectStatus: http.StatusBadRequest,
@@ -100,16 +102,18 @@ func TestRestCellWrite(t *testing.T) {
 			service := handlersmocks.NewMockRestCellWriteService(t)
 
 			if testCase.serviceCalled {
-				var resp []*core.WrittenCell
+				var resp *core.WrittenCell
 				if testCase.serviceErr == nil {
-					resp = []*core.WrittenCell{coreWrittenCell}
+					resp = coreWrittenCell
 				}
 
 				service.EXPECT().
 					Exec(mock.Anything, &core.CellWriteRequest{
 						OwnerID:   ownerID,
 						ProjectID: projectID,
-						Cells:     []core.CellWriteItem{{SceneID: sceneID, LayerID: layerID, Content: coreCell.Content}},
+						SceneID:   sceneID,
+						LayerID:   layerID,
+						Content:   coreCell.Content,
 					}).
 					Return(resp, testCase.serviceErr)
 			}

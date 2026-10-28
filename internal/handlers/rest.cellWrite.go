@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 
 	"github.com/a-novel-kit/golib/httpf"
 	"github.com/a-novel-kit/golib/logging"
@@ -17,11 +16,12 @@ import (
 
 // RestCellWriteService is the core operation [RestCellWrite] delegates to.
 type RestCellWriteService interface {
-	Exec(ctx context.Context, request *core.CellWriteRequest) ([]*core.WrittenCell, error)
+	Exec(ctx context.Context, request *core.CellWriteRequest) (*core.WrittenCell, error)
 }
 
-// RestCellWriteItem is one cell of a [RestCellWriteRequest].
-type RestCellWriteItem struct {
+// RestCellWriteRequest is the JSON body the write-cell endpoint accepts.
+type RestCellWriteRequest struct {
+	ProjectID uuid.UUID `json:"projectID"`
 	// SceneID is the scene whose column holds the cell.
 	SceneID uuid.UUID `json:"sceneID"`
 	// LayerID is the layer whose row holds the cell.
@@ -31,15 +31,8 @@ type RestCellWriteItem struct {
 	Content json.RawMessage `json:"content"`
 }
 
-// RestCellWriteRequest is the JSON body the write-cells endpoint accepts.
-type RestCellWriteRequest struct {
-	ProjectID uuid.UUID `json:"projectID"`
-	// Cells lists the cells to write.
-	Cells []RestCellWriteItem `json:"cells"`
-}
-
-// RestCellWrite is the HTTP handler for the write-cells endpoint. It responds with the written cells, in the
-// order of the request, without their content.
+// RestCellWrite is the HTTP handler for the write-cell endpoint. It responds with the written cell,
+// without its content.
 type RestCellWrite struct {
 	service RestCellWriteService
 	logger  logging.Log
@@ -69,19 +62,20 @@ func (handler *RestCellWrite) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	result, err := handler.service.Exec(ctx, &core.CellWriteRequest{
+	serviceRequest := &core.CellWriteRequest{
 		OwnerID:   ownerID,
 		ProjectID: request.ProjectID,
-		Cells: lo.Map(request.Cells, func(item RestCellWriteItem, _ int) core.CellWriteItem {
-			return core.CellWriteItem{SceneID: item.SceneID, LayerID: item.LayerID, Content: item.Content}
-		}),
-	})
+		SceneID:   request.SceneID,
+		LayerID:   request.LayerID,
+		Content:   request.Content,
+	}
+
+	result, err := handler.service.Exec(ctx, serviceRequest)
 	if err != nil {
 		httpf.HandleError(ctx, handler.logger, w, span, composerErrors, err)
 
 		return
 	}
 
-	response := lo.Map(result, func(cell *core.WrittenCell, _ int) WrittenCell { return loadWrittenCell(cell) })
-	httpf.SendJSONStatus(w, span, http.StatusOK, response)
+	httpf.SendJSONStatus(w, span, http.StatusOK, loadWrittenCell(result))
 }
