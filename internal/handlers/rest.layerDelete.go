@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 
 	"github.com/a-novel-kit/golib/httpf"
 	"github.com/a-novel-kit/golib/logging"
@@ -15,17 +16,18 @@ import (
 
 // RestLayerDeleteService is the core operation [RestLayerDelete] delegates to.
 type RestLayerDeleteService interface {
-	Exec(ctx context.Context, request *core.LayerDeleteRequest) (*core.Layer, error)
+	Exec(ctx context.Context, request *core.LayerDeleteRequest) ([]*core.Layer, error)
 }
 
-// RestLayerDeleteRequest is the query parameters the delete-layer endpoint accepts.
+// RestLayerDeleteRequest is the query the delete-layers endpoint accepts.
 type RestLayerDeleteRequest struct {
 	ProjectID uuid.UUID `schema:"projectID"`
-	ID        uuid.UUID `schema:"id"`
+	// IDs lists the layers to delete, one id parameter each.
+	IDs []uuid.UUID `schema:"id"`
 }
 
-// RestLayerDelete is the HTTP handler for the delete-layer endpoint. It responds with the deleted
-// layer.
+// RestLayerDelete is the HTTP handler for the delete-layers endpoint. It responds with the deleted layers, as they
+// were.
 type RestLayerDelete struct {
 	service RestLayerDeleteService
 	logger  logging.Log
@@ -55,18 +57,15 @@ func (handler *RestLayerDelete) ServeHTTP(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	serviceRequest := &core.LayerDeleteRequest{
-		OwnerID:   ownerID,
-		ProjectID: request.ProjectID,
-		ID:        request.ID,
-	}
-
-	result, err := handler.service.Exec(ctx, serviceRequest)
+	result, err := handler.service.Exec(ctx, &core.LayerDeleteRequest{
+		OwnerID: ownerID, ProjectID: request.ProjectID, IDs: request.IDs,
+	})
 	if err != nil {
 		httpf.HandleError(ctx, handler.logger, w, span, composerErrors, err)
 
 		return
 	}
 
-	httpf.SendJSONStatus(w, span, http.StatusOK, loadLayer(result))
+	response := lo.Map(result, func(layer *core.Layer, _ int) Layer { return loadLayer(layer) })
+	httpf.SendJSONStatus(w, span, http.StatusOK, response)
 }

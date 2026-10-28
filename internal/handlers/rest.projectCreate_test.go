@@ -26,7 +26,6 @@ func TestRestProjectCreate(t *testing.T) {
 			"title":    "Les Heures claires",
 			"premise":  "Marie attend.",
 			"language": "fr",
-			"scenes":   []any{map[string]any{"title": "Ouverture", "color": "#e0457b"}},
 		})
 	}
 
@@ -49,7 +48,7 @@ func TestRestProjectCreate(t *testing.T) {
 			serviceCalled: true,
 
 			expectStatus:   http.StatusCreated,
-			expectResponse: withComposer(jsonProject, []any{jsonScene}, []any{jsonLayer}),
+			expectResponse: withComposer(jsonProject, []any{jsonLayer}),
 		},
 		{
 			name: "Error/Anonymous",
@@ -104,9 +103,7 @@ func TestRestProjectCreate(t *testing.T) {
 			if testCase.serviceCalled {
 				var resp *core.ProjectComposer
 				if testCase.serviceErr == nil {
-					resp = &core.ProjectComposer{
-						Project: coreProject, Scenes: []*core.Scene{coreScene}, Layers: []*core.Layer{coreLayer},
-					}
+					resp = &core.ProjectComposer{Project: coreProject, Layers: []*core.Layer{coreLayer}}
 				}
 
 				service.EXPECT().
@@ -115,7 +112,6 @@ func TestRestProjectCreate(t *testing.T) {
 						Title:    "Les Heures claires",
 						Premise:  "Marie attend.",
 						Language: "fr",
-						Scenes:   []core.ProjectCreateScene{{Title: "Ouverture", Color: "#e0457b"}},
 					}).
 					Return(resp, testCase.serviceErr)
 			}

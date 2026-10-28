@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 
 	"github.com/a-novel-kit/golib/httpf"
 	"github.com/a-novel-kit/golib/logging"
@@ -15,17 +16,18 @@ import (
 
 // RestSceneDeleteService is the core operation [RestSceneDelete] delegates to.
 type RestSceneDeleteService interface {
-	Exec(ctx context.Context, request *core.SceneDeleteRequest) (*core.Scene, error)
+	Exec(ctx context.Context, request *core.SceneDeleteRequest) ([]*core.Scene, error)
 }
 
-// RestSceneDeleteRequest is the query parameters the delete-scene endpoint accepts.
+// RestSceneDeleteRequest is the query the delete-scenes endpoint accepts.
 type RestSceneDeleteRequest struct {
 	ProjectID uuid.UUID `schema:"projectID"`
-	ID        uuid.UUID `schema:"id"`
+	// IDs lists the scenes to delete, one id parameter each.
+	IDs []uuid.UUID `schema:"id"`
 }
 
-// RestSceneDelete is the HTTP handler for the delete-scene endpoint. It responds with the deleted
-// scene.
+// RestSceneDelete is the HTTP handler for the delete-scenes endpoint. It responds with the deleted scenes, as they
+// were.
 type RestSceneDelete struct {
 	service RestSceneDeleteService
 	logger  logging.Log
@@ -55,18 +57,15 @@ func (handler *RestSceneDelete) ServeHTTP(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	serviceRequest := &core.SceneDeleteRequest{
-		OwnerID:   ownerID,
-		ProjectID: request.ProjectID,
-		ID:        request.ID,
-	}
-
-	result, err := handler.service.Exec(ctx, serviceRequest)
+	result, err := handler.service.Exec(ctx, &core.SceneDeleteRequest{
+		OwnerID: ownerID, ProjectID: request.ProjectID, IDs: request.IDs,
+	})
 	if err != nil {
 		httpf.HandleError(ctx, handler.logger, w, span, composerErrors, err)
 
 		return
 	}
 
-	httpf.SendJSONStatus(w, span, http.StatusOK, loadScene(result))
+	response := lo.Map(result, func(scene *core.Scene, _ int) Scene { return loadScene(scene) })
+	httpf.SendJSONStatus(w, span, http.StatusOK, response)
 }

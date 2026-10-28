@@ -102,8 +102,8 @@ func main() {
 	// SERVICES
 	// =================================================================================================================
 
-	serviceProjectCreate := core.NewProjectCreate(daoProjectInsert, daoLayerInsert, daoSceneInsert, transactor)
-	serviceProjectGet := core.NewProjectGet(daoProjectSelect)
+	serviceProjectCreate := core.NewProjectCreate(daoProjectInsert, daoLayerInsert, transactor)
+	serviceProjectGet := core.NewProjectGet(daoProjectOwned, daoProjectSelect)
 	serviceProjectList := core.NewProjectList(daoProjectList)
 	serviceProjectUpdate := core.NewProjectUpdate(daoProjectOwned, daoProjectUpdate)
 	serviceProjectDelete := core.NewProjectDelete(daoProjectOwned, daoProjectDelete)
@@ -116,7 +116,7 @@ func main() {
 	serviceLayerList := core.NewLayerList(daoProjectOwned, daoLayerList)
 	serviceLayerUpdate := core.NewLayerUpdate(daoProjectOwned, daoLayerUpdate)
 	serviceLayerMove := core.NewLayerMove(daoProjectOwned, daoProjectLock, daoLayerMove, transactor)
-	serviceLayerDelete := core.NewLayerDelete(daoProjectOwned, daoLayerKind, daoProjectLock, daoLayerDelete, transactor)
+	serviceLayerDelete := core.NewLayerDelete(daoProjectOwned, daoProjectLock, daoLayerKind, daoLayerDelete, transactor)
 	serviceCellList := core.NewCellList(daoProjectOwned, daoCellList)
 	serviceCellWrite := core.NewCellWrite(daoProjectOwned, daoLayerKind, daoCellUpsert)
 
@@ -164,16 +164,16 @@ func main() {
 		withAuth(api, config.PermissionProjectRead).Get("/scenes", handlerSceneList.ServeHTTP)
 		withAuth(api, config.PermissionProjectWrite).Put("/scene", handlerSceneUpdate.ServeHTTP)
 		withAuth(api, config.PermissionProjectWrite).Post("/scene/move", handlerSceneMove.ServeHTTP)
-		withAuth(api, config.PermissionProjectWrite).Delete("/scene", handlerSceneDelete.ServeHTTP)
+		withAuth(api, config.PermissionProjectWrite).Delete("/scenes", handlerSceneDelete.ServeHTTP)
 
 		withAuth(api, config.PermissionProjectWrite).Post("/layers", handlerLayerCreate.ServeHTTP)
 		withAuth(api, config.PermissionProjectRead).Get("/layers", handlerLayerList.ServeHTTP)
 		withAuth(api, config.PermissionProjectWrite).Put("/layer", handlerLayerUpdate.ServeHTTP)
 		withAuth(api, config.PermissionProjectWrite).Post("/layer/move", handlerLayerMove.ServeHTTP)
-		withAuth(api, config.PermissionProjectWrite).Delete("/layer", handlerLayerDelete.ServeHTTP)
+		withAuth(api, config.PermissionProjectWrite).Delete("/layers", handlerLayerDelete.ServeHTTP)
 
 		withAuth(api, config.PermissionProjectRead).Get("/cells", handlerCellList.ServeHTTP)
-		withAuth(api, config.PermissionProjectWrite).Put("/cell", handlerCellWrite.ServeHTTP)
+		withAuth(api, config.PermissionProjectWrite).Put("/cells", handlerCellWrite.ServeHTTP)
 	})
 
 	// =================================================================================================================

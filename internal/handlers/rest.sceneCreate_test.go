@@ -23,12 +23,14 @@ func TestRestSceneCreate(t *testing.T) {
 		t.Helper()
 
 		return newRequest(t, http.MethodPost, "/v1/scenes", map[string]any{
-			"projectID":   projectID,
-			"position":    2,
-			"title":       "Ouverture",
-			"color":       "#e0457b",
-			"description": "Marie attend.",
-			"prompt":      "Lent.",
+			"projectID": projectID,
+			"position":  2,
+			"scenes": []any{map[string]any{
+				"title":       "Ouverture",
+				"color":       "#e0457b",
+				"description": "Marie attend.",
+				"prompt":      "Lent.",
+			}},
 		})
 	}
 
@@ -51,7 +53,7 @@ func TestRestSceneCreate(t *testing.T) {
 			serviceCalled: true,
 
 			expectStatus:   http.StatusCreated,
-			expectResponse: jsonScene,
+			expectResponse: []any{jsonScene},
 		},
 		{
 			name: "Error/Anonymous",
@@ -114,20 +116,19 @@ func TestRestSceneCreate(t *testing.T) {
 			service := handlersmocks.NewMockRestSceneCreateService(t)
 
 			if testCase.serviceCalled {
-				var resp *core.Scene
+				var resp []*core.Scene
 				if testCase.serviceErr == nil {
-					resp = coreScene
+					resp = []*core.Scene{coreScene}
 				}
 
 				service.EXPECT().
 					Exec(mock.Anything, &core.SceneCreateRequest{
-						OwnerID:     ownerID,
-						ProjectID:   projectID,
-						Position:    2,
-						Title:       "Ouverture",
-						Color:       "#e0457b",
-						Description: "Marie attend.",
-						Prompt:      "Lent.",
+						OwnerID:   ownerID,
+						ProjectID: projectID,
+						Position:  2,
+						Scenes: []core.SceneCreateItem{
+							{Title: "Ouverture", Color: "#e0457b", Description: "Marie attend.", Prompt: "Lent."},
+						},
 					}).
 					Return(resp, testCase.serviceErr)
 			}

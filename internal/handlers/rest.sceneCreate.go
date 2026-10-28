@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 
 	"github.com/a-novel-kit/golib/httpf"
 	"github.com/a-novel-kit/golib/logging"
@@ -15,17 +16,11 @@ import (
 
 // RestSceneCreateService is the core operation [RestSceneCreate] delegates to.
 type RestSceneCreateService interface {
-	Exec(ctx context.Context, request *core.SceneCreateRequest) (*core.Scene, error)
+	Exec(ctx context.Context, request *core.SceneCreateRequest) ([]*core.Scene, error)
 }
 
-// RestSceneCreateRequest is the JSON body the create-scene endpoint accepts.
-type RestSceneCreateRequest struct {
-	ProjectID uuid.UUID `json:"projectID"`
-
-	// Position is the scene's place in narrative order, from 0. A position past the last scene appends
-	// it.
-	Position int `json:"position"`
-
+// RestSceneCreateItem is one scene of a [RestSceneCreateRequest].
+type RestSceneCreateItem struct {
 	// Title names the scene in the composer.
 	Title string `json:"title"`
 	// Color is the scene's color in the composer, as a #rrggbb hex code in either case.
@@ -36,8 +31,19 @@ type RestSceneCreateRequest struct {
 	Prompt string `json:"prompt"`
 }
 
-// RestSceneCreate is the HTTP handler for the create-scene endpoint. It responds 201 with the scene at
-// its place.
+// RestSceneCreateRequest is the JSON body the create-scenes endpoint accepts.
+type RestSceneCreateRequest struct {
+	ProjectID uuid.UUID `json:"projectID"`
+
+	// Position is the place of the first new scene in narrative order, from 0, and the others follow it.
+	// A position past the last scene appends them.
+	Position int `json:"position"`
+	// Scenes lists the scenes to add, in narrative order.
+	Scenes []RestSceneCreateItem `json:"scenes"`
+}
+
+// RestSceneCreate is the HTTP handler for the create-scenes endpoint. It responds 201 with the new scenes in
+// narrative order.
 type RestSceneCreate struct {
 	service RestSceneCreateService
 	logger  logging.Log
@@ -67,22 +73,22 @@ func (handler *RestSceneCreate) ServeHTTP(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	serviceRequest := &core.SceneCreateRequest{
-		OwnerID:     ownerID,
-		ProjectID:   request.ProjectID,
-		Position:    request.Position,
-		Title:       request.Title,
-		Color:       request.Color,
-		Description: request.Description,
-		Prompt:      request.Prompt,
-	}
-
-	result, err := handler.service.Exec(ctx, serviceRequest)
+	result, err := handler.service.Exec(ctx, &core.SceneCreateRequest{
+		OwnerID:   ownerID,
+		ProjectID: request.ProjectID,
+		Position:  request.Position,
+		Scenes: lo.Map(request.Scenes, func(item RestSceneCreateItem, _ int) core.SceneCreateItem {
+			return core.SceneCreateItem{
+				Title: item.Title, Color: item.Color, Description: item.Description, Prompt: item.Prompt,
+			}
+		}),
+	})
 	if err != nil {
 		httpf.HandleError(ctx, handler.logger, w, span, composerErrors, err)
 
 		return
 	}
 
-	httpf.SendJSONStatus(w, span, http.StatusCreated, loadScene(result))
+	response := lo.Map(result, func(scene *core.Scene, _ int) Scene { return loadScene(scene) })
+	httpf.SendJSONStatus(w, span, http.StatusCreated, response)
 }

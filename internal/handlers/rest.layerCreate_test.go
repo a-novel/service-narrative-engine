@@ -23,10 +23,9 @@ func TestRestLayerCreate(t *testing.T) {
 		t.Helper()
 
 		return newRequest(t, http.MethodPost, "/v1/layers", map[string]any{
-			"projectID":   projectID,
-			"position":    2,
-			"name":        "Characters",
-			"description": "Who appears",
+			"projectID": projectID,
+			"position":  2,
+			"layers":    []any{map[string]any{"kind": "notes", "name": "Characters", "description": "Who appears"}},
 		})
 	}
 
@@ -49,7 +48,7 @@ func TestRestLayerCreate(t *testing.T) {
 			serviceCalled: true,
 
 			expectStatus:   http.StatusCreated,
-			expectResponse: jsonLayer,
+			expectResponse: []any{jsonLayer},
 		},
 		{
 			name: "Error/Anonymous",
@@ -112,18 +111,19 @@ func TestRestLayerCreate(t *testing.T) {
 			service := handlersmocks.NewMockRestLayerCreateService(t)
 
 			if testCase.serviceCalled {
-				var resp *core.Layer
+				var resp []*core.Layer
 				if testCase.serviceErr == nil {
-					resp = coreLayer
+					resp = []*core.Layer{coreLayer}
 				}
 
 				service.EXPECT().
 					Exec(mock.Anything, &core.LayerCreateRequest{
-						OwnerID:     ownerID,
-						ProjectID:   projectID,
-						Position:    2,
-						Name:        "Characters",
-						Description: "Who appears",
+						OwnerID:   ownerID,
+						ProjectID: projectID,
+						Position:  2,
+						Layers: []core.LayerCreateItem{
+							{Kind: core.LayerKindNotes, Name: "Characters", Description: "Who appears"},
+						},
 					}).
 					Return(resp, testCase.serviceErr)
 			}

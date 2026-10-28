@@ -6,21 +6,18 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/core"
 )
 
-// ProjectComposer is the REST representation of a project with the layout of its Scenes Composer:
-// its scenes and layers in order. The cells come page by page from the list-cells endpoint.
+// ProjectComposer is the REST representation of a new project with the layers it starts with. Its
+// scenes come next, from the create-scenes endpoint.
 type ProjectComposer struct {
 	Project
 
-	// Scenes are the project's scenes, in narrative order.
-	Scenes []Scene `json:"scenes"`
-	// Layers are the project's layers, in order.
+	// Layers are the project's required layers, one of each kind, in order.
 	Layers []Layer `json:"layers"`
 }
 
 func loadProjectComposer(composer *core.ProjectComposer) ProjectComposer {
 	return ProjectComposer{
 		Project: loadProject(composer.Project),
-		Scenes:  lo.Map(composer.Scenes, func(scene *core.Scene, _ int) Scene { return loadScene(scene) }),
 		Layers:  lo.Map(composer.Layers, func(layer *core.Layer, _ int) Layer { return loadLayer(layer) }),
 	}
 }
