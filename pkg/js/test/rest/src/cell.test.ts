@@ -52,12 +52,13 @@ afterAll(async () => {
 describe("cellWrite", () => {
   it("writes a manuscript cell, then rewrites it", async () => {
     const request = {
+      projectID: project.id,
       sceneID: project.scenes[0].id,
       layerID: project.layers[0].id,
       content: {
         blocks: [
-          { id: "b1", kind: "narration" as const, text: "La pluie battait les vitres." },
-          { id: "b2", kind: "dialogue" as const, speaker: "Marie", parts: [{ tone: "bas" }, { text: "Tu es venu." }] },
+          { kind: "narration" as const, text: "La pluie battait les vitres." },
+          { kind: "dialogue" as const, speaker: "Marie", parts: [{ tone: "bas" }, { text: "Tu es venu." }] },
         ],
       },
     };
@@ -74,6 +75,7 @@ describe("cellWrite", () => {
 
   it("writes a notes cell", async () => {
     const cell = await cellWrite(api, accessToken, {
+      projectID: project.id,
       sceneID: project.scenes[1].id,
       layerID: notes.id,
       content: { text: "Marie" },
@@ -83,12 +85,27 @@ describe("cellWrite", () => {
   });
 
   it("returns 400 for content outside the schema of the layer's kind", async () => {
-    const request = { sceneID: project.scenes[0].id, layerID: notes.id, content: { blocks: [] } };
+    const request = {
+      projectID: project.id,
+      sceneID: project.scenes[0].id,
+      layerID: notes.id,
+      content: { blocks: [] },
+    };
     await expectStatus(cellWrite(api, accessToken, request), 400);
   });
 
-  it("returns 404 for a scene and a layer of two projects", async () => {
-    const request = { sceneID: other.scenes[0].id, layerID: notes.id, content: { text: "Marie" } };
+  it("returns 404 for a scene of another project", async () => {
+    const request = {
+      projectID: project.id,
+      sceneID: other.scenes[0].id,
+      layerID: notes.id,
+      content: { text: "Marie" },
+    };
+    await expectStatus(cellWrite(api, accessToken, request), 404);
+  });
+
+  it("returns 404 for a layer of another project", async () => {
+    const request = { projectID: other.id, sceneID: other.scenes[0].id, layerID: notes.id, content: { text: "Marie" } };
     await expectStatus(cellWrite(api, accessToken, request), 404);
   });
 });
@@ -107,7 +124,7 @@ describe("cellList", () => {
 
     const written: Cell[] = [];
     for (const scene of paged.scenes) {
-      const request = { sceneID: scene.id, layerID: paged.layers[0].id, content: { blocks: [] } };
+      const request = { projectID: paged.id, sceneID: scene.id, layerID: paged.layers[0].id, content: { blocks: [] } };
       written.push(await cellWrite(api, accessToken, request));
     }
 

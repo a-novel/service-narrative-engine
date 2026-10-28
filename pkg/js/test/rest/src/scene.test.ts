@@ -86,6 +86,7 @@ describe("sceneUpdate", () => {
     const created = await sceneCreate(api, accessToken, { projectID: project.id, title: "Draft", color: COLOR });
 
     const scene = await sceneUpdate(api, accessToken, {
+      projectID: project.id,
       id: created.id,
       title: "Ouverture",
       color: "#E0457B",
@@ -102,8 +103,22 @@ describe("sceneUpdate", () => {
     await deleteScenes(scene);
   });
 
+  it("returns 404 for a scene of another project", async () => {
+    const other = await projectCreate(api, accessToken, { title: "Other", language: Language.En });
+    const created = await sceneCreate(api, accessToken, { projectID: project.id, title: "Draft", color: COLOR });
+
+    const request = { projectID: other.id, id: created.id, title: "Renamed", color: COLOR };
+    await expectStatus(sceneUpdate(api, accessToken, request), 404);
+
+    await deleteScenes(created);
+    await projectDelete(api, accessToken, other);
+  });
+
   it("returns 404 for an absent scene", async () => {
-    await expectStatus(sceneUpdate(api, accessToken, { id: ABSENT_ID, title: "Renamed", color: COLOR }), 404);
+    await expectStatus(
+      sceneUpdate(api, accessToken, { projectID: project.id, id: ABSENT_ID, title: "Renamed", color: COLOR }),
+      404
+    );
   });
 });
 
@@ -117,11 +132,11 @@ describe("sceneMove", () => {
       color: COLOR,
     });
 
-    const moved = await sceneMove(api, accessToken, { id: first.id, after: second.id });
+    const moved = await sceneMove(api, accessToken, { projectID: project.id, id: first.id, after: second.id });
     expect(moved).toMatchObject({ id: first.id, position: 1 });
     await expect(sceneTitles()).resolves.toEqual(["Second", "First"]);
 
-    const back = await sceneMove(api, accessToken, { id: first.id });
+    const back = await sceneMove(api, accessToken, { projectID: project.id, id: first.id });
     expect(back).toMatchObject({ id: first.id, position: 0 });
     await expect(sceneTitles()).resolves.toEqual(["First", "Second"]);
 
@@ -141,7 +156,7 @@ describe("sceneMove", () => {
       );
     }
 
-    await Promise.all(scenes.map((scene) => sceneMove(api, accessToken, { id: scene.id })));
+    await Promise.all(scenes.map((scene) => sceneMove(api, accessToken, { projectID: project.id, id: scene.id })));
 
     const stored = await storedScenes();
     expect(stored.map((scene) => scene.position)).toEqual([0, 1, 2, 3, 4, 5]);
@@ -153,13 +168,13 @@ describe("sceneMove", () => {
   it("returns 400 for a scene placed after itself", async () => {
     const scene = await sceneCreate(api, accessToken, { projectID: project.id, title: "Scene", color: COLOR });
 
-    await expectStatus(sceneMove(api, accessToken, { id: scene.id, after: scene.id }), 400);
+    await expectStatus(sceneMove(api, accessToken, { projectID: project.id, id: scene.id, after: scene.id }), 400);
 
     await deleteScenes(scene);
   });
 
   it("returns 404 for an absent scene", async () => {
-    await expectStatus(sceneMove(api, accessToken, { id: ABSENT_ID }), 404);
+    await expectStatus(sceneMove(api, accessToken, { projectID: project.id, id: ABSENT_ID }), 404);
   });
 });
 
@@ -182,7 +197,7 @@ describe("sceneDelete", () => {
   });
 
   it("returns 404 for an absent scene", async () => {
-    await expectStatus(sceneDelete(api, accessToken, { id: ABSENT_ID }), 404);
+    await expectStatus(sceneDelete(api, accessToken, { projectID: project.id, id: ABSENT_ID }), 404);
   });
 });
 

@@ -86,6 +86,7 @@ describe("layerUpdate", () => {
     const created = await layerCreate(api, accessToken, { projectID: project.id, after: manuscript.id, name: "Draft" });
 
     const layer = await layerUpdate(api, accessToken, {
+      projectID: project.id,
       id: created.id,
       name: "Characters",
       description: "Who appears",
@@ -96,7 +97,7 @@ describe("layerUpdate", () => {
   });
 
   it("returns 404 for an absent layer", async () => {
-    await expectStatus(layerUpdate(api, accessToken, { id: ABSENT_ID, name: "Renamed" }), 404);
+    await expectStatus(layerUpdate(api, accessToken, { projectID: project.id, id: ABSENT_ID, name: "Renamed" }), 404);
   });
 });
 
@@ -104,7 +105,7 @@ describe("layerMove", () => {
   it("moves a layer", async () => {
     const notes = await layerCreate(api, accessToken, { projectID: project.id, after: manuscript.id, name: "Notes" });
 
-    const moved = await layerMove(api, accessToken, { id: notes.id });
+    const moved = await layerMove(api, accessToken, { projectID: project.id, id: notes.id });
     expect(moved).toMatchObject({ id: notes.id, position: 0 });
     await expect(layerNames()).resolves.toEqual(["Notes", manuscript.name]);
 
@@ -112,7 +113,7 @@ describe("layerMove", () => {
   });
 
   it("returns 404 for an absent layer", async () => {
-    await expectStatus(layerMove(api, accessToken, { id: ABSENT_ID }), 404);
+    await expectStatus(layerMove(api, accessToken, { projectID: project.id, id: ABSENT_ID }), 404);
   });
 });
 

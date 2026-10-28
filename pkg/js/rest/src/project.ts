@@ -75,7 +75,7 @@ export type ProjectGetRequest = z.infer<typeof ProjectGetRequestSchema>;
 
 /** A page of projects, newest first: at most `limit`, 20 when omitted, after the first `offset`. */
 export const ProjectListRequestSchema = z.object({
-  limit: z.int().max(100).optional(),
+  limit: z.int().min(0).max(100).optional(),
   offset: z.int().min(0).optional(),
 });
 

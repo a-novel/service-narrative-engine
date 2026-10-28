@@ -48,6 +48,7 @@ export type LayerCreateRequest = z.infer<typeof LayerCreateRequestSchema>;
 
 /** The new fields of a layer. An omitted description is cleared. */
 export const LayerUpdateRequestSchema = z.object({
+  projectID: z.uuid(),
   id: z.uuid(),
   name: LayerNameSchema,
   description: LayerDescriptionSchema.optional(),
@@ -58,6 +59,7 @@ export type LayerUpdateRequest = z.infer<typeof LayerUpdateRequestSchema>;
 
 /** The layer to move, after the layer `after` names, or first without it. */
 export const LayerMoveRequestSchema = z.object({
+  projectID: z.uuid(),
   id: z.uuid(),
   after: z.uuid().optional(),
 });
@@ -67,6 +69,7 @@ export type LayerMoveRequest = z.infer<typeof LayerMoveRequestSchema>;
 
 /** The notes layer to delete. */
 export const LayerDeleteRequestSchema = z.object({
+  projectID: z.uuid(),
   id: z.uuid(),
 });
 
@@ -85,7 +88,7 @@ export type LayerPage = z.infer<typeof LayerPageSchema>;
 /** A page of a project's layers: at most `limit`, 100 when omitted, after the first `offset`. */
 export const LayerListRequestSchema = z.object({
   projectID: z.uuid(),
-  limit: z.int().max(500).optional(),
+  limit: z.int().min(0).max(500).optional(),
   offset: z.int().min(0).optional(),
 });
 
@@ -109,7 +112,10 @@ export async function layerCreate(
   });
 }
 
-/** Replaces the name and description of a layer. Throws on HTTP 404 for an unknown layer. */
+/**
+ * Replaces the name and description of a layer. Throws on HTTP 404 when the caller owns no such
+ * project, or the project holds no such layer.
+ */
 export async function layerUpdate(
   api: NarrativeEngineApi,
   accessToken: string,
@@ -124,8 +130,8 @@ export async function layerUpdate(
 
 /**
  * Moves a layer and returns it at its new position. The layers between its old and new position shift by
- * one. Throws on HTTP 400 when `after` names the moved layer or none of the project, and 404 for an
- * unknown layer.
+ * one. Throws on HTTP 400 when `after` names the moved layer or none of the project, and 404 when the
+ * caller owns no such project, or the project holds no such layer.
  */
 export async function layerMove(
   api: NarrativeEngineApi,
@@ -141,7 +147,8 @@ export async function layerMove(
 
 /**
  * Deletes a notes layer with its cells and returns it as it was; the layers after it move up one
- * place. Throws on HTTP 404 for an unknown layer, and 422 for the manuscript layer, which stays for
+ * place. Throws on HTTP 404 when the caller owns no such project, or the project holds no such
+ * layer, and 422 for the manuscript layer, which stays for
  * the life of its project.
  */
 export async function layerDelete(
@@ -149,7 +156,7 @@ export async function layerDelete(
   accessToken: string,
   request: LayerDeleteRequest
 ): Promise<Layer> {
-  const params = new URLSearchParams({ id: request.id });
+  const params = new URLSearchParams({ projectID: request.projectID, id: request.id });
   return await api.fetch(`/v1/layer?${params.toString()}`, LayerSchema, {
     method: "DELETE",
     headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },

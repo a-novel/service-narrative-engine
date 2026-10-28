@@ -50,6 +50,7 @@ export type SceneCreateRequest = z.infer<typeof SceneCreateRequestSchema>;
 
 /** The new fields of a scene. An omitted description or prompt is cleared. */
 export const SceneUpdateRequestSchema = SceneFieldsSchema.extend({
+  projectID: z.uuid(),
   id: z.uuid(),
 });
 
@@ -58,6 +59,7 @@ export type SceneUpdateRequest = z.infer<typeof SceneUpdateRequestSchema>;
 
 /** The scene to move, after the scene `after` names, or first without it. */
 export const SceneMoveRequestSchema = z.object({
+  projectID: z.uuid(),
   id: z.uuid(),
   after: z.uuid().optional(),
 });
@@ -67,6 +69,7 @@ export type SceneMoveRequest = z.infer<typeof SceneMoveRequestSchema>;
 
 /** The scene to delete. */
 export const SceneDeleteRequestSchema = z.object({
+  projectID: z.uuid(),
   id: z.uuid(),
 });
 
@@ -85,7 +88,7 @@ export type ScenePage = z.infer<typeof ScenePageSchema>;
 /** A page of a project's scenes: at most `limit`, 100 when omitted, after the first `offset`. */
 export const SceneListRequestSchema = z.object({
   projectID: z.uuid(),
-  limit: z.int().max(500).optional(),
+  limit: z.int().min(0).max(500).optional(),
   offset: z.int().min(0).optional(),
 });
 
@@ -109,7 +112,10 @@ export async function sceneCreate(
   });
 }
 
-/** Replaces the title, color, description and prompt of a scene. Throws on HTTP 404 for an unknown scene. */
+/**
+ * Replaces the title, color, description and prompt of a scene. Throws on HTTP 404 when the caller
+ * owns no such project, or the project holds no such scene.
+ */
 export async function sceneUpdate(
   api: NarrativeEngineApi,
   accessToken: string,
@@ -124,8 +130,8 @@ export async function sceneUpdate(
 
 /**
  * Moves a scene and returns it at its new position. The scenes between its old and new position shift by
- * one. Throws on HTTP 400 when `after` names the moved scene or none of the project, and 404 for an
- * unknown scene.
+ * one. Throws on HTTP 400 when `after` names the moved scene or none of the project, and 404 when the caller
+ * owns no such project, or the project holds no such scene.
  */
 export async function sceneMove(
   api: NarrativeEngineApi,
@@ -141,14 +147,14 @@ export async function sceneMove(
 
 /**
  * Deletes a scene with its cells and returns it as it was; the scenes after it move up one place.
- * Throws on HTTP 404 for an unknown scene.
+ * Throws on HTTP 404 when the caller owns no such project, or the project holds no such scene.
  */
 export async function sceneDelete(
   api: NarrativeEngineApi,
   accessToken: string,
   request: SceneDeleteRequest
 ): Promise<Scene> {
-  const params = new URLSearchParams({ id: request.id });
+  const params = new URLSearchParams({ projectID: request.projectID, id: request.id });
   return await api.fetch(`/v1/scene?${params.toString()}`, SceneSchema, {
     method: "DELETE",
     headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },

@@ -1,11 +1,7 @@
 import { z } from "zod";
 
-/** Identifies a block within its cell, so edits and appendices can point at it. */
-export const BlockIDSchema = z.string().regex(/^[A-Za-z0-9_-]{1,32}$/);
-
 /** Plain manuscript prose: action, description or exposition. */
 export const NarrationBlockSchema = z.strictObject({
-  id: BlockIDSchema,
   kind: z.literal("narration"),
   text: z.string().max(100000),
 });
@@ -24,7 +20,6 @@ export type DialoguePart = z.infer<typeof DialoguePartSchema>;
 
 /** One spoken line of the manuscript: a speaker and ordered parts. */
 export const DialogueBlockSchema = z.strictObject({
-  id: BlockIDSchema,
   kind: z.literal("dialogue"),
   speaker: z.string().max(200),
   parts: z.array(DialoguePartSchema).max(500),
@@ -40,14 +35,10 @@ export const BlockSchema = z.discriminatedUnion("kind", [NarrationBlockSchema, D
 export type Block = z.infer<typeof BlockSchema>;
 
 /**
- * The content of a manuscript cell: the scene's text, as ordered blocks with unique IDs. It mirrors
- * the server's `content.manuscript.schema.json`, and both agree on the shared test cases.
+ * The content of a manuscript cell: the scene's text, as ordered blocks. It mirrors the server's
+ * `content.manuscript.schema.json`, and both agree on the shared test cases.
  */
-export const ManuscriptContentSchema = z
-  .strictObject({ blocks: z.array(BlockSchema).max(10000) })
-  .refine((content) => new Set(content.blocks.map((block) => block.id)).size === content.blocks.length, {
-    message: "block IDs are unique within a cell",
-  });
+export const ManuscriptContentSchema = z.strictObject({ blocks: z.array(BlockSchema).max(10000) });
 
 /** The value {@link ManuscriptContentSchema} validates. */
 export type ManuscriptContent = z.infer<typeof ManuscriptContentSchema>;

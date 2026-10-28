@@ -24,10 +24,3 @@ for (const [kind, schema, cases] of suites) {
     }
   });
 }
-
-describe("ManuscriptContentSchema", () => {
-  it("refuses two blocks with one ID", () => {
-    const block = { id: "b1", kind: "narration", text: "Il pleuvait." };
-    expect(ManuscriptContentSchema.safeParse({ blocks: [block, block] }).success).toBe(false);
-  });
-});

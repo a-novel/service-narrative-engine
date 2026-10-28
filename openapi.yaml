@@ -264,7 +264,7 @@ paths:
         page, raise `offset` by the page size.
       tags: [scene]
       parameters:
-        - $ref: "#/components/parameters/listProjectID"
+        - $ref: "#/components/parameters/parentProjectID"
         - $ref: "#/components/parameters/composerLimit"
         - $ref: "#/components/parameters/offset"
       responses:
@@ -324,6 +324,7 @@ paths:
         place.
       tags: [scene]
       parameters:
+        - $ref: "#/components/parameters/parentProjectID"
         - $ref: "#/components/parameters/sceneID"
       responses:
         "200":
@@ -417,7 +418,7 @@ paths:
         page, raise `offset` by the page size.
       tags: [layer]
       parameters:
-        - $ref: "#/components/parameters/listProjectID"
+        - $ref: "#/components/parameters/parentProjectID"
         - $ref: "#/components/parameters/composerLimit"
         - $ref: "#/components/parameters/offset"
       responses:
@@ -477,6 +478,7 @@ paths:
         one place. The manuscript layer stays for the life of its project.
       tags: [layer]
       parameters:
+        - $ref: "#/components/parameters/parentProjectID"
         - $ref: "#/components/parameters/layerID"
       responses:
         "200":
@@ -540,7 +542,7 @@ paths:
         page, raise `offset` by the page size.
       tags: [cell]
       parameters:
-        - $ref: "#/components/parameters/listProjectID"
+        - $ref: "#/components/parameters/parentProjectID"
         - $ref: "#/components/parameters/composerLimit"
         - $ref: "#/components/parameters/offset"
       responses:
@@ -726,8 +728,7 @@ components:
 
     notFound:
       description: |
-        The caller owns no such project, scene, layer or cell. A scene and a layer of two different
-        projects share no cell.
+        The caller owns no such project, or the project holds no such scene or layer.
 
     projectFull:
       description: |
@@ -964,9 +965,11 @@ components:
     cell:
       type: object
       description: What one layer says about one scene.
-      required: [sceneID, layerID, content, updatedAt]
+      required: [projectID, sceneID, layerID, content, updatedAt]
       additionalProperties: false
       properties:
+        projectID:
+          $ref: "#/components/schemas/projectID"
         sceneID:
           $ref: "#/components/schemas/sceneID"
         layerID:
@@ -1136,9 +1139,11 @@ components:
     sceneUpdateRequest:
       type: object
       description: The new fields of a scene.
-      required: [id, title, color]
+      required: [projectID, id, title, color]
       additionalProperties: false
       properties:
+        projectID:
+          $ref: "#/components/schemas/projectID"
         id:
           $ref: "#/components/schemas/sceneID"
         title:
@@ -1153,9 +1158,11 @@ components:
     sceneMoveRequest:
       type: object
       description: The scene to move, and where.
-      required: [id]
+      required: [projectID, id]
       additionalProperties: false
       properties:
+        projectID:
+          $ref: "#/components/schemas/projectID"
         id:
           $ref: "#/components/schemas/sceneID"
         after:
@@ -1187,9 +1194,11 @@ components:
     layerUpdateRequest:
       type: object
       description: The new fields of a layer.
-      required: [id, name]
+      required: [projectID, id, name]
       additionalProperties: false
       properties:
+        projectID:
+          $ref: "#/components/schemas/projectID"
         id:
           $ref: "#/components/schemas/layerID"
         name:
@@ -1200,9 +1209,11 @@ components:
     layerMoveRequest:
       type: object
       description: The layer to move, and where.
-      required: [id]
+      required: [projectID, id]
       additionalProperties: false
       properties:
+        projectID:
+          $ref: "#/components/schemas/projectID"
         id:
           $ref: "#/components/schemas/layerID"
         after:
@@ -1212,9 +1223,11 @@ components:
     cellWriteRequest:
       type: object
       description: The content of a cell.
-      required: [sceneID, layerID, content]
+      required: [projectID, sceneID, layerID, content]
       additionalProperties: false
       properties:
+        projectID:
+          $ref: "#/components/schemas/projectID"
         sceneID:
           $ref: "#/components/schemas/sceneID"
         layerID:
@@ -1310,14 +1323,15 @@ components:
       required: false
       schema:
         type: integer
+        minimum: 0
         maximum: 100
         default: 20
         examples: [10]
 
-    listProjectID:
+    parentProjectID:
       name: projectID
       in: query
-      description: The project whose scenes, layers or cells to list.
+      description: The project that holds the scenes, layers or cells.
       required: true
       schema:
         $ref: "#/components/schemas/projectID"
@@ -1329,6 +1343,7 @@ components:
       required: false
       schema:
         type: integer
+        minimum: 0
         maximum: 500
         default: 100
         examples: [200]

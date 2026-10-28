@@ -11,6 +11,7 @@ import { z } from "zod";
  * this client does not know keeps its content as a plain object.
  */
 export const CellSchema = z.object({
+  projectID: z.uuid(),
   sceneID: z.uuid(),
   layerID: z.uuid(),
   content: z.record(z.string(), z.unknown()),
@@ -35,7 +36,7 @@ export type CellPage = z.infer<typeof CellPageSchema>;
 /** A page of a project's cells: at most `limit`, 100 when omitted, after the first `offset`. */
 export const CellListRequestSchema = z.object({
   projectID: z.uuid(),
-  limit: z.int().max(500).optional(),
+  limit: z.int().min(0).max(500).optional(),
   offset: z.int().min(0).optional(),
 });
 
@@ -44,6 +45,7 @@ export type CellListRequest = z.infer<typeof CellListRequestSchema>;
 
 /** The new content of a cell. */
 export const CellWriteRequestSchema = z.object({
+  projectID: z.uuid(),
   sceneID: z.uuid(),
   layerID: z.uuid(),
   content: z.union([ManuscriptContentSchema, NotesContentSchema]),
@@ -55,7 +57,8 @@ export type CellWriteRequest = z.infer<typeof CellWriteRequestSchema>;
 /**
  * Writes a cell where a scene and a layer of the same project cross, and returns it. The first write
  * creates the cell. Throws on HTTP 400 when the content breaks the schema of the layer's kind or
- * weighs over 2 MiB, and 404 when the scene and the layer share no cell.
+ * weighs over 2 MiB, and 404 when the caller owns no such project, or
+ * the project holds no such scene or layer.
  */
 export async function cellWrite(
   api: NarrativeEngineApi,
