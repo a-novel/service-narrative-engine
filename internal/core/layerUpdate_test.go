@@ -17,16 +17,15 @@ func TestLayerUpdate(t *testing.T) {
 
 	errFoo := errors.New("foo")
 
-	request := &core.LayerUpdateRequest{OwnerID: ownerID, ID: layerID2, Name: "Layer"}
+	request := &core.LayerUpdateRequest{OwnerID: ownerID, ProjectID: projectID, ID: layerID2, Name: "Layer"}
 
 	testCases := []struct {
 		name string
 
 		request *core.LayerUpdateRequest
 
-		selectMock  *daoMock[*dao.Layer]
-		projectMock *daoMock[*dao.Project]
-		updateMock  *daoMock[*dao.Layer]
+		ownerMock  *daoMock[bool]
+		updateMock *daoMock[*dao.Layer]
 
 		expect    *core.Layer
 		expectErr error
@@ -36,46 +35,43 @@ func TestLayerUpdate(t *testing.T) {
 
 			request: request,
 
-			selectMock:  &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
-			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
-			updateMock:  &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
+			ownerMock:  &daoMock[bool]{resp: true},
+			updateMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
 
 			expect: coreLayer(layerID2, 1),
 		},
 		{
 			name: "Error/InvalidRequest",
 
-			request: &core.LayerUpdateRequest{OwnerID: ownerID, ID: layerID2},
+			request: &core.LayerUpdateRequest{OwnerID: ownerID, ProjectID: projectID, ID: layerID2},
 
 			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/NotOwned",
+
+			request: request,
+
+			ownerMock: &daoMock[bool]{resp: false},
+
+			expectErr: core.ErrProjectNotFound,
+		},
+		{
+			name: "Error/CheckOwner",
+
+			request: request,
+
+			ownerMock: &daoMock[bool]{err: errFoo},
+
+			expectErr: errFoo,
 		},
 		{
 			name: "Error/NotFound",
 
 			request: request,
 
-			selectMock: &daoMock[*dao.Layer]{err: dao.ErrLayerSelectNotFound},
-
-			expectErr: core.ErrLayerNotFound,
-		},
-		{
-			name: "Error/OtherOwner",
-
-			request: request,
-
-			selectMock:  &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
-			projectMock: &daoMock[*dao.Project]{resp: foreignProject()},
-
-			expectErr: core.ErrLayerNotFound,
-		},
-		{
-			name: "Error/DeletedMeanwhile",
-
-			request: request,
-
-			selectMock:  &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
-			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
-			updateMock:  &daoMock[*dao.Layer]{err: dao.ErrLayerUpdateNotFound},
+			ownerMock:  &daoMock[bool]{resp: true},
+			updateMock: &daoMock[*dao.Layer]{err: dao.ErrLayerUpdateNotFound},
 
 			expectErr: core.ErrLayerNotFound,
 		},
@@ -84,9 +80,8 @@ func TestLayerUpdate(t *testing.T) {
 
 			request: request,
 
-			selectMock:  &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
-			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
-			updateMock:  &daoMock[*dao.Layer]{err: errFoo},
+			ownerMock:  &daoMock[bool]{resp: true},
+			updateMock: &daoMock[*dao.Layer]{err: errFoo},
 
 			expectErr: errFoo,
 		},
@@ -96,38 +91,30 @@ func TestLayerUpdate(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockSelect := coremocks.NewMockLayerUpdateDaoSelect(t)
-			mockProject := coremocks.NewMockLayerUpdateDaoProject(t)
+			mockOwner := coremocks.NewMockLayerUpdateDaoOwner(t)
 			mockUpdate := coremocks.NewMockLayerUpdateDao(t)
 
-			if testCase.selectMock != nil {
-				mockSelect.EXPECT().
-					Exec(mock.Anything, &dao.LayerSelectRequest{ID: layerID2}).
-					Return(testCase.selectMock.resp, testCase.selectMock.err)
-			}
-
-			if testCase.projectMock != nil {
-				mockProject.EXPECT().
-					Exec(mock.Anything, &dao.ProjectSelectRequest{ID: projectID}).
-					Return(testCase.projectMock.resp, testCase.projectMock.err)
+			if testCase.ownerMock != nil {
+				mockOwner.EXPECT().
+					Exec(mock.Anything, &dao.ProjectOwnedRequest{ID: projectID, OwnerID: ownerID}).
+					Return(testCase.ownerMock.resp, testCase.ownerMock.err)
 			}
 
 			if testCase.updateMock != nil {
 				mockUpdate.EXPECT().
 					Exec(mock.Anything, mock.MatchedBy(func(req *dao.LayerUpdateRequest) bool {
-						return req.ID == layerID2 && req.Name == "Layer" && recent(req.Now)
+						return req.ProjectID == projectID && req.ID == layerID2 && req.Name == "Layer" && recent(req.Now)
 					})).
 					Return(testCase.updateMock.resp, testCase.updateMock.err)
 			}
 
-			service := core.NewLayerUpdate(mockSelect, mockProject, mockUpdate)
+			service := core.NewLayerUpdate(mockOwner, mockUpdate)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
 
-			mockSelect.AssertExpectations(t)
-			mockProject.AssertExpectations(t)
+			mockOwner.AssertExpectations(t)
 			mockUpdate.AssertExpectations(t)
 		})
 	}

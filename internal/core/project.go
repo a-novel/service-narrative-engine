@@ -10,12 +10,17 @@ import (
 
 // Project is a narrative in progress, owned by one user. It produces one manuscript.
 type Project struct {
-	ID      uuid.UUID
+	ID uuid.UUID
+	// OwnerID is the user who owns the project, from the authentication service.
 	OwnerID uuid.UUID
-	Title   string
+
+	// Title names the narrative.
+	Title string
+	// Premise says what the narrative is about, in a few sentences. Empty until the author writes one.
 	Premise string
 	// Language is the language the project is written in, as a BCP 47 tag.
-	Language  string
+	Language string
+
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

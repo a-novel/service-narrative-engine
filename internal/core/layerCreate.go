@@ -15,6 +15,11 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
+// LayerCreateDaoOwner checks that the user owns the project.
+type LayerCreateDaoOwner interface {
+	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
+}
+
 // LayerCreateDaoLock locks the project, so changes to its order run one at a time.
 type LayerCreateDaoLock interface {
 	Exec(ctx context.Context, request *dao.ProjectLockRequest) (*dao.Project, error)
@@ -34,14 +39,19 @@ type LayerCreateDaoInsert interface {
 type LayerCreateRequest struct {
 	OwnerID   uuid.UUID `validate:"required"`
 	ProjectID uuid.UUID `validate:"required"`
+
 	// After is the layer the new one follows. uuid.Nil places it first.
-	After       uuid.UUID
-	Name        string `validate:"required,notblank,max=100"`
+	After uuid.UUID
+
+	// Name labels the layer's row in the composer.
+	Name string `validate:"required,notblank,max=100"`
+	// Description says what the layer records.
 	Description string `validate:"max=20000"`
 }
 
 // LayerCreate adds a notes layer to a project, right after the layer the caller names.
 type LayerCreate struct {
+	daoOwner   LayerCreateDaoOwner
 	daoLock    LayerCreateDaoLock
 	daoSelect  LayerCreateDaoSelect
 	daoInsert  LayerCreateDaoInsert
@@ -49,12 +59,19 @@ type LayerCreate struct {
 }
 
 func NewLayerCreate(
+	daoOwner LayerCreateDaoOwner,
 	daoLock LayerCreateDaoLock,
 	daoSelect LayerCreateDaoSelect,
 	daoInsert LayerCreateDaoInsert,
 	transactor transaction.Transactor,
 ) *LayerCreate {
-	return &LayerCreate{daoLock: daoLock, daoSelect: daoSelect, daoInsert: daoInsert, transactor: transactor}
+	return &LayerCreate{
+		daoOwner:   daoOwner,
+		daoLock:    daoLock,
+		daoSelect:  daoSelect,
+		daoInsert:  daoInsert,
+		transactor: transactor,
+	}
 }
 
 func (service *LayerCreate) Exec(ctx context.Context, request *LayerCreateRequest) (*Layer, error) {
@@ -72,6 +89,15 @@ func (service *LayerCreate) Exec(ctx context.Context, request *LayerCreateReques
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
+	owned, err := service.daoOwner.Exec(ctx, &dao.ProjectOwnedRequest{ID: request.ProjectID, OwnerID: request.OwnerID})
+	if err != nil {
+		return nil, otel.ReportError(span, fmt.Errorf("check owner: %w", err))
+	}
+
+	if !owned {
+		return nil, otel.ReportError(span, ErrProjectNotFound)
+	}
+
 	id, err := uuid.NewV7()
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("generate id: %w", err))
@@ -80,7 +106,7 @@ func (service *LayerCreate) Exec(ctx context.Context, request *LayerCreateReques
 	var layer *Layer
 
 	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
-		project, err := service.daoLock.Exec(ctx, &dao.ProjectLockRequest{ID: request.ProjectID})
+		_, err := service.daoLock.Exec(ctx, &dao.ProjectLockRequest{ID: request.ProjectID})
 		if errors.Is(err, dao.ErrProjectLockNotFound) {
 			err = errors.Join(err, ErrProjectNotFound)
 		}
@@ -89,17 +115,18 @@ func (service *LayerCreate) Exec(ctx context.Context, request *LayerCreateReques
 			return fmt.Errorf("lock project: %w", err)
 		}
 
-		err = checkOwner(project, request.OwnerID, ErrProjectNotFound)
-		if err != nil {
-			return err
-		}
-
 		position := 0
 
 		if request.After != uuid.Nil {
-			anchor, err := layerAnchor(ctx, service.daoSelect, project.ID, request.After)
+			anchor, err := service.daoSelect.Exec(ctx, &dao.LayerSelectRequest{
+				ProjectID: request.ProjectID, ID: request.After,
+			})
+			if errors.Is(err, dao.ErrLayerSelectNotFound) {
+				err = errors.Join(err, ErrInvalidRequest)
+			}
+
 			if err != nil {
-				return err
+				return fmt.Errorf("select anchor: %w", err)
 			}
 
 			position = anchor.Position + 1
@@ -122,7 +149,7 @@ func (service *LayerCreate) Exec(ctx context.Context, request *LayerCreateReques
 			return fmt.Errorf("insert layer: %w", err)
 		}
 
-		layer = newLayer(inserted, 0)
+		layer = newLayer(inserted)
 
 		return nil
 	})

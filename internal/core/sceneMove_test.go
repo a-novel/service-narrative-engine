@@ -22,7 +22,7 @@ func TestSceneMove(t *testing.T) {
 	errFoo := errors.New("foo")
 
 	request := func(after uuid.UUID) *core.SceneMoveRequest {
-		return &core.SceneMoveRequest{OwnerID: ownerID, ID: sceneID2, After: after}
+		return &core.SceneMoveRequest{OwnerID: ownerID, ProjectID: projectID, ID: sceneID2, After: after}
 	}
 
 	testCases := []struct {
@@ -30,9 +30,9 @@ func TestSceneMove(t *testing.T) {
 
 		request *core.SceneMoveRequest
 
-		// targetMock answers both reads of the moved scene, before and after the lock.
-		targetMock *daoMock[*dao.Scene]
+		ownerMock  *daoMock[bool]
 		lockMock   *daoMock[*dao.Project]
+		targetMock *daoMock[*dao.Scene]
 		anchorMock *daoMock[*dao.Scene]
 		// to is the position the service moves the scene to, when the case reaches the move.
 		to         int
@@ -47,8 +47,9 @@ func TestSceneMove(t *testing.T) {
 
 			request: request(sceneID3),
 
-			targetMock: &daoMock[*dao.Scene]{resp: daoScene(sceneID2, 1)},
+			ownerMock:  &daoMock[bool]{resp: true},
 			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
+			targetMock: &daoMock[*dao.Scene]{resp: daoScene(sceneID2, 1)},
 			anchorMock: &daoMock[*dao.Scene]{resp: daoScene(sceneID3, 2)},
 			to:         2,
 			moveMock:   &daoMock[*dao.Scene]{resp: daoScene(sceneID2, 2)},
@@ -60,8 +61,9 @@ func TestSceneMove(t *testing.T) {
 
 			request: request(uuid.Nil),
 
-			targetMock: &daoMock[*dao.Scene]{resp: daoScene(sceneID2, 1)},
+			ownerMock:  &daoMock[bool]{resp: true},
 			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
+			targetMock: &daoMock[*dao.Scene]{resp: daoScene(sceneID2, 1)},
 			to:         0,
 			moveMock:   &daoMock[*dao.Scene]{resp: daoScene(sceneID2, 0)},
 
@@ -72,8 +74,9 @@ func TestSceneMove(t *testing.T) {
 
 			request: request(sceneID1),
 
-			targetMock: &daoMock[*dao.Scene]{resp: daoScene(sceneID2, 1)},
+			ownerMock:  &daoMock[bool]{resp: true},
 			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
+			targetMock: &daoMock[*dao.Scene]{resp: daoScene(sceneID2, 1)},
 			anchorMock: &daoMock[*dao.Scene]{resp: daoScene(sceneID1, 0)},
 
 			expect: coreScene(sceneID2, 1),
@@ -88,26 +91,46 @@ func TestSceneMove(t *testing.T) {
 		{
 			name: "Error/InvalidRequest",
 
-			request: &core.SceneMoveRequest{OwnerID: ownerID},
+			request: &core.SceneMoveRequest{OwnerID: ownerID, ProjectID: projectID},
 
 			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/NotOwned",
+
+			request: request(uuid.Nil),
+
+			ownerMock: &daoMock[bool]{resp: false},
+
+			expectErr: core.ErrProjectNotFound,
+		},
+		{
+			name: "Error/CheckOwner",
+
+			request: request(uuid.Nil),
+
+			ownerMock: &daoMock[bool]{err: errFoo},
+
+			expectErr: errFoo,
+		},
+		{
+			name: "Error/ProjectNotFound",
+
+			request: request(uuid.Nil),
+
+			ownerMock: &daoMock[bool]{resp: true},
+			lockMock:  &daoMock[*dao.Project]{err: dao.ErrProjectLockNotFound},
+
+			expectErr: core.ErrProjectNotFound,
 		},
 		{
 			name: "Error/NotFound",
 
 			request: request(uuid.Nil),
 
+			ownerMock:  &daoMock[bool]{resp: true},
+			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
 			targetMock: &daoMock[*dao.Scene]{err: dao.ErrSceneSelectNotFound},
-
-			expectErr: core.ErrSceneNotFound,
-		},
-		{
-			name: "Error/OtherOwner",
-
-			request: request(uuid.Nil),
-
-			targetMock: &daoMock[*dao.Scene]{resp: daoScene(sceneID2, 1)},
-			lockMock:   &daoMock[*dao.Project]{resp: foreignProject()},
 
 			expectErr: core.ErrSceneNotFound,
 		},
@@ -116,25 +139,10 @@ func TestSceneMove(t *testing.T) {
 
 			request: request(sceneID3),
 
-			targetMock: &daoMock[*dao.Scene]{resp: daoScene(sceneID2, 1)},
+			ownerMock:  &daoMock[bool]{resp: true},
 			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
+			targetMock: &daoMock[*dao.Scene]{resp: daoScene(sceneID2, 1)},
 			anchorMock: &daoMock[*dao.Scene]{err: dao.ErrSceneSelectNotFound},
-
-			expectErr: core.ErrInvalidRequest,
-		},
-		{
-			name: "Error/AnchorElsewhere",
-
-			request: request(sceneID3),
-
-			targetMock: &daoMock[*dao.Scene]{resp: daoScene(sceneID2, 1)},
-			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
-			anchorMock: &daoMock[*dao.Scene]{resp: func() *dao.Scene {
-				anchor := daoScene(sceneID3, 2)
-				anchor.ProjectID = otherProjectID
-
-				return anchor
-			}()},
 
 			expectErr: core.ErrInvalidRequest,
 		},
@@ -143,8 +151,9 @@ func TestSceneMove(t *testing.T) {
 
 			request: request(uuid.Nil),
 
-			targetMock: &daoMock[*dao.Scene]{resp: daoScene(sceneID2, 1)},
+			ownerMock:  &daoMock[bool]{resp: true},
 			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
+			targetMock: &daoMock[*dao.Scene]{resp: daoScene(sceneID2, 1)},
 			to:         0,
 			moveMock:   &daoMock[*dao.Scene]{err: errFoo},
 
@@ -155,6 +164,7 @@ func TestSceneMove(t *testing.T) {
 
 			request: request(uuid.Nil),
 
+			ownerMock:  &daoMock[bool]{resp: true},
 			transactor: transactiontest.NewFailingTransactor(errFoo),
 
 			expectErr: errFoo,
@@ -165,14 +175,15 @@ func TestSceneMove(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockSelect := coremocks.NewMockSceneMoveDaoSelect(t)
+			mockOwner := coremocks.NewMockSceneMoveDaoOwner(t)
 			mockLock := coremocks.NewMockSceneMoveDaoLock(t)
+			mockSelect := coremocks.NewMockSceneMoveDaoSelect(t)
 			mockMove := coremocks.NewMockSceneMoveDao(t)
 
-			if testCase.targetMock != nil {
-				mockSelect.EXPECT().
-					Exec(mock.Anything, &dao.SceneSelectRequest{ID: sceneID2}).
-					Return(testCase.targetMock.resp, testCase.targetMock.err)
+			if testCase.ownerMock != nil {
+				mockOwner.EXPECT().
+					Exec(mock.Anything, &dao.ProjectOwnedRequest{ID: projectID, OwnerID: ownerID}).
+					Return(testCase.ownerMock.resp, testCase.ownerMock.err)
 			}
 
 			if testCase.lockMock != nil {
@@ -181,15 +192,21 @@ func TestSceneMove(t *testing.T) {
 					Return(testCase.lockMock.resp, testCase.lockMock.err)
 			}
 
+			if testCase.targetMock != nil {
+				mockSelect.EXPECT().
+					Exec(mock.Anything, &dao.SceneSelectRequest{ProjectID: projectID, ID: sceneID2}).
+					Return(testCase.targetMock.resp, testCase.targetMock.err)
+			}
+
 			if testCase.anchorMock != nil {
 				mockSelect.EXPECT().
-					Exec(mock.Anything, &dao.SceneSelectRequest{ID: testCase.request.After}).
+					Exec(mock.Anything, &dao.SceneSelectRequest{ProjectID: projectID, ID: testCase.request.After}).
 					Return(testCase.anchorMock.resp, testCase.anchorMock.err)
 			}
 
 			if testCase.moveMock != nil {
 				mockMove.EXPECT().
-					Exec(mock.Anything, &dao.SceneMoveRequest{ID: sceneID2, To: testCase.to}).
+					Exec(mock.Anything, &dao.SceneMoveRequest{ProjectID: projectID, ID: sceneID2, To: testCase.to}).
 					Return(testCase.moveMock.resp, testCase.moveMock.err)
 			}
 
@@ -198,14 +215,15 @@ func TestSceneMove(t *testing.T) {
 				transactor = transactiontest.NewTransactor()
 			}
 
-			service := core.NewSceneMove(mockSelect, mockLock, mockMove, transactor)
+			service := core.NewSceneMove(mockOwner, mockLock, mockSelect, mockMove, transactor)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
 
-			mockSelect.AssertExpectations(t)
+			mockOwner.AssertExpectations(t)
 			mockLock.AssertExpectations(t)
+			mockSelect.AssertExpectations(t)
 			mockMove.AssertExpectations(t)
 		})
 	}

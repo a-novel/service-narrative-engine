@@ -22,7 +22,7 @@ func TestLayerMove(t *testing.T) {
 	errFoo := errors.New("foo")
 
 	request := func(after uuid.UUID) *core.LayerMoveRequest {
-		return &core.LayerMoveRequest{OwnerID: ownerID, ID: layerID2, After: after}
+		return &core.LayerMoveRequest{OwnerID: ownerID, ProjectID: projectID, ID: layerID2, After: after}
 	}
 
 	testCases := []struct {
@@ -30,9 +30,9 @@ func TestLayerMove(t *testing.T) {
 
 		request *core.LayerMoveRequest
 
-		// targetMock answers both reads of the moved layer, before and after the lock.
-		targetMock *daoMock[*dao.Layer]
+		ownerMock  *daoMock[bool]
 		lockMock   *daoMock[*dao.Project]
+		targetMock *daoMock[*dao.Layer]
 		anchorMock *daoMock[*dao.Layer]
 		// to is the position the service moves the layer to, when the case reaches the move.
 		to         int
@@ -47,8 +47,9 @@ func TestLayerMove(t *testing.T) {
 
 			request: request(layerID3),
 
-			targetMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
+			ownerMock:  &daoMock[bool]{resp: true},
 			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
+			targetMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
 			anchorMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID3, 2)},
 			to:         2,
 			moveMock:   &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 2)},
@@ -60,8 +61,9 @@ func TestLayerMove(t *testing.T) {
 
 			request: request(uuid.Nil),
 
-			targetMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
+			ownerMock:  &daoMock[bool]{resp: true},
 			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
+			targetMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
 			to:         0,
 			moveMock:   &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 0)},
 
@@ -72,8 +74,9 @@ func TestLayerMove(t *testing.T) {
 
 			request: request(layerID1),
 
-			targetMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
+			ownerMock:  &daoMock[bool]{resp: true},
 			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
+			targetMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
 			anchorMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID1, 0)},
 
 			expect: coreLayer(layerID2, 1),
@@ -88,26 +91,46 @@ func TestLayerMove(t *testing.T) {
 		{
 			name: "Error/InvalidRequest",
 
-			request: &core.LayerMoveRequest{OwnerID: ownerID},
+			request: &core.LayerMoveRequest{OwnerID: ownerID, ProjectID: projectID},
 
 			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/NotOwned",
+
+			request: request(uuid.Nil),
+
+			ownerMock: &daoMock[bool]{resp: false},
+
+			expectErr: core.ErrProjectNotFound,
+		},
+		{
+			name: "Error/CheckOwner",
+
+			request: request(uuid.Nil),
+
+			ownerMock: &daoMock[bool]{err: errFoo},
+
+			expectErr: errFoo,
+		},
+		{
+			name: "Error/ProjectNotFound",
+
+			request: request(uuid.Nil),
+
+			ownerMock: &daoMock[bool]{resp: true},
+			lockMock:  &daoMock[*dao.Project]{err: dao.ErrProjectLockNotFound},
+
+			expectErr: core.ErrProjectNotFound,
 		},
 		{
 			name: "Error/NotFound",
 
 			request: request(uuid.Nil),
 
+			ownerMock:  &daoMock[bool]{resp: true},
+			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
 			targetMock: &daoMock[*dao.Layer]{err: dao.ErrLayerSelectNotFound},
-
-			expectErr: core.ErrLayerNotFound,
-		},
-		{
-			name: "Error/OtherOwner",
-
-			request: request(uuid.Nil),
-
-			targetMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
-			lockMock:   &daoMock[*dao.Project]{resp: foreignProject()},
 
 			expectErr: core.ErrLayerNotFound,
 		},
@@ -116,25 +139,10 @@ func TestLayerMove(t *testing.T) {
 
 			request: request(layerID3),
 
-			targetMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
+			ownerMock:  &daoMock[bool]{resp: true},
 			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
+			targetMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
 			anchorMock: &daoMock[*dao.Layer]{err: dao.ErrLayerSelectNotFound},
-
-			expectErr: core.ErrInvalidRequest,
-		},
-		{
-			name: "Error/AnchorElsewhere",
-
-			request: request(layerID3),
-
-			targetMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
-			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
-			anchorMock: &daoMock[*dao.Layer]{resp: func() *dao.Layer {
-				anchor := notesLayer(layerID3, 2)
-				anchor.ProjectID = otherProjectID
-
-				return anchor
-			}()},
 
 			expectErr: core.ErrInvalidRequest,
 		},
@@ -143,8 +151,9 @@ func TestLayerMove(t *testing.T) {
 
 			request: request(uuid.Nil),
 
-			targetMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
+			ownerMock:  &daoMock[bool]{resp: true},
 			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
+			targetMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
 			to:         0,
 			moveMock:   &daoMock[*dao.Layer]{err: errFoo},
 
@@ -155,6 +164,7 @@ func TestLayerMove(t *testing.T) {
 
 			request: request(uuid.Nil),
 
+			ownerMock:  &daoMock[bool]{resp: true},
 			transactor: transactiontest.NewFailingTransactor(errFoo),
 
 			expectErr: errFoo,
@@ -165,14 +175,15 @@ func TestLayerMove(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockSelect := coremocks.NewMockLayerMoveDaoSelect(t)
+			mockOwner := coremocks.NewMockLayerMoveDaoOwner(t)
 			mockLock := coremocks.NewMockLayerMoveDaoLock(t)
+			mockSelect := coremocks.NewMockLayerMoveDaoSelect(t)
 			mockMove := coremocks.NewMockLayerMoveDao(t)
 
-			if testCase.targetMock != nil {
-				mockSelect.EXPECT().
-					Exec(mock.Anything, &dao.LayerSelectRequest{ID: layerID2}).
-					Return(testCase.targetMock.resp, testCase.targetMock.err)
+			if testCase.ownerMock != nil {
+				mockOwner.EXPECT().
+					Exec(mock.Anything, &dao.ProjectOwnedRequest{ID: projectID, OwnerID: ownerID}).
+					Return(testCase.ownerMock.resp, testCase.ownerMock.err)
 			}
 
 			if testCase.lockMock != nil {
@@ -181,15 +192,21 @@ func TestLayerMove(t *testing.T) {
 					Return(testCase.lockMock.resp, testCase.lockMock.err)
 			}
 
+			if testCase.targetMock != nil {
+				mockSelect.EXPECT().
+					Exec(mock.Anything, &dao.LayerSelectRequest{ProjectID: projectID, ID: layerID2}).
+					Return(testCase.targetMock.resp, testCase.targetMock.err)
+			}
+
 			if testCase.anchorMock != nil {
 				mockSelect.EXPECT().
-					Exec(mock.Anything, &dao.LayerSelectRequest{ID: testCase.request.After}).
+					Exec(mock.Anything, &dao.LayerSelectRequest{ProjectID: projectID, ID: testCase.request.After}).
 					Return(testCase.anchorMock.resp, testCase.anchorMock.err)
 			}
 
 			if testCase.moveMock != nil {
 				mockMove.EXPECT().
-					Exec(mock.Anything, &dao.LayerMoveRequest{ID: layerID2, To: testCase.to}).
+					Exec(mock.Anything, &dao.LayerMoveRequest{ProjectID: projectID, ID: layerID2, To: testCase.to}).
 					Return(testCase.moveMock.resp, testCase.moveMock.err)
 			}
 
@@ -198,14 +215,15 @@ func TestLayerMove(t *testing.T) {
 				transactor = transactiontest.NewTransactor()
 			}
 
-			service := core.NewLayerMove(mockSelect, mockLock, mockMove, transactor)
+			service := core.NewLayerMove(mockOwner, mockLock, mockSelect, mockMove, transactor)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
 
-			mockSelect.AssertExpectations(t)
+			mockOwner.AssertExpectations(t)
 			mockLock.AssertExpectations(t)
+			mockSelect.AssertExpectations(t)
 			mockMove.AssertExpectations(t)
 		})
 	}

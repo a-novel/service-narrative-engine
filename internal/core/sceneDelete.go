@@ -14,12 +14,12 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// SceneDeleteDaoSelect reads the scene to delete.
-type SceneDeleteDaoSelect interface {
-	Exec(ctx context.Context, request *dao.SceneSelectRequest) (*dao.Scene, error)
+// SceneDeleteDaoOwner checks that the user owns the project.
+type SceneDeleteDaoOwner interface {
+	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
 }
 
-// SceneDeleteDaoLock locks the scene's project, so changes to its order run one at a time.
+// SceneDeleteDaoLock locks the project, so changes to its order run one at a time.
 type SceneDeleteDaoLock interface {
 	Exec(ctx context.Context, request *dao.ProjectLockRequest) (*dao.Project, error)
 }
@@ -31,25 +31,26 @@ type SceneDeleteDao interface {
 
 // SceneDeleteRequest names the scene to delete.
 type SceneDeleteRequest struct {
-	OwnerID uuid.UUID `validate:"required"`
-	ID      uuid.UUID `validate:"required"`
+	OwnerID   uuid.UUID `validate:"required"`
+	ProjectID uuid.UUID `validate:"required"`
+	ID        uuid.UUID `validate:"required"`
 }
 
 // SceneDelete deletes a scene with its cells, and moves the scenes after it up by one.
 type SceneDelete struct {
-	daoSelect  SceneDeleteDaoSelect
+	daoOwner   SceneDeleteDaoOwner
 	daoLock    SceneDeleteDaoLock
 	dao        SceneDeleteDao
 	transactor transaction.Transactor
 }
 
 func NewSceneDelete(
-	daoSelect SceneDeleteDaoSelect,
+	daoOwner SceneDeleteDaoOwner,
 	daoLock SceneDeleteDaoLock,
 	dao SceneDeleteDao,
 	transactor transaction.Transactor,
 ) *SceneDelete {
-	return &SceneDelete{daoSelect: daoSelect, daoLock: daoLock, dao: dao, transactor: transactor}
+	return &SceneDelete{daoOwner: daoOwner, daoLock: daoLock, dao: dao, transactor: transactor}
 }
 
 func (service *SceneDelete) Exec(ctx context.Context, request *SceneDeleteRequest) (*Scene, error) {
@@ -57,6 +58,7 @@ func (service *SceneDelete) Exec(ctx context.Context, request *SceneDeleteReques
 	defer span.End()
 
 	span.SetAttributes(
+		attribute.String("project.id", request.ProjectID.String()),
 		attribute.String("scene.id", request.ID.String()),
 		attribute.String("project.owner_id", request.OwnerID.String()),
 	)
@@ -66,34 +68,28 @@ func (service *SceneDelete) Exec(ctx context.Context, request *SceneDeleteReques
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
+	owned, err := service.daoOwner.Exec(ctx, &dao.ProjectOwnedRequest{ID: request.ProjectID, OwnerID: request.OwnerID})
+	if err != nil {
+		return nil, otel.ReportError(span, fmt.Errorf("check owner: %w", err))
+	}
+
+	if !owned {
+		return nil, otel.ReportError(span, ErrProjectNotFound)
+	}
+
 	var scene *Scene
 
 	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
-		target, err := service.daoSelect.Exec(ctx, &dao.SceneSelectRequest{ID: request.ID})
-		if errors.Is(err, dao.ErrSceneSelectNotFound) {
-			err = errors.Join(err, ErrSceneNotFound)
-		}
-
-		if err != nil {
-			return fmt.Errorf("select scene: %w", err)
-		}
-
-		project, err := service.daoLock.Exec(ctx, &dao.ProjectLockRequest{ID: target.ProjectID})
+		_, err := service.daoLock.Exec(ctx, &dao.ProjectLockRequest{ID: request.ProjectID})
 		if errors.Is(err, dao.ErrProjectLockNotFound) {
-			err = errors.Join(err, ErrSceneNotFound)
+			err = errors.Join(err, ErrProjectNotFound)
 		}
 
 		if err != nil {
 			return fmt.Errorf("lock project: %w", err)
 		}
 
-		err = checkOwner(project, request.OwnerID, ErrSceneNotFound)
-		if err != nil {
-			return err
-		}
-
-		// The lock serializes deletes, so a miss means a concurrent delete won.
-		deleted, err := service.dao.Exec(ctx, &dao.SceneDeleteRequest{ID: request.ID})
+		deleted, err := service.dao.Exec(ctx, &dao.SceneDeleteRequest{ProjectID: request.ProjectID, ID: request.ID})
 		if errors.Is(err, dao.ErrSceneDeleteNotFound) {
 			err = errors.Join(err, ErrSceneNotFound)
 		}
@@ -102,7 +98,7 @@ func (service *SceneDelete) Exec(ctx context.Context, request *SceneDeleteReques
 			return fmt.Errorf("delete scene: %w", err)
 		}
 
-		scene = newScene(deleted, 0)
+		scene = newScene(deleted)
 
 		return nil
 	})

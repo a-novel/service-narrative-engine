@@ -15,14 +15,9 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// SceneUpdateDaoSelect reads the scene, to find its project.
-type SceneUpdateDaoSelect interface {
-	Exec(ctx context.Context, request *dao.SceneSelectRequest) (*dao.Scene, error)
-}
-
-// SceneUpdateDaoProject reads the scene's project, to check its owner.
-type SceneUpdateDaoProject interface {
-	Exec(ctx context.Context, request *dao.ProjectSelectRequest) (*dao.Project, error)
+// SceneUpdateDaoOwner checks that the user owns the project.
+type SceneUpdateDaoOwner interface {
+	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
 }
 
 // SceneUpdateDao writes the scene's new fields.
@@ -32,24 +27,28 @@ type SceneUpdateDao interface {
 
 // SceneUpdateRequest carries a scene's new fields.
 type SceneUpdateRequest struct {
-	OwnerID uuid.UUID `validate:"required"`
-	ID      uuid.UUID `validate:"required"`
-	Title   string    `validate:"required,notblank,max=200"`
+	OwnerID   uuid.UUID `validate:"required"`
+	ProjectID uuid.UUID `validate:"required"`
+	ID        uuid.UUID `validate:"required"`
+
+	// Title names the scene in the composer.
+	Title string `validate:"required,notblank,max=200"`
 	// Color is the scene's color in the composer, as a #rrggbb hex code in either case.
-	Color       string `validate:"required,len=7,hexcolor"`
+	Color string `validate:"required,len=7,hexcolor"`
+	// Description says what the scene is for, written for the author.
 	Description string `validate:"max=20000"`
-	Prompt      string `validate:"max=20000"`
+	// Prompt holds extra instructions for the model when it writes about the scene.
+	Prompt string `validate:"max=20000"`
 }
 
 // SceneUpdate replaces a scene's title, color, description and prompt.
 type SceneUpdate struct {
-	daoSelect  SceneUpdateDaoSelect
-	daoProject SceneUpdateDaoProject
-	dao        SceneUpdateDao
+	daoOwner SceneUpdateDaoOwner
+	dao      SceneUpdateDao
 }
 
-func NewSceneUpdate(daoSelect SceneUpdateDaoSelect, daoProject SceneUpdateDaoProject, dao SceneUpdateDao) *SceneUpdate {
-	return &SceneUpdate{daoSelect: daoSelect, daoProject: daoProject, dao: dao}
+func NewSceneUpdate(daoOwner SceneUpdateDaoOwner, dao SceneUpdateDao) *SceneUpdate {
+	return &SceneUpdate{daoOwner: daoOwner, dao: dao}
 }
 
 func (service *SceneUpdate) Exec(ctx context.Context, request *SceneUpdateRequest) (*Scene, error) {
@@ -57,6 +56,7 @@ func (service *SceneUpdate) Exec(ctx context.Context, request *SceneUpdateReques
 	defer span.End()
 
 	span.SetAttributes(
+		attribute.String("project.id", request.ProjectID.String()),
 		attribute.String("scene.id", request.ID.String()),
 		attribute.String("project.owner_id", request.OwnerID.String()),
 	)
@@ -66,30 +66,17 @@ func (service *SceneUpdate) Exec(ctx context.Context, request *SceneUpdateReques
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	target, err := service.daoSelect.Exec(ctx, &dao.SceneSelectRequest{ID: request.ID})
-	if errors.Is(err, dao.ErrSceneSelectNotFound) {
-		err = errors.Join(err, ErrSceneNotFound)
-	}
-
+	owned, err := service.daoOwner.Exec(ctx, &dao.ProjectOwnedRequest{ID: request.ProjectID, OwnerID: request.OwnerID})
 	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("select scene: %w", err))
+		return nil, otel.ReportError(span, fmt.Errorf("check owner: %w", err))
 	}
 
-	project, err := service.daoProject.Exec(ctx, &dao.ProjectSelectRequest{ID: target.ProjectID})
-	if errors.Is(err, dao.ErrProjectSelectNotFound) {
-		err = errors.Join(err, ErrSceneNotFound)
-	}
-
-	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("select project: %w", err))
-	}
-
-	err = checkOwner(project, request.OwnerID, ErrSceneNotFound)
-	if err != nil {
-		return nil, otel.ReportError(span, err)
+	if !owned {
+		return nil, otel.ReportError(span, ErrProjectNotFound)
 	}
 
 	entity, err := service.dao.Exec(ctx, &dao.SceneUpdateRequest{
+		ProjectID:   request.ProjectID,
 		ID:          request.ID,
 		Title:       request.Title,
 		Color:       strings.ToLower(request.Color),
@@ -105,5 +92,5 @@ func (service *SceneUpdate) Exec(ctx context.Context, request *SceneUpdateReques
 		return nil, otel.ReportError(span, fmt.Errorf("update scene: %w", err))
 	}
 
-	return newScene(entity, 0), nil
+	return newScene(entity), nil
 }

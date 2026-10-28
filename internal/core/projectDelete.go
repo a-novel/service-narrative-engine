@@ -13,9 +13,9 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// ProjectDeleteDaoSelect reads the project, to check its owner.
-type ProjectDeleteDaoSelect interface {
-	Exec(ctx context.Context, request *dao.ProjectSelectRequest) (*dao.Project, error)
+// ProjectDeleteDaoOwner checks that the user owns the project.
+type ProjectDeleteDaoOwner interface {
+	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
 }
 
 // ProjectDeleteDao removes the project.
@@ -31,12 +31,12 @@ type ProjectDeleteRequest struct {
 
 // ProjectDelete deletes a project with its scenes, layers and cells.
 type ProjectDelete struct {
-	daoSelect ProjectDeleteDaoSelect
-	dao       ProjectDeleteDao
+	daoOwner ProjectDeleteDaoOwner
+	dao      ProjectDeleteDao
 }
 
-func NewProjectDelete(daoSelect ProjectDeleteDaoSelect, dao ProjectDeleteDao) *ProjectDelete {
-	return &ProjectDelete{daoSelect: daoSelect, dao: dao}
+func NewProjectDelete(daoOwner ProjectDeleteDaoOwner, dao ProjectDeleteDao) *ProjectDelete {
+	return &ProjectDelete{daoOwner: daoOwner, dao: dao}
 }
 
 func (service *ProjectDelete) Exec(ctx context.Context, request *ProjectDeleteRequest) (*Project, error) {
@@ -53,18 +53,13 @@ func (service *ProjectDelete) Exec(ctx context.Context, request *ProjectDeleteRe
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	project, err := service.daoSelect.Exec(ctx, &dao.ProjectSelectRequest{ID: request.ID})
-	if errors.Is(err, dao.ErrProjectSelectNotFound) {
-		err = errors.Join(err, ErrProjectNotFound)
+	owned, err := service.daoOwner.Exec(ctx, &dao.ProjectOwnedRequest{ID: request.ID, OwnerID: request.OwnerID})
+	if err != nil {
+		return nil, otel.ReportError(span, fmt.Errorf("check owner: %w", err))
 	}
 
-	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("select project: %w", err))
-	}
-
-	err = checkOwner(project, request.OwnerID, ErrProjectNotFound)
-	if err != nil {
-		return nil, otel.ReportError(span, err)
+	if !owned {
+		return nil, otel.ReportError(span, ErrProjectNotFound)
 	}
 
 	entity, err := service.dao.Exec(ctx, &dao.ProjectDeleteRequest{ID: request.ID})

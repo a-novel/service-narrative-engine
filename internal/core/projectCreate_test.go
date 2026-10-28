@@ -2,6 +2,7 @@ package core_test
 
 import (
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/mock"
@@ -113,9 +114,7 @@ func TestProjectCreate(t *testing.T) {
 
 			request: &core.ProjectCreateRequest{
 				OwnerID: ownerID, Title: "Clear Hours", Language: "en",
-				Scenes: []core.ProjectCreateScene{
-					{Title: "Un", Color: sceneColor}, {Title: "Deux", Color: sceneColor}, {Title: "Trois", Color: sceneColor},
-				},
+				Scenes: slices.Repeat([]core.ProjectCreateScene{{Title: "Scene", Color: sceneColor}}, 501),
 			},
 
 			expectErr: core.ErrInvalidRequest,
@@ -201,7 +200,7 @@ func TestProjectCreate(t *testing.T) {
 				transactor = transactiontest.NewTransactor()
 			}
 
-			service := core.NewProjectCreate(daoProjectMock, daoLayerMock, daoScenesMock, transactor, testLimits)
+			service := core.NewProjectCreate(daoProjectMock, daoLayerMock, daoScenesMock, transactor)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)

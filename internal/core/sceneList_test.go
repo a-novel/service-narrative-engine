@@ -22,7 +22,7 @@ func TestSceneList(t *testing.T) {
 
 		request *core.SceneListRequest
 
-		projectMock *daoMock[*dao.Project]
+		ownerMock *daoMock[bool]
 		// listRequest is the page the service asks for, when the case reaches the list.
 		listRequest *dao.SceneListRequest
 		listMock    *daoMock[[]*dao.SceneListRow]
@@ -35,7 +35,7 @@ func TestSceneList(t *testing.T) {
 
 			request: &core.SceneListRequest{OwnerID: ownerID, ProjectID: projectID, Limit: 50, Offset: 100},
 
-			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
+			ownerMock:   &daoMock[bool]{resp: true},
 			listRequest: &dao.SceneListRequest{ProjectID: projectID, Limit: 50, Offset: 100},
 			listMock:    &daoMock[[]*dao.SceneListRow]{resp: []*dao.SceneListRow{{Scene: *daoScene(sceneID1, 100), Total: 120}}},
 
@@ -46,7 +46,7 @@ func TestSceneList(t *testing.T) {
 
 			request: &core.SceneListRequest{OwnerID: ownerID, ProjectID: projectID},
 
-			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
+			ownerMock:   &daoMock[bool]{resp: true},
 			listRequest: &dao.SceneListRequest{ProjectID: projectID, Limit: core.SceneListDefaultSize},
 			listMock:    &daoMock[[]*dao.SceneListRow]{},
 
@@ -60,6 +60,13 @@ func TestSceneList(t *testing.T) {
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
+			name: "Error/NegativeLimit",
+
+			request: &core.SceneListRequest{OwnerID: ownerID, ProjectID: projectID, Limit: -1},
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
 			name: "Error/NegativeOffset",
 
 			request: &core.SceneListRequest{OwnerID: ownerID, ProjectID: projectID, Offset: -1},
@@ -67,29 +74,29 @@ func TestSceneList(t *testing.T) {
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
-			name: "Error/ProjectNotFound",
+			name: "Error/NotOwned",
 
 			request: &core.SceneListRequest{OwnerID: ownerID, ProjectID: projectID},
 
-			projectMock: &daoMock[*dao.Project]{err: dao.ErrProjectSelectNotFound},
+			ownerMock: &daoMock[bool]{resp: false},
 
 			expectErr: core.ErrProjectNotFound,
 		},
 		{
-			name: "Error/OtherOwner",
+			name: "Error/CheckOwner",
 
 			request: &core.SceneListRequest{OwnerID: ownerID, ProjectID: projectID},
 
-			projectMock: &daoMock[*dao.Project]{resp: foreignProject()},
+			ownerMock: &daoMock[bool]{err: errFoo},
 
-			expectErr: core.ErrProjectNotFound,
+			expectErr: errFoo,
 		},
 		{
 			name: "Error/List",
 
 			request: &core.SceneListRequest{OwnerID: ownerID, ProjectID: projectID},
 
-			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
+			ownerMock:   &daoMock[bool]{resp: true},
 			listRequest: &dao.SceneListRequest{ProjectID: projectID, Limit: core.SceneListDefaultSize},
 			listMock:    &daoMock[[]*dao.SceneListRow]{err: errFoo},
 
@@ -101,13 +108,13 @@ func TestSceneList(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockProject := coremocks.NewMockSceneListDaoProject(t)
+			mockOwner := coremocks.NewMockSceneListDaoOwner(t)
 			mockList := coremocks.NewMockSceneListDao(t)
 
-			if testCase.projectMock != nil {
-				mockProject.EXPECT().
-					Exec(mock.Anything, &dao.ProjectSelectRequest{ID: projectID}).
-					Return(testCase.projectMock.resp, testCase.projectMock.err)
+			if testCase.ownerMock != nil {
+				mockOwner.EXPECT().
+					Exec(mock.Anything, &dao.ProjectOwnedRequest{ID: projectID, OwnerID: ownerID}).
+					Return(testCase.ownerMock.resp, testCase.ownerMock.err)
 			}
 
 			if testCase.listMock != nil {
@@ -116,13 +123,13 @@ func TestSceneList(t *testing.T) {
 					Return(testCase.listMock.resp, testCase.listMock.err)
 			}
 
-			service := core.NewSceneList(mockProject, mockList)
+			service := core.NewSceneList(mockOwner, mockList)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
 
-			mockProject.AssertExpectations(t)
+			mockOwner.AssertExpectations(t)
 			mockList.AssertExpectations(t)
 		})
 	}

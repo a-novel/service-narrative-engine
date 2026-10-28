@@ -19,16 +19,15 @@ type ProjectListDao interface {
 	Exec(ctx context.Context, request *dao.ProjectListRequest) ([]*dao.ProjectListRow, error)
 }
 
-// ProjectListDefaultSize is the page size of a [ProjectListRequest] whose Limit is zero or negative.
+// ProjectListDefaultSize is the page size of a [ProjectListRequest] whose Limit is zero.
 const ProjectListDefaultSize = 20
 
 // ProjectListRequest selects a page of the caller's projects.
 type ProjectListRequest struct {
 	OwnerID uuid.UUID `validate:"required"`
 
-	// Limit caps the page at 100 projects. It defaults to [ProjectListDefaultSize] when zero or
-	// negative.
-	Limit int `validate:"max=100"`
+	// Limit caps the page at 100 projects. It defaults to [ProjectListDefaultSize] when zero.
+	Limit int `validate:"min=0,max=100"`
 	// Offset is how many projects come before the page, newest first.
 	Offset int `validate:"min=0"`
 }
@@ -46,20 +45,20 @@ func (service *ProjectList) Exec(ctx context.Context, request *ProjectListReques
 	ctx, span := otel.Tracer().Start(ctx, "core.ProjectList")
 	defer span.End()
 
-	limit := request.Limit
-	if limit <= 0 {
-		limit = ProjectListDefaultSize
-	}
-
 	span.SetAttributes(
 		attribute.String("project.owner_id", request.OwnerID.String()),
-		attribute.Int("projects.limit", limit),
+		attribute.Int("projects.limit", request.Limit),
 		attribute.Int("projects.offset", request.Offset),
 	)
 
 	err := validate.Struct(request)
 	if err != nil {
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
+	}
+
+	limit := request.Limit
+	if limit == 0 {
+		limit = ProjectListDefaultSize
 	}
 
 	rows, err := service.dao.Exec(ctx, &dao.ProjectListRequest{

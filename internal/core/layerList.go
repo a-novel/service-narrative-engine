@@ -14,9 +14,9 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// LayerListDaoProject reads the project, to check its owner.
-type LayerListDaoProject interface {
-	Exec(ctx context.Context, request *dao.ProjectSelectRequest) (*dao.Project, error)
+// LayerListDaoOwner checks that the user owns the project.
+type LayerListDaoOwner interface {
+	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
 }
 
 // LayerListDao reads a page of the project's layers.
@@ -24,7 +24,7 @@ type LayerListDao interface {
 	Exec(ctx context.Context, request *dao.LayerListRequest) ([]*dao.LayerListRow, error)
 }
 
-// LayerListDefaultSize is the page size of a [LayerListRequest] whose Limit is zero or negative.
+// LayerListDefaultSize is the page size of a [LayerListRequest] whose Limit is zero.
 const LayerListDefaultSize = 100
 
 // LayerListRequest selects a page of a project's layers.
@@ -32,8 +32,8 @@ type LayerListRequest struct {
 	OwnerID   uuid.UUID `validate:"required"`
 	ProjectID uuid.UUID `validate:"required"`
 
-	// Limit caps the page at 500 layers. It defaults to [LayerListDefaultSize] when zero or negative.
-	Limit int `validate:"max=500"`
+	// Limit caps the page at 500 layers. It defaults to [LayerListDefaultSize] when zero.
+	Limit int `validate:"min=0,max=500"`
 	// Offset is how many layers come before the page, in order.
 	Offset int `validate:"min=0"`
 }
@@ -41,27 +41,22 @@ type LayerListRequest struct {
 // LayerList reads a project's layers page by page, in order. Each page carries the total, so a
 // client knows when it holds every layer.
 type LayerList struct {
-	daoProject LayerListDaoProject
-	dao        LayerListDao
+	daoOwner LayerListDaoOwner
+	dao      LayerListDao
 }
 
-func NewLayerList(daoProject LayerListDaoProject, dao LayerListDao) *LayerList {
-	return &LayerList{daoProject: daoProject, dao: dao}
+func NewLayerList(daoOwner LayerListDaoOwner, dao LayerListDao) *LayerList {
+	return &LayerList{daoOwner: daoOwner, dao: dao}
 }
 
 func (service *LayerList) Exec(ctx context.Context, request *LayerListRequest) (*LayerPage, error) {
 	ctx, span := otel.Tracer().Start(ctx, "core.LayerList")
 	defer span.End()
 
-	limit := request.Limit
-	if limit <= 0 {
-		limit = LayerListDefaultSize
-	}
-
 	span.SetAttributes(
 		attribute.String("project.id", request.ProjectID.String()),
 		attribute.String("project.owner_id", request.OwnerID.String()),
-		attribute.Int("layers.limit", limit),
+		attribute.Int("layers.limit", request.Limit),
 		attribute.Int("layers.offset", request.Offset),
 	)
 
@@ -70,18 +65,18 @@ func (service *LayerList) Exec(ctx context.Context, request *LayerListRequest) (
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	project, err := service.daoProject.Exec(ctx, &dao.ProjectSelectRequest{ID: request.ProjectID})
-	if errors.Is(err, dao.ErrProjectSelectNotFound) {
-		err = errors.Join(err, ErrProjectNotFound)
+	limit := request.Limit
+	if limit == 0 {
+		limit = LayerListDefaultSize
 	}
 
+	owned, err := service.daoOwner.Exec(ctx, &dao.ProjectOwnedRequest{ID: request.ProjectID, OwnerID: request.OwnerID})
 	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("select project: %w", err))
+		return nil, otel.ReportError(span, fmt.Errorf("check owner: %w", err))
 	}
 
-	err = checkOwner(project, request.OwnerID, ErrProjectNotFound)
-	if err != nil {
-		return nil, otel.ReportError(span, err)
+	if !owned {
+		return nil, otel.ReportError(span, ErrProjectNotFound)
 	}
 
 	rows, err := service.dao.Exec(ctx, &dao.LayerListRequest{
@@ -94,7 +89,7 @@ func (service *LayerList) Exec(ctx context.Context, request *LayerListRequest) (
 	}
 
 	page := &LayerPage{
-		Layers: lo.Map(rows, func(row *dao.LayerListRow, _ int) *Layer { return newLayer(&row.Layer, 0) }),
+		Layers: lo.Map(rows, func(row *dao.LayerListRow, _ int) *Layer { return newLayer(&row.Layer) }),
 	}
 
 	// Every row carries the total, and a page past the end carries none.

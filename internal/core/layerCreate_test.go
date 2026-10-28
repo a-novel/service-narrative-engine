@@ -25,6 +25,7 @@ func TestLayerCreate(t *testing.T) {
 
 		request *core.LayerCreateRequest
 
+		ownerMock  *daoMock[bool]
 		lockMock   *daoMock[*dao.Project]
 		anchorMock *daoMock[*dao.Layer]
 		// position is where the service inserts the layer, when the case reaches the insert.
@@ -40,6 +41,7 @@ func TestLayerCreate(t *testing.T) {
 
 			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID, Name: "Layer"},
 
+			ownerMock:  &daoMock[bool]{resp: true},
 			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
 			position:   0,
 			insertMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID3, 0)},
@@ -51,6 +53,7 @@ func TestLayerCreate(t *testing.T) {
 
 			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID, Name: "Layer", After: layerID2},
 
+			ownerMock:  &daoMock[bool]{resp: true},
 			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
 			anchorMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
 			position:   2,
@@ -66,20 +69,30 @@ func TestLayerCreate(t *testing.T) {
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
-			name: "Error/ProjectNotFound",
+			name: "Error/NotOwned",
 
 			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID, Name: "Layer"},
 
-			lockMock: &daoMock[*dao.Project]{err: dao.ErrProjectLockNotFound},
+			ownerMock: &daoMock[bool]{resp: false},
 
 			expectErr: core.ErrProjectNotFound,
 		},
 		{
-			name: "Error/OtherOwner",
+			name: "Error/CheckOwner",
 
 			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID, Name: "Layer"},
 
-			lockMock: &daoMock[*dao.Project]{resp: foreignProject()},
+			ownerMock: &daoMock[bool]{err: errFoo},
+
+			expectErr: errFoo,
+		},
+		{
+			name: "Error/ProjectNotFound",
+
+			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID, Name: "Layer"},
+
+			ownerMock: &daoMock[bool]{resp: true},
+			lockMock:  &daoMock[*dao.Project]{err: dao.ErrProjectLockNotFound},
 
 			expectErr: core.ErrProjectNotFound,
 		},
@@ -88,23 +101,9 @@ func TestLayerCreate(t *testing.T) {
 
 			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID, Name: "Layer", After: layerID2},
 
+			ownerMock:  &daoMock[bool]{resp: true},
 			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
 			anchorMock: &daoMock[*dao.Layer]{err: dao.ErrLayerSelectNotFound},
-
-			expectErr: core.ErrInvalidRequest,
-		},
-		{
-			name: "Error/AnchorElsewhere",
-
-			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID, Name: "Layer", After: layerID2},
-
-			lockMock: &daoMock[*dao.Project]{resp: daoProject()},
-			anchorMock: &daoMock[*dao.Layer]{resp: func() *dao.Layer {
-				anchor := notesLayer(layerID3, 2)
-				anchor.ProjectID = otherProjectID
-
-				return anchor
-			}()},
 
 			expectErr: core.ErrInvalidRequest,
 		},
@@ -113,6 +112,7 @@ func TestLayerCreate(t *testing.T) {
 
 			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID, Name: "Layer"},
 
+			ownerMock:  &daoMock[bool]{resp: true},
 			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
 			insertMock: &daoMock[*dao.Layer]{err: dao.ErrLayerInsertFull},
 
@@ -123,6 +123,7 @@ func TestLayerCreate(t *testing.T) {
 
 			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID, Name: "Layer"},
 
+			ownerMock:  &daoMock[bool]{resp: true},
 			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
 			insertMock: &daoMock[*dao.Layer]{err: errFoo},
 
@@ -133,6 +134,7 @@ func TestLayerCreate(t *testing.T) {
 
 			request: &core.LayerCreateRequest{OwnerID: ownerID, ProjectID: projectID, Name: "Layer"},
 
+			ownerMock:  &daoMock[bool]{resp: true},
 			transactor: transactiontest.NewFailingTransactor(errFoo),
 
 			expectErr: errFoo,
@@ -143,9 +145,16 @@ func TestLayerCreate(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
+			mockOwner := coremocks.NewMockLayerCreateDaoOwner(t)
 			mockLock := coremocks.NewMockLayerCreateDaoLock(t)
 			mockSelect := coremocks.NewMockLayerCreateDaoSelect(t)
 			mockInsert := coremocks.NewMockLayerCreateDaoInsert(t)
+
+			if testCase.ownerMock != nil {
+				mockOwner.EXPECT().
+					Exec(mock.Anything, &dao.ProjectOwnedRequest{ID: projectID, OwnerID: ownerID}).
+					Return(testCase.ownerMock.resp, testCase.ownerMock.err)
+			}
 
 			if testCase.lockMock != nil {
 				mockLock.EXPECT().
@@ -155,7 +164,7 @@ func TestLayerCreate(t *testing.T) {
 
 			if testCase.anchorMock != nil {
 				mockSelect.EXPECT().
-					Exec(mock.Anything, &dao.LayerSelectRequest{ID: testCase.request.After}).
+					Exec(mock.Anything, &dao.LayerSelectRequest{ProjectID: projectID, ID: testCase.request.After}).
 					Return(testCase.anchorMock.resp, testCase.anchorMock.err)
 			}
 
@@ -173,12 +182,13 @@ func TestLayerCreate(t *testing.T) {
 				transactor = transactiontest.NewTransactor()
 			}
 
-			service := core.NewLayerCreate(mockLock, mockSelect, mockInsert, transactor)
+			service := core.NewLayerCreate(mockOwner, mockLock, mockSelect, mockInsert, transactor)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
 
+			mockOwner.AssertExpectations(t)
 			mockLock.AssertExpectations(t)
 			mockSelect.AssertExpectations(t)
 			mockInsert.AssertExpectations(t)

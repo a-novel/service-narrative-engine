@@ -14,9 +14,9 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// ProjectUpdateDaoSelect reads the project, to check its owner.
-type ProjectUpdateDaoSelect interface {
-	Exec(ctx context.Context, request *dao.ProjectSelectRequest) (*dao.Project, error)
+// ProjectUpdateDaoOwner checks that the user owns the project.
+type ProjectUpdateDaoOwner interface {
+	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
 }
 
 // ProjectUpdateDao writes the project's new fields.
@@ -28,20 +28,23 @@ type ProjectUpdateDao interface {
 type ProjectUpdateRequest struct {
 	OwnerID uuid.UUID `validate:"required"`
 	ID      uuid.UUID `validate:"required"`
-	Title   string    `validate:"required,notblank,max=200"`
-	Premise string    `validate:"max=20000"`
+
+	// Title names the narrative.
+	Title string `validate:"required,notblank,max=200"`
+	// Premise says what the narrative is about, in a few sentences.
+	Premise string `validate:"max=20000"`
 	// Language is the language the project is written in.
 	Language string `validate:"required,oneof=en fr"`
 }
 
 // ProjectUpdate replaces a project's own fields.
 type ProjectUpdate struct {
-	daoSelect ProjectUpdateDaoSelect
-	dao       ProjectUpdateDao
+	daoOwner ProjectUpdateDaoOwner
+	dao      ProjectUpdateDao
 }
 
-func NewProjectUpdate(daoSelect ProjectUpdateDaoSelect, dao ProjectUpdateDao) *ProjectUpdate {
-	return &ProjectUpdate{daoSelect: daoSelect, dao: dao}
+func NewProjectUpdate(daoOwner ProjectUpdateDaoOwner, dao ProjectUpdateDao) *ProjectUpdate {
+	return &ProjectUpdate{daoOwner: daoOwner, dao: dao}
 }
 
 func (service *ProjectUpdate) Exec(ctx context.Context, request *ProjectUpdateRequest) (*Project, error) {
@@ -58,18 +61,13 @@ func (service *ProjectUpdate) Exec(ctx context.Context, request *ProjectUpdateRe
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	project, err := service.daoSelect.Exec(ctx, &dao.ProjectSelectRequest{ID: request.ID})
-	if errors.Is(err, dao.ErrProjectSelectNotFound) {
-		err = errors.Join(err, ErrProjectNotFound)
+	owned, err := service.daoOwner.Exec(ctx, &dao.ProjectOwnedRequest{ID: request.ID, OwnerID: request.OwnerID})
+	if err != nil {
+		return nil, otel.ReportError(span, fmt.Errorf("check owner: %w", err))
 	}
 
-	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("select project: %w", err))
-	}
-
-	err = checkOwner(project, request.OwnerID, ErrProjectNotFound)
-	if err != nil {
-		return nil, otel.ReportError(span, err)
+	if !owned {
+		return nil, otel.ReportError(span, ErrProjectNotFound)
 	}
 
 	entity, err := service.dao.Exec(ctx, &dao.ProjectUpdateRequest{

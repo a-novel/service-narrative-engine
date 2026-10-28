@@ -14,14 +14,9 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// LayerUpdateDaoSelect reads the layer, to find its project.
-type LayerUpdateDaoSelect interface {
-	Exec(ctx context.Context, request *dao.LayerSelectRequest) (*dao.Layer, error)
-}
-
-// LayerUpdateDaoProject reads the layer's project, to check its owner.
-type LayerUpdateDaoProject interface {
-	Exec(ctx context.Context, request *dao.ProjectSelectRequest) (*dao.Project, error)
+// LayerUpdateDaoOwner checks that the user owns the project.
+type LayerUpdateDaoOwner interface {
+	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
 }
 
 // LayerUpdateDao writes the layer's new fields.
@@ -31,21 +26,24 @@ type LayerUpdateDao interface {
 
 // LayerUpdateRequest carries a layer's new fields.
 type LayerUpdateRequest struct {
-	OwnerID     uuid.UUID `validate:"required"`
-	ID          uuid.UUID `validate:"required"`
-	Name        string    `validate:"required,notblank,max=100"`
-	Description string    `validate:"max=20000"`
+	OwnerID   uuid.UUID `validate:"required"`
+	ProjectID uuid.UUID `validate:"required"`
+	ID        uuid.UUID `validate:"required"`
+
+	// Name labels the layer's row in the composer.
+	Name string `validate:"required,notblank,max=100"`
+	// Description says what the layer records.
+	Description string `validate:"max=20000"`
 }
 
 // LayerUpdate replaces a layer's name and description.
 type LayerUpdate struct {
-	daoSelect  LayerUpdateDaoSelect
-	daoProject LayerUpdateDaoProject
-	dao        LayerUpdateDao
+	daoOwner LayerUpdateDaoOwner
+	dao      LayerUpdateDao
 }
 
-func NewLayerUpdate(daoSelect LayerUpdateDaoSelect, daoProject LayerUpdateDaoProject, dao LayerUpdateDao) *LayerUpdate {
-	return &LayerUpdate{daoSelect: daoSelect, daoProject: daoProject, dao: dao}
+func NewLayerUpdate(daoOwner LayerUpdateDaoOwner, dao LayerUpdateDao) *LayerUpdate {
+	return &LayerUpdate{daoOwner: daoOwner, dao: dao}
 }
 
 func (service *LayerUpdate) Exec(ctx context.Context, request *LayerUpdateRequest) (*Layer, error) {
@@ -53,6 +51,7 @@ func (service *LayerUpdate) Exec(ctx context.Context, request *LayerUpdateReques
 	defer span.End()
 
 	span.SetAttributes(
+		attribute.String("project.id", request.ProjectID.String()),
 		attribute.String("layer.id", request.ID.String()),
 		attribute.String("project.owner_id", request.OwnerID.String()),
 	)
@@ -62,30 +61,17 @@ func (service *LayerUpdate) Exec(ctx context.Context, request *LayerUpdateReques
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	target, err := service.daoSelect.Exec(ctx, &dao.LayerSelectRequest{ID: request.ID})
-	if errors.Is(err, dao.ErrLayerSelectNotFound) {
-		err = errors.Join(err, ErrLayerNotFound)
-	}
-
+	owned, err := service.daoOwner.Exec(ctx, &dao.ProjectOwnedRequest{ID: request.ProjectID, OwnerID: request.OwnerID})
 	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("select layer: %w", err))
+		return nil, otel.ReportError(span, fmt.Errorf("check owner: %w", err))
 	}
 
-	project, err := service.daoProject.Exec(ctx, &dao.ProjectSelectRequest{ID: target.ProjectID})
-	if errors.Is(err, dao.ErrProjectSelectNotFound) {
-		err = errors.Join(err, ErrLayerNotFound)
-	}
-
-	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("select project: %w", err))
-	}
-
-	err = checkOwner(project, request.OwnerID, ErrLayerNotFound)
-	if err != nil {
-		return nil, otel.ReportError(span, err)
+	if !owned {
+		return nil, otel.ReportError(span, ErrProjectNotFound)
 	}
 
 	entity, err := service.dao.Exec(ctx, &dao.LayerUpdateRequest{
+		ProjectID:   request.ProjectID,
 		ID:          request.ID,
 		Name:        request.Name,
 		Description: request.Description,
@@ -99,5 +85,5 @@ func (service *LayerUpdate) Exec(ctx context.Context, request *LayerUpdateReques
 		return nil, otel.ReportError(span, fmt.Errorf("update layer: %w", err))
 	}
 
-	return newLayer(entity, 0), nil
+	return newLayer(entity), nil
 }

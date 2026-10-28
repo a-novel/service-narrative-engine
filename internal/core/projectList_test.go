@@ -64,6 +64,13 @@ func TestProjectList(t *testing.T) {
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
+			name: "Error/NegativeLimit",
+
+			request: &core.ProjectListRequest{OwnerID: ownerID, Limit: -1},
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
 			name: "Error/NegativeOffset",
 
 			request: &core.ProjectListRequest{OwnerID: ownerID, Offset: -1},

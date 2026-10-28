@@ -16,7 +16,6 @@ import (
 	"github.com/a-novel-kit/golib/otel"
 	"github.com/a-novel-kit/golib/transaction"
 
-	"github.com/a-novel/service-narrative-engine/internal/config"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
@@ -45,22 +44,29 @@ type ProjectCreateDaoScenes interface {
 
 // ProjectCreateScene is a scene a new project starts with, such as one a preset seeds.
 type ProjectCreateScene struct {
+	// Title names the scene in the composer.
 	Title string `validate:"required,notblank,max=200"`
 	// Color is the scene's color in the composer, as a #rrggbb hex code in either case.
-	Color       string `validate:"required,len=7,hexcolor"`
+	Color string `validate:"required,len=7,hexcolor"`
+	// Description says what the scene is for, written for the author.
 	Description string `validate:"max=20000"`
-	Prompt      string `validate:"max=20000"`
+	// Prompt holds extra instructions for the model when it writes about the scene.
+	Prompt string `validate:"max=20000"`
 }
 
 // ProjectCreateRequest carries a new project and the scenes it starts with.
 type ProjectCreateRequest struct {
 	OwnerID uuid.UUID `validate:"required"`
-	Title   string    `validate:"required,notblank,max=200"`
-	Premise string    `validate:"max=20000"`
+
+	// Title names the narrative.
+	Title string `validate:"required,notblank,max=200"`
+	// Premise says what the narrative is about, in a few sentences.
+	Premise string `validate:"max=20000"`
 	// Language is the language the project is written in.
 	Language string `validate:"required,oneof=en fr"`
-	// Scenes are the scenes the project starts with, in order.
-	Scenes []ProjectCreateScene `validate:"dive"`
+
+	// Scenes are the scenes the project starts with, in order, up to the 500 a project holds.
+	Scenes []ProjectCreateScene `validate:"max=500,dive"`
 }
 
 // ProjectCreate creates a project with its manuscript layer and its first scenes, in one
@@ -70,7 +76,6 @@ type ProjectCreate struct {
 	daoLayer   ProjectCreateDaoLayer
 	daoScenes  ProjectCreateDaoScenes
 	transactor transaction.Transactor
-	config     config.Composer
 }
 
 func NewProjectCreate(
@@ -78,14 +83,12 @@ func NewProjectCreate(
 	daoLayer ProjectCreateDaoLayer,
 	daoScenes ProjectCreateDaoScenes,
 	transactor transaction.Transactor,
-	config config.Composer,
 ) *ProjectCreate {
 	return &ProjectCreate{
 		daoProject: daoProject,
 		daoLayer:   daoLayer,
 		daoScenes:  daoScenes,
 		transactor: transactor,
-		config:     config,
 	}
 }
 
@@ -101,12 +104,6 @@ func (service *ProjectCreate) Exec(ctx context.Context, request *ProjectCreateRe
 	err := validate.Struct(request)
 	if err != nil {
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
-	}
-
-	if len(request.Scenes) > service.config.MaxSeedScenes {
-		return nil, otel.ReportError(span, fmt.Errorf(
-			"%w: %d scenes, at most %d", ErrInvalidRequest, len(request.Scenes), service.config.MaxSeedScenes,
-		))
 	}
 
 	// UUIDv7 sorts by creation time, which lets ProjectList order projects by ID. The project and its manuscript
@@ -145,7 +142,7 @@ func (service *ProjectCreate) Exec(ctx context.Context, request *ProjectCreateRe
 		}
 
 		composer.Project = newProject(project)
-		composer.Layers = []*Layer{newLayer(layer, 0)}
+		composer.Layers = []*Layer{newLayer(layer)}
 
 		if len(request.Scenes) == 0 {
 			return nil
@@ -162,7 +159,7 @@ func (service *ProjectCreate) Exec(ctx context.Context, request *ProjectCreateRe
 		}
 
 		slices.SortFunc(scenes, func(a, b *dao.Scene) int { return cmp.Compare(a.Position, b.Position) })
-		composer.Scenes = lo.Map(scenes, newScene)
+		composer.Scenes = lo.Map(scenes, func(entity *dao.Scene, _ int) *Scene { return newScene(entity) })
 
 		return nil
 	})

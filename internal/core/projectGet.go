@@ -57,9 +57,9 @@ func (service *ProjectGet) Exec(ctx context.Context, request *ProjectGetRequest)
 		return nil, otel.ReportError(span, fmt.Errorf("select project: %w", err))
 	}
 
-	err = checkOwner(project, request.OwnerID, ErrProjectNotFound)
-	if err != nil {
-		return nil, otel.ReportError(span, err)
+	// Another user's project reads as missing.
+	if project.OwnerID != request.OwnerID {
+		return nil, otel.ReportError(span, ErrProjectNotFound)
 	}
 
 	return newProject(project), nil

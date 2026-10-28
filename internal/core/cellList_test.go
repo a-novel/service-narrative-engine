@@ -22,7 +22,7 @@ func TestCellList(t *testing.T) {
 
 		request *core.CellListRequest
 
-		projectMock *daoMock[*dao.Project]
+		ownerMock *daoMock[bool]
 		// listRequest is the page the service asks for, when the case reaches the list.
 		listRequest *dao.CellListRequest
 		listMock    *daoMock[[]*dao.CellListRow]
@@ -35,7 +35,7 @@ func TestCellList(t *testing.T) {
 
 			request: &core.CellListRequest{OwnerID: ownerID, ProjectID: projectID, Limit: 50, Offset: 100},
 
-			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
+			ownerMock:   &daoMock[bool]{resp: true},
 			listRequest: &dao.CellListRequest{ProjectID: projectID, Limit: 50, Offset: 100},
 			listMock: &daoMock[[]*dao.CellListRow]{resp: []*dao.CellListRow{
 				{Cell: dao.Cell{SceneID: sceneID1, LayerID: layerID1, UpdatedAt: updatedAt}, Total: 120},
@@ -51,7 +51,7 @@ func TestCellList(t *testing.T) {
 
 			request: &core.CellListRequest{OwnerID: ownerID, ProjectID: projectID},
 
-			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
+			ownerMock:   &daoMock[bool]{resp: true},
 			listRequest: &dao.CellListRequest{ProjectID: projectID, Limit: core.CellListDefaultSize},
 			listMock:    &daoMock[[]*dao.CellListRow]{},
 
@@ -65,6 +65,13 @@ func TestCellList(t *testing.T) {
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
+			name: "Error/NegativeLimit",
+
+			request: &core.CellListRequest{OwnerID: ownerID, ProjectID: projectID, Limit: -1},
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
 			name: "Error/NegativeOffset",
 
 			request: &core.CellListRequest{OwnerID: ownerID, ProjectID: projectID, Offset: -1},
@@ -72,29 +79,29 @@ func TestCellList(t *testing.T) {
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
-			name: "Error/ProjectNotFound",
+			name: "Error/NotOwned",
 
 			request: &core.CellListRequest{OwnerID: ownerID, ProjectID: projectID},
 
-			projectMock: &daoMock[*dao.Project]{err: dao.ErrProjectSelectNotFound},
+			ownerMock: &daoMock[bool]{resp: false},
 
 			expectErr: core.ErrProjectNotFound,
 		},
 		{
-			name: "Error/OtherOwner",
+			name: "Error/CheckOwner",
 
 			request: &core.CellListRequest{OwnerID: ownerID, ProjectID: projectID},
 
-			projectMock: &daoMock[*dao.Project]{resp: foreignProject()},
+			ownerMock: &daoMock[bool]{err: errFoo},
 
-			expectErr: core.ErrProjectNotFound,
+			expectErr: errFoo,
 		},
 		{
 			name: "Error/List",
 
 			request: &core.CellListRequest{OwnerID: ownerID, ProjectID: projectID},
 
-			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
+			ownerMock:   &daoMock[bool]{resp: true},
 			listRequest: &dao.CellListRequest{ProjectID: projectID, Limit: core.CellListDefaultSize},
 			listMock:    &daoMock[[]*dao.CellListRow]{err: errFoo},
 
@@ -106,13 +113,13 @@ func TestCellList(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockProject := coremocks.NewMockCellListDaoProject(t)
+			mockOwner := coremocks.NewMockCellListDaoOwner(t)
 			mockList := coremocks.NewMockCellListDao(t)
 
-			if testCase.projectMock != nil {
-				mockProject.EXPECT().
-					Exec(mock.Anything, &dao.ProjectSelectRequest{ID: projectID}).
-					Return(testCase.projectMock.resp, testCase.projectMock.err)
+			if testCase.ownerMock != nil {
+				mockOwner.EXPECT().
+					Exec(mock.Anything, &dao.ProjectOwnedRequest{ID: projectID, OwnerID: ownerID}).
+					Return(testCase.ownerMock.resp, testCase.ownerMock.err)
 			}
 
 			if testCase.listMock != nil {
@@ -121,13 +128,13 @@ func TestCellList(t *testing.T) {
 					Return(testCase.listMock.resp, testCase.listMock.err)
 			}
 
-			service := core.NewCellList(mockProject, mockList)
+			service := core.NewCellList(mockOwner, mockList)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
 
-			mockProject.AssertExpectations(t)
+			mockOwner.AssertExpectations(t)
 			mockList.AssertExpectations(t)
 		})
 	}

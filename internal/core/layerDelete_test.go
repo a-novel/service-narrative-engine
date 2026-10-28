@@ -20,13 +20,14 @@ func TestLayerDelete(t *testing.T) {
 
 	errFoo := errors.New("foo")
 
-	request := &core.LayerDeleteRequest{OwnerID: ownerID, ID: layerID2}
+	request := &core.LayerDeleteRequest{OwnerID: ownerID, ProjectID: projectID, ID: layerID2}
 
 	testCases := []struct {
 		name string
 
 		request *core.LayerDeleteRequest
 
+		ownerMock  *daoMock[bool]
 		selectMock *daoMock[*dao.Layer]
 		lockMock   *daoMock[*dao.Project]
 		deleteMock *daoMock[*dao.Layer]
@@ -40,6 +41,7 @@ func TestLayerDelete(t *testing.T) {
 
 			request: request,
 
+			ownerMock:  &daoMock[bool]{resp: true},
 			selectMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
 			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
 			deleteMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
@@ -49,15 +51,34 @@ func TestLayerDelete(t *testing.T) {
 		{
 			name: "Error/InvalidRequest",
 
-			request: &core.LayerDeleteRequest{OwnerID: ownerID},
+			request: &core.LayerDeleteRequest{OwnerID: ownerID, ProjectID: projectID},
 
 			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/NotOwned",
+
+			request: request,
+
+			ownerMock: &daoMock[bool]{resp: false},
+
+			expectErr: core.ErrProjectNotFound,
+		},
+		{
+			name: "Error/CheckOwner",
+
+			request: request,
+
+			ownerMock: &daoMock[bool]{err: errFoo},
+
+			expectErr: errFoo,
 		},
 		{
 			name: "Error/NotFound",
 
 			request: request,
 
+			ownerMock:  &daoMock[bool]{resp: true},
 			selectMock: &daoMock[*dao.Layer]{err: dao.ErrLayerSelectNotFound},
 
 			expectErr: core.ErrLayerNotFound,
@@ -65,27 +86,30 @@ func TestLayerDelete(t *testing.T) {
 		{
 			name: "Error/ManuscriptLayer",
 
-			request: &core.LayerDeleteRequest{OwnerID: ownerID, ID: layerID2},
+			request: request,
 
+			ownerMock:  &daoMock[bool]{resp: true},
 			selectMock: &daoMock[*dao.Layer]{resp: daoLayer(layerID2, 1, core.LayerKindManuscript)},
 
 			expectErr: core.ErrManuscriptLayer,
 		},
 		{
-			name: "Error/OtherOwner",
+			name: "Error/ProjectNotFound",
 
 			request: request,
 
+			ownerMock:  &daoMock[bool]{resp: true},
 			selectMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
-			lockMock:   &daoMock[*dao.Project]{resp: foreignProject()},
+			lockMock:   &daoMock[*dao.Project]{err: dao.ErrProjectLockNotFound},
 
-			expectErr: core.ErrLayerNotFound,
+			expectErr: core.ErrProjectNotFound,
 		},
 		{
 			name: "Error/DeletedMeanwhile",
 
 			request: request,
 
+			ownerMock:  &daoMock[bool]{resp: true},
 			selectMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
 			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
 			deleteMock: &daoMock[*dao.Layer]{err: dao.ErrLayerDeleteNotFound},
@@ -97,6 +121,8 @@ func TestLayerDelete(t *testing.T) {
 
 			request: request,
 
+			ownerMock:  &daoMock[bool]{resp: true},
+			selectMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID2, 1)},
 			transactor: transactiontest.NewFailingTransactor(errFoo),
 
 			expectErr: errFoo,
@@ -107,13 +133,20 @@ func TestLayerDelete(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
+			mockOwner := coremocks.NewMockLayerDeleteDaoOwner(t)
 			mockSelect := coremocks.NewMockLayerDeleteDaoSelect(t)
 			mockLock := coremocks.NewMockLayerDeleteDaoLock(t)
 			mockDelete := coremocks.NewMockLayerDeleteDao(t)
 
+			if testCase.ownerMock != nil {
+				mockOwner.EXPECT().
+					Exec(mock.Anything, &dao.ProjectOwnedRequest{ID: projectID, OwnerID: ownerID}).
+					Return(testCase.ownerMock.resp, testCase.ownerMock.err)
+			}
+
 			if testCase.selectMock != nil {
 				mockSelect.EXPECT().
-					Exec(mock.Anything, &dao.LayerSelectRequest{ID: layerID2}).
+					Exec(mock.Anything, &dao.LayerSelectRequest{ProjectID: projectID, ID: layerID2}).
 					Return(testCase.selectMock.resp, testCase.selectMock.err)
 			}
 
@@ -125,7 +158,7 @@ func TestLayerDelete(t *testing.T) {
 
 			if testCase.deleteMock != nil {
 				mockDelete.EXPECT().
-					Exec(mock.Anything, &dao.LayerDeleteRequest{ID: layerID2}).
+					Exec(mock.Anything, &dao.LayerDeleteRequest{ProjectID: projectID, ID: layerID2}).
 					Return(testCase.deleteMock.resp, testCase.deleteMock.err)
 			}
 
@@ -134,12 +167,13 @@ func TestLayerDelete(t *testing.T) {
 				transactor = transactiontest.NewTransactor()
 			}
 
-			service := core.NewLayerDelete(mockSelect, mockLock, mockDelete, transactor)
+			service := core.NewLayerDelete(mockOwner, mockSelect, mockLock, mockDelete, transactor)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
 
+			mockOwner.AssertExpectations(t)
 			mockSelect.AssertExpectations(t)
 			mockLock.AssertExpectations(t)
 			mockDelete.AssertExpectations(t)

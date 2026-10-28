@@ -20,14 +20,14 @@ func TestSceneDelete(t *testing.T) {
 
 	errFoo := errors.New("foo")
 
-	request := &core.SceneDeleteRequest{OwnerID: ownerID, ID: sceneID2}
+	request := &core.SceneDeleteRequest{OwnerID: ownerID, ProjectID: projectID, ID: sceneID2}
 
 	testCases := []struct {
 		name string
 
 		request *core.SceneDeleteRequest
 
-		selectMock *daoMock[*dao.Scene]
+		ownerMock  *daoMock[bool]
 		lockMock   *daoMock[*dao.Project]
 		deleteMock *daoMock[*dao.Scene]
 		transactor transaction.Transactor
@@ -40,7 +40,7 @@ func TestSceneDelete(t *testing.T) {
 
 			request: request,
 
-			selectMock: &daoMock[*dao.Scene]{resp: daoScene(sceneID2, 1)},
+			ownerMock:  &daoMock[bool]{resp: true},
 			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
 			deleteMock: &daoMock[*dao.Scene]{resp: daoScene(sceneID2, 1)},
 
@@ -49,35 +49,44 @@ func TestSceneDelete(t *testing.T) {
 		{
 			name: "Error/InvalidRequest",
 
-			request: &core.SceneDeleteRequest{OwnerID: ownerID},
+			request: &core.SceneDeleteRequest{OwnerID: ownerID, ProjectID: projectID},
 
 			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/NotOwned",
+
+			request: request,
+
+			ownerMock: &daoMock[bool]{resp: false},
+
+			expectErr: core.ErrProjectNotFound,
+		},
+		{
+			name: "Error/CheckOwner",
+
+			request: request,
+
+			ownerMock: &daoMock[bool]{err: errFoo},
+
+			expectErr: errFoo,
+		},
+		{
+			name: "Error/ProjectNotFound",
+
+			request: request,
+
+			ownerMock: &daoMock[bool]{resp: true},
+			lockMock:  &daoMock[*dao.Project]{err: dao.ErrProjectLockNotFound},
+
+			expectErr: core.ErrProjectNotFound,
 		},
 		{
 			name: "Error/NotFound",
 
 			request: request,
 
-			selectMock: &daoMock[*dao.Scene]{err: dao.ErrSceneSelectNotFound},
-
-			expectErr: core.ErrSceneNotFound,
-		},
-		{
-			name: "Error/OtherOwner",
-
-			request: request,
-
-			selectMock: &daoMock[*dao.Scene]{resp: daoScene(sceneID2, 1)},
-			lockMock:   &daoMock[*dao.Project]{resp: foreignProject()},
-
-			expectErr: core.ErrSceneNotFound,
-		},
-		{
-			name: "Error/DeletedMeanwhile",
-
-			request: request,
-
-			selectMock: &daoMock[*dao.Scene]{resp: daoScene(sceneID2, 1)},
+			ownerMock:  &daoMock[bool]{resp: true},
 			lockMock:   &daoMock[*dao.Project]{resp: daoProject()},
 			deleteMock: &daoMock[*dao.Scene]{err: dao.ErrSceneDeleteNotFound},
 
@@ -88,6 +97,7 @@ func TestSceneDelete(t *testing.T) {
 
 			request: request,
 
+			ownerMock:  &daoMock[bool]{resp: true},
 			transactor: transactiontest.NewFailingTransactor(errFoo),
 
 			expectErr: errFoo,
@@ -98,14 +108,14 @@ func TestSceneDelete(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockSelect := coremocks.NewMockSceneDeleteDaoSelect(t)
+			mockOwner := coremocks.NewMockSceneDeleteDaoOwner(t)
 			mockLock := coremocks.NewMockSceneDeleteDaoLock(t)
 			mockDelete := coremocks.NewMockSceneDeleteDao(t)
 
-			if testCase.selectMock != nil {
-				mockSelect.EXPECT().
-					Exec(mock.Anything, &dao.SceneSelectRequest{ID: sceneID2}).
-					Return(testCase.selectMock.resp, testCase.selectMock.err)
+			if testCase.ownerMock != nil {
+				mockOwner.EXPECT().
+					Exec(mock.Anything, &dao.ProjectOwnedRequest{ID: projectID, OwnerID: ownerID}).
+					Return(testCase.ownerMock.resp, testCase.ownerMock.err)
 			}
 
 			if testCase.lockMock != nil {
@@ -116,7 +126,7 @@ func TestSceneDelete(t *testing.T) {
 
 			if testCase.deleteMock != nil {
 				mockDelete.EXPECT().
-					Exec(mock.Anything, &dao.SceneDeleteRequest{ID: sceneID2}).
+					Exec(mock.Anything, &dao.SceneDeleteRequest{ProjectID: projectID, ID: sceneID2}).
 					Return(testCase.deleteMock.resp, testCase.deleteMock.err)
 			}
 
@@ -125,13 +135,13 @@ func TestSceneDelete(t *testing.T) {
 				transactor = transactiontest.NewTransactor()
 			}
 
-			service := core.NewSceneDelete(mockSelect, mockLock, mockDelete, transactor)
+			service := core.NewSceneDelete(mockOwner, mockLock, mockDelete, transactor)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
 
-			mockSelect.AssertExpectations(t)
+			mockOwner.AssertExpectations(t)
 			mockLock.AssertExpectations(t)
 			mockDelete.AssertExpectations(t)
 		})

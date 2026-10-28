@@ -14,12 +14,17 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// LayerDeleteDaoSelect reads the layer to delete.
+// LayerDeleteDaoOwner checks that the user owns the project.
+type LayerDeleteDaoOwner interface {
+	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
+}
+
+// LayerDeleteDaoSelect reads the layer to delete, to check its kind.
 type LayerDeleteDaoSelect interface {
 	Exec(ctx context.Context, request *dao.LayerSelectRequest) (*dao.Layer, error)
 }
 
-// LayerDeleteDaoLock locks the layer's project, so changes to its order run one at a time.
+// LayerDeleteDaoLock locks the project, so changes to its order run one at a time.
 type LayerDeleteDaoLock interface {
 	Exec(ctx context.Context, request *dao.ProjectLockRequest) (*dao.Project, error)
 }
@@ -31,13 +36,15 @@ type LayerDeleteDao interface {
 
 // LayerDeleteRequest names the layer to delete.
 type LayerDeleteRequest struct {
-	OwnerID uuid.UUID `validate:"required"`
-	ID      uuid.UUID `validate:"required"`
+	OwnerID   uuid.UUID `validate:"required"`
+	ProjectID uuid.UUID `validate:"required"`
+	ID        uuid.UUID `validate:"required"`
 }
 
 // LayerDelete deletes a notes layer with its cells, and moves the layers after it up by one. It
 // refuses the manuscript layer with [ErrManuscriptLayer].
 type LayerDelete struct {
+	daoOwner   LayerDeleteDaoOwner
 	daoSelect  LayerDeleteDaoSelect
 	daoLock    LayerDeleteDaoLock
 	dao        LayerDeleteDao
@@ -45,12 +52,15 @@ type LayerDelete struct {
 }
 
 func NewLayerDelete(
+	daoOwner LayerDeleteDaoOwner,
 	daoSelect LayerDeleteDaoSelect,
 	daoLock LayerDeleteDaoLock,
 	dao LayerDeleteDao,
 	transactor transaction.Transactor,
 ) *LayerDelete {
-	return &LayerDelete{daoSelect: daoSelect, daoLock: daoLock, dao: dao, transactor: transactor}
+	return &LayerDelete{
+		daoOwner: daoOwner, daoSelect: daoSelect, daoLock: daoLock, dao: dao, transactor: transactor,
+	}
 }
 
 func (service *LayerDelete) Exec(ctx context.Context, request *LayerDeleteRequest) (*Layer, error) {
@@ -58,6 +68,7 @@ func (service *LayerDelete) Exec(ctx context.Context, request *LayerDeleteReques
 	defer span.End()
 
 	span.SetAttributes(
+		attribute.String("project.id", request.ProjectID.String()),
 		attribute.String("layer.id", request.ID.String()),
 		attribute.String("project.owner_id", request.OwnerID.String()),
 	)
@@ -67,38 +78,41 @@ func (service *LayerDelete) Exec(ctx context.Context, request *LayerDeleteReques
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
+	owned, err := service.daoOwner.Exec(ctx, &dao.ProjectOwnedRequest{ID: request.ProjectID, OwnerID: request.OwnerID})
+	if err != nil {
+		return nil, otel.ReportError(span, fmt.Errorf("check owner: %w", err))
+	}
+
+	if !owned {
+		return nil, otel.ReportError(span, ErrProjectNotFound)
+	}
+
+	target, err := service.daoSelect.Exec(ctx, &dao.LayerSelectRequest{ProjectID: request.ProjectID, ID: request.ID})
+	if errors.Is(err, dao.ErrLayerSelectNotFound) {
+		err = errors.Join(err, ErrLayerNotFound)
+	}
+
+	if err != nil {
+		return nil, otel.ReportError(span, fmt.Errorf("select layer: %w", err))
+	}
+
+	if target.Kind == LayerKindManuscript {
+		return nil, otel.ReportError(span, ErrManuscriptLayer)
+	}
+
 	var layer *Layer
 
 	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
-		target, err := service.daoSelect.Exec(ctx, &dao.LayerSelectRequest{ID: request.ID})
-		if errors.Is(err, dao.ErrLayerSelectNotFound) {
-			err = errors.Join(err, ErrLayerNotFound)
-		}
-
-		if err != nil {
-			return fmt.Errorf("select layer: %w", err)
-		}
-
-		if target.Kind == LayerKindManuscript {
-			return ErrManuscriptLayer
-		}
-
-		project, err := service.daoLock.Exec(ctx, &dao.ProjectLockRequest{ID: target.ProjectID})
+		_, err := service.daoLock.Exec(ctx, &dao.ProjectLockRequest{ID: request.ProjectID})
 		if errors.Is(err, dao.ErrProjectLockNotFound) {
-			err = errors.Join(err, ErrLayerNotFound)
+			err = errors.Join(err, ErrProjectNotFound)
 		}
 
 		if err != nil {
 			return fmt.Errorf("lock project: %w", err)
 		}
 
-		err = checkOwner(project, request.OwnerID, ErrLayerNotFound)
-		if err != nil {
-			return err
-		}
-
-		// The lock serializes deletes, so a miss means a concurrent delete won.
-		deleted, err := service.dao.Exec(ctx, &dao.LayerDeleteRequest{ID: request.ID})
+		deleted, err := service.dao.Exec(ctx, &dao.LayerDeleteRequest{ProjectID: request.ProjectID, ID: request.ID})
 		if errors.Is(err, dao.ErrLayerDeleteNotFound) {
 			err = errors.Join(err, ErrLayerNotFound)
 		}
@@ -107,7 +121,7 @@ func (service *LayerDelete) Exec(ctx context.Context, request *LayerDeleteReques
 			return fmt.Errorf("delete layer: %w", err)
 		}
 
-		layer = newLayer(deleted, 0)
+		layer = newLayer(deleted)
 
 		return nil
 	})
