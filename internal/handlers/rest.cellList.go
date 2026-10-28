@@ -22,14 +22,12 @@ type RestCellListService interface {
 type RestCellListRequest struct {
 	ProjectID uuid.UUID `schema:"projectID"`
 
-	Limit int `schema:"limit"`
-	// AfterSceneID and AfterLayerID are the key of the last cell of the previous page.
-	AfterSceneID uuid.UUID `schema:"afterSceneID"`
-	AfterLayerID uuid.UUID `schema:"afterLayerID"`
+	Limit  int `schema:"limit"`
+	Offset int `schema:"offset"`
 }
 
 // RestCellList is the HTTP handler for the list-cells endpoint. It responds with a page of a
-// project's cells, in the order of their keys, and their total.
+// project's cells, by the position of their scene, then of their layer, and their total.
 type RestCellList struct {
 	service RestCellListService
 	logger  logging.Log
@@ -60,11 +58,10 @@ func (handler *RestCellList) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	serviceRequest := &core.CellListRequest{
-		OwnerID:      ownerID,
-		ProjectID:    request.ProjectID,
-		Limit:        request.Limit,
-		AfterSceneID: request.AfterSceneID,
-		AfterLayerID: request.AfterLayerID,
+		OwnerID:   ownerID,
+		ProjectID: request.ProjectID,
+		Limit:     request.Limit,
+		Offset:    request.Offset,
 	}
 
 	result, err := handler.service.Exec(ctx, serviceRequest)

@@ -22,7 +22,7 @@ func TestRestProjectList(t *testing.T) {
 	validRequest := func(t *testing.T) *http.Request {
 		t.Helper()
 
-		return newRequest(t, http.MethodGet, "/v1/projects?limit=10&after="+projectID.String(), nil)
+		return newRequest(t, http.MethodGet, "/v1/projects?limit=10&offset=20", nil)
 	}
 
 	testCases := []struct {
@@ -103,7 +103,7 @@ func TestRestProjectList(t *testing.T) {
 				}
 
 				service.EXPECT().
-					Exec(mock.Anything, &core.ProjectListRequest{OwnerID: ownerID, Limit: 10, After: projectID}).
+					Exec(mock.Anything, &core.ProjectListRequest{OwnerID: ownerID, Limit: 10, Offset: 20}).
 					Return(resp, testCase.serviceErr)
 			}
 

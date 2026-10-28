@@ -22,10 +22,7 @@ func TestRestCellList(t *testing.T) {
 	validRequest := func(t *testing.T) *http.Request {
 		t.Helper()
 
-		target := "/v1/cells?projectID=" + projectID.String() + "&limit=10" +
-			"&afterSceneID=" + sceneID.String() + "&afterLayerID=" + layerID.String()
-
-		return newRequest(t, http.MethodGet, target, nil)
+		return newRequest(t, http.MethodGet, "/v1/cells?projectID="+projectID.String()+"&limit=10&offset=20", nil)
 	}
 
 	testCases := []struct {
@@ -116,9 +113,7 @@ func TestRestCellList(t *testing.T) {
 				}
 
 				service.EXPECT().
-					Exec(mock.Anything, &core.CellListRequest{
-						OwnerID: ownerID, ProjectID: projectID, Limit: 10, AfterSceneID: sceneID, AfterLayerID: layerID,
-					}).
+					Exec(mock.Anything, &core.CellListRequest{OwnerID: ownerID, ProjectID: projectID, Limit: 10, Offset: 20}).
 					Return(resp, testCase.serviceErr)
 			}
 

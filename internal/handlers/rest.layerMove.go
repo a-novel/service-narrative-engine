@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 
 	"github.com/a-novel-kit/golib/httpf"
 	"github.com/a-novel-kit/golib/logging"
@@ -16,7 +15,7 @@ import (
 
 // RestLayerMoveService is the core operation [RestLayerMove] delegates to.
 type RestLayerMoveService interface {
-	Exec(ctx context.Context, request *core.LayerMoveRequest) ([]*core.Layer, error)
+	Exec(ctx context.Context, request *core.LayerMoveRequest) (*core.Layer, error)
 }
 
 // RestLayerMoveRequest is the JSON body the move-layer endpoint accepts.
@@ -25,8 +24,8 @@ type RestLayerMoveRequest struct {
 	After uuid.UUID `json:"after"`
 }
 
-// RestLayerMove is the HTTP handler for the move-layer endpoint. It responds with every layer of the
-// project, in their new order.
+// RestLayerMove is the HTTP handler for the move-layer endpoint. It responds with the layer at its new
+// position.
 type RestLayerMove struct {
 	service RestLayerMoveService
 	logger  logging.Log
@@ -69,5 +68,5 @@ func (handler *RestLayerMove) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	httpf.SendJSONStatus(w, span, http.StatusOK, lo.Map(result, loadLayerMap))
+	httpf.SendJSONStatus(w, span, http.StatusOK, loadLayer(result))
 }

@@ -15,7 +15,7 @@ import (
 
 // RestProjectGetService is the core operation [RestProjectGet] delegates to.
 type RestProjectGetService interface {
-	Exec(ctx context.Context, request *core.ProjectGetRequest) (*core.ProjectComposer, error)
+	Exec(ctx context.Context, request *core.ProjectGetRequest) (*core.Project, error)
 }
 
 // RestProjectGetRequest is the query parameters the get-project endpoint accepts.
@@ -23,8 +23,8 @@ type RestProjectGetRequest struct {
 	ID uuid.UUID `schema:"id"`
 }
 
-// RestProjectGet is the HTTP handler for the get-project endpoint. It responds with the project and
-// its whole Scenes Composer.
+// RestProjectGet is the HTTP handler for the get-project endpoint. It responds with the project. Its
+// scenes, layers and cells come page by page from their list endpoints.
 type RestProjectGet struct {
 	service RestProjectGetService
 	logger  logging.Log
@@ -66,5 +66,5 @@ func (handler *RestProjectGet) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	httpf.SendJSONStatus(w, span, http.StatusOK, loadProjectComposer(result))
+	httpf.SendJSONStatus(w, span, http.StatusOK, loadProject(result))
 }

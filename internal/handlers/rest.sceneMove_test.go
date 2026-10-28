@@ -47,7 +47,7 @@ func TestRestSceneMove(t *testing.T) {
 			serviceCalled: true,
 
 			expectStatus:   http.StatusOK,
-			expectResponse: []any{jsonScene},
+			expectResponse: jsonScene,
 		},
 		{
 			name: "Error/Anonymous",
@@ -110,9 +110,9 @@ func TestRestSceneMove(t *testing.T) {
 			service := handlersmocks.NewMockRestSceneMoveService(t)
 
 			if testCase.serviceCalled {
-				var resp []*core.Scene
+				var resp *core.Scene
 				if testCase.serviceErr == nil {
-					resp = []*core.Scene{coreScene}
+					resp = coreScene
 				}
 
 				service.EXPECT().

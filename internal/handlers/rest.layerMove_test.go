@@ -46,7 +46,7 @@ func TestRestLayerMove(t *testing.T) {
 			serviceCalled: true,
 
 			expectStatus:   http.StatusOK,
-			expectResponse: []any{jsonLayer},
+			expectResponse: jsonLayer,
 		},
 		{
 			name: "Error/Anonymous",
@@ -99,9 +99,9 @@ func TestRestLayerMove(t *testing.T) {
 			service := handlersmocks.NewMockRestLayerMoveService(t)
 
 			if testCase.serviceCalled {
-				var resp []*core.Layer
+				var resp *core.Layer
 				if testCase.serviceErr == nil {
-					resp = []*core.Layer{coreLayer}
+					resp = coreLayer
 				}
 
 				service.EXPECT().

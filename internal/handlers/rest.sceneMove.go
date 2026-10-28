@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 
 	"github.com/a-novel-kit/golib/httpf"
 	"github.com/a-novel-kit/golib/logging"
@@ -16,7 +15,7 @@ import (
 
 // RestSceneMoveService is the core operation [RestSceneMove] delegates to.
 type RestSceneMoveService interface {
-	Exec(ctx context.Context, request *core.SceneMoveRequest) ([]*core.Scene, error)
+	Exec(ctx context.Context, request *core.SceneMoveRequest) (*core.Scene, error)
 }
 
 // RestSceneMoveRequest is the JSON body the move-scene endpoint accepts.
@@ -25,8 +24,8 @@ type RestSceneMoveRequest struct {
 	After uuid.UUID `json:"after"`
 }
 
-// RestSceneMove is the HTTP handler for the move-scene endpoint. It responds with every scene of the
-// project, in their new order.
+// RestSceneMove is the HTTP handler for the move-scene endpoint. It responds with the scene at its new
+// position.
 type RestSceneMove struct {
 	service RestSceneMoveService
 	logger  logging.Log
@@ -69,5 +68,5 @@ func (handler *RestSceneMove) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	httpf.SendJSONStatus(w, span, http.StatusOK, lo.Map(result, loadSceneMap))
+	httpf.SendJSONStatus(w, span, http.StatusOK, loadScene(result))
 }

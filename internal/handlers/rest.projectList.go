@@ -4,8 +4,6 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/google/uuid"
-
 	"github.com/a-novel-kit/golib/httpf"
 	"github.com/a-novel-kit/golib/logging"
 	"github.com/a-novel-kit/golib/otel"
@@ -20,8 +18,8 @@ type RestProjectListService interface {
 
 // RestProjectListRequest is the query parameters the list-projects endpoint accepts.
 type RestProjectListRequest struct {
-	Limit int       `schema:"limit"`
-	After uuid.UUID `schema:"after"`
+	Limit  int `schema:"limit"`
+	Offset int `schema:"offset"`
 }
 
 // RestProjectList is the HTTP handler for the list-projects endpoint. It responds with a page of the
@@ -58,7 +56,7 @@ func (handler *RestProjectList) ServeHTTP(w http.ResponseWriter, r *http.Request
 	serviceRequest := &core.ProjectListRequest{
 		OwnerID: ownerID,
 		Limit:   request.Limit,
-		After:   request.After,
+		Offset:  request.Offset,
 	}
 
 	result, err := handler.service.Exec(ctx, serviceRequest)

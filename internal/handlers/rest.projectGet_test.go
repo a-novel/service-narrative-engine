@@ -44,7 +44,7 @@ func TestRestProjectGet(t *testing.T) {
 			serviceCalled: true,
 
 			expectStatus:   http.StatusOK,
-			expectResponse: withComposer(jsonProject, []any{jsonScene}, []any{jsonLayer}),
+			expectResponse: jsonProject,
 		},
 		{
 			name: "Error/Anonymous",
@@ -97,11 +97,9 @@ func TestRestProjectGet(t *testing.T) {
 			service := handlersmocks.NewMockRestProjectGetService(t)
 
 			if testCase.serviceCalled {
-				var resp *core.ProjectComposer
+				var resp *core.Project
 				if testCase.serviceErr == nil {
-					resp = &core.ProjectComposer{
-						Project: coreProject, Scenes: []*core.Scene{coreScene}, Layers: []*core.Layer{coreLayer},
-					}
+					resp = coreProject
 				}
 
 				service.EXPECT().
