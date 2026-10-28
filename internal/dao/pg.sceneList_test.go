@@ -16,20 +16,36 @@ import (
 func TestPgSceneList(t *testing.T) {
 	t.Parallel()
 
+	scenes := composerFixtures().scenes
+
+	row := func(scene *dao.Scene) *dao.SceneListRow { return &dao.SceneListRow{Scene: *scene, Total: 3} }
+
 	testCases := []struct {
 		name string
 
 		request *dao.SceneListRequest
 
-		expect    []*dao.Scene
+		expect    []*dao.SceneListRow
 		expectErr error
 	}{
 		{
 			name: "Success",
 
-			request: &dao.SceneListRequest{ProjectID: projectID},
+			request: &dao.SceneListRequest{ProjectID: projectID, Limit: 10},
 
-			expect: composerFixtures().scenes[:3],
+			expect: []*dao.SceneListRow{row(scenes[0]), row(scenes[1]), row(scenes[2])},
+		},
+		{
+			name: "Success/Page",
+
+			request: &dao.SceneListRequest{ProjectID: projectID, Limit: 1, Offset: 1},
+
+			expect: []*dao.SceneListRow{row(scenes[1])},
+		},
+		{
+			name: "Success/PastEnd",
+
+			request: &dao.SceneListRequest{ProjectID: projectID, Limit: 10, Offset: 3},
 		},
 	}
 

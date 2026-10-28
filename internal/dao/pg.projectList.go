@@ -22,18 +22,27 @@ type ProjectListRequest struct {
 
 	// Limit caps the projects in the page.
 	Limit int
-	// After is the ID the page starts after, in descending order. uuid.Max starts at the newest project.
-	After uuid.UUID
+	// Offset is how many projects newest first come before the page.
+	Offset int
 }
 
-// PgProjectList reads a page of the projects an owner holds, newest first.
+// ProjectListRow is one project of a page.
+type ProjectListRow struct {
+	Project
+
+	// Total counts every project of the owner, beyond the page.
+	Total int `bun:"total"`
+}
+
+// PgProjectList reads a page of the projects an owner holds, newest first. Each row carries the
+// total, and a page past the end comes back empty.
 type PgProjectList struct{}
 
 func NewPgProjectList() *PgProjectList {
 	return &PgProjectList{}
 }
 
-func (dao *PgProjectList) Exec(ctx context.Context, request *ProjectListRequest) ([]*Project, error) {
+func (dao *PgProjectList) Exec(ctx context.Context, request *ProjectListRequest) ([]*ProjectListRow, error) {
 	ctx, span := otel.Tracer().Start(ctx, "dao.PgProjectList")
 	defer span.End()
 
@@ -42,9 +51,9 @@ func (dao *PgProjectList) Exec(ctx context.Context, request *ProjectListRequest)
 		return nil, otel.ReportError(span, fmt.Errorf("get postgres context: %w", err))
 	}
 
-	var entities []*Project
+	var entities []*ProjectListRow
 
-	err = db.NewRaw(projectListQuery, request.OwnerID, request.Limit, request.After).Scan(ctx, &entities)
+	err = db.NewRaw(projectListQuery, request.OwnerID, request.Limit, request.Offset).Scan(ctx, &entities)
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("execute query: %w", err))
 	}

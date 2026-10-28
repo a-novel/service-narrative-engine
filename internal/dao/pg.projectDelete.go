@@ -16,15 +16,12 @@ import (
 //go:embed pg.projectDelete.sql
 var projectDeleteQuery string
 
-// ErrProjectDeleteNotFound is returned by [PgProjectDelete.Exec] when no project with the ID belongs
-// to the owner.
+// ErrProjectDeleteNotFound is returned by [PgProjectDelete.Exec] when no project has the ID.
 var ErrProjectDeleteNotFound = errors.New("project not found")
 
 // ProjectDeleteRequest is the input to [PgProjectDelete.Exec].
 type ProjectDeleteRequest struct {
 	ID uuid.UUID
-	// OwnerID is the user who must own the project. Another owner's project reads as not found.
-	OwnerID uuid.UUID
 }
 
 // PgProjectDelete removes a project with its scenes, layers and cells.
@@ -45,7 +42,7 @@ func (dao *PgProjectDelete) Exec(ctx context.Context, request *ProjectDeleteRequ
 
 	entity := &Project{}
 
-	err = db.NewRaw(projectDeleteQuery, request.ID, request.OwnerID).Scan(ctx, entity)
+	err = db.NewRaw(projectDeleteQuery, request.ID).Scan(ctx, entity)
 	if errors.Is(err, sql.ErrNoRows) {
 		err = errors.Join(err, ErrProjectDeleteNotFound)
 	}

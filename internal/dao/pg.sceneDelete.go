@@ -16,18 +16,15 @@ import (
 //go:embed pg.sceneDelete.sql
 var sceneDeleteQuery string
 
-// ErrSceneDeleteNotFound is returned by [PgSceneDelete.Exec] when no scene with the ID belongs to a
-// project of the owner.
+// ErrSceneDeleteNotFound is returned by [PgSceneDelete.Exec] when no scene has the ID.
 var ErrSceneDeleteNotFound = errors.New("scene not found")
 
 // SceneDeleteRequest is the input to [PgSceneDelete.Exec].
 type SceneDeleteRequest struct {
 	ID uuid.UUID
-	// OwnerID is the user who must own the scene's project. Another owner's scene reads as not found.
-	OwnerID uuid.UUID
 }
 
-// PgSceneDelete removes a scene with its cells.
+// PgSceneDelete removes a scene with its cells, and moves the scenes after it up by one.
 type PgSceneDelete struct{}
 
 func NewPgSceneDelete() *PgSceneDelete {
@@ -45,7 +42,7 @@ func (dao *PgSceneDelete) Exec(ctx context.Context, request *SceneDeleteRequest)
 
 	entity := &Scene{}
 
-	err = db.NewRaw(sceneDeleteQuery, request.ID, request.OwnerID).Scan(ctx, entity)
+	err = db.NewRaw(sceneDeleteQuery, request.ID).Scan(ctx, entity)
 	if errors.Is(err, sql.ErrNoRows) {
 		err = errors.Join(err, ErrSceneDeleteNotFound)
 	}

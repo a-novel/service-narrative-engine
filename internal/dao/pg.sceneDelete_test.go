@@ -16,35 +16,48 @@ import (
 func TestPgSceneDelete(t *testing.T) {
 	t.Parallel()
 
+	scenes := composerFixtures().scenes
+
 	testCases := []struct {
 		name string
 
 		request *dao.SceneDeleteRequest
 
-		expect      *dao.Scene
-		expectCells []*dao.Cell
-		expectErr   error
+		expect       *dao.Scene
+		expectScenes []*dao.Scene
+		expectCells  []*dao.Cell
+		expectErr    error
 	}{
 		{
 			name: "Success",
 
-			request: &dao.SceneDeleteRequest{ID: sceneID1, OwnerID: ownerID},
+			request: &dao.SceneDeleteRequest{ID: sceneID1},
 
-			expect:      composerFixtures().scenes[0],
-			expectCells: []*dao.Cell{},
+			expect:       scenes[0],
+			expectScenes: []*dao.Scene{sceneAt(scenes[1], 0), sceneAt(scenes[2], 1)},
+			expectCells:  []*dao.Cell{},
 		},
 		{
-			name: "Error/OtherOwner",
+			name: "Success/Middle",
 
-			request: &dao.SceneDeleteRequest{ID: sceneID1, OwnerID: otherOwnerID},
+			request: &dao.SceneDeleteRequest{ID: sceneID2},
 
-			expectCells: composerFixtures().cells,
-			expectErr:   dao.ErrSceneDeleteNotFound,
+			expect:       scenes[1],
+			expectScenes: []*dao.Scene{scenes[0], sceneAt(scenes[2], 1)},
+			expectCells:  composerFixtures().cells,
+		},
+		{
+			name: "Error/NotFound",
+
+			request: &dao.SceneDeleteRequest{ID: absentID},
+
+			expectScenes: scenes[:3],
+			expectCells:  composerFixtures().cells,
+			expectErr:    dao.ErrSceneDeleteNotFound,
 		},
 	}
 
 	daoSceneDelete := dao.NewPgSceneDelete()
-	daoCellList := dao.NewPgCellList()
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -59,10 +72,9 @@ func TestPgSceneDelete(t *testing.T) {
 				require.ErrorIs(t, err, testCase.expectErr)
 				require.Equal(t, testCase.expect, result)
 
-				// Deleting a scene deletes its cells with it.
-				cells, err := daoCellList.Exec(ctx, &dao.CellListRequest{ProjectID: projectID, Limit: 10})
-				require.NoError(t, err)
-				requireCellsEqual(t, testCase.expectCells, cells)
+				// The scenes after the deleted one move up, and its cells go with it.
+				require.Equal(t, testCase.expectScenes, listScenes(ctx, t, projectID))
+				requireCellsEqual(t, testCase.expectCells, listCells(ctx, t, projectID))
 			})
 		})
 	}

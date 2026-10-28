@@ -40,7 +40,8 @@ type LayerInsertRequest struct {
 	Now time.Time
 }
 
-// PgLayerInsert creates a layer.
+// PgLayerInsert creates a layer at Position, and moves the layers at or after Position down to make
+// room.
 type PgLayerInsert struct{}
 
 func NewPgLayerInsert() *PgLayerInsert {

@@ -1,6 +1,6 @@
--- The position check caps a project at 500 scenes, so this limit returns every one.
 SELECT
-  *
+  *,
+  count(*) OVER () AS total
 FROM
   scenes
 WHERE
@@ -8,4 +8,6 @@ WHERE
 ORDER BY
   position
 LIMIT
-  500;
+  ?1
+OFFSET
+  ?2;

@@ -16,19 +16,16 @@ import (
 //go:embed pg.projectLock.sql
 var projectLockQuery string
 
-// ErrProjectLockNotFound is returned by [PgProjectLock.Exec] when no project with the ID belongs to
-// the owner.
+// ErrProjectLockNotFound is returned by [PgProjectLock.Exec] when no project has the ID.
 var ErrProjectLockNotFound = errors.New("project not found")
 
 // ProjectLockRequest is the input to [PgProjectLock.Exec].
 type ProjectLockRequest struct {
 	ID uuid.UUID
-	// OwnerID is the user who must own the project. Another owner's project reads as not found.
-	OwnerID uuid.UUID
 }
 
-// PgProjectLock reads a project its owner holds and locks it until the transaction ends, so changes to
-// the order of its scenes and layers run one at a time.
+// PgProjectLock reads a project by its ID and locks it until the transaction ends, so changes to the
+// order of its scenes and layers run one at a time. The caller checks the owner.
 type PgProjectLock struct{}
 
 func NewPgProjectLock() *PgProjectLock {
@@ -46,7 +43,7 @@ func (dao *PgProjectLock) Exec(ctx context.Context, request *ProjectLockRequest)
 
 	entity := &Project{}
 
-	err = db.NewRaw(projectLockQuery, request.ID, request.OwnerID).Scan(ctx, entity)
+	err = db.NewRaw(projectLockQuery, request.ID).Scan(ctx, entity)
 	if errors.Is(err, sql.ErrNoRows) {
 		err = errors.Join(err, ErrProjectLockNotFound)
 	}

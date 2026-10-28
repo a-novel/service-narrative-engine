@@ -17,15 +17,12 @@ import (
 //go:embed pg.projectUpdate.sql
 var projectUpdateQuery string
 
-// ErrProjectUpdateNotFound is returned by [PgProjectUpdate.Exec] when no project with the ID belongs
-// to the owner.
+// ErrProjectUpdateNotFound is returned by [PgProjectUpdate.Exec] when no project has the ID.
 var ErrProjectUpdateNotFound = errors.New("project not found")
 
 // ProjectUpdateRequest is the input to [PgProjectUpdate.Exec].
 type ProjectUpdateRequest struct {
 	ID uuid.UUID
-	// OwnerID is the user who must own the project. Another owner's project reads as not found.
-	OwnerID uuid.UUID
 
 	// Title names the narrative.
 	Title string
@@ -58,7 +55,7 @@ func (dao *PgProjectUpdate) Exec(ctx context.Context, request *ProjectUpdateRequ
 
 	err = db.NewRaw(
 		projectUpdateQuery,
-		request.ID, request.OwnerID, request.Title, request.Premise, request.Language, request.Now,
+		request.ID, request.Title, request.Premise, request.Language, request.Now,
 	).Scan(ctx, entity)
 	if errors.Is(err, sql.ErrNoRows) {
 		err = errors.Join(err, ErrProjectUpdateNotFound)

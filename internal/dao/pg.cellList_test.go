@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
 	"github.com/a-novel-kit/golib/postgres/postgrestest"
@@ -21,38 +22,30 @@ func TestPgCellList(t *testing.T) {
 
 		request *dao.CellListRequest
 
-		expect    []*dao.Cell
-		expectErr error
+		expect      []*dao.Cell
+		expectTotal int
+		expectErr   error
 	}{
 		{
 			name: "Success",
 
 			request: &dao.CellListRequest{ProjectID: projectID, Limit: 10},
 
-			expect: composerFixtures().cells,
+			expect:      composerFixtures().cells,
+			expectTotal: 2,
 		},
 		{
-			name: "Success/Limit",
+			name: "Success/Page",
 
-			request: &dao.CellListRequest{ProjectID: projectID, Limit: 1},
+			request: &dao.CellListRequest{ProjectID: projectID, Limit: 1, Offset: 1},
 
-			expect: composerFixtures().cells[:1],
+			expect:      composerFixtures().cells[1:],
+			expectTotal: 2,
 		},
 		{
-			name: "Success/After",
+			name: "Success/PastEnd",
 
-			request: &dao.CellListRequest{
-				ProjectID: projectID, Limit: 10, AfterSceneID: sceneID1, AfterLayerID: manuscriptLayerID,
-			},
-
-			expect: composerFixtures().cells[1:],
-		},
-		{
-			name: "Success/AfterLast",
-
-			request: &dao.CellListRequest{
-				ProjectID: projectID, Limit: 10, AfterSceneID: sceneID1, AfterLayerID: notesLayerID,
-			},
+			request: &dao.CellListRequest{ProjectID: projectID, Limit: 10, Offset: 2},
 		},
 		{
 			name: "Success/OtherProject",
@@ -74,7 +67,13 @@ func TestPgCellList(t *testing.T) {
 
 				result, err := daoCellList.Exec(ctx, testCase.request)
 				require.ErrorIs(t, err, testCase.expectErr)
-				requireCellsEqual(t, testCase.expect, result)
+				requireCellsEqual(t, testCase.expect, lo.Map(result, func(row *dao.CellListRow, _ int) *dao.Cell {
+					return &row.Cell
+				}))
+
+				for _, row := range result {
+					require.Equal(t, testCase.expectTotal, row.Total)
+				}
 			})
 		})
 	}

@@ -1,4 +1,14 @@
--- The request lists the scenes to create, so they bound the rows returned.
+-- The scenes at or after the insert position move down to make room. The positions unique constraint
+-- is deferred, so the shift and the insert run in one statement.
+WITH
+  shifted AS (
+    UPDATE scenes
+    SET
+      position = position + cardinality(ARRAY[?2]::uuid[])
+    WHERE
+      project_id = ?0
+      AND position >= ?1
+  )
 INSERT INTO
   scenes (
     id,

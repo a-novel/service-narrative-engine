@@ -28,7 +28,7 @@ func TestPgProjectUpdate(t *testing.T) {
 			name: "Success",
 
 			request: &dao.ProjectUpdateRequest{
-				ID: projectID, OwnerID: ownerID,
+				ID:    projectID,
 				Title: "Clear Hours", Premise: "Marie waits.", Language: "en", Now: now,
 			},
 
@@ -38,10 +38,10 @@ func TestPgProjectUpdate(t *testing.T) {
 			},
 		},
 		{
-			name: "Error/OtherOwner",
+			name: "Error/NotFound",
 
 			request: &dao.ProjectUpdateRequest{
-				ID: projectID, OwnerID: otherOwnerID, Title: "Clear Hours", Language: "en", Now: now,
+				ID: absentID, Title: "Clear Hours", Language: "en", Now: now,
 			},
 
 			expectErr: dao.ErrProjectUpdateNotFound,

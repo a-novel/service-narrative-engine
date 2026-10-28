@@ -29,41 +29,36 @@ func TestPgProjectList(t *testing.T) {
 	third := project("00000000-0000-0000-0000-000000000004", ownerID)
 	foreign := project("00000000-0000-0000-0000-000000000002", otherOwnerID)
 
+	row := func(project *dao.Project) *dao.ProjectListRow {
+		return &dao.ProjectListRow{Project: *project, Total: 3}
+	}
+
 	testCases := []struct {
 		name string
 
 		request *dao.ProjectListRequest
 
-		expect    []*dao.Project
+		expect    []*dao.ProjectListRow
 		expectErr error
 	}{
 		{
 			name: "Success",
 
-			request: &dao.ProjectListRequest{OwnerID: ownerID, Limit: 10, After: uuid.Max},
+			request: &dao.ProjectListRequest{OwnerID: ownerID, Limit: 10},
 
-			expect: []*dao.Project{third, second, first},
+			expect: []*dao.ProjectListRow{row(third), row(second), row(first)},
 		},
 		{
-			name: "Success/After",
+			name: "Success/Page",
 
-			request: &dao.ProjectListRequest{OwnerID: ownerID, Limit: 10, After: third.ID},
+			request: &dao.ProjectListRequest{OwnerID: ownerID, Limit: 1, Offset: 1},
 
-			expect: []*dao.Project{second, first},
-		},
-		{
-			name: "Success/Limit",
-
-			request: &dao.ProjectListRequest{OwnerID: ownerID, Limit: 1, After: uuid.Max},
-
-			expect: []*dao.Project{third},
+			expect: []*dao.ProjectListRow{row(second)},
 		},
 		{
 			name: "Success/NoProject",
 
-			request: &dao.ProjectListRequest{
-				OwnerID: uuid.MustParse("00000000-0000-0000-0000-0000000000a3"), Limit: 10, After: uuid.Max,
-			},
+			request: &dao.ProjectListRequest{OwnerID: uuid.MustParse("00000000-0000-0000-0000-0000000000a3"), Limit: 10},
 		},
 	}
 

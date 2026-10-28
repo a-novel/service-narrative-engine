@@ -16,18 +16,15 @@ import (
 //go:embed pg.projectSelect.sql
 var projectSelectQuery string
 
-// ErrProjectSelectNotFound is returned by [PgProjectSelect.Exec] when no project with the ID belongs
-// to the owner.
+// ErrProjectSelectNotFound is returned by [PgProjectSelect.Exec] when no project has the ID.
 var ErrProjectSelectNotFound = errors.New("project not found")
 
 // ProjectSelectRequest is the input to [PgProjectSelect.Exec].
 type ProjectSelectRequest struct {
 	ID uuid.UUID
-	// OwnerID is the user who must own the project. Another owner's project reads as not found.
-	OwnerID uuid.UUID
 }
 
-// PgProjectSelect reads a project its owner holds.
+// PgProjectSelect reads a project by its ID. The caller checks the owner.
 type PgProjectSelect struct{}
 
 func NewPgProjectSelect() *PgProjectSelect {
@@ -45,7 +42,7 @@ func (dao *PgProjectSelect) Exec(ctx context.Context, request *ProjectSelectRequ
 
 	entity := &Project{}
 
-	err = db.NewRaw(projectSelectQuery, request.ID, request.OwnerID).Scan(ctx, entity)
+	err = db.NewRaw(projectSelectQuery, request.ID).Scan(ctx, entity)
 	if errors.Is(err, sql.ErrNoRows) {
 		err = errors.Join(err, ErrProjectSelectNotFound)
 	}

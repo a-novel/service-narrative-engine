@@ -17,15 +17,12 @@ import (
 //go:embed pg.layerUpdate.sql
 var layerUpdateQuery string
 
-// ErrLayerUpdateNotFound is returned by [PgLayerUpdate.Exec] when no layer with the ID belongs to a
-// project of the owner.
+// ErrLayerUpdateNotFound is returned by [PgLayerUpdate.Exec] when no layer has the ID.
 var ErrLayerUpdateNotFound = errors.New("layer not found")
 
 // LayerUpdateRequest is the input to [PgLayerUpdate.Exec].
 type LayerUpdateRequest struct {
 	ID uuid.UUID
-	// OwnerID is the user who must own the layer's project. Another owner's layer reads as not found.
-	OwnerID uuid.UUID
 
 	// Name labels the layer's row in the composer.
 	Name string
@@ -55,7 +52,7 @@ func (dao *PgLayerUpdate) Exec(ctx context.Context, request *LayerUpdateRequest)
 	entity := &Layer{}
 
 	err = db.NewRaw(
-		layerUpdateQuery, request.ID, request.OwnerID, request.Name, request.Description, request.Now,
+		layerUpdateQuery, request.ID, request.Name, request.Description, request.Now,
 	).Scan(ctx, entity)
 	if errors.Is(err, sql.ErrNoRows) {
 		err = errors.Join(err, ErrLayerUpdateNotFound)

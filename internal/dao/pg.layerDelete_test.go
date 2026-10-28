@@ -16,35 +16,48 @@ import (
 func TestPgLayerDelete(t *testing.T) {
 	t.Parallel()
 
+	layers := composerFixtures().layers
+
 	testCases := []struct {
 		name string
 
 		request *dao.LayerDeleteRequest
 
-		expect      *dao.Layer
-		expectCells []*dao.Cell
-		expectErr   error
+		expect       *dao.Layer
+		expectLayers []*dao.Layer
+		expectCells  []*dao.Cell
+		expectErr    error
 	}{
 		{
 			name: "Success",
 
-			request: &dao.LayerDeleteRequest{ID: notesLayerID, OwnerID: ownerID},
+			request: &dao.LayerDeleteRequest{ID: notesLayerID},
 
-			expect:      composerFixtures().layers[1],
-			expectCells: composerFixtures().cells[:1],
+			expect:       layers[1],
+			expectLayers: []*dao.Layer{layers[0]},
+			expectCells:  composerFixtures().cells[:1],
 		},
 		{
-			name: "Error/OtherOwner",
+			name: "Success/First",
 
-			request: &dao.LayerDeleteRequest{ID: notesLayerID, OwnerID: otherOwnerID},
+			request: &dao.LayerDeleteRequest{ID: manuscriptLayerID},
 
-			expectCells: composerFixtures().cells,
-			expectErr:   dao.ErrLayerDeleteNotFound,
+			expect:       layers[0],
+			expectLayers: []*dao.Layer{layerAt(layers[1], 0)},
+			expectCells:  composerFixtures().cells[1:],
+		},
+		{
+			name: "Error/NotFound",
+
+			request: &dao.LayerDeleteRequest{ID: absentID},
+
+			expectLayers: layers[:2],
+			expectCells:  composerFixtures().cells,
+			expectErr:    dao.ErrLayerDeleteNotFound,
 		},
 	}
 
 	daoLayerDelete := dao.NewPgLayerDelete()
-	daoCellList := dao.NewPgCellList()
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -59,10 +72,9 @@ func TestPgLayerDelete(t *testing.T) {
 				require.ErrorIs(t, err, testCase.expectErr)
 				require.Equal(t, testCase.expect, result)
 
-				// Deleting a layer deletes its cells with it.
-				cells, err := daoCellList.Exec(ctx, &dao.CellListRequest{ProjectID: projectID, Limit: 10})
-				require.NoError(t, err)
-				requireCellsEqual(t, testCase.expectCells, cells)
+				// The layers after the deleted one move up, and its cells go with it.
+				require.Equal(t, testCase.expectLayers, listLayers(ctx, t, projectID))
+				requireCellsEqual(t, testCase.expectCells, listCells(ctx, t, projectID))
 			})
 		})
 	}

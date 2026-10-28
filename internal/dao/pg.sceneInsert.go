@@ -51,8 +51,8 @@ type SceneInsertRequest struct {
 	Now time.Time
 }
 
-// PgSceneInsert creates scenes in one project, in one statement. It returns them in no particular
-// order.
+// PgSceneInsert creates scenes in one project from Position on, and moves the scenes at or after
+// Position down to make room. It returns the new scenes in no particular order.
 type PgSceneInsert struct{}
 
 func NewPgSceneInsert() *PgSceneInsert {

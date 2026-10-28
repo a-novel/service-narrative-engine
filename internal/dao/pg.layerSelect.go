@@ -16,18 +16,15 @@ import (
 //go:embed pg.layerSelect.sql
 var layerSelectQuery string
 
-// ErrLayerSelectNotFound is returned by [PgLayerSelect.Exec] when no layer with the ID belongs to a
-// project of the owner.
+// ErrLayerSelectNotFound is returned by [PgLayerSelect.Exec] when no layer has the ID.
 var ErrLayerSelectNotFound = errors.New("layer not found")
 
 // LayerSelectRequest is the input to [PgLayerSelect.Exec].
 type LayerSelectRequest struct {
 	ID uuid.UUID
-	// OwnerID is the user who must own the layer's project. Another owner's layer reads as not found.
-	OwnerID uuid.UUID
 }
 
-// PgLayerSelect reads a layer of a project its owner holds.
+// PgLayerSelect reads a layer by its ID. The caller checks the owner of its project.
 type PgLayerSelect struct{}
 
 func NewPgLayerSelect() *PgLayerSelect {
@@ -45,7 +42,7 @@ func (dao *PgLayerSelect) Exec(ctx context.Context, request *LayerSelectRequest)
 
 	entity := &Layer{}
 
-	err = db.NewRaw(layerSelectQuery, request.ID, request.OwnerID).Scan(ctx, entity)
+	err = db.NewRaw(layerSelectQuery, request.ID).Scan(ctx, entity)
 	if errors.Is(err, sql.ErrNoRows) {
 		err = errors.Join(err, ErrLayerSelectNotFound)
 	}

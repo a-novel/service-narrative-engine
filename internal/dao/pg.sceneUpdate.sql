@@ -1,15 +1,11 @@
 UPDATE scenes
 SET
-  title = ?2,
-  color = ?3,
-  description = ?4,
-  prompt = ?5,
-  updated_at = ?6
-FROM
-  projects
+  title = ?1,
+  color = ?2,
+  description = ?3,
+  prompt = ?4,
+  updated_at = ?5
 WHERE
-  scenes.id = ?0
-  AND projects.id = scenes.project_id
-  AND projects.owner_id = ?1
+  id = ?0
 RETURNING
-  scenes.*;
+  *;

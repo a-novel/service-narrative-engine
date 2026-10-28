@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
 	"github.com/a-novel-kit/golib/postgres/postgrestest"
@@ -28,21 +27,14 @@ func TestPgProjectSelect(t *testing.T) {
 		{
 			name: "Success",
 
-			request: &dao.ProjectSelectRequest{ID: projectID, OwnerID: ownerID},
+			request: &dao.ProjectSelectRequest{ID: projectID},
 
 			expect: composerFixtures().projects[0],
 		},
 		{
-			name: "Error/OtherOwner",
-
-			request: &dao.ProjectSelectRequest{ID: projectID, OwnerID: otherOwnerID},
-
-			expectErr: dao.ErrProjectSelectNotFound,
-		},
-		{
 			name: "Error/NotFound",
 
-			request: &dao.ProjectSelectRequest{ID: uuid.MustParse("00000000-0000-0000-0000-0000000000ff"), OwnerID: ownerID},
+			request: &dao.ProjectSelectRequest{ID: absentID},
 
 			expectErr: dao.ErrProjectSelectNotFound,
 		},

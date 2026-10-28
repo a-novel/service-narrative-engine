@@ -22,20 +22,27 @@ type CellListRequest struct {
 
 	// Limit caps the cells in the page.
 	Limit int
-	// AfterSceneID and AfterLayerID are the key of the last cell of the previous page. uuid.Nil for
-	// both starts at the first cell.
-	AfterSceneID uuid.UUID
-	AfterLayerID uuid.UUID
+	// Offset is how many cells come before the page, in the order the page follows.
+	Offset int
 }
 
-// PgCellList reads a page of a project's cells, in the order of their keys.
+// CellListRow is one cell of a page.
+type CellListRow struct {
+	Cell
+
+	// Total counts every cell of the project, beyond the page.
+	Total int `bun:"total"`
+}
+
+// PgCellList reads a page of a project's cells, by the position of their scene, then of their
+// layer. Each row carries the total, and a page past the end comes back empty.
 type PgCellList struct{}
 
 func NewPgCellList() *PgCellList {
 	return &PgCellList{}
 }
 
-func (dao *PgCellList) Exec(ctx context.Context, request *CellListRequest) ([]*Cell, error) {
+func (dao *PgCellList) Exec(ctx context.Context, request *CellListRequest) ([]*CellListRow, error) {
 	ctx, span := otel.Tracer().Start(ctx, "dao.PgCellList")
 	defer span.End()
 
@@ -44,11 +51,9 @@ func (dao *PgCellList) Exec(ctx context.Context, request *CellListRequest) ([]*C
 		return nil, otel.ReportError(span, fmt.Errorf("get postgres context: %w", err))
 	}
 
-	var entities []*Cell
+	var entities []*CellListRow
 
-	err = db.NewRaw(
-		cellListQuery, request.ProjectID, request.Limit, request.AfterSceneID, request.AfterLayerID,
-	).Scan(ctx, &entities)
+	err = db.NewRaw(cellListQuery, request.ProjectID, request.Limit, request.Offset).Scan(ctx, &entities)
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("execute query: %w", err))
 	}

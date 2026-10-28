@@ -28,7 +28,7 @@ func TestPgLayerUpdate(t *testing.T) {
 			name: "Success",
 
 			request: &dao.LayerUpdateRequest{
-				ID: notesLayerID, OwnerID: ownerID, Name: "Cast", Description: "Who speaks", Now: now,
+				ID: notesLayerID, Name: "Cast", Description: "Who speaks", Now: now,
 			},
 
 			expect: &dao.Layer{
@@ -37,9 +37,9 @@ func TestPgLayerUpdate(t *testing.T) {
 			},
 		},
 		{
-			name: "Error/OtherOwner",
+			name: "Error/NotFound",
 
-			request: &dao.LayerUpdateRequest{ID: notesLayerID, OwnerID: otherOwnerID, Name: "Cast", Now: now},
+			request: &dao.LayerUpdateRequest{ID: absentID, Name: "Cast", Now: now},
 
 			expectErr: dao.ErrLayerUpdateNotFound,
 		},

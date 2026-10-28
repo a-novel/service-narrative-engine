@@ -16,20 +16,36 @@ import (
 func TestPgLayerList(t *testing.T) {
 	t.Parallel()
 
+	layers := composerFixtures().layers
+
+	row := func(layer *dao.Layer) *dao.LayerListRow { return &dao.LayerListRow{Layer: *layer, Total: 2} }
+
 	testCases := []struct {
 		name string
 
 		request *dao.LayerListRequest
 
-		expect    []*dao.Layer
+		expect    []*dao.LayerListRow
 		expectErr error
 	}{
 		{
 			name: "Success",
 
-			request: &dao.LayerListRequest{ProjectID: projectID},
+			request: &dao.LayerListRequest{ProjectID: projectID, Limit: 10},
 
-			expect: composerFixtures().layers[:2],
+			expect: []*dao.LayerListRow{row(layers[0]), row(layers[1])},
+		},
+		{
+			name: "Success/Page",
+
+			request: &dao.LayerListRequest{ProjectID: projectID, Limit: 1, Offset: 1},
+
+			expect: []*dao.LayerListRow{row(layers[1])},
+		},
+		{
+			name: "Success/PastEnd",
+
+			request: &dao.LayerListRequest{ProjectID: projectID, Limit: 10, Offset: 2},
 		},
 	}
 

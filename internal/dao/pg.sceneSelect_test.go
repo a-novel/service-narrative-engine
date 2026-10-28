@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
 	"github.com/a-novel-kit/golib/postgres/postgrestest"
@@ -28,21 +27,14 @@ func TestPgSceneSelect(t *testing.T) {
 		{
 			name: "Success",
 
-			request: &dao.SceneSelectRequest{ID: sceneID2, OwnerID: ownerID},
+			request: &dao.SceneSelectRequest{ID: sceneID2},
 
 			expect: composerFixtures().scenes[1],
 		},
 		{
-			name: "Error/OtherOwner",
-
-			request: &dao.SceneSelectRequest{ID: sceneID2, OwnerID: otherOwnerID},
-
-			expectErr: dao.ErrSceneSelectNotFound,
-		},
-		{
 			name: "Error/NotFound",
 
-			request: &dao.SceneSelectRequest{ID: uuid.MustParse("00000000-0000-0000-0000-0000000000ff"), OwnerID: ownerID},
+			request: &dao.SceneSelectRequest{ID: absentID},
 
 			expectErr: dao.ErrSceneSelectNotFound,
 		},

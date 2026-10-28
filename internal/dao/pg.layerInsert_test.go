@@ -24,7 +24,9 @@ func TestPgLayerInsert(t *testing.T) {
 
 		request *dao.LayerInsertRequest
 
-		expect       *dao.Layer
+		expect *dao.Layer
+		// expectLayers is the project's order after the insert, when the case checks it.
+		expectLayers []*dao.Layer
 		expectErr    error
 		expectFailed bool
 	}{
@@ -71,13 +73,20 @@ func TestPgLayerInsert(t *testing.T) {
 			expectFailed: true,
 		},
 		{
-			name: "Error/PositionTaken",
+			name: "Success/Shift",
 
 			request: &dao.LayerInsertRequest{
 				ID: newLayerID, ProjectID: projectID, Position: 1, Kind: "notes", Name: "Places", Now: now,
 			},
 
-			expectFailed: true,
+			expect: &dao.Layer{
+				ID: newLayerID, ProjectID: projectID, Position: 1, Kind: "notes", Name: "Places", UpdatedAt: now,
+			},
+			expectLayers: []*dao.Layer{
+				composerFixtures().layers[0],
+				{ID: newLayerID, ProjectID: projectID, Position: 1, Kind: "notes", Name: "Places", UpdatedAt: now},
+				layerAt(composerFixtures().layers[1], 2),
+			},
 		},
 	}
 
@@ -101,6 +110,10 @@ func TestPgLayerInsert(t *testing.T) {
 
 				require.ErrorIs(t, err, testCase.expectErr)
 				require.Equal(t, testCase.expect, result)
+
+				if testCase.expectLayers != nil {
+					require.Equal(t, testCase.expectLayers, listLayers(ctx, t, projectID))
+				}
 			})
 		})
 	}

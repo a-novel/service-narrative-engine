@@ -28,14 +28,15 @@ func TestPgProjectDelete(t *testing.T) {
 		{
 			name: "Success",
 
-			request: &dao.ProjectDeleteRequest{ID: projectID, OwnerID: ownerID},
+			request: &dao.ProjectDeleteRequest{ID: projectID},
 
-			expect: composerFixtures().projects[0],
+			expect:       composerFixtures().projects[0],
+			expectScenes: []*dao.Scene{},
 		},
 		{
-			name: "Error/OtherOwner",
+			name: "Error/NotFound",
 
-			request: &dao.ProjectDeleteRequest{ID: projectID, OwnerID: otherOwnerID},
+			request: &dao.ProjectDeleteRequest{ID: absentID},
 
 			expectScenes: composerFixtures().scenes[:3],
 			expectErr:    dao.ErrProjectDeleteNotFound,
@@ -43,7 +44,6 @@ func TestPgProjectDelete(t *testing.T) {
 	}
 
 	daoProjectDelete := dao.NewPgProjectDelete()
-	daoSceneList := dao.NewPgSceneList()
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -59,9 +59,7 @@ func TestPgProjectDelete(t *testing.T) {
 				require.Equal(t, testCase.expect, result)
 
 				// Deleting a project deletes its scenes with it.
-				scenes, err := daoSceneList.Exec(ctx, &dao.SceneListRequest{ProjectID: projectID})
-				require.NoError(t, err)
-				require.Equal(t, testCase.expectScenes, scenes)
+				require.Equal(t, testCase.expectScenes, listScenes(ctx, t, projectID))
 			})
 		})
 	}

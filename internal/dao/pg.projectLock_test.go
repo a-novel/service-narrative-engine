@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
 	"github.com/a-novel-kit/golib/postgres/postgrestest"
@@ -28,21 +27,14 @@ func TestPgProjectLock(t *testing.T) {
 		{
 			name: "Success",
 
-			request: &dao.ProjectLockRequest{ID: projectID, OwnerID: ownerID},
+			request: &dao.ProjectLockRequest{ID: projectID},
 
 			expect: composerFixtures().projects[0],
 		},
 		{
-			name: "Error/OtherOwner",
-
-			request: &dao.ProjectLockRequest{ID: projectID, OwnerID: otherOwnerID},
-
-			expectErr: dao.ErrProjectLockNotFound,
-		},
-		{
 			name: "Error/NotFound",
 
-			request: &dao.ProjectLockRequest{ID: uuid.MustParse("00000000-0000-0000-0000-0000000000ff"), OwnerID: ownerID},
+			request: &dao.ProjectLockRequest{ID: absentID},
 
 			expectErr: dao.ErrProjectLockNotFound,
 		},

@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
 	"github.com/a-novel-kit/golib/postgres/postgrestest"
@@ -28,21 +27,14 @@ func TestPgLayerSelect(t *testing.T) {
 		{
 			name: "Success",
 
-			request: &dao.LayerSelectRequest{ID: notesLayerID, OwnerID: ownerID},
+			request: &dao.LayerSelectRequest{ID: notesLayerID},
 
 			expect: composerFixtures().layers[1],
 		},
 		{
-			name: "Error/OtherOwner",
-
-			request: &dao.LayerSelectRequest{ID: notesLayerID, OwnerID: otherOwnerID},
-
-			expectErr: dao.ErrLayerSelectNotFound,
-		},
-		{
 			name: "Error/NotFound",
 
-			request: &dao.LayerSelectRequest{ID: uuid.MustParse("00000000-0000-0000-0000-0000000000ff"), OwnerID: ownerID},
+			request: &dao.LayerSelectRequest{ID: absentID},
 
 			expectErr: dao.ErrLayerSelectNotFound,
 		},

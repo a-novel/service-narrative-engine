@@ -16,18 +16,15 @@ import (
 //go:embed pg.sceneSelect.sql
 var sceneSelectQuery string
 
-// ErrSceneSelectNotFound is returned by [PgSceneSelect.Exec] when no scene with the ID belongs to a
-// project of the owner.
+// ErrSceneSelectNotFound is returned by [PgSceneSelect.Exec] when no scene has the ID.
 var ErrSceneSelectNotFound = errors.New("scene not found")
 
 // SceneSelectRequest is the input to [PgSceneSelect.Exec].
 type SceneSelectRequest struct {
 	ID uuid.UUID
-	// OwnerID is the user who must own the scene's project. Another owner's scene reads as not found.
-	OwnerID uuid.UUID
 }
 
-// PgSceneSelect reads a scene of a project its owner holds.
+// PgSceneSelect reads a scene by its ID. The caller checks the owner of its project.
 type PgSceneSelect struct{}
 
 func NewPgSceneSelect() *PgSceneSelect {
@@ -45,7 +42,7 @@ func (dao *PgSceneSelect) Exec(ctx context.Context, request *SceneSelectRequest)
 
 	entity := &Scene{}
 
-	err = db.NewRaw(sceneSelectQuery, request.ID, request.OwnerID).Scan(ctx, entity)
+	err = db.NewRaw(sceneSelectQuery, request.ID).Scan(ctx, entity)
 	if errors.Is(err, sql.ErrNoRows) {
 		err = errors.Join(err, ErrSceneSelectNotFound)
 	}

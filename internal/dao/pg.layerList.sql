@@ -1,6 +1,6 @@
--- The position check caps a project at 1000 layers, so this limit returns every one.
 SELECT
-  *
+  *,
+  count(*) OVER () AS total
 FROM
   layers
 WHERE
@@ -8,4 +8,6 @@ WHERE
 ORDER BY
   position
 LIMIT
-  1000;
+  ?1
+OFFSET
+  ?2;

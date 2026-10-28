@@ -27,9 +27,10 @@ func TestPgSceneInsert(t *testing.T) {
 
 		request *dao.SceneInsertRequest
 
-		expect       []*dao.Scene
+		expect []*dao.Scene
+		// expectScenes is the project's order after the insert, when the case checks it.
+		expectScenes []*dao.Scene
 		expectErr    error
-		expectFailed bool
 	}{
 		{
 			name: "Success",
@@ -82,16 +83,29 @@ func TestPgSceneInsert(t *testing.T) {
 			expectErr: dao.ErrSceneInsertFull,
 		},
 		{
-			name: "Error/PositionTaken",
+			name: "Success/Shift",
 
 			request: &dao.SceneInsertRequest{
 				ProjectID: projectID,
-				Position:  2,
-				Scenes:    []dao.SceneInsertItem{{ID: newSceneID1, Title: "Le débat", Color: "#e0457b"}},
-				Now:       now,
+				Position:  1,
+				Scenes: []dao.SceneInsertItem{
+					{ID: newSceneID1, Title: "Le débat", Color: "#e0457b"},
+					{ID: newSceneID2, Title: "Le passage", Color: "#2bb673"},
+				},
+				Now: now,
 			},
 
-			expectFailed: true,
+			expect: []*dao.Scene{
+				{ID: newSceneID1, ProjectID: projectID, Position: 1, Title: "Le débat", Color: "#e0457b", UpdatedAt: now},
+				{ID: newSceneID2, ProjectID: projectID, Position: 2, Title: "Le passage", Color: "#2bb673", UpdatedAt: now},
+			},
+			expectScenes: []*dao.Scene{
+				composerFixtures().scenes[0],
+				{ID: newSceneID1, ProjectID: projectID, Position: 1, Title: "Le débat", Color: "#e0457b", UpdatedAt: now},
+				{ID: newSceneID2, ProjectID: projectID, Position: 2, Title: "Le passage", Color: "#2bb673", UpdatedAt: now},
+				sceneAt(composerFixtures().scenes[1], 3),
+				sceneAt(composerFixtures().scenes[2], 4),
+			},
 		},
 	}
 
@@ -107,16 +121,14 @@ func TestPgSceneInsert(t *testing.T) {
 				insertFixtures(ctx, t, composerFixtures())
 
 				result, err := daoSceneInsert.Exec(ctx, testCase.request)
-				if testCase.expectFailed {
-					require.Error(t, err)
-
-					return
-				}
-
 				require.ErrorIs(t, err, testCase.expectErr)
 
 				slices.SortFunc(result, func(a, b *dao.Scene) int { return cmp.Compare(a.Position, b.Position) })
 				require.Equal(t, testCase.expect, result)
+
+				if testCase.expectScenes != nil {
+					require.Equal(t, testCase.expectScenes, listScenes(ctx, t, projectID))
+				}
 			})
 		})
 	}

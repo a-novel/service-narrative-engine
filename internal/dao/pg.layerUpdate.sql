@@ -1,13 +1,9 @@
 UPDATE layers
 SET
-  name = ?2,
-  description = ?3,
-  updated_at = ?4
-FROM
-  projects
+  name = ?1,
+  description = ?2,
+  updated_at = ?3
 WHERE
-  layers.id = ?0
-  AND projects.id = layers.project_id
-  AND projects.owner_id = ?1
+  id = ?0
 RETURNING
-  layers.*;
+  *;

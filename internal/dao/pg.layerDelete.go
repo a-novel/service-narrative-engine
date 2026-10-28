@@ -16,18 +16,15 @@ import (
 //go:embed pg.layerDelete.sql
 var layerDeleteQuery string
 
-// ErrLayerDeleteNotFound is returned by [PgLayerDelete.Exec] when no layer with the ID belongs to a
-// project of the owner.
+// ErrLayerDeleteNotFound is returned by [PgLayerDelete.Exec] when no layer has the ID.
 var ErrLayerDeleteNotFound = errors.New("layer not found")
 
 // LayerDeleteRequest is the input to [PgLayerDelete.Exec].
 type LayerDeleteRequest struct {
 	ID uuid.UUID
-	// OwnerID is the user who must own the layer's project. Another owner's layer reads as not found.
-	OwnerID uuid.UUID
 }
 
-// PgLayerDelete removes a layer with its cells.
+// PgLayerDelete removes a layer with its cells, and moves the layers after it up by one.
 type PgLayerDelete struct{}
 
 func NewPgLayerDelete() *PgLayerDelete {
@@ -45,7 +42,7 @@ func (dao *PgLayerDelete) Exec(ctx context.Context, request *LayerDeleteRequest)
 
 	entity := &Layer{}
 
-	err = db.NewRaw(layerDeleteQuery, request.ID, request.OwnerID).Scan(ctx, entity)
+	err = db.NewRaw(layerDeleteQuery, request.ID).Scan(ctx, entity)
 	if errors.Is(err, sql.ErrNoRows) {
 		err = errors.Join(err, ErrLayerDeleteNotFound)
 	}
