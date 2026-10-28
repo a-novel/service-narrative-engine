@@ -27,14 +27,37 @@ func TestPgCellList(t *testing.T) {
 		{
 			name: "Success",
 
-			request: &dao.CellListRequest{ProjectID: projectID},
+			request: &dao.CellListRequest{ProjectID: projectID, Limit: 10},
 
 			expect: composerFixtures().cells,
 		},
 		{
+			name: "Success/Limit",
+
+			request: &dao.CellListRequest{ProjectID: projectID, Limit: 1},
+
+			expect: composerFixtures().cells[:1],
+		},
+		{
+			name: "Success/After",
+
+			request: &dao.CellListRequest{
+				ProjectID: projectID, Limit: 10, AfterSceneID: sceneID1, AfterLayerID: manuscriptLayerID,
+			},
+
+			expect: composerFixtures().cells[1:],
+		},
+		{
+			name: "Success/AfterLast",
+
+			request: &dao.CellListRequest{
+				ProjectID: projectID, Limit: 10, AfterSceneID: sceneID1, AfterLayerID: notesLayerID,
+			},
+		},
+		{
 			name: "Success/OtherProject",
 
-			request: &dao.CellListRequest{ProjectID: otherProjectID},
+			request: &dao.CellListRequest{ProjectID: otherProjectID, Limit: 10},
 		},
 	}
 

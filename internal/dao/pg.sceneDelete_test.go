@@ -60,7 +60,7 @@ func TestPgSceneDelete(t *testing.T) {
 				require.Equal(t, testCase.expect, result)
 
 				// Deleting a scene deletes its cells with it.
-				cells, err := daoCellList.Exec(ctx, &dao.CellListRequest{ProjectID: projectID})
+				cells, err := daoCellList.Exec(ctx, &dao.CellListRequest{ProjectID: projectID, Limit: 10})
 				require.NoError(t, err)
 				requireCellsEqual(t, testCase.expectCells, cells)
 			})

@@ -19,9 +19,16 @@ var cellListQuery string
 type CellListRequest struct {
 	// ProjectID is the project whose cells to read.
 	ProjectID uuid.UUID
+
+	// Limit caps the cells in the page.
+	Limit int
+	// AfterSceneID and AfterLayerID are the key of the last cell of the previous page. uuid.Nil for
+	// both starts at the first cell.
+	AfterSceneID uuid.UUID
+	AfterLayerID uuid.UUID
 }
 
-// PgCellList reads the cells of a project, in the narrative order of their scenes.
+// PgCellList reads a page of a project's cells, in the order of their keys.
 type PgCellList struct{}
 
 func NewPgCellList() *PgCellList {
@@ -39,7 +46,9 @@ func (dao *PgCellList) Exec(ctx context.Context, request *CellListRequest) ([]*C
 
 	var entities []*Cell
 
-	err = db.NewRaw(cellListQuery, request.ProjectID).Scan(ctx, &entities)
+	err = db.NewRaw(
+		cellListQuery, request.ProjectID, request.Limit, request.AfterSceneID, request.AfterLayerID,
+	).Scan(ctx, &entities)
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("execute query: %w", err))
 	}
