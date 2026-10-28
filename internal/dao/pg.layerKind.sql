@@ -1,5 +1,5 @@
 SELECT
-  *
+  kind
 FROM
   layers
 WHERE

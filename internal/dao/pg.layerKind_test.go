@@ -13,41 +13,41 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/models/migrations"
 )
 
-func TestPgSceneSelect(t *testing.T) {
+func TestPgLayerKind(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
 		name string
 
-		request *dao.SceneSelectRequest
+		request *dao.LayerKindRequest
 
-		expect    *dao.Scene
+		expect    string
 		expectErr error
 	}{
 		{
 			name: "Success",
 
-			request: &dao.SceneSelectRequest{ProjectID: projectID, ID: sceneID2},
+			request: &dao.LayerKindRequest{ProjectID: projectID, ID: notesLayerID},
 
-			expect: composerFixtures().scenes[1],
+			expect: "notes",
 		},
 		{
 			name: "Error/NotFound",
 
-			request: &dao.SceneSelectRequest{ProjectID: projectID, ID: absentID},
+			request: &dao.LayerKindRequest{ProjectID: projectID, ID: absentID},
 
-			expectErr: dao.ErrSceneSelectNotFound,
+			expectErr: dao.ErrLayerKindNotFound,
 		},
 		{
 			name: "Error/OtherProject",
 
-			request: &dao.SceneSelectRequest{ProjectID: projectID, ID: otherSceneID},
+			request: &dao.LayerKindRequest{ProjectID: projectID, ID: otherLayerID},
 
-			expectErr: dao.ErrSceneSelectNotFound,
+			expectErr: dao.ErrLayerKindNotFound,
 		},
 	}
 
-	daoSceneSelect := dao.NewPgSceneSelect()
+	daoLayerKind := dao.NewPgLayerKind()
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -58,7 +58,7 @@ func TestPgSceneSelect(t *testing.T) {
 
 				insertFixtures(ctx, t, composerFixtures())
 
-				result, err := daoSceneSelect.Exec(ctx, testCase.request)
+				result, err := daoLayerKind.Exec(ctx, testCase.request)
 				require.ErrorIs(t, err, testCase.expectErr)
 				require.Equal(t, testCase.expect, result)
 			})
