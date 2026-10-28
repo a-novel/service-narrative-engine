@@ -21,7 +21,7 @@ CREATE TABLE scenes (
   id uuid PRIMARY KEY NOT NULL DEFAULT uuidv7(),
   project_id uuid NOT NULL REFERENCES projects (id) ON DELETE CASCADE,
   /* The scene's place in narrative order, from 0. With the unique position key, the range caps a
-  project at 500 scenes, so a read of every scene needs no pagination. */
+  project at 500 scenes. */
   position integer NOT NULL CONSTRAINT scenes_position_check CHECK (
     position >= 0
     AND position < 500
@@ -34,16 +34,18 @@ CREATE TABLE scenes (
   /* Extra instructions for the model when it writes about the scene. */
   prompt text NOT NULL DEFAULT '',
   updated_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  -- A reorder rewrites every position in one statement, so uniqueness is checked at commit.
+  -- A shift moves a range of positions in one statement, so uniqueness is checked at commit.
   CONSTRAINT scenes_project_id_position_key UNIQUE (project_id, position)
-  DEFERRABLE INITIALLY DEFERRED
+  DEFERRABLE INITIALLY DEFERRED,
+  -- The target of the cells' foreign key, which keeps a cell within its scene's project.
+  CONSTRAINT scenes_project_id_id_key UNIQUE (project_id, id)
 );
 
 CREATE TABLE layers (
   id uuid PRIMARY KEY NOT NULL DEFAULT uuidv7(),
   project_id uuid NOT NULL REFERENCES projects (id) ON DELETE CASCADE,
   /* The layer's place among the project's rows, from 0. With the unique position key, the range
-  caps a project at 1000 layers, so a read of every layer needs no pagination. */
+  caps a project at 1000 layers. */
   position integer NOT NULL CONSTRAINT layers_position_check CHECK (
     position >= 0
     AND position < 1000
@@ -54,22 +56,24 @@ CREATE TABLE layers (
   description text NOT NULL DEFAULT '',
   updated_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT layers_project_id_position_key UNIQUE (project_id, position)
-  DEFERRABLE INITIALLY DEFERRED
+  DEFERRABLE INITIALLY DEFERRED,
+  -- The target of the cells' foreign key, which keeps a cell within its layer's project.
+  CONSTRAINT layers_project_id_id_key UNIQUE (project_id, id)
 );
 
--- The manuscript layer is the source of the export, so a project holds exactly one.
-CREATE UNIQUE INDEX layers_project_id_manuscript_idx ON layers (project_id)
-WHERE
-  kind = 'manuscript';
-
 CREATE TABLE cells (
-  scene_id uuid NOT NULL REFERENCES scenes (id) ON DELETE CASCADE,
-  layer_id uuid NOT NULL REFERENCES layers (id) ON DELETE CASCADE,
+  project_id uuid NOT NULL,
+  scene_id uuid NOT NULL,
+  layer_id uuid NOT NULL,
   /* A JSON document that follows the content schema of the layer's kind. */
   content jsonb NOT NULL,
   updated_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (scene_id, layer_id)
+  PRIMARY KEY (scene_id, layer_id),
+  -- Both keys carry the project, so a cell's scene and layer exist and share its project.
+  CONSTRAINT cells_scene_fkey FOREIGN KEY (project_id, scene_id) REFERENCES scenes (project_id, id) ON DELETE CASCADE,
+  CONSTRAINT cells_layer_fkey FOREIGN KEY (project_id, layer_id) REFERENCES layers (project_id, id) ON DELETE CASCADE
 );
 
--- The primary key serves the scene side; deleting a layer cascades through this one.
-CREATE INDEX cells_layer_id_idx ON cells (layer_id);
+-- Lists a project's cells. The primary key serves the scene side; deleting a layer cascades through
+-- this one.
+CREATE INDEX cells_project_id_layer_id_idx ON cells (project_id, layer_id);

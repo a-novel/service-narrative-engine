@@ -1,0 +1,133 @@
+package core
+
+import (
+	"cmp"
+	"context"
+	"errors"
+	"fmt"
+	"slices"
+
+	"github.com/google/uuid"
+	"github.com/samber/lo"
+	"go.opentelemetry.io/otel/attribute"
+
+	"github.com/a-novel-kit/golib/otel"
+	"github.com/a-novel-kit/golib/transaction"
+
+	"github.com/a-novel/service-narrative-engine/internal/dao"
+)
+
+// LayersDeleteDaoLock locks the project its owner names, so changes to its order run one at a time.
+type LayersDeleteDaoLock interface {
+	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
+}
+
+// LayersDeleteDaoKind reads the kinds of the layers to delete, and how many layers share each.
+type LayersDeleteDaoKind interface {
+	Exec(ctx context.Context, request *dao.LayerKindRequest) ([]*dao.LayerKind, error)
+}
+
+// LayersDeleteDao removes the layers, and moves the layers after them up.
+type LayersDeleteDao interface {
+	Exec(ctx context.Context, request *dao.LayersDeleteRequest) ([]*dao.Layer, error)
+}
+
+// LayersDeleteRequest names the layers to delete.
+type LayersDeleteRequest struct {
+	OwnerID   uuid.UUID `validate:"required"`
+	ProjectID uuid.UUID `validate:"required"`
+	// IDs lists the layers to delete, each once, at most 100.
+	IDs []uuid.UUID `validate:"required,min=1,max=100,unique,dive,required"`
+}
+
+// LayersDelete deletes layers with their cells, and moves the layers after them up to close the gaps. It
+// deletes all of them or none, and refuses with [ErrRequiredLayer] to remove the last layer of a
+// required kind, such as the manuscript.
+type LayersDelete struct {
+	daoLock    LayersDeleteDaoLock
+	daoKind    LayersDeleteDaoKind
+	dao        LayersDeleteDao
+	transactor transaction.Transactor
+}
+
+func NewLayersDelete(
+	daoLock LayersDeleteDaoLock,
+	daoKind LayersDeleteDaoKind,
+	dao LayersDeleteDao,
+	transactor transaction.Transactor,
+) *LayersDelete {
+	return &LayersDelete{daoLock: daoLock, daoKind: daoKind, dao: dao, transactor: transactor}
+}
+
+func (service *LayersDelete) Exec(ctx context.Context, request *LayersDeleteRequest) ([]*Layer, error) {
+	ctx, span := otel.Tracer().Start(ctx, "core.LayersDelete")
+	defer span.End()
+
+	span.SetAttributes(
+		attribute.String("project.id", request.ProjectID.String()),
+		attribute.String("project.owner_id", request.OwnerID.String()),
+		attribute.Int("layers.count", len(request.IDs)),
+	)
+
+	err := validate.Struct(request)
+	if err != nil {
+		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
+	}
+
+	var layers []*Layer
+
+	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
+		err := lockOwnedProject(ctx, service.daoLock, projectOwnershipOpts{
+			projectID: request.ProjectID,
+			ownerID:   request.OwnerID,
+		})
+		if err != nil {
+			return fmt.Errorf("lock project: %w", err)
+		}
+
+		// The counts are read under the lock, so two deletes cannot both remove the last layer of a kind.
+		kinds, err := service.daoKind.Exec(ctx, &dao.LayerKindRequest{ProjectID: request.ProjectID, IDs: request.IDs})
+		if err != nil {
+			return fmt.Errorf("read layer kinds: %w", err)
+		}
+
+		if len(kinds) != len(request.IDs) {
+			return fmt.Errorf("%w: %d of %d layers", ErrLayerNotFound, len(request.IDs)-len(kinds), len(request.IDs))
+		}
+
+		err = keepRequiredLayers(kinds)
+		if err != nil {
+			return err
+		}
+
+		deleted, err := service.dao.Exec(ctx, &dao.LayersDeleteRequest{ProjectID: request.ProjectID, IDs: request.IDs})
+		if err != nil {
+			return fmt.Errorf("delete layers: %w", err)
+		}
+
+		slices.SortFunc(deleted, func(a, b *dao.Layer) int { return cmp.Compare(a.Position, b.Position) })
+		layers = lo.Map(deleted, func(entity *dao.Layer, _ int) *Layer { return newLayer(entity) })
+
+		return nil
+	})
+	if err != nil {
+		return nil, otel.ReportError(span, fmt.Errorf("run transaction: %w", err))
+	}
+
+	return layers, nil
+}
+
+// keepRequiredLayers returns [ErrRequiredLayer] when the layers to delete hold every layer of a required
+// kind their project has.
+func keepRequiredLayers(kinds []*dao.LayerKind) error {
+	deleting := lo.CountValuesBy(kinds, func(kind *dao.LayerKind) string { return kind.Kind })
+
+	for _, kind := range kinds {
+		_, required := requiredLayers[kind.Kind]
+		if required && deleting[kind.Kind] == kind.Count {
+			return fmt.Errorf("%w: the last %s layer", ErrRequiredLayer, kind.Kind)
+		}
+	}
+
+	return nil
+}

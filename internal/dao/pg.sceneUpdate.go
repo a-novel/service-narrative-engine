@@ -17,12 +17,13 @@ import (
 //go:embed pg.sceneUpdate.sql
 var sceneUpdateQuery string
 
-// ErrSceneUpdateNotFound is returned by [PgSceneUpdate.Exec] when no scene has the ID.
+// ErrSceneUpdateNotFound is returned by [PgSceneUpdate.Exec] when the project holds no scene with the ID.
 var ErrSceneUpdateNotFound = errors.New("scene not found")
 
 // SceneUpdateRequest is the input to [PgSceneUpdate.Exec].
 type SceneUpdateRequest struct {
-	ID uuid.UUID
+	ProjectID uuid.UUID
+	ID        uuid.UUID
 
 	// Title names the scene in the composer.
 	Title string
@@ -56,7 +57,7 @@ func (dao *PgSceneUpdate) Exec(ctx context.Context, request *SceneUpdateRequest)
 	entity := &Scene{}
 
 	err = db.NewRaw(
-		sceneUpdateQuery, request.ID,
+		sceneUpdateQuery, request.ProjectID, request.ID,
 		request.Title, request.Color, request.Description, request.Prompt, request.Now,
 	).Scan(ctx, entity)
 	if errors.Is(err, sql.ErrNoRows) {

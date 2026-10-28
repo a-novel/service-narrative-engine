@@ -4,18 +4,12 @@
   "description": "One unit of a scene's manuscript text, in reading order: a narration or a line of dialogue.",
   "oneOf": [{ "$ref": "#/$defs/narration" }, { "$ref": "#/$defs/dialogue" }],
   "$defs": {
-    "id": {
-      "type": "string",
-      "description": "Identifies the block within its cell. An edited block keeps its id; a new block takes one no other block of the cell uses.",
-      "pattern": "^[A-Za-z0-9_-]{1,32}$"
-    },
     "narration": {
       "type": "object",
       "description": "Prose the narrator tells: action, description, a character's thoughts. It follows the manuscript's language, voice and tense.",
-      "required": ["id", "kind", "text"],
+      "required": ["kind", "text"],
       "additionalProperties": false,
       "properties": {
-        "id": { "$ref": "#/$defs/id" },
         "kind": { "const": "narration" },
         "text": {
           "type": "string",
@@ -27,10 +21,9 @@
     "dialogue": {
       "type": "object",
       "description": "One character's spoken line: the words spoken, with tone cues where the delivery changes.",
-      "required": ["id", "kind", "speaker", "parts"],
+      "required": ["kind", "speaker", "parts"],
       "additionalProperties": false,
       "properties": {
-        "id": { "$ref": "#/$defs/id" },
         "kind": { "const": "dialogue" },
         "speaker": {
           "type": "string",

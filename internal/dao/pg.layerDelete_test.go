@@ -31,7 +31,7 @@ func TestPgLayerDelete(t *testing.T) {
 		{
 			name: "Success",
 
-			request: &dao.LayerDeleteRequest{ID: notesLayerID},
+			request: &dao.LayerDeleteRequest{ProjectID: projectID, ID: notesLayerID},
 
 			expect:       layers[1],
 			expectLayers: []*dao.Layer{layers[0]},
@@ -40,7 +40,7 @@ func TestPgLayerDelete(t *testing.T) {
 		{
 			name: "Success/First",
 
-			request: &dao.LayerDeleteRequest{ID: manuscriptLayerID},
+			request: &dao.LayerDeleteRequest{ProjectID: projectID, ID: manuscriptLayerID},
 
 			expect:       layers[0],
 			expectLayers: []*dao.Layer{layerAt(layers[1], 0)},
@@ -49,7 +49,16 @@ func TestPgLayerDelete(t *testing.T) {
 		{
 			name: "Error/NotFound",
 
-			request: &dao.LayerDeleteRequest{ID: absentID},
+			request: &dao.LayerDeleteRequest{ProjectID: projectID, ID: absentID},
+
+			expectLayers: layers[:2],
+			expectCells:  composerFixtures().cells,
+			expectErr:    dao.ErrLayerDeleteNotFound,
+		},
+		{
+			name: "Error/OtherProject",
+
+			request: &dao.LayerDeleteRequest{ProjectID: projectID, ID: otherLayerID},
 
 			expectLayers: layers[:2],
 			expectCells:  composerFixtures().cells,

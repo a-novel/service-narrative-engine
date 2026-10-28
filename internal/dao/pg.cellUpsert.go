@@ -4,6 +4,7 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -16,8 +17,29 @@ import (
 //go:embed pg.cellUpsert.sql
 var cellUpsertQuery string
 
+var (
+	// ErrCellUpsertSceneNotFound is returned by [PgCellUpsert.Exec] when the project holds no scene
+	// with the ID.
+	ErrCellUpsertSceneNotFound = errors.New("scene not found")
+	// ErrCellUpsertLayerNotFound is returned by [PgCellUpsert.Exec] when the project holds no layer
+	// with the ID.
+	ErrCellUpsertLayerNotFound = errors.New("layer not found")
+)
+
+// CellUpsertRow names a cell [PgCellUpsert.Exec] or [PgCellsUpsert.Exec] wrote, and when. The caller
+// already holds its content.
+type CellUpsertRow struct {
+	// SceneID is the scene whose column holds the cell.
+	SceneID uuid.UUID `bun:"scene_id,type:uuid"`
+	// LayerID is the layer whose row holds the cell.
+	LayerID uuid.UUID `bun:"layer_id,type:uuid"`
+
+	UpdatedAt time.Time `bun:"updated_at"`
+}
+
 // CellUpsertRequest is the input to [PgCellUpsert.Exec].
 type CellUpsertRequest struct {
+	ProjectID uuid.UUID
 	// SceneID is the scene whose column holds the cell.
 	SceneID uuid.UUID
 	// LayerID is the layer whose row holds the cell.
@@ -30,14 +52,15 @@ type CellUpsertRequest struct {
 	Now time.Time
 }
 
-// PgCellUpsert writes a cell's content, creating the cell on its first write.
+// PgCellUpsert writes a cell's content, creating the cell on its first write, and returns its keys and
+// write time. The scene and the layer must belong to the project.
 type PgCellUpsert struct{}
 
 func NewPgCellUpsert() *PgCellUpsert {
 	return &PgCellUpsert{}
 }
 
-func (dao *PgCellUpsert) Exec(ctx context.Context, request *CellUpsertRequest) (*Cell, error) {
+func (dao *PgCellUpsert) Exec(ctx context.Context, request *CellUpsertRequest) (*CellUpsertRow, error) {
 	ctx, span := otel.Tracer().Start(ctx, "dao.PgCellUpsert")
 	defer span.End()
 
@@ -46,11 +69,19 @@ func (dao *PgCellUpsert) Exec(ctx context.Context, request *CellUpsertRequest) (
 		return nil, otel.ReportError(span, fmt.Errorf("get postgres context: %w", err))
 	}
 
-	entity := &Cell{}
+	entity := &CellUpsertRow{}
 
 	err = db.NewRaw(
-		cellUpsertQuery, request.SceneID, request.LayerID, string(request.Content), request.Now,
+		cellUpsertQuery, request.ProjectID, request.SceneID, request.LayerID, string(request.Content), request.Now,
 	).Scan(ctx, entity)
+
+	switch {
+	case isViolation(err, pgForeignKeyViolation, "cells_scene_fkey"):
+		err = errors.Join(err, ErrCellUpsertSceneNotFound)
+	case isViolation(err, pgForeignKeyViolation, "cells_layer_fkey"):
+		err = errors.Join(err, ErrCellUpsertLayerNotFound)
+	}
+
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("execute query: %w", err))
 	}

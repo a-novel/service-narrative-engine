@@ -32,9 +32,10 @@ VALUES
   );
 
 INSERT INTO
-  cells (scene_id, layer_id, content)
+  cells (project_id, scene_id, layer_id, content)
 VALUES
   (
+    '00000000-0000-0000-0000-000000000001',
     '00000000-0000-0000-0000-000000000011',
     '00000000-0000-0000-0000-000000000021',
     '{"blocks": []}'

@@ -31,7 +31,7 @@ func TestPgSceneDelete(t *testing.T) {
 		{
 			name: "Success",
 
-			request: &dao.SceneDeleteRequest{ID: sceneID1},
+			request: &dao.SceneDeleteRequest{ProjectID: projectID, ID: sceneID1},
 
 			expect:       scenes[0],
 			expectScenes: []*dao.Scene{sceneAt(scenes[1], 0), sceneAt(scenes[2], 1)},
@@ -40,7 +40,7 @@ func TestPgSceneDelete(t *testing.T) {
 		{
 			name: "Success/Middle",
 
-			request: &dao.SceneDeleteRequest{ID: sceneID2},
+			request: &dao.SceneDeleteRequest{ProjectID: projectID, ID: sceneID2},
 
 			expect:       scenes[1],
 			expectScenes: []*dao.Scene{scenes[0], sceneAt(scenes[2], 1)},
@@ -49,7 +49,16 @@ func TestPgSceneDelete(t *testing.T) {
 		{
 			name: "Error/NotFound",
 
-			request: &dao.SceneDeleteRequest{ID: absentID},
+			request: &dao.SceneDeleteRequest{ProjectID: projectID, ID: absentID},
+
+			expectScenes: scenes[:3],
+			expectCells:  composerFixtures().cells,
+			expectErr:    dao.ErrSceneDeleteNotFound,
+		},
+		{
+			name: "Error/OtherProject",
+
+			request: &dao.SceneDeleteRequest{ProjectID: projectID, ID: otherSceneID},
 
 			expectScenes: scenes[:3],
 			expectCells:  composerFixtures().cells,

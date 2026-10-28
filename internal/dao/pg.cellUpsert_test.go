@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
 	"github.com/a-novel-kit/golib/postgres/postgrestest"
@@ -19,37 +18,74 @@ func TestPgCellUpsert(t *testing.T) {
 	t.Parallel()
 
 	content := json.RawMessage(`{"text": "Marie, Paul"}`)
-	// unknownSceneID names no scene, so a cell for it breaks the foreign key.
-	unknownSceneID := uuid.MustParse("00000000-0000-0000-0000-000000000018")
+	cells := composerFixtures().cells
 
 	testCases := []struct {
 		name string
 
 		request *dao.CellUpsertRequest
 
-		expect       *dao.Cell
-		expectFailed bool
+		expect *dao.CellUpsertRow
+		// expectCells is the project's cells after the write, by scene, then layer.
+		expectCells []*dao.Cell
+		expectErr   error
 	}{
 		{
 			name: "Success/Create",
 
-			request: &dao.CellUpsertRequest{SceneID: sceneID2, LayerID: notesLayerID, Content: content, Now: now},
+			request: &dao.CellUpsertRequest{
+				ProjectID: projectID, SceneID: sceneID2, LayerID: notesLayerID, Content: content, Now: now,
+			},
 
-			expect: &dao.Cell{SceneID: sceneID2, LayerID: notesLayerID, Content: content, UpdatedAt: now},
+			expect: &dao.CellUpsertRow{SceneID: sceneID2, LayerID: notesLayerID, UpdatedAt: now},
+			expectCells: []*dao.Cell{
+				cells[0],
+				cells[1],
+				{ProjectID: projectID, SceneID: sceneID2, LayerID: notesLayerID, Content: content, UpdatedAt: now},
+			},
 		},
 		{
 			name: "Success/Update",
 
-			request: &dao.CellUpsertRequest{SceneID: sceneID1, LayerID: notesLayerID, Content: content, Now: now},
+			request: &dao.CellUpsertRequest{
+				ProjectID: projectID, SceneID: sceneID1, LayerID: notesLayerID, Content: content, Now: now,
+			},
 
-			expect: &dao.Cell{SceneID: sceneID1, LayerID: notesLayerID, Content: content, UpdatedAt: now},
+			expect: &dao.CellUpsertRow{SceneID: sceneID1, LayerID: notesLayerID, UpdatedAt: now},
+			expectCells: []*dao.Cell{
+				cells[0],
+				{ProjectID: projectID, SceneID: sceneID1, LayerID: notesLayerID, Content: content, UpdatedAt: now},
+			},
 		},
 		{
 			name: "Error/UnknownScene",
 
-			request: &dao.CellUpsertRequest{SceneID: unknownSceneID, LayerID: notesLayerID, Content: content, Now: now},
+			request: &dao.CellUpsertRequest{
+				ProjectID: projectID, SceneID: absentID, LayerID: notesLayerID, Content: content, Now: now,
+			},
 
-			expectFailed: true,
+			expectCells: cells,
+			expectErr:   dao.ErrCellUpsertSceneNotFound,
+		},
+		{
+			name: "Error/OtherProjectScene",
+
+			request: &dao.CellUpsertRequest{
+				ProjectID: projectID, SceneID: otherSceneID, LayerID: notesLayerID, Content: content, Now: now,
+			},
+
+			expectCells: cells,
+			expectErr:   dao.ErrCellUpsertSceneNotFound,
+		},
+		{
+			name: "Error/OtherProjectLayer",
+
+			request: &dao.CellUpsertRequest{
+				ProjectID: projectID, SceneID: sceneID2, LayerID: otherLayerID, Content: content, Now: now,
+			},
+
+			expectCells: cells,
+			expectErr:   dao.ErrCellUpsertLayerNotFound,
 		},
 	}
 
@@ -65,15 +101,11 @@ func TestPgCellUpsert(t *testing.T) {
 				insertFixtures(ctx, t, composerFixtures())
 
 				result, err := daoCellUpsert.Exec(ctx, testCase.request)
-				if testCase.expectFailed {
-					require.Error(t, err)
+				require.ErrorIs(t, err, testCase.expectErr)
+				require.Equal(t, testCase.expect, result)
 
-					return
-				}
-
-				require.NoError(t, err)
-
-				requireCellsEqual(t, []*dao.Cell{testCase.expect}, []*dao.Cell{result})
+				// The write returns the cell's key alone, so the stored cells carry the content.
+				requireCellsEqual(t, testCase.expectCells, listCells(ctx, t, projectID))
 			})
 		})
 	}

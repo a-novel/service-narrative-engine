@@ -30,7 +30,7 @@ func TestPgLayerMove(t *testing.T) {
 		{
 			name: "Success/Up",
 
-			request: &dao.LayerMoveRequest{ID: notesLayerID, To: 0},
+			request: &dao.LayerMoveRequest{ProjectID: projectID, ID: notesLayerID, Position: 0},
 
 			expect:       layerAt(layers[1], 0),
 			expectLayers: []*dao.Layer{layerAt(layers[1], 0), layerAt(layers[0], 1)},
@@ -38,15 +38,38 @@ func TestPgLayerMove(t *testing.T) {
 		{
 			name: "Success/Down",
 
-			request: &dao.LayerMoveRequest{ID: manuscriptLayerID, To: 1},
+			request: &dao.LayerMoveRequest{ProjectID: projectID, ID: manuscriptLayerID, Position: 1},
 
 			expect:       layerAt(layers[0], 1),
 			expectLayers: []*dao.Layer{layerAt(layers[1], 0), layerAt(layers[0], 1)},
 		},
 		{
+			name: "Success/PastTheEnd",
+
+			request: &dao.LayerMoveRequest{ProjectID: projectID, ID: manuscriptLayerID, Position: 99},
+
+			expect:       layerAt(layers[0], 1),
+			expectLayers: []*dao.Layer{layerAt(layers[1], 0), layerAt(layers[0], 1)},
+		},
+		{
+			name: "Success/SamePosition",
+
+			request: &dao.LayerMoveRequest{ProjectID: projectID, ID: notesLayerID, Position: 1},
+
+			expect:       layers[1],
+			expectLayers: layers[:2],
+		},
+		{
 			name: "Error/NotFound",
 
-			request: &dao.LayerMoveRequest{ID: absentID, To: 0},
+			request: &dao.LayerMoveRequest{ProjectID: projectID, ID: absentID, Position: 0},
+
+			expectErr: dao.ErrLayerMoveNotFound,
+		},
+		{
+			name: "Error/OtherProject",
+
+			request: &dao.LayerMoveRequest{ProjectID: projectID, ID: otherLayerID, Position: 0},
 
 			expectErr: dao.ErrLayerMoveNotFound,
 		},

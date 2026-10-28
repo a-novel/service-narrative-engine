@@ -13,34 +13,40 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/models/migrations"
 )
 
-func TestPgLayerSelect(t *testing.T) {
+func TestPgProjectOwned(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
 		name string
 
-		request *dao.LayerSelectRequest
+		request *dao.ProjectOwnedRequest
 
-		expect    *dao.Layer
-		expectErr error
+		expect bool
 	}{
 		{
 			name: "Success",
 
-			request: &dao.LayerSelectRequest{ID: notesLayerID},
+			request: &dao.ProjectOwnedRequest{ID: projectID, OwnerID: ownerID},
 
-			expect: composerFixtures().layers[1],
+			expect: true,
 		},
 		{
-			name: "Error/NotFound",
+			name: "Success/OtherOwner",
 
-			request: &dao.LayerSelectRequest{ID: absentID},
+			request: &dao.ProjectOwnedRequest{ID: otherProjectID, OwnerID: ownerID},
 
-			expectErr: dao.ErrLayerSelectNotFound,
+			expect: false,
+		},
+		{
+			name: "Success/NotFound",
+
+			request: &dao.ProjectOwnedRequest{ID: absentID, OwnerID: ownerID},
+
+			expect: false,
 		},
 	}
 
-	daoLayerSelect := dao.NewPgLayerSelect()
+	daoProjectOwned := dao.NewPgProjectOwned()
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -51,8 +57,8 @@ func TestPgLayerSelect(t *testing.T) {
 
 				insertFixtures(ctx, t, composerFixtures())
 
-				result, err := daoLayerSelect.Exec(ctx, testCase.request)
-				require.ErrorIs(t, err, testCase.expectErr)
+				result, err := daoProjectOwned.Exec(ctx, testCase.request)
+				require.NoError(t, err)
 				require.Equal(t, testCase.expect, result)
 			})
 		})

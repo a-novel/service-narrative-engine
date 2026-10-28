@@ -1,0 +1,128 @@
+package core
+
+import (
+	"cmp"
+	"context"
+	"errors"
+	"fmt"
+	"slices"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/samber/lo"
+	"go.opentelemetry.io/otel/attribute"
+
+	"github.com/a-novel-kit/golib/otel"
+	"github.com/a-novel-kit/golib/transaction"
+
+	"github.com/a-novel/service-narrative-engine/internal/dao"
+)
+
+// LayersCreateDaoLock locks the project its owner names, so changes to its order run one at a time.
+type LayersCreateDaoLock interface {
+	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
+}
+
+// LayersCreateDaoInsert inserts the layers, and moves the layers at or after their position down.
+type LayersCreateDaoInsert interface {
+	Exec(ctx context.Context, request *dao.LayersInsertRequest) ([]*dao.Layer, error)
+}
+
+// LayersCreateItem is one layer of a [LayersCreateRequest].
+type LayersCreateItem struct {
+	// Kind names the content schema the layer's cells follow, such as manuscript or notes.
+	Kind string `validate:"required,layerkind"`
+
+	// Name labels the layer's row in the composer.
+	Name string `validate:"required,notblank,max=100"`
+	// Description says what the layer records.
+	Description string `validate:"max=20000"`
+}
+
+// LayersCreateRequest carries new layers and their place in the project.
+type LayersCreateRequest struct {
+	OwnerID   uuid.UUID `validate:"required"`
+	ProjectID uuid.UUID `validate:"required"`
+
+	// Position is the place of the first new layer among the project's rows, from 0, and the others
+	// follow it. A position past the last layer appends them.
+	Position int `validate:"min=0"`
+	// Layers lists the layers to add, in order, at most 100.
+	Layers []LayersCreateItem `validate:"required,min=1,max=100,dive"`
+}
+
+// LayersCreate adds layers to a project at the position the caller names. The layers from that
+// position on move down to make room.
+type LayersCreate struct {
+	daoLock    LayersCreateDaoLock
+	daoInsert  LayersCreateDaoInsert
+	transactor transaction.Transactor
+}
+
+func NewLayersCreate(
+	daoLock LayersCreateDaoLock,
+	daoInsert LayersCreateDaoInsert,
+	transactor transaction.Transactor,
+) *LayersCreate {
+	return &LayersCreate{daoLock: daoLock, daoInsert: daoInsert, transactor: transactor}
+}
+
+func (service *LayersCreate) Exec(ctx context.Context, request *LayersCreateRequest) ([]*Layer, error) {
+	ctx, span := otel.Tracer().Start(ctx, "core.LayersCreate")
+	defer span.End()
+
+	span.SetAttributes(
+		attribute.String("project.id", request.ProjectID.String()),
+		attribute.String("project.owner_id", request.OwnerID.String()),
+		attribute.Int("layers.position", request.Position),
+		attribute.Int("layers.count", len(request.Layers)),
+	)
+
+	err := validate.Struct(request)
+	if err != nil {
+		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
+	}
+
+	ids, err := newIDs(ctx, len(request.Layers))
+	if err != nil {
+		return nil, otel.ReportError(span, err)
+	}
+
+	var layers []*Layer
+
+	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
+		err := lockOwnedProject(ctx, service.daoLock, projectOwnershipOpts{
+			projectID: request.ProjectID,
+			ownerID:   request.OwnerID,
+		})
+		if err != nil {
+			return fmt.Errorf("lock project: %w", err)
+		}
+
+		inserted, err := service.daoInsert.Exec(ctx, &dao.LayersInsertRequest{
+			ProjectID: request.ProjectID,
+			Position:  request.Position,
+			Layers: lo.Map(request.Layers, func(item LayersCreateItem, index int) dao.LayersInsertItem {
+				return dao.LayersInsertItem{ID: ids[index], Kind: item.Kind, Name: item.Name, Description: item.Description}
+			}),
+			Now: time.Now(),
+		})
+		if errors.Is(err, dao.ErrLayersInsertFull) {
+			err = errors.Join(err, ErrProjectFull)
+		}
+
+		if err != nil {
+			return fmt.Errorf("insert layers: %w", err)
+		}
+
+		slices.SortFunc(inserted, func(a, b *dao.Layer) int { return cmp.Compare(a.Position, b.Position) })
+		layers = lo.Map(inserted, func(entity *dao.Layer, _ int) *Layer { return newLayer(entity) })
+
+		return nil
+	})
+	if err != nil {
+		return nil, otel.ReportError(span, fmt.Errorf("run transaction: %w", err))
+	}
+
+	return layers, nil
+}

@@ -1,9 +1,7 @@
 package dao_test
 
 import (
-	"cmp"
 	"context"
-	"slices"
 	"testing"
 
 	"github.com/google/uuid"
@@ -19,92 +17,69 @@ import (
 func TestPgSceneInsert(t *testing.T) {
 	t.Parallel()
 
-	newSceneID1 := uuid.MustParse("00000000-0000-0000-0000-000000000014")
-	newSceneID2 := uuid.MustParse("00000000-0000-0000-0000-000000000015")
+	newSceneID := uuid.MustParse("00000000-0000-0000-0000-000000000014")
 
 	testCases := []struct {
 		name string
 
 		request *dao.SceneInsertRequest
 
-		expect []*dao.Scene
+		expect *dao.Scene
 		// expectScenes is the project's order after the insert, when the case checks it.
 		expectScenes []*dao.Scene
-		expectErr    error
+		// full fills the project up to its last position before the insert.
+		full      bool
+		expectErr error
 	}{
 		{
 			name: "Success",
 
 			request: &dao.SceneInsertRequest{
-				ProjectID: projectID,
-				Position:  3,
-				Scenes: []dao.SceneInsertItem{
-					{ID: newSceneID1, Title: "Le débat", Color: "#e0457b", Description: "Marie hésite.", Prompt: "Lent."},
-					{ID: newSceneID2, Title: "Le passage", Color: "#2bb673"},
-				},
-				Now: now,
+				ID: newSceneID, ProjectID: projectID, Position: 3, Title: "Le débat", Color: "#e0457b",
+				Description: "Marie hésite.", Prompt: "Lent.", Now: now,
 			},
 
-			expect: []*dao.Scene{
-				{
-					ID: newSceneID1, ProjectID: projectID, Position: 3, Title: "Le débat", Color: "#e0457b",
-					Description: "Marie hésite.", Prompt: "Lent.", UpdatedAt: now,
-				},
-				{ID: newSceneID2, ProjectID: projectID, Position: 4, Title: "Le passage", Color: "#2bb673", UpdatedAt: now},
+			expect: &dao.Scene{
+				ID: newSceneID, ProjectID: projectID, Position: 3, Title: "Le débat", Color: "#e0457b",
+				Description: "Marie hésite.", Prompt: "Lent.", UpdatedAt: now,
 			},
 		},
 		{
-			name: "Success/LastPosition",
+			name: "Success/PastTheEnd",
 
 			request: &dao.SceneInsertRequest{
-				ProjectID: projectID,
-				Position:  499,
-				Scenes:    []dao.SceneInsertItem{{ID: newSceneID1, Title: "Le débat", Color: "#e0457b"}},
-				Now:       now,
+				ID: newSceneID, ProjectID: projectID, Position: 499, Title: "Le débat", Color: "#e0457b", Now: now,
 			},
 
-			expect: []*dao.Scene{
-				{ID: newSceneID1, ProjectID: projectID, Position: 499, Title: "Le débat", Color: "#e0457b", UpdatedAt: now},
+			expect: &dao.Scene{
+				ID: newSceneID, ProjectID: projectID, Position: 3, Title: "Le débat", Color: "#e0457b", UpdatedAt: now,
 			},
 		},
 		{
 			name: "Error/ProjectFull",
 
 			request: &dao.SceneInsertRequest{
-				ProjectID: projectID,
-				Position:  499,
-				Scenes: []dao.SceneInsertItem{
-					{ID: newSceneID1, Title: "Le débat", Color: "#e0457b"},
-					{ID: newSceneID2, Title: "Le passage", Color: "#2bb673"},
-				},
-				Now: now,
+				ID: newSceneID, ProjectID: projectID, Position: 0, Title: "Le débat", Color: "#e0457b", Now: now,
 			},
 
+			full:      true,
 			expectErr: dao.ErrSceneInsertFull,
 		},
 		{
 			name: "Success/Shift",
 
 			request: &dao.SceneInsertRequest{
-				ProjectID: projectID,
-				Position:  1,
-				Scenes: []dao.SceneInsertItem{
-					{ID: newSceneID1, Title: "Le débat", Color: "#e0457b"},
-					{ID: newSceneID2, Title: "Le passage", Color: "#2bb673"},
-				},
-				Now: now,
+				ID: newSceneID, ProjectID: projectID, Position: 1, Title: "Le débat", Color: "#e0457b", Now: now,
 			},
 
-			expect: []*dao.Scene{
-				{ID: newSceneID1, ProjectID: projectID, Position: 1, Title: "Le débat", Color: "#e0457b", UpdatedAt: now},
-				{ID: newSceneID2, ProjectID: projectID, Position: 2, Title: "Le passage", Color: "#2bb673", UpdatedAt: now},
+			expect: &dao.Scene{
+				ID: newSceneID, ProjectID: projectID, Position: 1, Title: "Le débat", Color: "#e0457b", UpdatedAt: now,
 			},
 			expectScenes: []*dao.Scene{
 				composerFixtures().scenes[0],
-				{ID: newSceneID1, ProjectID: projectID, Position: 1, Title: "Le débat", Color: "#e0457b", UpdatedAt: now},
-				{ID: newSceneID2, ProjectID: projectID, Position: 2, Title: "Le passage", Color: "#2bb673", UpdatedAt: now},
-				sceneAt(composerFixtures().scenes[1], 3),
-				sceneAt(composerFixtures().scenes[2], 4),
+				{ID: newSceneID, ProjectID: projectID, Position: 1, Title: "Le débat", Color: "#e0457b", UpdatedAt: now},
+				sceneAt(composerFixtures().scenes[1], 2),
+				sceneAt(composerFixtures().scenes[2], 3),
 			},
 		},
 	}
@@ -118,12 +93,15 @@ func TestPgSceneInsert(t *testing.T) {
 			postgrestest.RunDBTest(t, configtest.PostgresPreset, migrations.Migrations, func(ctx context.Context, t *testing.T) {
 				t.Helper()
 
-				insertFixtures(ctx, t, composerFixtures())
+				data := composerFixtures()
+				if testCase.full {
+					data.scenes = append(data.scenes, fillerScenes()...)
+				}
+
+				insertFixtures(ctx, t, data)
 
 				result, err := daoSceneInsert.Exec(ctx, testCase.request)
 				require.ErrorIs(t, err, testCase.expectErr)
-
-				slices.SortFunc(result, func(a, b *dao.Scene) int { return cmp.Compare(a.Position, b.Position) })
 				require.Equal(t, testCase.expect, result)
 
 				if testCase.expectScenes != nil {

@@ -26,7 +26,8 @@ type LayerInsertRequest struct {
 	// ProjectID is the project the layer joins.
 	ProjectID uuid.UUID
 
-	// Position is the layer's place among the project's rows, from 0.
+	// Position is the layer's place among the project's rows, from 0. A position past the last layer
+	// appends.
 	Position int
 	// Kind names the content schema the layer's cells follow.
 	Kind string
@@ -64,7 +65,7 @@ func (dao *PgLayerInsert) Exec(ctx context.Context, request *LayerInsertRequest)
 		request.ID, request.ProjectID, request.Position, request.Kind,
 		request.Name, request.Description, request.Now,
 	).Scan(ctx, entity)
-	if isCheckViolation(err, "layers_position_check") {
+	if isViolation(err, pgCheckViolation, "layers_position_check") {
 		err = errors.Join(err, ErrLayerInsertFull)
 	}
 

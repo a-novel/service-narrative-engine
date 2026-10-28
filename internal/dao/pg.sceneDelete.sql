@@ -3,7 +3,8 @@ WITH
   deleted AS (
     DELETE FROM scenes
     WHERE
-      id = ?0
+      project_id = ?0
+      AND id = ?1
     RETURNING
       *
   ),

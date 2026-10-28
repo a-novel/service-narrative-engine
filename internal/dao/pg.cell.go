@@ -12,6 +12,7 @@ import (
 type Cell struct {
 	bun.BaseModel `bun:"table:cells,alias:cells"`
 
+	ProjectID uuid.UUID `bun:"project_id,type:uuid"`
 	// SceneID is the scene whose column holds the cell.
 	SceneID uuid.UUID `bun:"scene_id,pk,type:uuid"`
 	// LayerID is the layer whose row holds the cell.

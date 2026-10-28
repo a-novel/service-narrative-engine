@@ -2,9 +2,7 @@ package dao
 
 import (
 	"context"
-	"database/sql"
 	_ "embed"
-	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -16,41 +14,40 @@ import (
 //go:embed pg.projectLock.sql
 var projectLockQuery string
 
-// ErrProjectLockNotFound is returned by [PgProjectLock.Exec] when no project has the ID.
-var ErrProjectLockNotFound = errors.New("project not found")
-
 // ProjectLockRequest is the input to [PgProjectLock.Exec].
 type ProjectLockRequest struct {
 	ID uuid.UUID
+	// OwnerID is the user who claims the project.
+	OwnerID uuid.UUID
 }
 
-// PgProjectLock reads a project by its ID and locks it until the transaction ends, so changes to the
-// order of its scenes and layers run one at a time. The caller checks the owner.
+// PgProjectLock locks a project its owner names until the transaction ends, so changes to the order of
+// its scenes and layers run one at a time. It reports whether the user owns the project, and locks
+// nothing when they do not. A missing project yields false with a nil error.
 type PgProjectLock struct{}
 
 func NewPgProjectLock() *PgProjectLock {
 	return &PgProjectLock{}
 }
 
-func (dao *PgProjectLock) Exec(ctx context.Context, request *ProjectLockRequest) (*Project, error) {
+func (dao *PgProjectLock) Exec(ctx context.Context, request *ProjectLockRequest) (bool, error) {
 	ctx, span := otel.Tracer().Start(ctx, "dao.PgProjectLock")
 	defer span.End()
 
 	db, err := postgres.GetContext(ctx)
 	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("get postgres context: %w", err))
+		return false, otel.ReportError(span, fmt.Errorf("get postgres context: %w", err))
 	}
 
-	entity := &Project{}
-
-	err = db.NewRaw(projectLockQuery, request.ID).Scan(ctx, entity)
-	if errors.Is(err, sql.ErrNoRows) {
-		err = errors.Join(err, ErrProjectLockNotFound)
-	}
-
+	res, err := db.NewRaw(projectLockQuery, request.ID, request.OwnerID).Exec(ctx)
 	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("execute query: %w", err))
+		return false, otel.ReportError(span, fmt.Errorf("execute query: %w", err))
 	}
 
-	return entity, nil
+	n, err := res.RowsAffected()
+	if err != nil {
+		return false, otel.ReportError(span, fmt.Errorf("get rows affected: %w", err))
+	}
+
+	return n > 0, nil
 }
