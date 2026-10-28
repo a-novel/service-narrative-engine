@@ -154,23 +154,23 @@ func (_m *MockRestCellWriteService) EXPECT() *MockRestCellWriteService_Expecter 
 }
 
 // Exec provides a mock function for the type MockRestCellWriteService
-func (_mock *MockRestCellWriteService) Exec(ctx context.Context, request *core.CellWriteRequest) ([]*core.Cell, error) {
+func (_mock *MockRestCellWriteService) Exec(ctx context.Context, request *core.CellWriteRequest) ([]*core.WrittenCell, error) {
 	ret := _mock.Called(ctx, request)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Exec")
 	}
 
-	var r0 []*core.Cell
+	var r0 []*core.WrittenCell
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.CellWriteRequest) ([]*core.Cell, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.CellWriteRequest) ([]*core.WrittenCell, error)); ok {
 		return returnFunc(ctx, request)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.CellWriteRequest) []*core.Cell); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.CellWriteRequest) []*core.WrittenCell); ok {
 		r0 = returnFunc(ctx, request)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*core.Cell)
+			r0 = ret.Get(0).([]*core.WrittenCell)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, *core.CellWriteRequest) error); ok {
@@ -211,12 +211,12 @@ func (_c *MockRestCellWriteService_Exec_Call) Run(run func(ctx context.Context, 
 	return _c
 }
 
-func (_c *MockRestCellWriteService_Exec_Call) Return(cells []*core.Cell, err error) *MockRestCellWriteService_Exec_Call {
-	_c.Call.Return(cells, err)
+func (_c *MockRestCellWriteService_Exec_Call) Return(writtenCells []*core.WrittenCell, err error) *MockRestCellWriteService_Exec_Call {
+	_c.Call.Return(writtenCells, err)
 	return _c
 }
 
-func (_c *MockRestCellWriteService_Exec_Call) RunAndReturn(run func(ctx context.Context, request *core.CellWriteRequest) ([]*core.Cell, error)) *MockRestCellWriteService_Exec_Call {
+func (_c *MockRestCellWriteService_Exec_Call) RunAndReturn(run func(ctx context.Context, request *core.CellWriteRequest) ([]*core.WrittenCell, error)) *MockRestCellWriteService_Exec_Call {
 	_c.Call.Return(run)
 	return _c
 }

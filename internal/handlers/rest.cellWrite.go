@@ -17,7 +17,7 @@ import (
 
 // RestCellWriteService is the core operation [RestCellWrite] delegates to.
 type RestCellWriteService interface {
-	Exec(ctx context.Context, request *core.CellWriteRequest) ([]*core.Cell, error)
+	Exec(ctx context.Context, request *core.CellWriteRequest) ([]*core.WrittenCell, error)
 }
 
 // RestCellWriteItem is one cell of a [RestCellWriteRequest].
@@ -39,7 +39,7 @@ type RestCellWriteRequest struct {
 }
 
 // RestCellWrite is the HTTP handler for the write-cells endpoint. It responds with the written cells, in the
-// order of the request.
+// order of the request, without their content.
 type RestCellWrite struct {
 	service RestCellWriteService
 	logger  logging.Log
@@ -82,6 +82,6 @@ func (handler *RestCellWrite) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	response := lo.Map(result, func(cell *core.Cell, _ int) Cell { return loadCell(cell) })
+	response := lo.Map(result, func(cell *core.WrittenCell, _ int) WrittenCell { return loadWrittenCell(cell) })
 	httpf.SendJSONStatus(w, span, http.StatusOK, response)
 }

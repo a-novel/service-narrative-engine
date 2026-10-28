@@ -47,7 +47,7 @@ func TestRestCellWrite(t *testing.T) {
 			serviceCalled: true,
 
 			expectStatus:   http.StatusOK,
-			expectResponse: []any{jsonCell},
+			expectResponse: []any{jsonWrittenCell},
 		},
 		{
 			name: "Error/Anonymous",
@@ -100,9 +100,9 @@ func TestRestCellWrite(t *testing.T) {
 			service := handlersmocks.NewMockRestCellWriteService(t)
 
 			if testCase.serviceCalled {
-				var resp []*core.Cell
+				var resp []*core.WrittenCell
 				if testCase.serviceErr == nil {
-					resp = []*core.Cell{coreCell}
+					resp = []*core.WrittenCell{coreWrittenCell}
 				}
 
 				service.EXPECT().

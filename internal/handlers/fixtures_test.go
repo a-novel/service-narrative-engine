@@ -59,6 +59,11 @@ var (
 		ProjectID: projectID, SceneID: sceneID, LayerID: layerID, Content: json.RawMessage(`{"text":"Marie"}`),
 		UpdatedAt: updatedAt,
 	}
+	coreWrittenCell = &core.WrittenCell{SceneID: sceneID, LayerID: layerID, UpdatedAt: updatedAt}
+	jsonWrittenCell = map[string]any{
+		"sceneID": sceneID.String(), "layerID": layerID.String(), "updatedAt": "2021-01-02T00:00:00Z",
+	}
+
 	jsonCell = map[string]any{
 		"projectID": projectID.String(), "sceneID": sceneID.String(), "layerID": layerID.String(),
 		"content":   map[string]any{"text": "Marie"},
