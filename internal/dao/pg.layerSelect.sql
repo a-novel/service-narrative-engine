@@ -3,4 +3,5 @@ SELECT
 FROM
   layers
 WHERE
-  id = ?0;
+  project_id = ?0
+  AND id = ?1;

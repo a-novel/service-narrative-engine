@@ -3,26 +3,26 @@
 WITH
   moving AS (
     SELECT
-      project_id,
       position
     FROM
       scenes
     WHERE
-      id = ?0
+      project_id = ?0
+      AND id = ?1
   ),
   moved AS (
     UPDATE scenes
     SET
       position = CASE
-        WHEN scenes.id = ?0 THEN ?1
-        WHEN ?1 < moving.position THEN scenes.position + 1
+        WHEN scenes.id = ?1 THEN ?2
+        WHEN ?2 < moving.position THEN scenes.position + 1
         ELSE scenes.position - 1
       END
     FROM
       moving
     WHERE
-      scenes.project_id = moving.project_id
-      AND scenes.position BETWEEN LEAST(moving.position, ?1) AND GREATEST(moving.position, ?1)
+      scenes.project_id = ?0
+      AND scenes.position BETWEEN LEAST(moving.position, ?2) AND GREATEST(moving.position, ?2)
     RETURNING
       scenes.*
   )
@@ -31,4 +31,4 @@ SELECT
 FROM
   moved
 WHERE
-  id = ?0;
+  id = ?1;

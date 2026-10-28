@@ -27,14 +27,21 @@ func TestPgLayerSelect(t *testing.T) {
 		{
 			name: "Success",
 
-			request: &dao.LayerSelectRequest{ID: notesLayerID},
+			request: &dao.LayerSelectRequest{ProjectID: projectID, ID: notesLayerID},
 
 			expect: composerFixtures().layers[1],
 		},
 		{
 			name: "Error/NotFound",
 
-			request: &dao.LayerSelectRequest{ID: absentID},
+			request: &dao.LayerSelectRequest{ProjectID: projectID, ID: absentID},
+
+			expectErr: dao.ErrLayerSelectNotFound,
+		},
+		{
+			name: "Error/OtherProject",
+
+			request: &dao.LayerSelectRequest{ProjectID: projectID, ID: otherLayerID},
 
 			expectErr: dao.ErrLayerSelectNotFound,
 		},

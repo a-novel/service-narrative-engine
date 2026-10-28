@@ -16,12 +16,13 @@ import (
 //go:embed pg.layerMove.sql
 var layerMoveQuery string
 
-// ErrLayerMoveNotFound is returned by [PgLayerMove.Exec] when no layer has the ID.
+// ErrLayerMoveNotFound is returned by [PgLayerMove.Exec] when the project holds no layer with the ID.
 var ErrLayerMoveNotFound = errors.New("layer not found")
 
 // LayerMoveRequest is the input to [PgLayerMove.Exec].
 type LayerMoveRequest struct {
-	ID uuid.UUID
+	ProjectID uuid.UUID
+	ID        uuid.UUID
 
 	// To is the layer's position after the move.
 	To int
@@ -46,7 +47,7 @@ func (dao *PgLayerMove) Exec(ctx context.Context, request *LayerMoveRequest) (*L
 
 	entity := &Layer{}
 
-	err = db.NewRaw(layerMoveQuery, request.ID, request.To).Scan(ctx, entity)
+	err = db.NewRaw(layerMoveQuery, request.ProjectID, request.ID, request.To).Scan(ctx, entity)
 	if errors.Is(err, sql.ErrNoRows) {
 		err = errors.Join(err, ErrLayerMoveNotFound)
 	}

@@ -27,14 +27,21 @@ func TestPgSceneSelect(t *testing.T) {
 		{
 			name: "Success",
 
-			request: &dao.SceneSelectRequest{ID: sceneID2},
+			request: &dao.SceneSelectRequest{ProjectID: projectID, ID: sceneID2},
 
 			expect: composerFixtures().scenes[1],
 		},
 		{
 			name: "Error/NotFound",
 
-			request: &dao.SceneSelectRequest{ID: absentID},
+			request: &dao.SceneSelectRequest{ProjectID: projectID, ID: absentID},
+
+			expectErr: dao.ErrSceneSelectNotFound,
+		},
+		{
+			name: "Error/OtherProject",
+
+			request: &dao.SceneSelectRequest{ProjectID: projectID, ID: otherSceneID},
 
 			expectErr: dao.ErrSceneSelectNotFound,
 		},

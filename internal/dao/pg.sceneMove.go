@@ -16,12 +16,13 @@ import (
 //go:embed pg.sceneMove.sql
 var sceneMoveQuery string
 
-// ErrSceneMoveNotFound is returned by [PgSceneMove.Exec] when no scene has the ID.
+// ErrSceneMoveNotFound is returned by [PgSceneMove.Exec] when the project holds no scene with the ID.
 var ErrSceneMoveNotFound = errors.New("scene not found")
 
 // SceneMoveRequest is the input to [PgSceneMove.Exec].
 type SceneMoveRequest struct {
-	ID uuid.UUID
+	ProjectID uuid.UUID
+	ID        uuid.UUID
 
 	// To is the scene's position after the move.
 	To int
@@ -46,7 +47,7 @@ func (dao *PgSceneMove) Exec(ctx context.Context, request *SceneMoveRequest) (*S
 
 	entity := &Scene{}
 
-	err = db.NewRaw(sceneMoveQuery, request.ID, request.To).Scan(ctx, entity)
+	err = db.NewRaw(sceneMoveQuery, request.ProjectID, request.ID, request.To).Scan(ctx, entity)
 	if errors.Is(err, sql.ErrNoRows) {
 		err = errors.Join(err, ErrSceneMoveNotFound)
 	}
