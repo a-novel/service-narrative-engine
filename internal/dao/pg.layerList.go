@@ -18,7 +18,6 @@ var layerListQuery string
 // LayerListRequest is the input to [PgLayerList.Exec].
 type LayerListRequest struct {
 	ProjectID uuid.UUID
-	Limit     int
 }
 
 // PgLayerList reads the layers of a project in order.
@@ -39,7 +38,7 @@ func (dao *PgLayerList) Exec(ctx context.Context, request *LayerListRequest) ([]
 
 	var entities []*Layer
 
-	err = db.NewRaw(layerListQuery, request.ProjectID, request.Limit).Scan(ctx, &entities)
+	err = db.NewRaw(layerListQuery, request.ProjectID).Scan(ctx, &entities)
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("execute query: %w", err))
 	}

@@ -59,7 +59,7 @@ func TestPgProjectDelete(t *testing.T) {
 				require.Equal(t, testCase.expect, result)
 
 				// Deleting a project deletes its scenes with it.
-				scenes, err := daoSceneList.Exec(ctx, &dao.SceneListRequest{ProjectID: projectID, Limit: 10})
+				scenes, err := daoSceneList.Exec(ctx, &dao.SceneListRequest{ProjectID: projectID})
 				require.NoError(t, err)
 				require.Equal(t, testCase.expectScenes, scenes)
 			})

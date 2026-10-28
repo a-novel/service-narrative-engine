@@ -27,16 +27,9 @@ func TestPgLayerList(t *testing.T) {
 		{
 			name: "Success",
 
-			request: &dao.LayerListRequest{ProjectID: projectID, Limit: 10},
+			request: &dao.LayerListRequest{ProjectID: projectID},
 
 			expect: composerFixtures().layers[:2],
-		},
-		{
-			name: "Success/Limit",
-
-			request: &dao.LayerListRequest{ProjectID: projectID, Limit: 1},
-
-			expect: composerFixtures().layers[:1],
 		},
 	}
 

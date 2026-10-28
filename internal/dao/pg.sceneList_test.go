@@ -27,16 +27,9 @@ func TestPgSceneList(t *testing.T) {
 		{
 			name: "Success",
 
-			request: &dao.SceneListRequest{ProjectID: projectID, Limit: 10},
+			request: &dao.SceneListRequest{ProjectID: projectID},
 
 			expect: composerFixtures().scenes[:3],
-		},
-		{
-			name: "Success/Limit",
-
-			request: &dao.SceneListRequest{ProjectID: projectID, Limit: 2},
-
-			expect: composerFixtures().scenes[:2],
 		},
 	}
 

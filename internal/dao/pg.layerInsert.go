@@ -3,6 +3,7 @@ package dao
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"time"
 
@@ -14,6 +15,10 @@ import (
 
 //go:embed pg.layerInsert.sql
 var layerInsertQuery string
+
+// ErrLayerInsertFull is returned by [PgLayerInsert.Exec] when the layer would take a position past
+// 19, so the project would hold more than the 20 layers the schema allows.
+var ErrLayerInsertFull = errors.New("project holds the most layers it can")
 
 // LayerInsertRequest is the input to [PgLayerInsert.Exec].
 type LayerInsertRequest struct {
@@ -50,6 +55,10 @@ func (dao *PgLayerInsert) Exec(ctx context.Context, request *LayerInsertRequest)
 		request.ID, request.ProjectID, request.Position, request.Kind,
 		request.Name, request.Description, request.Now,
 	).Scan(ctx, entity)
+	if isCheckViolation(err, "layers_position_check") {
+		err = errors.Join(err, ErrLayerInsertFull)
+	}
+
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("execute query: %w", err))
 	}

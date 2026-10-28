@@ -28,6 +28,7 @@ func TestPgSceneInsert(t *testing.T) {
 		request *dao.SceneInsertRequest
 
 		expect       []*dao.Scene
+		expectErr    error
 		expectFailed bool
 	}{
 		{
@@ -50,6 +51,35 @@ func TestPgSceneInsert(t *testing.T) {
 				},
 				{ID: newSceneID2, ProjectID: projectID, Position: 4, Title: "Le passage", Color: "#2bb673", UpdatedAt: now},
 			},
+		},
+		{
+			name: "Success/LastPosition",
+
+			request: &dao.SceneInsertRequest{
+				ProjectID: projectID,
+				Position:  499,
+				Scenes:    []dao.SceneInsertItem{{ID: newSceneID1, Title: "Le débat", Color: "#e0457b"}},
+				Now:       now,
+			},
+
+			expect: []*dao.Scene{
+				{ID: newSceneID1, ProjectID: projectID, Position: 499, Title: "Le débat", Color: "#e0457b", UpdatedAt: now},
+			},
+		},
+		{
+			name: "Error/ProjectFull",
+
+			request: &dao.SceneInsertRequest{
+				ProjectID: projectID,
+				Position:  499,
+				Scenes: []dao.SceneInsertItem{
+					{ID: newSceneID1, Title: "Le débat", Color: "#e0457b"},
+					{ID: newSceneID2, Title: "Le passage", Color: "#2bb673"},
+				},
+				Now: now,
+			},
+
+			expectErr: dao.ErrSceneInsertFull,
 		},
 		{
 			name: "Error/PositionTaken",
@@ -83,7 +113,7 @@ func TestPgSceneInsert(t *testing.T) {
 					return
 				}
 
-				require.NoError(t, err)
+				require.ErrorIs(t, err, testCase.expectErr)
 
 				slices.SortFunc(result, func(a, b *dao.Scene) int { return cmp.Compare(a.Position, b.Position) })
 				require.Equal(t, testCase.expect, result)

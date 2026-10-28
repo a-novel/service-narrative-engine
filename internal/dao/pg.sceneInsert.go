@@ -3,6 +3,7 @@ package dao
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"time"
 
@@ -17,6 +18,10 @@ import (
 
 //go:embed pg.sceneInsert.sql
 var sceneInsertQuery string
+
+// ErrSceneInsertFull is returned by [PgSceneInsert.Exec] when a scene would take a position past 499,
+// so the project would hold more than the 500 scenes the schema allows.
+var ErrSceneInsertFull = errors.New("project holds the most scenes it can")
 
 // SceneInsertItem is one scene of a [SceneInsertRequest].
 type SceneInsertItem struct {
@@ -67,6 +72,10 @@ func (dao *PgSceneInsert) Exec(ctx context.Context, request *SceneInsertRequest)
 		request.ProjectID, request.Position, bun.List(ids), bun.List(titles), bun.List(colors),
 		bun.List(descriptions), bun.List(prompts), request.Now,
 	).Scan(ctx, &entities)
+	if isCheckViolation(err, "scenes_position_check") {
+		err = errors.Join(err, ErrSceneInsertFull)
+	}
+
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("execute query: %w", err))
 	}

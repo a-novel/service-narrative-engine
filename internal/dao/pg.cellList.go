@@ -18,7 +18,6 @@ var cellListQuery string
 // CellListRequest is the input to [PgCellList.Exec].
 type CellListRequest struct {
 	ProjectID uuid.UUID
-	Limit     int
 }
 
 // PgCellList reads the cells of a project, in the narrative order of their scenes.
@@ -39,7 +38,7 @@ func (dao *PgCellList) Exec(ctx context.Context, request *CellListRequest) ([]*C
 
 	var entities []*Cell
 
-	err = db.NewRaw(cellListQuery, request.ProjectID, request.Limit).Scan(ctx, &entities)
+	err = db.NewRaw(cellListQuery, request.ProjectID).Scan(ctx, &entities)
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("execute query: %w", err))
 	}

@@ -25,6 +25,7 @@ func TestPgLayerInsert(t *testing.T) {
 		request *dao.LayerInsertRequest
 
 		expect       *dao.Layer
+		expectErr    error
 		expectFailed bool
 	}{
 		{
@@ -39,6 +40,26 @@ func TestPgLayerInsert(t *testing.T) {
 				ID: newLayerID, ProjectID: projectID, Position: 2, Kind: "notes", Name: "Places",
 				Description: "Where it happens", UpdatedAt: now,
 			},
+		},
+		{
+			name: "Success/LastPosition",
+
+			request: &dao.LayerInsertRequest{
+				ID: newLayerID, ProjectID: projectID, Position: 19, Kind: "notes", Name: "Places", Now: now,
+			},
+
+			expect: &dao.Layer{
+				ID: newLayerID, ProjectID: projectID, Position: 19, Kind: "notes", Name: "Places", UpdatedAt: now,
+			},
+		},
+		{
+			name: "Error/ProjectFull",
+
+			request: &dao.LayerInsertRequest{
+				ID: newLayerID, ProjectID: projectID, Position: 20, Kind: "notes", Name: "Places", Now: now,
+			},
+
+			expectErr: dao.ErrLayerInsertFull,
 		},
 		{
 			name: "Error/SecondManuscript",
@@ -78,7 +99,7 @@ func TestPgLayerInsert(t *testing.T) {
 					return
 				}
 
-				require.NoError(t, err)
+				require.ErrorIs(t, err, testCase.expectErr)
 				require.Equal(t, testCase.expect, result)
 			})
 		})

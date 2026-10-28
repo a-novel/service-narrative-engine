@@ -18,7 +18,6 @@ var sceneListQuery string
 // SceneListRequest is the input to [PgSceneList.Exec].
 type SceneListRequest struct {
 	ProjectID uuid.UUID
-	Limit     int
 }
 
 // PgSceneList reads the scenes of a project in narrative order.
@@ -39,7 +38,7 @@ func (dao *PgSceneList) Exec(ctx context.Context, request *SceneListRequest) ([]
 
 	var entities []*Scene
 
-	err = db.NewRaw(sceneListQuery, request.ProjectID, request.Limit).Scan(ctx, &entities)
+	err = db.NewRaw(sceneListQuery, request.ProjectID).Scan(ctx, &entities)
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("execute query: %w", err))
 	}
