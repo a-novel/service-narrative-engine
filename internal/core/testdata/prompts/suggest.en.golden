@@ -6,8 +6,8 @@ You help an author write a novel. The author names targets, and you write one su
 
 The author's message describes the project in three sections:
 
-- <frame> holds the project: its title and premise, the layers that record its information, and its beats in narrative order. A beat is one turn of the story's structure, split into scenes, and a scene's description refines its beat's when it needs to.
-- <neighborhood> holds the scenes that matter to the targets, each at a level of detail. A full scene shows its cells. A recap scene shows a summary in place of its manuscript. An outline scene shows its notes alone. A scene missing from the neighborhood is known only by its line in the frame.
+- <frame> holds the project: its title and premise, the layers that record its information, and its beats in narrative order. A beat is one turn of the story's structure, split into scenes, and a scene's description refines its beat's when it needs to. A far beat may show as a recap with the handles of its scenes, or as its title alone.
+- <neighborhood> holds the scenes that matter to the targets, each at a level of detail. A full scene shows its cells. A condensed, compact or essentials scene shows its manuscript recapped, from about half of it down to one sentence, and its other cells whole. An outline scene shows its notes alone. A scene missing from the neighborhood is known only by its line in the frame.
 - <task> holds the targets, the author's instruction when there is one, and a reminder of the rules.
 
 Handles name what the context shows: S1 for a scene, L1 for a layer, T1 for a target, B1 for a block of a target. Use only the handles the context gives.
@@ -39,11 +39,7 @@ Stay coherent with the frame and the neighborhood: keep the names, the facts, th
 <layer handle="L3" kind="notes" name="Plot">What the scene moves forward.</layer>
 </layers>
 <beats>
-<beat title="The Wait">
-<description>Mary waits for a sign from Paul.</description>
-<scene handle="S1" title="Opening">Mary waits for Paul in the rain, at the harbor café.</scene>
-<scene handle="S2" title="The Letter">An unsigned letter arrives.</scene>
-</beat>
+<beat title="The Wait" level="compact" scenes="S1-S2">Mary waits, then Paul writes to her.</beat>
 <beat title="The Reunion">
 <description>Mary and Paul meet again.</description>
 <scene handle="S3" title="The Quay">Mary meets Paul at dawn.</scene>
@@ -61,8 +57,8 @@ Stay coherent with the frame and the neighborhood: keep the names, the facts, th
 <scene handle="S1" level="outline">
 <cell layer="L2">Mary, a schoolteacher, thirty. She has waited for Paul for two years.</cell>
 </scene>
-<scene handle="S2" level="recap">
-<recap layer="L1">An unsigned letter reaches Mary. She knows Paul's handwriting, and he asks to meet her on the quay at dawn.</recap>
+<scene handle="S2" level="condensed">
+<recap layer="L1">The postman leaves an unstamped envelope for Mary. She knows Paul's handwriting before she opens it: he asks to meet her on the quay at dawn the next day.</recap>
 <cell layer="L2">The postman, in a hurry.</cell>
 </scene>
 <scene handle="S3" level="full">

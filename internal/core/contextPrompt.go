@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"text/template"
 	"time"
@@ -18,6 +19,10 @@ import (
 // part of a prompt in characters, which add up exactly, and estimates tokens once.
 const charsPerToken = 4
 
+// frameShare divides a prompt's budget into the most its frame takes. Below that share the frame shows every
+// beat whole, so it stays the same, and caches, across a project's calls.
+const frameShare = 2
+
 // sceneRender is a scene rendered at one level. Size counts its characters with the line it takes in the
 // neighborhood.
 type sceneRender struct {
@@ -25,10 +30,10 @@ type sceneRender struct {
 	size int
 }
 
-// shownCell is a cell a scene shows at a level, whole or as its recap.
+// shownCell is a cell a scene shows at a level: whole, or as the version of its recap that names a level.
 type shownCell struct {
-	cell  *draftCell
-	recap bool
+	cell    *draftCell
+	version string
 }
 
 // contextSide is one side of a manuscript target's range, where the task shows context blocks.
@@ -39,19 +44,24 @@ type contextSide struct {
 
 // The prompt views are the data the templates of package prompts render. Handles stand for identifiers.
 type (
+	// promptFrame is the frame, with its beats rendered one per line.
 	promptFrame struct {
 		Title    string
 		Premise  string
 		Language string
 		Layers   []*promptLayer
-		Beats    []*promptFrameBeat
+		Beats    []string
 	}
 
-	// promptFrameBeat is a beat of the frame, with the lines of its scenes.
+	// promptFrameBeat is a beat of the frame at its level: whole, with the lines of its scenes, or as a
+	// version of its recap, or as its title. A beat short of whole names the handles of its scenes.
 	promptFrameBeat struct {
 		Title       string
+		Level       string
 		Description string
-		Scenes      []*promptFrameScene
+		Lines       []*promptFrameScene
+		Handles     string
+		Recap       string
 	}
 
 	promptLayer struct {
@@ -90,6 +100,7 @@ type (
 	promptTask struct {
 		Targets     []*promptTarget
 		Cell        *promptRecapCell
+		Beat        *promptRecapBeat
 		Scenes      *promptSpan
 		Instruction string
 	}
@@ -119,6 +130,20 @@ type (
 	promptRecapCell struct {
 		Scene   string
 		Layer   string
+		Content *cellContent
+	}
+
+	// promptRecapBeat is a beat to recap: its description, and each scene's manuscript as its fresh compact
+	// recap, or whole.
+	promptRecapBeat struct {
+		Title       string
+		Description string
+		Scenes      []*promptRecapScene
+	}
+
+	promptRecapScene struct {
+		Handle  string
+		Recap   string
 		Content *cellContent
 	}
 
@@ -178,11 +203,6 @@ func (draft *contextDraft) renderSections(
 		return err
 	}
 
-	prompt.Frame, err = execute(templates, "frame", draft.frameView())
-	if err != nil {
-		return err
-	}
-
 	err = draft.renderPinned(templates)
 	if err != nil {
 		return err
@@ -195,6 +215,14 @@ func (draft *contextDraft) renderSections(
 	}
 
 	prompt.Neighborhood, err = draft.neighborhood(templates)
+	if err != nil {
+		return err
+	}
+
+	// The frame takes at most its share of the budget, and never what the parts that always enter need.
+	budget := kind.Budget * charsPerToken
+
+	prompt.Frame, err = draft.renderFrame(templates, min(budget/frameShare, budget-prompt.size()))
 	if err != nil {
 		return err
 	}
@@ -378,7 +406,7 @@ func (draft *contextDraft) allocate(templates *template.Template, budget int) er
 func (draft *contextDraft) upgrade(templates *template.Template, scene *draftScene, budget int) (int, error) {
 	outline := scene.renders[ContextLevelOutline].size
 
-	for _, level := range []string{ContextLevelFull, ContextLevelRecap} {
+	for _, level := range append([]string{ContextLevelFull}, recapLevels...) {
 		least, ok := scene.adds(level)
 		if !ok || least > budget {
 			continue
@@ -400,8 +428,8 @@ func (draft *contextDraft) upgrade(templates *template.Template, scene *draftSce
 }
 
 // adds returns the characters a level adds at least to the scene's outline: the text of its manuscript
-// cells, whole or as their fresh recaps. It reports false when the scene cannot enter at the level, as a
-// recap without a fresh one.
+// cells, whole or as a version of their fresh recaps. It reports false when the scene cannot enter at the
+// level, as a recap level without a fresh recap.
 func (scene *draftScene) adds(level string) (int, bool) {
 	var (
 		size   int
@@ -417,7 +445,7 @@ func (scene *draftScene) adds(level string) (int, bool) {
 		case level == ContextLevelFull:
 			size += cell.content.size()
 		case cell.recap != nil:
-			size += utf8.RuneCountInString(cell.recap.Summary)
+			size += utf8.RuneCountInString(cell.recap.version(level))
 			recaps = true
 		}
 	}
@@ -426,7 +454,8 @@ func (scene *draftScene) adds(level string) (int, bool) {
 }
 
 // shows lists the cells the scene shows at a level. A full scene shows every cell, a target's own cell as
-// its handle. A recap scene shows its manuscript as fresh recaps, and an outline scene leaves it out.
+// its handle. A condensed, compact or essentials scene shows its manuscript as that version of its fresh
+// recaps, and an outline scene leaves it out. Every level shows the other cells whole.
 func (scene *draftScene) shows(level string) []*shownCell {
 	var shown []*shownCell
 
@@ -436,8 +465,8 @@ func (scene *draftScene) shows(level string) []*shownCell {
 		switch {
 		case level == ContextLevelFull, !manuscript:
 			shown = append(shown, &shownCell{cell: cell})
-		case level == ContextLevelRecap && cell.recap != nil:
-			shown = append(shown, &shownCell{cell: cell, recap: true})
+		case cell.recap != nil && slices.Contains(recapLevels, level):
+			shown = append(shown, &shownCell{cell: cell, version: level})
 		}
 	}
 
@@ -458,8 +487,8 @@ func (scene *draftScene) view(level string) *promptScene {
 		switch {
 		case shown.cell.target != nil:
 			cell.Target = shown.cell.target.handle
-		case shown.recap:
-			cell.Recap = shown.cell.recap.Summary
+		case shown.version != "":
+			cell.Recap = shown.cell.recap.version(shown.version)
 		default:
 			cell.Content = shown.cell.content
 		}
@@ -470,10 +499,89 @@ func (scene *draftScene) view(level string) *promptScene {
 	return view
 }
 
-// frameView returns what the template renders for the frame: the project, the layers the context shows,
-// and every beat with its scenes. A scene field the generation writes anew is hidden.
-func (draft *contextDraft) frameView() *promptFrame {
-	view := &promptFrame{Title: draft.project.Title, Premise: draft.project.Premise, Language: draft.project.Language}
+// renderFrame renders the frame within budget, in characters: the project, the layers the context shows,
+// and every beat at the richest level that fits. A beat holding a target shows whole. Every other beat
+// first takes its outline, which names its scenes' handles, then, most relevant first, the richest level
+// that still fits. A frame within budget shows every beat whole, so it caches across a project's calls.
+func (draft *contextDraft) renderFrame(templates *template.Template, budget int) (string, error) {
+	for _, beat := range draft.beats {
+		beat.level = lo.Ternary(beat.pinned, ContextLevelFull, ContextLevelOutline)
+
+		render, err := draft.renderBeat(templates, beat, beat.level)
+		if err != nil {
+			return "", err
+		}
+
+		budget -= render.size
+	}
+
+	bare, err := execute(templates, "frame", draft.frameView(nil))
+	if err != nil {
+		return "", err
+	}
+
+	budget -= utf8.RuneCountInString(bare)
+
+	for _, beat := range draft.rankedBeats {
+		budget, err = draft.upgradeBeat(templates, beat, budget)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	beats := lo.Map(draft.beats, func(beat *draftBeat, _ int) string { return beat.renders[beat.level].text })
+
+	return execute(templates, "frame", draft.frameView(beats))
+}
+
+// upgradeBeat raises an outlined beat to the richest level that fits in budget: whole, or a version of its
+// fresh recap. It returns the budget left.
+func (draft *contextDraft) upgradeBeat(templates *template.Template, beat *draftBeat, budget int) (int, error) {
+	outline := beat.renders[ContextLevelOutline].size
+
+	for _, level := range []string{ContextLevelFull, ContextLevelCompact, ContextLevelEssentials} {
+		if level != ContextLevelFull && beat.recap == nil {
+			continue
+		}
+
+		render, err := draft.renderBeat(templates, beat, level)
+		if err != nil {
+			return 0, err
+		}
+
+		if render.size-outline <= budget {
+			beat.level = level
+
+			return budget - (render.size - outline), nil
+		}
+	}
+
+	return budget, nil
+}
+
+// renderBeat renders a beat's line of the frame at a level once, and returns the same render after.
+func (draft *contextDraft) renderBeat(
+	templates *template.Template, beat *draftBeat, level string,
+) (*sceneRender, error) {
+	if render, ok := beat.renders[level]; ok {
+		return render, nil
+	}
+
+	text, err := execute(templates, "beat", draft.beatView(beat, level))
+	if err != nil {
+		return nil, err
+	}
+
+	beat.renders[level] = &sceneRender{text: text, size: 1 + utf8.RuneCountInString(text)}
+
+	return beat.renders[level], nil
+}
+
+// frameView returns what the template renders for the frame around its rendered beats.
+func (draft *contextDraft) frameView(beats []string) *promptFrame {
+	view := &promptFrame{
+		Title: draft.project.Title, Premise: draft.project.Premise, Language: draft.project.Language, Beats: beats,
+	}
 
 	for _, layer := range draft.layers {
 		if layer.excluded && !layer.target {
@@ -485,35 +593,57 @@ func (draft *contextDraft) frameView() *promptFrame {
 		})
 	}
 
-	lines := make(map[*draftScene]*promptFrameScene, len(draft.scenes))
+	return view
+}
 
-	for _, beat := range draft.beats {
-		line := &promptFrameBeat{Title: beat.beat.Title, Description: beat.beat.Description}
+// beatView returns what the template renders for a beat at a level. A whole beat lists its scenes, and
+// hides a scene field the generation writes anew.
+func (draft *contextDraft) beatView(beat *draftBeat, level string) *promptFrameBeat {
+	view := &promptFrameBeat{Title: beat.beat.Title, Level: level}
 
-		for _, scene := range beat.scenes {
-			lines[scene] = &promptFrameScene{
-				Handle: scene.handle, Title: scene.scene.Title, Description: scene.scene.Description,
-			}
-			line.Scenes = append(line.Scenes, lines[scene])
+	if level != ContextLevelFull {
+		view.Handles = handleSpan(beat.scenes)
+		if beat.recap != nil && level != ContextLevelOutline {
+			view.Recap = beat.recap.version(level)
 		}
 
-		view.Beats = append(view.Beats, line)
+		return view
 	}
 
-	for _, target := range draft.targets {
-		if target.mode != TargetModeWrite {
-			continue
+	view.Description = beat.beat.Description
+
+	for _, scene := range beat.scenes {
+		line := &promptFrameScene{Handle: scene.handle, Title: scene.scene.Title, Description: scene.scene.Description}
+
+		for _, target := range draft.targets {
+			if target.scene != scene || target.mode != TargetModeWrite {
+				continue
+			}
+
+			switch target.field {
+			case SceneFieldTitle:
+				line.Title = ""
+			case SceneFieldDescription:
+				line.Description = ""
+			}
 		}
 
-		switch target.field {
-		case SceneFieldTitle:
-			lines[target.scene].Title = ""
-		case SceneFieldDescription:
-			lines[target.scene].Description = ""
-		}
+		view.Lines = append(view.Lines, line)
 	}
 
 	return view
+}
+
+// handleSpan names the handles of a run of scenes, as S12-S21, or S12 for one scene.
+func handleSpan(scenes []*draftScene) string {
+	switch len(scenes) {
+	case 0:
+		return ""
+	case 1:
+		return scenes[0].handle
+	default:
+		return scenes[0].handle + "-" + scenes[len(scenes)-1].handle
+	}
 }
 
 // taskView returns what the template renders for the task of the generation's kind.
@@ -525,8 +655,12 @@ func (draft *contextDraft) taskView() *promptTask {
 		view.Targets = lo.Map(draft.targets, func(target *draftTarget, _ int) *promptTarget { return target.view() })
 	case GenerationKindConsolidate:
 		target := draft.targets[0]
-		view.Cell = &promptRecapCell{
-			Scene: target.scene.handle, Layer: target.cell.layer.handle, Content: target.cell.content,
+		if target.beat != nil {
+			view.Beat = target.beatView()
+		} else {
+			view.Cell = &promptRecapCell{
+				Scene: target.scene.handle, Layer: target.cell.layer.handle, Content: target.cell.content,
+			}
 		}
 	case GenerationKindCheck:
 		if span := draft.request.Scenes; span != nil {
@@ -565,9 +699,39 @@ func (target *draftTarget) view() *promptTarget {
 	return view
 }
 
+// beatView returns what the template renders for the beat a consolidation recaps. Each scene shows its
+// manuscript as its fresh compact recap where one exists, or whole.
+func (target *draftTarget) beatView() *promptRecapBeat {
+	view := &promptRecapBeat{Title: target.beat.beat.Title, Description: target.beat.beat.Description}
+
+	for _, scene := range target.beat.scenes {
+		line := &promptRecapScene{Handle: scene.handle}
+
+		for _, cell := range scene.cells {
+			if cell.target != target {
+				continue
+			}
+
+			if cell.recap != nil {
+				line.Recap = cell.recap.Compact
+			} else {
+				line.Content = cell.content
+			}
+		}
+
+		view.Scenes = append(view.Scenes, line)
+	}
+
+	return view
+}
+
 // plan returns the plan of the context the draft renders.
 func (draft *contextDraft) plan() *ContextPlan {
 	plan := &ContextPlan{Kind: draft.request.Kind}
+
+	plan.Beats = lo.Map(draft.beats, func(beat *draftBeat, _ int) *ContextBeat {
+		return &ContextBeat{BeatID: beat.beat.ID, Level: beat.level}
+	})
 
 	for _, scene := range draft.scenes {
 		planned := &ContextScene{
@@ -582,7 +746,7 @@ func (draft *contextDraft) plan() *ContextPlan {
 				}
 
 				planned.Cells = append(planned.Cells, &ContextCell{
-					LayerID: shown.cell.layer.layer.ID, Recap: shown.recap,
+					LayerID: shown.cell.layer.layer.ID, Recap: shown.version,
 					Override: shown.cell.override, UpdatedAt: shown.cell.updatedAt,
 				})
 			}
@@ -604,6 +768,10 @@ func (draft *contextDraft) plan() *ContextPlan {
 
 // plan returns the plan of the target.
 func (target *draftTarget) plan() *ContextTarget {
+	if target.beat != nil {
+		return &ContextTarget{Handle: target.handle, BeatID: target.beat.beat.ID, UpdatedAt: target.beat.beat.UpdatedAt}
+	}
+
 	planned := &ContextTarget{
 		Handle: target.handle, SceneID: target.scene.scene.ID, Field: target.field, Mode: target.mode,
 		Range: target.span, Kept: target.kept, Blocks: target.blocks,

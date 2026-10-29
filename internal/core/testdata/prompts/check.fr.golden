@@ -6,8 +6,8 @@ Vous vérifiez la cohérence du roman d'un auteur. Vous cherchez les passages o�
 
 Le message de l'auteur présente le projet en trois sections :
 
-- <frame> décrit le projet : son titre et sa prémisse, ses couches, et ses beats avec leurs scènes, dans l'ordre du récit. Un beat est un tournant de la structure de l'histoire, découpé en scènes.
-- <neighborhood> rassemble les scènes, chacune à un niveau de détail. Une scène full montre ses cellules. Une scène recap montre un résumé à la place de son manuscrit. Une scène outline ne montre que ses notes.
+- <frame> décrit le projet : son titre et sa prémisse, ses couches, et ses beats avec leurs scènes, dans l'ordre du récit. Un beat est un tournant de la structure de l'histoire, découpé en scènes. Un beat éloigné peut n'apparaître que par un résumé et les identifiants de ses scènes, ou par son seul titre.
+- <neighborhood> rassemble les scènes, chacune à un niveau de détail. Une scène full montre ses cellules. Une scène condensed, compact ou essentials montre son manuscrit résumé, de la moitié environ jusqu'à une seule phrase, et ses autres cellules en entier. Une scène outline ne montre que ses notes.
 - <task> désigne les scènes à vérifier, et porte la consigne de l'auteur quand il y en a une.
 
 Des identifiants désignent ce que le contexte montre : S1 pour une scène, L1 pour une couche. Une cellule de manuscrit contient des blocs dans l'ordre de lecture : un bloc narration contient de la prose, un bloc dialogue la réplique d'un personnage, avec ses paroles et le ton sur lequel il les prononce.
@@ -33,7 +33,7 @@ Ne signalez que ce que le texte permet d'affirmer : un mystère que l'histoire e
 </layers>
 <beats>
 <beat title="L'attente">
-<description>Marie attend un signe de Paul.</description>
+<description>Marie attend un signe de Paul. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus.</description>
 <scene handle="S1" title="Ouverture">Marie attend sous la pluie.</scene>
 <scene handle="S2" title="La lettre">Une lettre sans signature arrive.</scene>
 </beat>
@@ -57,7 +57,9 @@ Ne signalez que ce que le texte permet d'affirmer : un mystère que l'histoire e
 </scene>
 <scene handle="S2" level="full">
 <cell layer="L1">
-<narration>Le facteur déposa une enveloppe sans timbre. Marie reconnut l'écriture avant même de l'ouvrir.</narration>
+<narration>Le facteur déposa une enveloppe sans timbre. Marie reconnut l'écriture avant même de l'ouvrir.
+
+Elle la garda longtemps fermée sur la table de la cuisine, entre la cafetière et le pot de géraniums que Paul avait rapporté de Brest, trois étés plus tôt. Elle pensa à la porte du café, à la pluie, à ces deux années où chaque lettre qui n'arrivait pas avait pesé un peu plus. Puis elle déchira l'enveloppe d'un geste sec. Il n'y avait qu'une ligne, de la main de Paul, sans signature, et une heure : l'aube. Elle relut la ligne jusqu'à la savoir par cœur, plia la feuille en quatre et la glissa dans la poche de son manteau, celle qui fermait, pour être sûre de ne pas la perdre.</narration>
 <dialogue speaker="Marie"><text>Demain, à l'aube, sur le quai.</text></dialogue>
 </cell>
 <cell layer="L2">Le facteur, pressé.</cell>

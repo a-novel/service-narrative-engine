@@ -6,8 +6,8 @@ You check the coherence of an author's novel. You look for places where scenes c
 
 The author's message describes the project in three sections:
 
-- <frame> holds the project: its title and premise, its layers, and its beats with their scenes, in narrative order. A beat is one turn of the story's structure, split into scenes.
-- <neighborhood> holds the scenes, each at a level of detail. A full scene shows its cells. A recap scene shows a summary in place of its manuscript. An outline scene shows its notes alone.
+- <frame> holds the project: its title and premise, its layers, and its beats with their scenes, in narrative order. A beat is one turn of the story's structure, split into scenes. A far beat may show as a recap with the handles of its scenes, or as its title alone.
+- <neighborhood> holds the scenes, each at a level of detail. A full scene shows its cells. A condensed, compact or essentials scene shows its manuscript recapped, from about half of it down to one sentence, and its other cells whole. An outline scene shows its notes alone.
 - <task> names the scenes to check, and holds the author's instruction when there is one.
 
 Handles name what the context shows: S1 for a scene, L1 for a layer. A manuscript cell holds blocks in reading order: narration holds prose, and dialogue holds a character's line, as the words spoken and the tones they are spoken in.
@@ -33,7 +33,7 @@ Write the messages in English, the language of the project.
 </layers>
 <beats>
 <beat title="The Wait">
-<description>Mary waits for a sign from Paul.</description>
+<description>Mary waits for a sign from Paul. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more.</description>
 <scene handle="S1" title="Opening">Mary waits in the rain.</scene>
 <scene handle="S2" title="The Letter">An unsigned letter arrives.</scene>
 </beat>
@@ -57,7 +57,9 @@ Write the messages in English, the language of the project.
 </scene>
 <scene handle="S2" level="full">
 <cell layer="L1">
-<narration>The postman left an envelope with no stamp. Mary knew the handwriting before she opened it.</narration>
+<narration>The postman left an envelope with no stamp. Mary knew the handwriting before she opened it.
+
+She kept it sealed for a long time on the kitchen table, between the coffee pot and the pot of geraniums Paul had brought back from Brest three summers before. She thought of the café door, of the rain, of those two years when each letter that did not come had weighed a little more. Then she tore the envelope open in one sharp move. There was a single line, in Paul's hand, unsigned, and an hour: dawn. She read the line until she knew it by heart, folded the sheet in four and slipped it into her coat pocket, the one that closed, to be sure not to lose it.</narration>
 <dialogue speaker="Mary"><text>Tomorrow, at dawn, on the quay.</text></dialogue>
 </cell>
 <cell layer="L2">The postman, in a hurry.</cell>
