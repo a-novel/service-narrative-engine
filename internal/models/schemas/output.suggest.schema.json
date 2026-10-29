@@ -1,23 +1,34 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Suggest output",
-  "description": "What the model returns for a suggest generation: one suggestion per target of the task.",
+  "description": "What the model returns for a suggest generation: one suggestion per target of the task, in one list per target shape.",
   "type": "object",
-  "required": ["suggestions"],
+  "required": ["manuscript", "text"],
   "additionalProperties": false,
   "properties": {
-    "suggestions": {
+    "manuscript": {
       "type": "array",
-      "description": "One suggestion per target, in any order.",
+      "description": "One suggestion per manuscript target, in any order.",
       "maxItems": 20,
-      "items": { "anyOf": [{ "$ref": "#/$defs/text" }, { "$ref": "#/$defs/edits" }] }
+      "items": { "$ref": "#/$defs/edits" }
+    },
+    "text": {
+      "type": "array",
+      "description": "One suggestion per text target, in any order.",
+      "maxItems": 20,
+      "items": { "$ref": "#/$defs/text" }
     }
   },
   "$defs": {
-    "targetHandle": {
+    "textTarget": {
       "type": "string",
-      "description": "The handle of the target the suggestion is for, such as T1.",
+      "description": "The handle of the text target the suggestion is for, such as T1.",
       "pattern": "^T[0-9]+$"
+    },
+    "manuscriptTarget": {
+      "type": "string",
+      "description": "The handle of the manuscript target the suggestion is for, such as M1.",
+      "pattern": "^M[0-9]+$"
     },
     "note": {
       "type": "string",
@@ -41,7 +52,7 @@
       "required": ["target", "note", "text"],
       "additionalProperties": false,
       "properties": {
-        "target": { "$ref": "#/$defs/targetHandle" },
+        "target": { "$ref": "#/$defs/textTarget" },
         "note": { "$ref": "#/$defs/note" },
         "text": { "type": "string", "description": "The text, in full.", "maxLength": 200000 }
       }
@@ -52,7 +63,7 @@
       "required": ["target", "note", "edits"],
       "additionalProperties": false,
       "properties": {
-        "target": { "$ref": "#/$defs/targetHandle" },
+        "target": { "$ref": "#/$defs/manuscriptTarget" },
         "note": { "$ref": "#/$defs/note" },
         "edits": {
           "type": "array",

@@ -25,6 +25,14 @@ import (
 // two names with the focus weighs as much as the scene next to it.
 const nameWeight = 0.25
 
+const (
+	// textTargetPrefix starts the handle of a target that receives text: a scene field or a notes cell, as
+	// in T1.
+	textTargetPrefix = "T"
+	// manuscriptTargetPrefix starts the handle of a target that receives edits: a manuscript cell, as in M1.
+	manuscriptTargetPrefix = "M"
+)
+
 // elisions lists the French words that drop their vowel before another word, as in l'Ombre or d'Artagnan.
 var elisions = []string{"c", "d", "j", "l", "m", "n", "s", "t", "qu", "jusqu", "lorsqu", "puisqu"}
 
@@ -438,6 +446,7 @@ func (draft *contextDraft) suggestTargets() ([]*draftTarget, error) {
 
 	targets := make([]*draftTarget, len(draft.request.Targets))
 	written := make(map[targetKey]bool, len(draft.request.Targets))
+	counts := map[string]int{}
 
 	var blocks int
 
@@ -449,10 +458,15 @@ func (draft *contextDraft) suggestTargets() ([]*draftTarget, error) {
 
 		written[key] = true
 
-		target, err := draft.newTarget(request, handle("T", index), &blocks)
+		target, err := draft.newTarget(request, &blocks)
 		if err != nil {
 			return nil, fmt.Errorf("target %d: %w", index, err)
 		}
+
+		// A handle names its target's shape, so the output schema can require edits for a manuscript target.
+		prefix := lo.Ternary(target.span != nil, manuscriptTargetPrefix, textTargetPrefix)
+		target.handle = handle(prefix, counts[prefix])
+		counts[prefix]++
 
 		targets[index] = target
 	}
@@ -460,15 +474,15 @@ func (draft *contextDraft) suggestTargets() ([]*draftTarget, error) {
 	return targets, nil
 }
 
-// newTarget reads the scene field or the cell a target writes, under the handle name, and pins its scene.
-// Blocks counts the block handles the targets before it took.
-func (draft *contextDraft) newTarget(request *GenerationTarget, name string, blocks *int) (*draftTarget, error) {
+// newTarget reads the scene field or the cell a target writes, and pins its scene. Blocks counts the block
+// handles the targets before it took.
+func (draft *contextDraft) newTarget(request *GenerationTarget, blocks *int) (*draftTarget, error) {
 	scene, ok := draft.sceneByID[request.SceneID]
 	if !ok {
 		return nil, ErrSceneNotFound
 	}
 
-	target := &draftTarget{handle: name, scene: scene, field: request.Field, mode: request.Mode}
+	target := &draftTarget{scene: scene, field: request.Field, mode: request.Mode}
 	scene.pinned, scene.focus, scene.beat.pinned = true, true, true
 
 	if request.Field != "" {
@@ -571,7 +585,7 @@ func (draft *contextDraft) recapTarget() ([]*draftTarget, error) {
 		return nil, ErrLayerNotFound
 	}
 
-	target := &draftTarget{handle: handle("T", 0), scene: scene, cell: draft.cell(scene, layer)}
+	target := &draftTarget{handle: handle(textTargetPrefix, 0), scene: scene, cell: draft.cell(scene, layer)}
 	target.cell.target, layer.target = target, true
 	scene.pinned, scene.focus, scene.beat.pinned = true, true, true
 
@@ -586,7 +600,7 @@ func (draft *contextDraft) recapBeatTarget() ([]*draftTarget, error) {
 		return nil, ErrBeatNotFound
 	}
 
-	target := &draftTarget{handle: handle("T", 0), beat: beat}
+	target := &draftTarget{handle: handle(textTargetPrefix, 0), beat: beat}
 	beat.pinned = true
 
 	for _, scene := range beat.scenes {

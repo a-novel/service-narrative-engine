@@ -1,7 +1,7 @@
 {
-  "suggestions": [
+  "manuscript": [
     {
-      "target": "T1",
+      "target": "M1",
       "note": "Holds Paul's line back and adds the wind.",
       "edits": [
         {
@@ -22,8 +22,10 @@
         },
         { "op": "insert_after", "block": null, "blocks": [{ "kind": "narration", "text": "A gull cried." }] }
       ]
-    },
-    { "target": "T2", "note": "Names the scene after the lighthouse.", "text": "The Lighthouse" },
-    { "target": "T3", "note": "Closes on the waiting.", "text": "Mary waits again, and this time she knows why." }
+    }
+  ],
+  "text": [
+    { "target": "T1", "note": "Names the scene after the lighthouse.", "text": "The Lighthouse" },
+    { "target": "T2", "note": "Closes on the waiting.", "text": "Mary waits again, and this time she knows why." }
   ]
 }
