@@ -56,6 +56,9 @@ var AppPresetDefault = App{
 			&grpcf.LocalCredentialsProvider{},
 			&grpcf.GcloudCredentialsProvider{Host: env.ServiceJsonKeysHost},
 		),
+		ServiceGenaiHost:        env.ServiceGenaiHost,
+		ServiceGenaiPort:        env.ServiceGenaiPort,
+		ServiceGenaiCredentials: newGenaiCredentials(),
 	},
 	Permissions: PermissionsConfigDefault,
 	Rest:        env.Rest,
@@ -69,6 +72,20 @@ var AppPresetDefault = App{
 		!exportsOTLP, &loggingpresets.HTTPLocal{BaseLogger: LoggerDev}, nil,
 	),
 	Postgres: PostgresPresetDefault,
+}
+
+// newGenaiCredentials authenticates the genai connection with the service token at
+// SERVICE_GENAI_TOKEN_PATH. Without one, it sends a Google ID token when the service runs on Google Cloud,
+// and nothing otherwise.
+func newGenaiCredentials() grpcf.CredentialsProvider {
+	switch {
+	case env.ServiceGenaiTokenPath != "":
+		return &grpcf.ServiceTokenCredentialsProvider{ServiceTokenPath: env.ServiceGenaiTokenPath}
+	case env.GcloudProjectID != "":
+		return &grpcf.GcloudCredentialsProvider{Host: env.ServiceGenaiHost}
+	default:
+		return &grpcf.LocalCredentialsProvider{}
+	}
 }
 
 // newOtelPreset picks the exporter [OtelPresetDefault] describes.

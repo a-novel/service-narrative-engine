@@ -12,6 +12,8 @@ roles:
     priority: 2
     inherits:
       - "auth:user"
+    permissions:
+      - "narrative:generation:uncapped"
   "auth:superadmin":
     priority: 3
     inherits:
