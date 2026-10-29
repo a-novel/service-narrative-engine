@@ -77,7 +77,8 @@ func TestGenerationSubmit(t *testing.T) {
 			name: "Success",
 
 			request: &core.GenerationSubmitRequest{
-				OwnerID: ownerID, ProjectID: projectID, Targets: targets, Instruction: "Plus court.",
+				OwnerID: ownerID, ProjectID: projectID, Kind: core.GenerationKindSuggest, Targets: targets,
+				Instruction: "Plus court.",
 			},
 
 			snapshotMock: &daoMock[*core.ProjectSnapshot]{resp: snapshot},
@@ -96,7 +97,8 @@ func TestGenerationSubmit(t *testing.T) {
 			name: "Success/Admin",
 
 			request: &core.GenerationSubmitRequest{
-				OwnerID: ownerID, ProjectID: projectID, Targets: targets, Admin: true, Variant: 2,
+				OwnerID: ownerID, ProjectID: projectID, Kind: core.GenerationKindSuggest, Targets: targets,
+				Admin: true, Variant: 2,
 			},
 
 			snapshotMock: &daoMock[*core.ProjectSnapshot]{resp: snapshot},
@@ -115,7 +117,9 @@ func TestGenerationSubmit(t *testing.T) {
 			// A resent request finds the call genai already ran, and its output with it.
 			name: "Success/Replay",
 
-			request: &core.GenerationSubmitRequest{OwnerID: ownerID, ProjectID: projectID, Targets: targets},
+			request: &core.GenerationSubmitRequest{
+				OwnerID: ownerID, ProjectID: projectID, Kind: core.GenerationKindSuggest, Targets: targets,
+			},
 
 			snapshotMock: &daoMock[*core.ProjectSnapshot]{resp: snapshot},
 			planMock: &daoMock[*core.ContextPlan]{resp: &core.ContextPlan{
@@ -138,7 +142,9 @@ func TestGenerationSubmit(t *testing.T) {
 			// genai refuses the second call, so it waits, and the third waits without a submit.
 			name: "Success/Waiting",
 
-			request: &core.GenerationSubmitRequest{OwnerID: ownerID, ProjectID: projectID, Targets: targets},
+			request: &core.GenerationSubmitRequest{
+				OwnerID: ownerID, ProjectID: projectID, Kind: core.GenerationKindSuggest, Targets: targets,
+			},
 
 			snapshotMock: &daoMock[*core.ProjectSnapshot]{resp: snapshot},
 			planMock: &daoMock[*core.ContextPlan]{resp: &core.ContextPlan{
@@ -165,7 +171,9 @@ func TestGenerationSubmit(t *testing.T) {
 		{
 			name: "Error/Quota",
 
-			request: &core.GenerationSubmitRequest{OwnerID: ownerID, ProjectID: projectID, Targets: targets},
+			request: &core.GenerationSubmitRequest{
+				OwnerID: ownerID, ProjectID: projectID, Kind: core.GenerationKindSuggest, Targets: targets,
+			},
 
 			snapshotMock: &daoMock[*core.ProjectSnapshot]{resp: snapshot},
 			planMock: &daoMock[*core.ContextPlan]{resp: &core.ContextPlan{
@@ -179,16 +187,21 @@ func TestGenerationSubmit(t *testing.T) {
 			expectErr: core.ErrGenerationQuota,
 		},
 		{
-			name: "Error/NoTarget",
+			// Only a suggest generation takes targets.
+			name: "Error/TargetsOnConsolidate",
 
-			request: &core.GenerationSubmitRequest{OwnerID: ownerID, ProjectID: projectID},
+			request: &core.GenerationSubmitRequest{
+				OwnerID: ownerID, ProjectID: projectID, Kind: core.GenerationKindConsolidate, Targets: targets,
+			},
 
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
 			name: "Error/Snapshot",
 
-			request: &core.GenerationSubmitRequest{OwnerID: ownerID, ProjectID: projectID, Targets: targets},
+			request: &core.GenerationSubmitRequest{
+				OwnerID: ownerID, ProjectID: projectID, Kind: core.GenerationKindSuggest, Targets: targets,
+			},
 
 			snapshotMock: &daoMock[*core.ProjectSnapshot]{err: core.ErrProjectNotFound},
 
@@ -197,7 +210,9 @@ func TestGenerationSubmit(t *testing.T) {
 		{
 			name: "Error/Plan",
 
-			request: &core.GenerationSubmitRequest{OwnerID: ownerID, ProjectID: projectID, Targets: targets},
+			request: &core.GenerationSubmitRequest{
+				OwnerID: ownerID, ProjectID: projectID, Kind: core.GenerationKindSuggest, Targets: targets,
+			},
 
 			snapshotMock: &daoMock[*core.ProjectSnapshot]{resp: snapshot},
 			planMock:     &daoMock[*core.ContextPlan]{err: core.ErrContextTooLarge},
@@ -207,7 +222,9 @@ func TestGenerationSubmit(t *testing.T) {
 		{
 			name: "Error/Unavailable",
 
-			request: &core.GenerationSubmitRequest{OwnerID: ownerID, ProjectID: projectID, Targets: targets},
+			request: &core.GenerationSubmitRequest{
+				OwnerID: ownerID, ProjectID: projectID, Kind: core.GenerationKindSuggest, Targets: targets,
+			},
 
 			snapshotMock: &daoMock[*core.ProjectSnapshot]{resp: snapshot},
 			planMock: &daoMock[*core.ContextPlan]{resp: &core.ContextPlan{
@@ -221,7 +238,9 @@ func TestGenerationSubmit(t *testing.T) {
 		{
 			name: "Error/Genai",
 
-			request: &core.GenerationSubmitRequest{OwnerID: ownerID, ProjectID: projectID, Targets: targets},
+			request: &core.GenerationSubmitRequest{
+				OwnerID: ownerID, ProjectID: projectID, Kind: core.GenerationKindSuggest, Targets: targets,
+			},
 
 			snapshotMock: &daoMock[*core.ProjectSnapshot]{resp: snapshot},
 			planMock: &daoMock[*core.ContextPlan]{resp: &core.ContextPlan{

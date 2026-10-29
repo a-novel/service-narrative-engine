@@ -35,27 +35,37 @@ type GenerationSubmitServiceGenai interface {
 	) (*servicegenai.GenerationSubmitResponse, error)
 }
 
-// GenerationSubmitRequest asks for a suggest generation on a project of the caller.
+// GenerationSubmitRequest asks for a generation on a project of the caller. Each kind takes its own fields.
 type GenerationSubmitRequest struct {
 	OwnerID   uuid.UUID `validate:"required"`
 	ProjectID uuid.UUID `validate:"required"`
 	// Admin runs the generation on genai's admin tier, which no cap limits.
 	Admin bool
 
-	// Targets lists what the generation writes, from 1 to 20, each once.
-	Targets []*GenerationTarget `validate:"required,min=1,max=20,dive,required"`
+	// Kind is the kind of the generation, one of [GenerationKinds].
+	Kind string `validate:"generationkind"`
+
+	// Targets lists what a suggest generation writes, from 1 to 20, each once.
+	Targets []*GenerationTarget `validate:"excluded_unless=Kind suggest,max=20,dive,required"`
+	// Cell names the cell a consolidate generation recaps, unless BeatID names a beat.
+	Cell *GenerationCell `validate:"excluded_unless=Kind consolidate"`
+	// BeatID names the beat a consolidate generation recaps.
+	BeatID uuid.UUID `validate:"excluded_unless=Kind consolidate"`
+	// Scenes narrows a check generation to a range of scene positions. Nil checks every scene.
+	Scenes *Range `validate:"excluded_unless=Kind check"`
+
 	// Instruction is what the author asks of the generation.
-	Instruction string `validate:"max=4000"`
+	Instruction string `validate:"max=4000,excluded_if=Kind consolidate"`
 	// Exclude lists the layers the generation does not read. A target still shows its own cell.
-	Exclude []uuid.UUID `validate:"max=1000,unique"`
+	Exclude []uuid.UUID `validate:"max=1000,unique,excluded_if=Kind consolidate"`
 	// Overrides carries unsaved content the generation reads in place of the stored one.
-	Overrides *GenerationOverrides
+	Overrides *GenerationOverrides `validate:"excluded_if=Kind consolidate"`
 
 	// Variant asks genai for another result of the same calls.
 	Variant uint32
 }
 
-// GenerationSubmit plans a suggest generation and submits each of its calls to genai, as the caller. A call
+// GenerationSubmit plans a generation and submits each of its calls to genai, as the caller. A call
 // genai refuses for a cap waits, and so do the calls after it. Resending the same request admits the
 // calls that wait: genai replays the calls it admitted and those that succeeded, and runs again those that
 // failed or were cancelled. A generation whose every call waits returns a [GenerationQuotaError].
@@ -93,8 +103,8 @@ func (service *GenerationSubmit) Exec(ctx context.Context, request *GenerationSu
 	}
 
 	plan, err := service.plan.Exec(ctx, &GenerationPlanRequest{
-		Snapshot: snapshot, Kind: GenerationKindSuggest, Targets: request.Targets,
-		Instruction: request.Instruction, Exclude: request.Exclude, Overrides: request.Overrides,
+		Snapshot: snapshot, Kind: request.Kind, Targets: request.Targets, Cell: request.Cell, BeatID: request.BeatID,
+		Scenes: request.Scenes, Instruction: request.Instruction, Exclude: request.Exclude, Overrides: request.Overrides,
 	})
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("plan generation: %w", err))
