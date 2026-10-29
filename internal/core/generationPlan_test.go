@@ -142,7 +142,7 @@ func loadPromptProject(t *testing.T, language string) (*promptProject, *core.Pro
 
 				snapshot.Recaps = append(snapshot.Recaps, &core.CellRecap{
 					SceneID: fixtureSceneID(position), LayerID: fixtureLayerID(cell.Layer),
-					Summary: cell.Recap.Summary, Names: cell.Recap.Names, ContentUpdatedAt: read,
+					Summary: cell.Recap.Summary, Names: cell.Recap.Names, CellUpdatedAt: read,
 				})
 			}
 		}

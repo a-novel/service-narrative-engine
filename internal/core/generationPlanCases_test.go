@@ -116,17 +116,12 @@ func setManuscript(snapshot *core.ProjectSnapshot, scene int, content string) *c
 	return snapshot
 }
 
-// addRecap gives the manuscript cell of the scene at position a recap, which read an older content when
-// stale.
-func addRecap(snapshot *core.ProjectSnapshot, scene int, stale bool) *core.ProjectSnapshot {
-	read := updatedAt
-	if stale {
-		read = updatedAt.Add(-time.Hour)
-	}
-
+// addRecap gives the manuscript cell of the second scene a recap, which read the cell shift away from its
+// UpdatedAt. A recap is fresh only when shift is zero.
+func addRecap(snapshot *core.ProjectSnapshot, shift time.Duration) *core.ProjectSnapshot {
 	snapshot.Recaps = append(snapshot.Recaps, &core.CellRecap{
-		SceneID: fixtureSceneID(scene), LayerID: fixtureLayerID(0), Summary: "The tide takes the boat.",
-		Names: []string{"Ana"}, ContentUpdatedAt: read,
+		SceneID: fixtureSceneID(1), LayerID: fixtureLayerID(0), Summary: "The tide takes the boat.",
+		Names: []string{"Ana"}, CellUpdatedAt: updatedAt.Add(shift),
 	})
 
 	return snapshot
@@ -217,7 +212,7 @@ func generationPlanCases() []*generationPlanCase {
 		},
 		{
 			name:           "Success/Recap",
-			request:        suggestRequest(addRecap(planProject(4), 1, false), cellTarget(0, 0, revise)),
+			request:        suggestRequest(addRecap(planProject(4), 0), cellTarget(0, 0, revise)),
 			extra:          3*outlineCost + manuscriptCost/2,
 			expectLevels:   []string{full, recap, outline, outline},
 			expectContains: []string{`<recap layer="L1">The tide takes the boat.</recap>`},
@@ -231,14 +226,21 @@ func generationPlanCases() []*generationPlanCase {
 		},
 		{
 			name:         "Success/StaleRecap",
-			request:      suggestRequest(addRecap(planProject(4), 1, true), cellTarget(0, 0, revise)),
+			request:      suggestRequest(addRecap(planProject(4), -time.Hour), cellTarget(0, 0, revise)),
+			extra:        3*outlineCost + manuscriptCost/2,
+			expectLevels: []string{full, outline, outline, outline},
+			expectAbsent: []string{"The tide takes the boat."},
+		},
+		{
+			name:         "Success/StaleRecapOfAnotherWrite",
+			request:      suggestRequest(addRecap(planProject(4), time.Hour), cellTarget(0, 0, revise)),
 			extra:        3*outlineCost + manuscriptCost/2,
 			expectLevels: []string{full, outline, outline, outline},
 			expectAbsent: []string{"The tide takes the boat."},
 		},
 		{
 			name: "Success/OverrideStalesRecap",
-			request: with(suggestRequest(addRecap(planProject(4), 1, false), cellTarget(0, 0, revise)),
+			request: with(suggestRequest(addRecap(planProject(4), 0), cellTarget(0, 0, revise)),
 				func(request *core.GenerationPlanRequest) {
 					request.Overrides = &core.GenerationOverrides{Cells: []*core.CellOverride{{
 						SceneID: fixtureSceneID(1), LayerID: fixtureLayerID(0),

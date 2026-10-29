@@ -255,7 +255,7 @@ func (draft *contextDraft) readCells() (map[cellKey]*draftCell, error) {
 
 	for _, recap := range draft.request.Snapshot.Recaps {
 		cell, ok := cells[cellKey{recap.SceneID, recap.LayerID}]
-		if ok && !cell.override && !cell.updatedAt.After(recap.ContentUpdatedAt) {
+		if ok && !cell.override && cell.updatedAt.Equal(recap.CellUpdatedAt) {
 			cell.recap = recap
 		}
 	}

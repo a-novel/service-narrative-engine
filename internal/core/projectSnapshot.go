@@ -34,7 +34,6 @@ type CellRecap struct {
 	// Names lists the characters, places and objects the cell names.
 	Names []string
 
-	// ContentUpdatedAt is when the content the recap read was written. The recap is stale once the cell
-	// changes after that.
-	ContentUpdatedAt time.Time
+	// CellUpdatedAt is the cell's UpdatedAt when the recap read it. The recap is stale once they differ.
+	CellUpdatedAt time.Time
 }
