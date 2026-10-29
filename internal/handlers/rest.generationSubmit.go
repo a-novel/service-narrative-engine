@@ -24,13 +24,22 @@ type RestGenerationSubmitService interface {
 	Exec(ctx context.Context, request *core.GenerationSubmitRequest) (*core.Generation, error)
 }
 
-// RestGenerationSubmitRequest is the JSON body the submit-generation endpoint accepts: a suggest
-// generation on a project of the caller.
+// RestGenerationSubmitRequest is the JSON body the submit-generation endpoint accepts: a generation on a
+// project of the caller.
 type RestGenerationSubmitRequest struct {
 	ProjectID uuid.UUID `json:"projectID"`
+	// Kind is the kind of the generation: suggest, consolidate or check. Each kind takes its own fields.
+	Kind string `json:"kind"`
 
-	// Targets lists what the generation writes, from 1 to 20, each once.
+	// Targets lists what a suggest generation writes, from 1 to 20, each once.
 	Targets []*RestGenerationTarget `json:"targets"`
+	// Cell names the cell a consolidate generation recaps, unless BeatID names a beat.
+	Cell *RestGenerationCell `json:"cell"`
+	// BeatID names the beat a consolidate generation recaps.
+	BeatID uuid.UUID `json:"beatID"`
+	// Scenes narrows a check generation to a range of scene positions. Null checks every scene.
+	Scenes *RestRange `json:"scenes"`
+
 	// Instruction is what the author asks of the generation.
 	Instruction string `json:"instruction"`
 	// Exclude lists the layers the generation does not read. A target still shows its own cell.
@@ -40,6 +49,12 @@ type RestGenerationSubmitRequest struct {
 
 	// Variant asks for another result of the same calls.
 	Variant uint32 `json:"variant"`
+}
+
+// RestGenerationCell names the cell a consolidate generation recaps.
+type RestGenerationCell struct {
+	SceneID uuid.UUID `json:"sceneID"`
+	LayerID uuid.UUID `json:"layerID"`
 }
 
 // RestGenerationTarget names one thing a suggest generation writes: a field of a scene, or a cell.
@@ -128,9 +143,12 @@ func (handler *RestGenerationSubmit) ServeHTTP(w http.ResponseWriter, r *http.Re
 		OwnerID:   ownerID,
 		ProjectID: request.ProjectID,
 		Admin:     requestGranted(r, handler.uncapped),
-		Targets: lo.Map(request.Targets, func(target *RestGenerationTarget, _ int) *core.GenerationTarget {
-			return saveGenerationTarget(target)
-		}),
+		Kind:      request.Kind,
+		Targets:   saveGenerationTargets(request.Targets),
+		Cell:      saveGenerationCell(request.Cell),
+		BeatID:    request.BeatID,
+		Scenes:    saveRange(request.Scenes),
+
 		Instruction: request.Instruction,
 		Exclude:     request.Exclude,
 		Overrides:   saveGenerationOverrides(request.Overrides),
@@ -153,21 +171,39 @@ func (handler *RestGenerationSubmit) ServeHTTP(w http.ResponseWriter, r *http.Re
 	httpf.SendJSONStatus(w, span, http.StatusAccepted, loadGeneration(result))
 }
 
-// saveGenerationTarget returns nil for a missing target, which the core refuses.
-func saveGenerationTarget(target *RestGenerationTarget) *core.GenerationTarget {
-	if target == nil {
+// saveGenerationTargets keeps a request without targets at nil, since only a suggest generation takes them,
+// and a missing target at nil, which the core refuses.
+func saveGenerationTargets(targets []*RestGenerationTarget) []*core.GenerationTarget {
+	if targets == nil {
 		return nil
 	}
 
-	saved := &core.GenerationTarget{
-		SceneID: target.SceneID, LayerID: target.LayerID, Field: target.Field, Mode: target.Mode, Kept: target.Kept,
+	return lo.Map(targets, func(target *RestGenerationTarget, _ int) *core.GenerationTarget {
+		if target == nil {
+			return nil
+		}
+
+		return &core.GenerationTarget{
+			SceneID: target.SceneID, LayerID: target.LayerID, Field: target.Field, Mode: target.Mode,
+			Range: saveRange(target.Range), Kept: target.Kept,
+		}
+	})
+}
+
+func saveGenerationCell(cell *RestGenerationCell) *core.GenerationCell {
+	if cell == nil {
+		return nil
 	}
 
-	if target.Range != nil {
-		saved.Range = &core.Range{Start: target.Range.Start, End: target.Range.End}
+	return &core.GenerationCell{SceneID: cell.SceneID, LayerID: cell.LayerID}
+}
+
+func saveRange(span *RestRange) *core.Range {
+	if span == nil {
+		return nil
 	}
 
-	return saved
+	return &core.Range{Start: span.Start, End: span.End}
 }
 
 func saveGenerationOverrides(overrides *RestGenerationOverrides) *core.GenerationOverrides {

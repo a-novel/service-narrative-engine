@@ -118,6 +118,8 @@ func main() {
 	daoCellUpsert := dao.NewPgCellUpsert()
 	daoCellsUpsert := dao.NewPgCellsUpsert()
 	daoCellList := dao.NewPgCellList()
+	daoCellRecapUpdate := dao.NewPgCellRecapUpdate()
+	daoBeatRecapUpdate := dao.NewPgBeatRecapUpdate()
 	daoManuscriptSelect := dao.NewPgManuscriptSelect()
 	transactor := postgres.NewTransactor(nil)
 
@@ -155,6 +157,8 @@ func main() {
 	serviceLayerDelete := core.NewLayerDelete(daoProjectLock, daoLayerKind, daoLayerDelete, transactor)
 	serviceLayersDelete := core.NewLayersDelete(daoProjectLock, daoLayerKind, daoLayersDelete, transactor)
 	serviceCellList := core.NewCellList(daoProjectOwned, daoCellList)
+	serviceCellRecapWrite := core.NewCellRecapWrite(daoProjectOwned, daoCellRecapUpdate)
+	serviceBeatRecapWrite := core.NewBeatRecapWrite(daoProjectOwned, daoBeatRecapUpdate)
 	serviceCellWrite := core.NewCellWrite(
 		daoProjectOwned, daoLayerKind, daoSceneLock, daoCellUpsert, daoSceneLength, transactor,
 	)
@@ -210,6 +214,8 @@ func main() {
 	handlerCellList := handlers.NewRestCellList(serviceCellList, cfg.Logger)
 	handlerCellWrite := handlers.NewRestCellWrite(serviceCellWrite, cfg.Logger)
 	handlerCellsWrite := handlers.NewRestCellsWrite(serviceCellsWrite, cfg.Logger)
+	handlerCellRecapWrite := handlers.NewRestCellRecapWrite(serviceCellRecapWrite, cfg.Logger)
+	handlerBeatRecapWrite := handlers.NewRestBeatRecapWrite(serviceBeatRecapWrite, cfg.Logger)
 	handlerManuscriptExport := handlers.NewRestManuscriptExport(serviceManuscriptExport, cfg.Logger)
 	handlerGenerationSubmit := handlers.NewRestGenerationSubmit(serviceGenerationSubmit, cfg.Permissions, cfg.Logger)
 	handlerGenerationGet := handlers.NewRestGenerationGet(serviceGenerationGet, cfg.Logger)
@@ -264,6 +270,9 @@ func main() {
 		withAuth(item, config.PermissionProjectWrite).Put("/cell", handlerCellWrite.ServeHTTP)
 		withAuth(api, config.PermissionProjectRead).Get("/cells", handlerCellList.ServeHTTP)
 		withAuth(api, config.PermissionProjectWrite).Put("/cells", handlerCellsWrite.ServeHTTP)
+
+		withAuth(item, config.PermissionProjectWrite).Put("/cell/recap", handlerCellRecapWrite.ServeHTTP)
+		withAuth(item, config.PermissionProjectWrite).Put("/beat/recap", handlerBeatRecapWrite.ServeHTTP)
 
 		withAuth(api, config.PermissionProjectRead).Get("/manuscript", handlerManuscriptExport.ServeHTTP)
 
