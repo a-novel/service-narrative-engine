@@ -20,10 +20,14 @@ type RestProjectUpdateService interface {
 
 // RestProjectUpdateRequest is the JSON body the update-project endpoint accepts.
 type RestProjectUpdateRequest struct {
-	ID       uuid.UUID `json:"id"`
-	Title    string    `json:"title"`
-	Premise  string    `json:"premise"`
-	Language string    `json:"language"`
+	ID uuid.UUID `json:"id"`
+
+	// Title names the narrative.
+	Title string `json:"title"`
+	// Premise says what the narrative is about, in a few sentences.
+	Premise string `json:"premise"`
+	// Language is the language the project is written in, one of [core.ProjectLanguages].
+	Language string `json:"language"`
 }
 
 // RestProjectUpdate is the HTTP handler for the update-project endpoint. It responds with the updated

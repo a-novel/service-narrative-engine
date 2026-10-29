@@ -34,6 +34,7 @@ type RestCellsWriteItem struct {
 // RestCellsWriteRequest is the JSON body the write-cells endpoint accepts.
 type RestCellsWriteRequest struct {
 	ProjectID uuid.UUID `json:"projectID"`
+
 	// Cells lists the cells to write.
 	Cells []RestCellsWriteItem `json:"cells"`
 }
@@ -69,13 +70,15 @@ func (handler *RestCellsWrite) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	result, err := handler.service.Exec(ctx, &core.CellsWriteRequest{
+	serviceRequest := &core.CellsWriteRequest{
 		OwnerID:   ownerID,
 		ProjectID: request.ProjectID,
 		Cells: lo.Map(request.Cells, func(item RestCellsWriteItem, _ int) core.CellsWriteItem {
-			return core.CellsWriteItem{SceneID: item.SceneID, LayerID: item.LayerID, Content: item.Content}
+			return loadCellsWriteItem(item)
 		}),
-	})
+	}
+
+	result, err := handler.service.Exec(ctx, serviceRequest)
 	if err != nil {
 		httpf.HandleError(ctx, handler.logger, w, span, composerErrors, err)
 
@@ -84,4 +87,9 @@ func (handler *RestCellsWrite) ServeHTTP(w http.ResponseWriter, r *http.Request)
 
 	response := lo.Map(result, func(cell *core.WrittenCell, _ int) WrittenCell { return loadWrittenCell(cell) })
 	httpf.SendJSONStatus(w, span, http.StatusOK, response)
+}
+
+// loadCellsWriteItem converts one item of the request body to its core counterpart.
+func loadCellsWriteItem(item RestCellsWriteItem) core.CellsWriteItem {
+	return core.CellsWriteItem{SceneID: item.SceneID, LayerID: item.LayerID, Content: item.Content}
 }

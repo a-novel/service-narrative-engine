@@ -37,6 +37,7 @@ type RestLayersCreateRequest struct {
 	// Position is the place of the first new layer among the project's rows, from 0, and the others
 	// follow it. A position past the last layer appends them.
 	Position int `json:"position"`
+
 	// Layers lists the layers to add, in order.
 	Layers []RestLayersCreateItem `json:"layers"`
 }
@@ -72,14 +73,16 @@ func (handler *RestLayersCreate) ServeHTTP(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	result, err := handler.service.Exec(ctx, &core.LayersCreateRequest{
+	serviceRequest := &core.LayersCreateRequest{
 		OwnerID:   ownerID,
 		ProjectID: request.ProjectID,
 		Position:  request.Position,
 		Layers: lo.Map(request.Layers, func(item RestLayersCreateItem, _ int) core.LayersCreateItem {
-			return core.LayersCreateItem{Kind: item.Kind, Name: item.Name, Description: item.Description}
+			return loadLayersCreateItem(item)
 		}),
-	})
+	}
+
+	result, err := handler.service.Exec(ctx, serviceRequest)
 	if err != nil {
 		httpf.HandleError(ctx, handler.logger, w, span, composerErrors, err)
 
@@ -88,4 +91,9 @@ func (handler *RestLayersCreate) ServeHTTP(w http.ResponseWriter, r *http.Reques
 
 	response := lo.Map(result, func(layer *core.Layer, _ int) Layer { return loadLayer(layer) })
 	httpf.SendJSONStatus(w, span, http.StatusCreated, response)
+}
+
+// loadLayersCreateItem converts one item of the request body to its core counterpart.
+func loadLayersCreateItem(item RestLayersCreateItem) core.LayersCreateItem {
+	return core.LayersCreateItem{Kind: item.Kind, Name: item.Name, Description: item.Description}
 }

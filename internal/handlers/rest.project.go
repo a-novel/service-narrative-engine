@@ -16,7 +16,7 @@ type Project struct {
 	Title string `json:"title"`
 	// Premise says what the narrative is about, in a few sentences.
 	Premise string `json:"premise"`
-	// Language is the language the project is written in: en or fr.
+	// Language is the language the project is written in, one of [core.ProjectLanguages].
 	Language string `json:"language"`
 
 	CreatedAt time.Time `json:"createdAt"`

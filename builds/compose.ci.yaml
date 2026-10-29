@@ -34,6 +34,11 @@ services:
       POSTGRES_DATABASE: postgres
       POSTGRES_TLS_ENABLED: "false"
       APP_MASTER_KEY: "0000000000000000000000000000000000000000000000000000000000000001"
+    healthcheck:
+      test: ["CMD", "grpcurl", "--plaintext", "-d", "", "localhost:8080", "grpc.health.v1.Health/Check"]
+      interval: 1s
+      timeout: 5s
+      retries: 30
 
   standalone-rest:
     profiles: ["rest"]

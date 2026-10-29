@@ -32,6 +32,7 @@ type RestLayersUpdateItem struct {
 // RestLayersUpdateRequest is the JSON body the update-layers endpoint accepts.
 type RestLayersUpdateRequest struct {
 	ProjectID uuid.UUID `json:"projectID"`
+
 	// Layers lists the layers to update, each once.
 	Layers []RestLayersUpdateItem `json:"layers"`
 }
@@ -67,13 +68,15 @@ func (handler *RestLayersUpdate) ServeHTTP(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	result, err := handler.service.Exec(ctx, &core.LayersUpdateRequest{
+	serviceRequest := &core.LayersUpdateRequest{
 		OwnerID:   ownerID,
 		ProjectID: request.ProjectID,
 		Layers: lo.Map(request.Layers, func(item RestLayersUpdateItem, _ int) core.LayersUpdateItem {
-			return core.LayersUpdateItem{ID: item.ID, Name: item.Name, Description: item.Description}
+			return loadLayersUpdateItem(item)
 		}),
-	})
+	}
+
+	result, err := handler.service.Exec(ctx, serviceRequest)
 	if err != nil {
 		httpf.HandleError(ctx, handler.logger, w, span, composerErrors, err)
 
@@ -82,4 +85,9 @@ func (handler *RestLayersUpdate) ServeHTTP(w http.ResponseWriter, r *http.Reques
 
 	response := lo.Map(result, func(layer *core.Layer, _ int) Layer { return loadLayer(layer) })
 	httpf.SendJSONStatus(w, span, http.StatusOK, response)
+}
+
+// loadLayersUpdateItem converts one item of the request body to its core counterpart.
+func loadLayersUpdateItem(item RestLayersUpdateItem) core.LayersUpdateItem {
+	return core.LayersUpdateItem{ID: item.ID, Name: item.Name, Description: item.Description}
 }

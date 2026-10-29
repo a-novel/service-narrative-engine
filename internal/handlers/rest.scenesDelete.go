@@ -57,9 +57,11 @@ func (handler *RestScenesDelete) ServeHTTP(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	result, err := handler.service.Exec(ctx, &core.ScenesDeleteRequest{
+	serviceRequest := &core.ScenesDeleteRequest{
 		OwnerID: ownerID, ProjectID: request.ProjectID, IDs: request.IDs,
-	})
+	}
+
+	result, err := handler.service.Exec(ctx, serviceRequest)
 	if err != nil {
 		httpf.HandleError(ctx, handler.logger, w, span, composerErrors, err)
 

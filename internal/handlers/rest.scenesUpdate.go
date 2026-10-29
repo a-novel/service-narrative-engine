@@ -36,6 +36,7 @@ type RestScenesUpdateItem struct {
 // RestScenesUpdateRequest is the JSON body the update-scenes endpoint accepts.
 type RestScenesUpdateRequest struct {
 	ProjectID uuid.UUID `json:"projectID"`
+
 	// Scenes lists the scenes to update, each once.
 	Scenes []RestScenesUpdateItem `json:"scenes"`
 }
@@ -71,15 +72,15 @@ func (handler *RestScenesUpdate) ServeHTTP(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	result, err := handler.service.Exec(ctx, &core.ScenesUpdateRequest{
+	serviceRequest := &core.ScenesUpdateRequest{
 		OwnerID:   ownerID,
 		ProjectID: request.ProjectID,
 		Scenes: lo.Map(request.Scenes, func(item RestScenesUpdateItem, _ int) core.ScenesUpdateItem {
-			return core.ScenesUpdateItem{
-				ID: item.ID, Title: item.Title, Color: item.Color, Description: item.Description, Prompt: item.Prompt,
-			}
+			return loadScenesUpdateItem(item)
 		}),
-	})
+	}
+
+	result, err := handler.service.Exec(ctx, serviceRequest)
 	if err != nil {
 		httpf.HandleError(ctx, handler.logger, w, span, composerErrors, err)
 
@@ -88,4 +89,11 @@ func (handler *RestScenesUpdate) ServeHTTP(w http.ResponseWriter, r *http.Reques
 
 	response := lo.Map(result, func(scene *core.Scene, _ int) Scene { return loadScene(scene) })
 	httpf.SendJSONStatus(w, span, http.StatusOK, response)
+}
+
+// loadScenesUpdateItem converts one item of the request body to its core counterpart.
+func loadScenesUpdateItem(item RestScenesUpdateItem) core.ScenesUpdateItem {
+	return core.ScenesUpdateItem{
+		ID: item.ID, Title: item.Title, Color: item.Color, Description: item.Description, Prompt: item.Prompt,
+	}
 }
