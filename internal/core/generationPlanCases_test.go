@@ -2,6 +2,7 @@ package core_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
 	"testing"
@@ -11,6 +12,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
+	"github.com/a-novel/service-narrative-engine/internal/config"
 	"github.com/a-novel/service-narrative-engine/internal/core"
 )
 
@@ -31,8 +33,8 @@ type generationPlanCase struct {
 	// expectContains and expectAbsent list text the user message holds, or lacks.
 	expectContains []string
 	expectAbsent   []string
-	// expect checks the rest of the plan.
-	expect func(t *testing.T, plan *core.ContextPlan)
+	// expect checks the rest of the plan's one call.
+	expect func(t *testing.T, call *core.ContextCall)
 
 	expectErr error
 }
@@ -209,9 +211,9 @@ func shortScenes(snapshot *core.ProjectSnapshot) *core.ProjectSnapshot {
 	return snapshot
 }
 
-// beatLevels returns the level of each beat of a plan, in order.
-func beatLevels(plan *core.ContextPlan) []string {
-	return lo.Map(plan.Beats, func(beat *core.ContextBeat, _ int) string { return beat.Level })
+// beatLevels returns the level of each beat of a call, in order.
+func beatLevels(call *core.ContextCall) []string {
+	return lo.Map(call.Beats, func(beat *core.ContextBeat, _ int) string { return beat.Level })
 }
 
 func suggestRequest(snapshot *core.ProjectSnapshot, targets ...*core.GenerationTarget) *core.GenerationPlanRequest {
@@ -285,12 +287,12 @@ func generationPlanCases() []*generationPlanCase {
 			name:    "Success/ManyScenes",
 			request: suggestRequest(planProject(200), cellTarget(0, 0, revise)),
 			extra:   100 * outlineCost,
-			expect: func(t *testing.T, plan *core.ContextPlan) {
+			expect: func(t *testing.T, call *core.ContextCall) {
 				t.Helper()
 
-				outlines := lo.CountBy(plan.Scenes, func(scene *core.ContextScene) bool { return scene.Level == outline })
+				outlines := lo.CountBy(call.Scenes, func(scene *core.ContextScene) bool { return scene.Level == outline })
 				require.Greater(t, outlines, 100)
-				require.Equal(t, omitted, plan.Scenes[199].Level)
+				require.Equal(t, omitted, call.Scenes[199].Level)
 			},
 		},
 		{
@@ -309,12 +311,12 @@ func generationPlanCases() []*generationPlanCase {
 			extra:          3*outlineCost + manuscriptCost/2,
 			expectLevels:   []string{full, condensed, outline, outline},
 			expectContains: []string{`<recap layer="L1">The tide takes the boat. The tide takes the boat.`},
-			expect: func(t *testing.T, plan *core.ContextPlan) {
+			expect: func(t *testing.T, call *core.ContextCall) {
 				t.Helper()
 				require.Equal(t, []*core.ContextCell{
 					{LayerID: fixtureLayerID(0), Recap: condensed, UpdatedAt: updatedAt},
 					{LayerID: fixtureLayerID(1), UpdatedAt: updatedAt},
-				}, plan.Scenes[1].Cells)
+				}, call.Scenes[1].Cells)
 			},
 		},
 		{
@@ -346,9 +348,9 @@ func generationPlanCases() []*generationPlanCase {
 				`<beat title="Beat 4" level="essentials" scenes="S4">The boats return.</beat>`,
 				`<beat title="Beat 5" level="essentials" scenes="S5">The boats return.</beat>`,
 			},
-			expect: func(t *testing.T, plan *core.ContextPlan) {
+			expect: func(t *testing.T, call *core.ContextCall) {
 				t.Helper()
-				require.Equal(t, []string{full, full, compact, essentials, essentials}, beatLevels(plan))
+				require.Equal(t, []string{full, full, compact, essentials, essentials}, beatLevels(call))
 			},
 		},
 		{
@@ -356,18 +358,18 @@ func generationPlanCases() []*generationPlanCase {
 			request:        suggestRequest(longBeats(shortScenes(planProject(5)), 2), cellTarget(0, 0, revise)),
 			extra:          2200,
 			expectContains: []string{`<beat title="Beat 3" level="outline" scenes="S3"/>`},
-			expect: func(t *testing.T, plan *core.ContextPlan) {
+			expect: func(t *testing.T, call *core.ContextCall) {
 				t.Helper()
-				require.Equal(t, []string{full, full, outline, compact, essentials}, beatLevels(plan))
+				require.Equal(t, []string{full, full, outline, compact, essentials}, beatLevels(call))
 			},
 		},
 		{
 			name:      "Success/FrameWhole",
 			request:   suggestRequest(longBeats(shortScenes(planProject(3)), 0), cellTarget(0, 0, revise)),
 			unbounded: true,
-			expect: func(t *testing.T, plan *core.ContextPlan) {
+			expect: func(t *testing.T, call *core.ContextCall) {
 				t.Helper()
-				require.Equal(t, []string{full, full, full}, beatLevels(plan))
+				require.Equal(t, []string{full, full, full}, beatLevels(call))
 			},
 		},
 		{
@@ -404,10 +406,10 @@ func generationPlanCases() []*generationPlanCase {
 			}),
 			unbounded:    true,
 			expectAbsent: []string{"Notes 1", "Notes 2", `name="Notes"`},
-			expect: func(t *testing.T, plan *core.ContextPlan) {
+			expect: func(t *testing.T, call *core.ContextCall) {
 				t.Helper()
-				require.Equal(t, []*core.ContextLayer{{Handle: "L1", LayerID: fixtureLayerID(0)}}, plan.Layers)
-				require.Equal(t, []*core.ContextCell{{LayerID: fixtureLayerID(0), UpdatedAt: updatedAt}}, plan.Scenes[1].Cells)
+				require.Equal(t, []*core.ContextLayer{{Handle: "L1", LayerID: fixtureLayerID(0)}}, call.Layers)
+				require.Equal(t, []*core.ContextCell{{LayerID: fixtureLayerID(0), UpdatedAt: updatedAt}}, call.Scenes[1].Cells)
 			},
 		},
 		{
@@ -460,12 +462,12 @@ func generationPlanCases() []*generationPlanCase {
 			unbounded:      true,
 			expectContains: []string{`<scene handle="S2" title="Unsaved title">Unsaved</scene>`, "Unsaved notes"},
 			expectAbsent:   []string{"Scene 2", "Notes 3"},
-			expect: func(t *testing.T, plan *core.ContextPlan) {
+			expect: func(t *testing.T, call *core.ContextCall) {
 				t.Helper()
-				require.True(t, plan.Scenes[1].Override)
-				require.Zero(t, plan.Scenes[1].UpdatedAt)
-				require.False(t, plan.Scenes[2].Override)
-				require.Equal(t, &core.ContextCell{LayerID: fixtureLayerID(1), Override: true}, plan.Scenes[2].Cells[1])
+				require.True(t, call.Scenes[1].Override)
+				require.Zero(t, call.Scenes[1].UpdatedAt)
+				require.False(t, call.Scenes[2].Override)
+				require.Equal(t, &core.ContextCell{LayerID: fixtureLayerID(1), Override: true}, call.Scenes[2].Cells[1])
 			},
 		},
 		{
@@ -481,12 +483,12 @@ func generationPlanCases() []*generationPlanCase {
 					`<narration handle="B2" kept="true">Silence.</narration>` + "\n</range>",
 				"<after>\n" + `<dialogue speaker="Leo"><text>I did.</text></dialogue>` + "\n</after>",
 			},
-			expect: func(t *testing.T, plan *core.ContextPlan) {
+			expect: func(t *testing.T, call *core.ContextCall) {
 				t.Helper()
 				require.Equal(t, []*core.ContextBlock{{Handle: "B1", Position: 1}, {Handle: "B2", Position: 2}},
-					plan.Targets[0].Blocks)
-				require.Equal(t, &core.Range{Start: 1, End: 3}, plan.Targets[0].Range)
-				require.Equal(t, []int{2}, plan.Targets[0].Kept)
+					call.Targets[0].Blocks)
+				require.Equal(t, &core.Range{Start: 1, End: 3}, call.Targets[0].Range)
+				require.Equal(t, []int{2}, call.Targets[0].Kept)
 			},
 		},
 		{
@@ -501,10 +503,10 @@ func generationPlanCases() []*generationPlanCase {
 					"\n</range>",
 			},
 			expectAbsent: []string{"Dawn.", "Silence.", "I did."},
-			expect: func(t *testing.T, plan *core.ContextPlan) {
+			expect: func(t *testing.T, call *core.ContextCall) {
 				t.Helper()
-				require.Equal(t, []*core.ContextBlock{{Handle: "B1", Position: 1}}, plan.Targets[0].Blocks)
-				require.Equal(t, &core.Range{Start: 0, End: 4}, plan.Targets[0].Range)
+				require.Equal(t, []*core.ContextBlock{{Handle: "B1", Position: 1}}, call.Targets[0].Blocks)
+				require.Equal(t, &core.Range{Start: 0, End: 4}, call.Targets[0].Range)
 			},
 		},
 		{
@@ -524,14 +526,14 @@ func generationPlanCases() []*generationPlanCase {
 				`<cell layer="L2" target="T4"/>`,
 			},
 			expectAbsent: []string{"Notes 2"},
-			expect: func(t *testing.T, plan *core.ContextPlan) {
+			expect: func(t *testing.T, call *core.ContextCall) {
 				t.Helper()
 				require.Equal(t, &core.ContextTarget{
 					Handle: "T1", SceneID: fixtureSceneID(0), Field: core.SceneFieldTitle, Mode: revise, UpdatedAt: updatedAt,
-				}, plan.Targets[0])
+				}, call.Targets[0])
 				require.Equal(t, &core.ContextTarget{
 					Handle: "T4", SceneID: fixtureSceneID(1), LayerID: fixtureLayerID(1), Mode: write, UpdatedAt: updatedAt,
-				}, plan.Targets[3])
+				}, call.Targets[3])
 			},
 		},
 		{
@@ -551,24 +553,24 @@ func generationPlanCases() []*generationPlanCase {
 				}),
 			),
 			unbounded: true,
-			expect: func(t *testing.T, plan *core.ContextPlan) {
+			expect: func(t *testing.T, call *core.ContextCall) {
 				t.Helper()
 
-				scene, ok := plan.Scene("S3")
+				scene, ok := call.Scene("S3")
 				require.True(t, ok)
 				require.Equal(t, fixtureSceneID(2), scene.SceneID)
 
-				_, ok = plan.Scene("S4")
+				_, ok = call.Scene("S4")
 				require.False(t, ok)
 
-				first, ok := plan.Target("M1")
+				first, ok := call.Target("M1")
 				require.True(t, ok)
 
 				position, ok := first.Block("B4")
 				require.True(t, ok)
 				require.Equal(t, 3, position)
 
-				second, ok := plan.Target("M2")
+				second, ok := call.Target("M2")
 				require.True(t, ok)
 
 				position, ok = second.Block("B5")
@@ -578,7 +580,7 @@ func generationPlanCases() []*generationPlanCase {
 				_, ok = second.Block("B1")
 				require.False(t, ok, "a block of another target")
 
-				_, ok = plan.Target("M3")
+				_, ok = call.Target("M3")
 				require.False(t, ok)
 			},
 		},
@@ -593,11 +595,11 @@ func generationPlanCases() []*generationPlanCase {
 			expectContains: []string{
 				`<target handle="T1" scene="S2" layer="L1">` + "\n<narration>The sea", `<cell layer="L1" target="T1"/>`,
 			},
-			expect: func(t *testing.T, plan *core.ContextPlan) {
+			expect: func(t *testing.T, call *core.ContextCall) {
 				t.Helper()
 				require.Equal(t, []*core.ContextTarget{{
 					Handle: "T1", SceneID: fixtureSceneID(1), LayerID: fixtureLayerID(0), UpdatedAt: updatedAt,
-				}}, plan.Targets)
+				}}, call.Targets)
 			},
 		},
 		{
@@ -613,11 +615,11 @@ func generationPlanCases() []*generationPlanCase {
 				`<scene handle="S2"><recap>Tide. Tide.`,
 				`<cell layer="L1" target="T1"/>`,
 			},
-			expect: func(t *testing.T, plan *core.ContextPlan) {
+			expect: func(t *testing.T, call *core.ContextCall) {
 				t.Helper()
 				require.Equal(t, []*core.ContextTarget{
 					{Handle: "T1", BeatID: fixtureBeatID(0), UpdatedAt: updatedAt},
-				}, plan.Targets)
+				}, call.Targets)
 			},
 		},
 		{
@@ -667,10 +669,10 @@ func generationPlanCases() []*generationPlanCase {
 					`<scene handle="S2" title="Scene 2"/>` + "\n</beat>",
 				`<beat title="Second">` + "\n" + `<scene handle="S3" title="Scene 1"/>`,
 			},
-			expect: func(t *testing.T, plan *core.ContextPlan) {
+			expect: func(t *testing.T, call *core.ContextCall) {
 				t.Helper()
 				require.Equal(t, []uuid.UUID{fixtureSceneID(2), fixtureSceneID(1), fixtureSceneID(0)},
-					lo.Map(plan.Scenes, func(scene *core.ContextScene, _ int) uuid.UUID { return scene.SceneID }))
+					lo.Map(call.Scenes, func(scene *core.ContextScene, _ int) uuid.UUID { return scene.SceneID }))
 			},
 		},
 		{
@@ -851,4 +853,274 @@ func generationPlanCases() []*generationPlanCase {
 			expectErr: core.ErrInvalidRequest,
 		},
 	}
+}
+
+// generationSplitCase is one request of [TestGenerationPlan] that may outgrow a single call, with the
+// settings of its kind.
+type generationSplitCase struct {
+	name string
+
+	request *core.GenerationPlanRequest
+	// settings returns the settings of the case's kind from single, the estimate of the request as one call
+	// with its frame collapsed and no context.
+	settings func(single int) config.GenerationKind
+
+	// expect checks the plan.
+	expect func(t *testing.T, plan *core.ContextPlan)
+
+	expectErr error
+}
+
+// splitSettings returns settings with neither limit nor output cap in the way, and a budget that fits only
+// the parts that always enter.
+func splitSettings() config.GenerationKind {
+	return config.GenerationKind{Model: "a-model", Reasoning: "low", MaxOutputTokens: 1 << 20, Limit: 1 << 30}
+}
+
+// spansProject is a [planProject] of three scenes. The first holds [contextBlocks], and the third two
+// short blocks.
+func spansProject() *core.ProjectSnapshot {
+	return setManuscript(setManuscript(planProject(3), 0, contextBlocks), 2,
+		blocks(narration("Dawn."), narration("Dusk.")))
+}
+
+// spansRequest revises the manuscript of each scene of [spansProject], keeping the fourth block of the
+// first, and the title of the second.
+func spansRequest() *core.GenerationPlanRequest {
+	return suggestRequest(spansProject(),
+		with(cellTarget(0, 0, core.TargetModeRevise), func(target *core.GenerationTarget) { target.Kept = []int{3} }),
+		fieldTarget(1, core.SceneFieldTitle, core.TargetModeRevise),
+		cellTarget(2, 0, core.TargetModeRevise),
+	)
+}
+
+// checkRequest checks every scene of a project of six.
+func checkRequest() *core.GenerationPlanRequest {
+	return &core.GenerationPlanRequest{Snapshot: planProject(6), Kind: core.GenerationKindCheck}
+}
+
+// checkSettings gives a check a budget whose window share holds two scenes whole, and the budget not all
+// six.
+func checkSettings(split bool) func(int) config.GenerationKind {
+	return func(int) config.GenerationKind {
+		settings := splitSettings()
+		settings.Budget, settings.Split = 6000, split
+
+		return settings
+	}
+}
+
+func generationPlanSplitCases() []*generationSplitCase {
+	const full = core.ContextLevelFull
+
+	return []*generationSplitCase{
+		{
+			name: "Success/LongContext",
+			request: suggestRequest(planProject(2),
+				cellTarget(0, 0, core.TargetModeRevise), cellTarget(1, 0, core.TargetModeRevise)),
+			settings: func(single int) config.GenerationKind {
+				settings := splitSettings()
+				settings.Limit, settings.LongLimit = single-1, single
+
+				return settings
+			},
+			expect: func(t *testing.T, plan *core.ContextPlan) {
+				t.Helper()
+				require.Len(t, plan.Calls, 1)
+				require.Len(t, plan.Calls[0].Targets, 2)
+			},
+		},
+		{
+			name: "Error/LongContextOff",
+			request: suggestRequest(planProject(2),
+				cellTarget(0, 0, core.TargetModeRevise), cellTarget(1, 0, core.TargetModeRevise)),
+			settings: func(single int) config.GenerationKind {
+				settings := splitSettings()
+				settings.Limit = single - 1
+
+				return settings
+			},
+			expectErr: core.ErrContextTooLarge,
+		},
+		{
+			name: "Error/PastLongLimit",
+			request: suggestRequest(planProject(2),
+				cellTarget(0, 0, core.TargetModeRevise), cellTarget(1, 0, core.TargetModeRevise)),
+			settings: func(single int) config.GenerationKind {
+				settings := splitSettings()
+				settings.Limit, settings.LongLimit = single-2, single-1
+
+				return settings
+			},
+			expectErr: core.ErrContextTooLarge,
+		},
+		{
+			// The targets together pass the limit, and each fits alone.
+			name: "Success/SplitTargets",
+			request: suggestRequest(planProject(3),
+				cellTarget(0, 0, core.TargetModeRevise), fieldTarget(1, core.SceneFieldTitle, core.TargetModeWrite),
+				cellTarget(2, 0, core.TargetModeRevise)),
+			settings: func(single int) config.GenerationKind {
+				settings := splitSettings()
+				settings.Limit, settings.Split = single-manuscriptCost/2, true
+
+				return settings
+			},
+			expect: func(t *testing.T, plan *core.ContextPlan) {
+				t.Helper()
+				require.Equal(t, []string{"M1", "T1", "M2"}, callTargets(plan))
+
+				for _, call := range plan.Calls {
+					require.Less(t, call.Estimate, plan.Calls[0].Estimate+manuscriptCost)
+				}
+
+				require.Equal(t, []*core.ContextBlock{{Handle: "B2", Position: 0}}, plan.Calls[2].Targets[0].Blocks)
+			},
+		},
+		{
+			name: "Error/SplitOff",
+			request: suggestRequest(planProject(3),
+				cellTarget(0, 0, core.TargetModeRevise), cellTarget(2, 0, core.TargetModeRevise)),
+			settings: func(single int) config.GenerationKind {
+				settings := splitSettings()
+				settings.Limit = single - manuscriptCost/2
+
+				return settings
+			},
+			expectErr: core.ErrContextTooLarge,
+		},
+		{
+			// The first target's rewrite passes half the output cap, so its range takes four spans of two
+			// rewritten blocks each at most. The kept block stays with its span.
+			name:    "Success/Spans",
+			request: spansRequest(),
+			settings: func(int) config.GenerationKind {
+				settings := splitSettings()
+				settings.MaxOutputTokens, settings.Split = 500, true
+
+				return settings
+			},
+			expect: func(t *testing.T, plan *core.ContextPlan) {
+				t.Helper()
+				require.Equal(t, []string{"M1", "M1", "M1", "M1", "T1", "M2"}, callTargets(plan))
+
+				spans := lo.Map(plan.Calls[:4], func(call *core.ContextCall, _ int) *core.Range {
+					return call.Targets[0].Range
+				})
+				require.Equal(t, []*core.Range{{Start: 0, End: 2}, {Start: 2, End: 5}, {Start: 5, End: 7}, {Start: 7, End: 9}},
+					spans)
+				require.Equal(t, []int{3}, plan.Calls[1].Targets[0].Kept)
+				require.Empty(t, plan.Calls[2].Targets[0].Kept)
+				require.Equal(t, []*core.ContextBlock{{Handle: "B3", Position: 2}, {Handle: "B4", Position: 3}, {
+					Handle: "B5", Position: 4,
+				}}, plan.Calls[1].Targets[0].Blocks)
+				require.Equal(t, []*core.ContextBlock{{Handle: "B10", Position: 0}, {Handle: "B11", Position: 1}},
+					plan.Calls[5].Targets[0].Blocks)
+				require.NotContains(t, plan.Calls[0].Prompt.Task, `handle="B3"`, "a block of another span")
+			},
+		},
+		{
+			name:    "Error/SpansOff",
+			request: spansRequest(),
+			settings: func(int) config.GenerationKind {
+				settings := splitSettings()
+				settings.MaxOutputTokens = 500
+
+				return settings
+			},
+			expectErr: core.ErrContextTooLarge,
+		},
+		{
+			// A single block takes the whole output cap, past half of it.
+			name:    "Success/SingleBlock",
+			request: suggestRequest(planProject(1), cellTarget(0, 0, core.TargetModeRevise)),
+			settings: func(int) config.GenerationKind {
+				settings := splitSettings()
+				settings.MaxOutputTokens, settings.Split = manuscriptCost, true
+
+				return settings
+			},
+			expect: func(t *testing.T, plan *core.ContextPlan) {
+				t.Helper()
+				require.Len(t, plan.Calls, 1)
+			},
+		},
+		{
+			name:    "Error/SingleBlockPastCap",
+			request: suggestRequest(planProject(1), cellTarget(0, 0, core.TargetModeRevise)),
+			settings: func(int) config.GenerationKind {
+				settings := splitSettings()
+				settings.MaxOutputTokens, settings.Split = 1000, true
+
+				return settings
+			},
+			expectErr: core.ErrContextTooLarge,
+		},
+		{
+			// A write rewrites nothing the planner measures.
+			name:    "Success/Write",
+			request: suggestRequest(spansProject(), cellTarget(0, 0, core.TargetModeWrite)),
+			settings: func(int) config.GenerationKind {
+				settings := splitSettings()
+				settings.MaxOutputTokens = 1
+
+				return settings
+			},
+			expect: func(t *testing.T, plan *core.ContextPlan) {
+				t.Helper()
+				require.Len(t, plan.Calls, 1)
+			},
+		},
+		{
+			name:     "Success/Windows",
+			request:  checkRequest(),
+			settings: checkSettings(true),
+			expect: func(t *testing.T, plan *core.ContextPlan) {
+				t.Helper()
+				require.Len(t, plan.Calls, 3)
+
+				for index, call := range plan.Calls {
+					require.LessOrEqual(t, call.Estimate, plan.Budget)
+					require.Equal(t, full, call.Scenes[2*index].Level)
+					require.Equal(t, full, call.Scenes[2*index+1].Level)
+					require.Contains(t, call.Prompt.Task,
+						fmt.Sprintf(`<check from="S%d" to="S%d"/>`, 2*index+1, 2*index+2))
+					require.NotContains(t, call.Prompt.Neighborhood, "<prompt>", "a check shows no prompts")
+				}
+			},
+		},
+		{
+			name:     "Success/WindowsOff",
+			request:  checkRequest(),
+			settings: checkSettings(false),
+			expect: func(t *testing.T, plan *core.ContextPlan) {
+				t.Helper()
+				require.Len(t, plan.Calls, 1)
+				require.True(t, lo.ContainsBy(plan.Calls[0].Scenes, func(scene *core.ContextScene) bool {
+					return scene.Level != full
+				}))
+			},
+		},
+		{
+			name: "Error/ConsolidateNeverSplits",
+			request: &core.GenerationPlanRequest{
+				Snapshot: planProject(2), Kind: core.GenerationKindConsolidate,
+				Cell: &core.GenerationCell{SceneID: fixtureSceneID(0), LayerID: fixtureLayerID(0)},
+			},
+			settings: func(single int) config.GenerationKind {
+				settings := splitSettings()
+				settings.Limit, settings.Split = single-1, true
+
+				return settings
+			},
+			expectErr: core.ErrContextTooLarge,
+		},
+	}
+}
+
+// callTargets returns the handle of each call's targets, in call order.
+func callTargets(plan *core.ContextPlan) []string {
+	return lo.FlatMap(plan.Calls, func(call *core.ContextCall, _ int) []string {
+		return lo.Map(call.Targets, func(target *core.ContextTarget, _ int) string { return target.Handle })
+	})
 }

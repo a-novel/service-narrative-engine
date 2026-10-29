@@ -20,6 +20,13 @@ type GenerationKind struct {
 	// and the context around them shares what they leave.
 	Budget int `json:"budget" yaml:"budget"`
 	// Limit is the largest prompt the kind sends, when its frame, task and target scenes alone outgrow the
-	// budget. A larger prompt is refused.
+	// budget.
 	Limit int `json:"limit" yaml:"limit"`
+	// LongLimit raises Limit for a call sent as long context. Zero turns long context off. OpenAI bills input
+	// past 272K tokens at twice the rate.
+	LongLimit int `json:"longLimit" yaml:"longLimit"`
+	// Split runs a generation that fits no single call as several. suggest gives each target a call of its
+	// own, and each span of a range whose rewrite passes half the output cap. check checks consecutive
+	// windows of scenes whole. consolidate never splits.
+	Split bool `json:"split" yaml:"split"`
 }

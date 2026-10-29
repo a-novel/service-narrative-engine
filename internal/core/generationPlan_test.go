@@ -302,14 +302,14 @@ type modelOutput struct {
 	} `json:"findings"`
 }
 
-// requireOutput fails unless output, the fixture output of a generation kind, passes the plan's strict
-// schema and the full output schema, and unless every handle it names maps back through the plan to
+// requireOutput fails unless output, the output of one call of a generation kind, passes the call's strict
+// schema and the full output schema, and unless every handle it names maps back through the call to
 // content that passes the content schemas. A suggest output answers each target once.
-func requireOutput(t *testing.T, plan *core.ContextPlan, snapshot *core.ProjectSnapshot, output []byte) {
+func requireOutput(t *testing.T, kind string, call *core.ContextCall, snapshot *core.ProjectSnapshot, output []byte) {
 	t.Helper()
 
 	strictSchema := &jsonschema.Schema{}
-	require.NoError(t, json.Unmarshal(plan.Prompt.Schema, strictSchema))
+	require.NoError(t, json.Unmarshal(call.Prompt.Schema, strictSchema))
 
 	strict, err := strictSchema.Resolve(nil)
 	require.NoError(t, err)
@@ -318,7 +318,7 @@ func requireOutput(t *testing.T, plan *core.ContextPlan, snapshot *core.ProjectS
 	require.NoError(t, json.Unmarshal(output, &value))
 	require.NoError(t, strict.Validate(value))
 
-	full, err := schemas.Output(plan.Kind)
+	full, err := schemas.Output(kind)
 	require.NoError(t, err)
 	require.NoError(t, full.Validate(output))
 
@@ -326,15 +326,15 @@ func requireOutput(t *testing.T, plan *core.ContextPlan, snapshot *core.ProjectS
 	require.NoError(t, json.Unmarshal(output, parsed))
 
 	suggestions := slices.Concat(parsed.Manuscript, parsed.Text)
-	if plan.Kind == core.GenerationKindSuggest {
+	if kind == core.GenerationKindSuggest {
 		// The model answers each target once.
 		require.ElementsMatch(t,
-			lo.Map(plan.Targets, func(target *core.ContextTarget, _ int) string { return target.Handle }),
+			lo.Map(call.Targets, func(target *core.ContextTarget, _ int) string { return target.Handle }),
 			lo.Map(suggestions, func(suggestion modelSuggestion, _ int) string { return suggestion.Target }))
 	}
 
 	for _, suggestion := range suggestions {
-		target, ok := plan.Target(suggestion.Target)
+		target, ok := call.Target(suggestion.Target)
 		require.True(t, ok, suggestion.Target)
 
 		for _, edit := range suggestion.Edits {
@@ -361,9 +361,44 @@ func requireOutput(t *testing.T, plan *core.ContextPlan, snapshot *core.ProjectS
 
 	for _, finding := range parsed.Findings {
 		for _, quote := range finding.Evidence {
-			scene, ok := plan.Scene(quote.Scene)
+			scene, ok := call.Scene(quote.Scene)
 			require.True(t, ok, quote.Scene)
 			require.Equal(t, core.ContextLevelFull, scene.Level, "a quote cites a full scene")
+		}
+	}
+}
+
+// requireHandles fails unless every handle keeps one meaning across the calls of a plan: a scene or a target
+// names the same thing in each call, and a block takes its handle in one call only.
+func requireHandles(t *testing.T, plan *core.ContextPlan) {
+	t.Helper()
+
+	scenes := map[string]uuid.UUID{}
+	targets := map[string]string{}
+	blocks := map[string]bool{}
+
+	for _, call := range plan.Calls {
+		for _, scene := range call.Scenes {
+			if id, ok := scenes[scene.Handle]; ok {
+				require.Equal(t, id, scene.SceneID, scene.Handle)
+			}
+
+			scenes[scene.Handle] = scene.SceneID
+		}
+
+		for _, target := range call.Targets {
+			named := target.SceneID.String() + target.LayerID.String() + target.BeatID.String() + target.Field
+			if other, ok := targets[target.Handle]; ok {
+				require.Equal(t, other, named, target.Handle)
+			}
+
+			targets[target.Handle] = named
+
+			for _, block := range target.Blocks {
+				require.False(t, blocks[block.Handle], block.Handle)
+
+				blocks[block.Handle] = true
+			}
 		}
 	}
 }
@@ -438,15 +473,94 @@ func TestGenerationPlan(t *testing.T) {
 
 			plan, err := planService(request.Kind, settings).Exec(t.Context(), request)
 			require.NoError(t, err, request.Kind)
-			require.LessOrEqual(t, plan.Estimate, settings.Budget, request.Kind)
+
+			for _, call := range plan.Calls {
+				require.LessOrEqual(t, call.Estimate, settings.Budget, request.Kind)
+			}
 		}
 	})
+
+	// A project at the store's limits plans every kind on the default settings, which turn on long context
+	// and splitting: 200 beats of 10 scenes, twenty targets of 200,000 characters that pass the long limit
+	// together, a scene at the 400,000-character cap, and a beat whose scenes carry the largest recaps.
+	t.Run("Success/StoreLimits", func(t *testing.T) {
+		t.Parallel()
+
+		snapshot := planProject(2000)
+		for index, scene := range snapshot.Scenes {
+			scene.BeatID, scene.Position = fixtureBeatID(index/10), index%10
+		}
+
+		snapshot.Beats = snapshot.Beats[:200]
+
+		large := blocks(lo.Times(100, func(int) string { return narration(strings.Repeat("Wind. ", 333)) })...)
+		targets := lo.Times(20, func(index int) *core.GenerationTarget {
+			setManuscript(snapshot, index*100, large)
+
+			return cellTarget(index*100, 0, core.TargetModeRevise)
+		})
+
+		setManuscript(snapshot, 1005, blocks(lo.Times(200, func(int) string {
+			return narration(strings.Repeat("Wind. ", 333))
+		})...))
+
+		for scene := 1010; scene < 1020; scene++ {
+			snapshot.Recaps = append(snapshot.Recaps, &core.CellRecap{
+				Recap:   core.Recap{Condensed: "Wind.", Compact: strings.Repeat("Wind. ", 6666), Essentials: "Wind."},
+				SceneID: fixtureSceneID(scene), LayerID: fixtureLayerID(0), CellUpdatedAt: updatedAt,
+			})
+		}
+
+		requests := []*core.GenerationPlanRequest{
+			suggestRequest(snapshot, targets...),
+			{Snapshot: snapshot, Kind: core.GenerationKindConsolidate, Cell: &core.GenerationCell{
+				SceneID: fixtureSceneID(1005), LayerID: fixtureLayerID(0),
+			}},
+			{Snapshot: snapshot, Kind: core.GenerationKindConsolidate, BeatID: fixtureBeatID(101)},
+			{Snapshot: snapshot, Kind: core.GenerationKindCheck},
+		}
+
+		for _, request := range requests {
+			settings := config.GenerationsConfigDefault.Kinds[request.Kind]
+
+			plan, err := planService(request.Kind, settings).Exec(t.Context(), request)
+			require.NoError(t, err, request.Kind)
+			requireHandles(t, plan)
+
+			for _, call := range plan.Calls {
+				require.LessOrEqual(t, call.Estimate, settings.LongLimit, request.Kind)
+			}
+		}
+	})
+
+	for _, testCase := range generationPlanSplitCases() {
+		t.Run("Split/"+testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			single, err := planService(testCase.request.Kind, splitSettings()).Exec(t.Context(), testCase.request)
+			require.NoError(t, err)
+			require.Len(t, single.Calls, 1)
+
+			plan, err := planService(testCase.request.Kind, testCase.settings(single.Calls[0].Estimate)).
+				Exec(t.Context(), testCase.request)
+			if testCase.expectErr != nil {
+				require.ErrorIs(t, err, testCase.expectErr)
+				require.Nil(t, plan)
+
+				return
+			}
+
+			require.NoError(t, err)
+			requireHandles(t, plan)
+			testCase.expect(t, plan)
+		})
+	}
 
 	for _, testCase := range generationPlanCases() {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			settings := config.GenerationKind{Model: "a-model", Reasoning: "low", MaxOutputTokens: 1000, Limit: 1 << 30}
+			settings := config.GenerationKind{Model: "a-model", Reasoning: "low", MaxOutputTokens: 1 << 20, Limit: 1 << 30}
 			if testCase.limit > 0 {
 				settings.Limit = testCase.limit
 			}
@@ -461,33 +575,38 @@ func TestGenerationPlan(t *testing.T) {
 
 			require.NoError(t, err)
 
-			settings.Budget = lo.Ternary(testCase.unbounded, 1<<30, fixed.Estimate+testCase.extra)
+			require.Len(t, fixed.Calls, 1)
+
+			settings.Budget = lo.Ternary(testCase.unbounded, 1<<30, fixed.Calls[0].Estimate+testCase.extra)
 			service := planService(testCase.request.Kind, settings)
 
 			plan, err := service.Exec(t.Context(), testCase.request)
 			require.NoError(t, err)
-			require.LessOrEqual(t, plan.Estimate, plan.Budget)
+			require.Len(t, plan.Calls, 1)
+
+			call := plan.Calls[0]
+			require.LessOrEqual(t, call.Estimate, plan.Budget)
 
 			again, err := service.Exec(t.Context(), testCase.request)
 			require.NoError(t, err)
 			require.Equal(t, plan, again, "the same request gives the same plan")
 
 			if testCase.expectLevels != nil {
-				require.Equal(t, testCase.expectLevels, lo.Map(plan.Scenes, func(scene *core.ContextScene, _ int) string {
+				require.Equal(t, testCase.expectLevels, lo.Map(call.Scenes, func(scene *core.ContextScene, _ int) string {
 					return scene.Level
 				}))
 			}
 
 			for _, text := range testCase.expectContains {
-				require.Contains(t, sections(plan.Prompt), text)
+				require.Contains(t, sections(call.Prompt), text)
 			}
 
 			for _, text := range testCase.expectAbsent {
-				require.NotContains(t, sections(plan.Prompt), text)
+				require.NotContains(t, sections(call.Prompt), text)
 			}
 
 			if testCase.expect != nil {
-				testCase.expect(t, plan)
+				testCase.expect(t, call)
 			}
 		})
 	}
@@ -515,22 +634,25 @@ func TestGenerationPlan(t *testing.T) {
 
 				plan, err := planService(kind, settings).Exec(t.Context(), request)
 				require.NoError(t, err)
+				require.Len(t, plan.Calls, 1)
+
+				call := plan.Calls[0]
 
 				name := variant.name + "." + language + ".golden"
 				if *updateGolden {
 					path := filepath.Join("testdata", "prompts", name)
-					require.NoError(t, os.WriteFile(path, []byte(goldenPrompt(plan.Prompt)), 0o600))
+					require.NoError(t, os.WriteFile(path, []byte(goldenPrompt(call.Prompt)), 0o600))
 				} else {
 					golden, err := promptFixtures.ReadFile("testdata/prompts/" + name)
 					require.NoError(t, err)
-					require.Equal(t, string(golden), goldenPrompt(plan.Prompt))
+					require.Equal(t, string(golden), goldenPrompt(call.Prompt))
 				}
 
-				require.LessOrEqual(t, plan.Estimate, plan.Budget)
+				require.LessOrEqual(t, call.Estimate, plan.Budget)
 
 				output, err := promptFixtures.ReadFile("testdata/prompts/" + kind + ".output.json")
 				require.NoError(t, err)
-				requireOutput(t, plan, snapshot, output)
+				requireOutput(t, kind, call, snapshot, output)
 			})
 		}
 	}

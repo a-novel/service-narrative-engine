@@ -1,6 +1,7 @@
 package core
 
 import (
+	"encoding/json"
 	"fmt"
 	"slices"
 	"strings"
@@ -11,8 +12,6 @@ import (
 	"github.com/samber/lo"
 
 	"github.com/a-novel/service-narrative-engine/internal/config"
-	"github.com/a-novel/service-narrative-engine/internal/config/prompts"
-	"github.com/a-novel/service-narrative-engine/internal/models/schemas"
 )
 
 // charsPerToken is how many characters [estimateTokens] counts as one token. The planner measures every
@@ -153,25 +152,19 @@ type (
 	}
 )
 
-// render plans what the generation reads within the budget of its kind, and renders its prompt.
+// render plans what the call reads within the budget of its kind, and renders its prompt with the
+// generation's templates and strict output schema.
 //
-// The frame, the task and the scenes of the targets always enter, unless they alone outgrow the kind's
-// limit, which [ErrContextTooLarge] refuses. The blocks around each target's range come next, nearest first,
-// and the other scenes share what is left.
-func (draft *contextDraft) render(kind config.GenerationKind) (*ContextPlan, error) {
-	templates, err := prompts.Lookup(draft.request.Kind, draft.project.Language)
+// The frame, the task and the scenes that always enter come first. They may outgrow the budget up to the
+// kind's limit, or its long limit as long context. A suggestion's rewrite fits half the output cap, or the
+// whole cap for a single text or block. [ErrContextTooLarge] refuses a call past either. The blocks around
+// each target's range come next, nearest first, and the other scenes share what is left.
+func (draft *contextDraft) render(
+	templates *template.Template, schema json.RawMessage, kind config.GenerationKind,
+) (*ContextCall, error) {
+	err := draft.checkRewrite(kind)
 	if err != nil {
-		return nil, fmt.Errorf("templates: %w", err)
-	}
-
-	output, err := schemas.Output(draft.request.Kind)
-	if err != nil {
-		return nil, fmt.Errorf("output schema: %w", err)
-	}
-
-	schema, err := output.Strict()
-	if err != nil {
-		return nil, fmt.Errorf("strict output schema: %w", err)
+		return nil, err
 	}
 
 	prompt := &Prompt{
@@ -183,12 +176,31 @@ func (draft *contextDraft) render(kind config.GenerationKind) (*ContextPlan, err
 		return nil, err
 	}
 
-	plan := draft.plan()
-	plan.Budget = kind.Budget
-	plan.Prompt = prompt
-	plan.Estimate = estimateTokens(prompt.size())
+	call := draft.call()
+	call.Prompt = prompt
+	call.Estimate = estimateTokens(prompt.size())
 
-	return plan, nil
+	return call, nil
+}
+
+// checkRewrite refuses a suggest call whose rewrite outgrows its share of the output cap: half the cap,
+// the rest left for reasoning, or the whole cap for a single text or block.
+func (draft *contextDraft) checkRewrite(kind config.GenerationKind) error {
+	if draft.request.Kind != GenerationKindSuggest {
+		return nil
+	}
+
+	share := kind.MaxOutputTokens / outputShare
+	if len(draft.targets) == 1 && draft.targets[0].single() {
+		share = kind.MaxOutputTokens
+	}
+
+	rewrite := estimateTokens(lo.SumBy(draft.targets, (*draftTarget).rewrite))
+	if rewrite > share {
+		return fmt.Errorf("%w: a rewrite of %d tokens, over the %d the output takes", ErrContextTooLarge, rewrite, share)
+	}
+
+	return nil
 }
 
 // renderSections renders the developer message and the three sections of the prompt within the kind's
@@ -227,10 +239,10 @@ func (draft *contextDraft) renderSections(
 		return err
 	}
 
-	if prompt.size() > kind.Limit*charsPerToken {
-		return fmt.Errorf(
-			"%w: %d tokens, over the limit of %d", ErrContextTooLarge, estimateTokens(prompt.size()), kind.Limit,
-		)
+	// Past the kind's limit, the call enters as long context when the kind allows it.
+	limit := max(kind.Limit, kind.LongLimit)
+	if prompt.size() > limit*charsPerToken {
+		return fmt.Errorf("%w: %d tokens, over the limit of %d", ErrContextTooLarge, estimateTokens(prompt.size()), limit)
 	}
 
 	err = draft.showTargetContext(templates, kind.Budget*charsPerToken-prompt.size())
@@ -280,7 +292,8 @@ func (draft *contextDraft) renderScene(
 		return render, nil
 	}
 
-	text, err := execute(templates, "scene", scene.view(level))
+	// A check reads its scenes, so only a generation that writes or recaps shows the author's prompts.
+	text, err := execute(templates, "scene", scene.view(level, scene.pinned && draft.request.Kind != GenerationKindCheck))
 	if err != nil {
 		return nil, err
 	}
@@ -473,11 +486,11 @@ func (scene *draftScene) shows(level string) []*shownCell {
 	return shown
 }
 
-// view returns what the template renders for the scene at a level. The scene of a target shows the
-// author's prompts for its beat and for itself.
-func (scene *draftScene) view(level string) *promptScene {
+// view returns what the template renders for the scene at a level, with the author's prompts for its beat
+// and for itself when prompts is set.
+func (scene *draftScene) view(level string, prompts bool) *promptScene {
 	view := &promptScene{Handle: scene.handle, Level: level}
-	if scene.pinned {
+	if prompts {
 		view.BeatPrompt, view.Prompt = scene.beat.beat.Prompt, scene.scene.Prompt
 	}
 
@@ -725,11 +738,11 @@ func (target *draftTarget) beatView() *promptRecapBeat {
 	return view
 }
 
-// plan returns the plan of the context the draft renders.
-func (draft *contextDraft) plan() *ContextPlan {
-	plan := &ContextPlan{Kind: draft.request.Kind}
+// call returns the call the draft renders.
+func (draft *contextDraft) call() *ContextCall {
+	call := &ContextCall{}
 
-	plan.Beats = lo.Map(draft.beats, func(beat *draftBeat, _ int) *ContextBeat {
+	call.Beats = lo.Map(draft.beats, func(beat *draftBeat, _ int) *ContextBeat {
 		return &ContextBeat{BeatID: beat.beat.ID, Level: beat.level}
 	})
 
@@ -752,18 +765,18 @@ func (draft *contextDraft) plan() *ContextPlan {
 			}
 		}
 
-		plan.Scenes = append(plan.Scenes, planned)
+		call.Scenes = append(call.Scenes, planned)
 	}
 
 	for _, layer := range draft.layers {
 		if !layer.excluded || layer.target {
-			plan.Layers = append(plan.Layers, &ContextLayer{Handle: layer.handle, LayerID: layer.layer.ID})
+			call.Layers = append(call.Layers, &ContextLayer{Handle: layer.handle, LayerID: layer.layer.ID})
 		}
 	}
 
-	plan.Targets = lo.Map(draft.targets, func(target *draftTarget, _ int) *ContextTarget { return target.plan() })
+	call.Targets = lo.Map(draft.targets, func(target *draftTarget, _ int) *ContextTarget { return target.plan() })
 
-	return plan
+	return call
 }
 
 // plan returns the plan of the target.

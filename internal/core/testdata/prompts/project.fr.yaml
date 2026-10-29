@@ -131,7 +131,7 @@ budgets:
   suggest: 2695
   consolidate: 1170
   consolidate-beat: 1930
-  check: 1950
+  check: 2010
 requests:
   suggest:
     targets:
