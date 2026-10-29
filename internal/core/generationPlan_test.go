@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -44,6 +45,7 @@ type promptProject struct {
 		Title       string         `yaml:"title"`
 		Description string         `yaml:"description"`
 		Prompt      string         `yaml:"prompt"`
+		Recap       *promptRecap   `yaml:"recap"`
 		Scenes      []*promptScene `yaml:"scenes"`
 	} `yaml:"beats"`
 	Budgets  map[string]int `yaml:"budgets"`
@@ -73,6 +75,9 @@ type promptProject struct {
 				Layer int `yaml:"layer"`
 			} `yaml:"cell"`
 		} `yaml:"consolidate"`
+		ConsolidateBeat struct {
+			Beat int `yaml:"beat"`
+		} `yaml:"consolidateBeat"`
 		Check struct {
 			Scenes      *core.Range `yaml:"scenes"`
 			Instruction string      `yaml:"instruction"`
@@ -82,18 +87,38 @@ type promptProject struct {
 
 // promptScene is a scene of a [promptProject], with its cells.
 type promptScene struct {
-	Title       string `yaml:"title"`
-	Description string `yaml:"description"`
-	Prompt      string `yaml:"prompt"`
-	Cells       []struct {
-		Layer   int `yaml:"layer"`
-		Content any `yaml:"content"`
-		Recap   *struct {
-			Summary string   `yaml:"summary"`
-			Names   []string `yaml:"names"`
-			Stale   bool     `yaml:"stale"`
-		} `yaml:"recap"`
-	} `yaml:"cells"`
+	Title       string        `yaml:"title"`
+	Description string        `yaml:"description"`
+	Prompt      string        `yaml:"prompt"`
+	Cells       []*promptCell `yaml:"cells"`
+}
+
+// promptCell is a cell of a [promptScene], in the layer at a position.
+type promptCell struct {
+	Layer   int          `yaml:"layer"`
+	Content any          `yaml:"content"`
+	Recap   *promptRecap `yaml:"recap"`
+}
+
+// promptRecap is a recap of a [promptProject]. A stale recap read an older version of its source.
+type promptRecap struct {
+	Condensed  string   `yaml:"condensed"`
+	Compact    string   `yaml:"compact"`
+	Essentials string   `yaml:"essentials"`
+	Names      []string `yaml:"names"`
+	Stale      bool     `yaml:"stale"`
+}
+
+// recap returns the versions of the recap, and the instant it read its source at.
+func (recap *promptRecap) recap() (core.Recap, time.Time) {
+	read := updatedAt
+	if recap.Stale {
+		read = updatedAt.Add(-time.Hour)
+	}
+
+	return core.Recap{
+		Condensed: recap.Condensed, Compact: recap.Compact, Essentials: recap.Essentials, Names: recap.Names,
+	}, read
 }
 
 // fixtureBeatID gives the beat at a position of a fixture its ID.
@@ -141,9 +166,25 @@ func loadPromptProject(t *testing.T, language string) (*promptProject, *core.Pro
 			Color: beatColor, Description: beat.Description, Prompt: beat.Prompt, UpdatedAt: updatedAt,
 		})
 
+		var sources []*core.BeatRecapSource
+
 		for scenePosition, scene := range beat.Scenes {
 			addPromptScene(t, snapshot, scene, fixtureBeatID(beatPosition), scenePosition, position)
+
+			source := &core.BeatRecapSource{SceneID: fixtureSceneID(position)}
+			if lo.ContainsBy(scene.Cells, func(cell *promptCell) bool { return cell.Layer == 0 }) {
+				source.CellUpdatedAt = updatedAt
+			}
+
+			sources = append(sources, source)
 			position++
+		}
+
+		if beat.Recap != nil {
+			recap, read := beat.Recap.recap()
+			snapshot.BeatRecaps = append(snapshot.BeatRecaps, &core.BeatRecap{
+				Recap: recap, BeatID: fixtureBeatID(beatPosition), BeatUpdatedAt: read, Sources: sources,
+			})
 		}
 	}
 
@@ -174,24 +215,32 @@ func addPromptScene(
 		})
 
 		if cell.Recap != nil {
-			read := updatedAt
-			if cell.Recap.Stale {
-				read = updatedAt.Add(-time.Hour)
-			}
-
+			recap, read := cell.Recap.recap()
 			snapshot.Recaps = append(snapshot.Recaps, &core.CellRecap{
-				SceneID: sceneID, LayerID: fixtureLayerID(cell.Layer), Summary: cell.Recap.Summary,
-				Names: cell.Recap.Names, CellUpdatedAt: read,
+				Recap: recap, SceneID: sceneID, LayerID: fixtureLayerID(cell.Layer), CellUpdatedAt: read,
 			})
 		}
 	}
 }
 
-// promptRequest returns the request of a generation kind the fixture holds.
-func (fixture *promptProject) promptRequest(kind string, snapshot *core.ProjectSnapshot) *core.GenerationPlanRequest {
+// goldenVariants lists the requests the golden prompts render, each named after its generation kind.
+var goldenVariants = []struct {
+	name string
+	kind string
+}{
+	{name: "suggest", kind: core.GenerationKindSuggest},
+	{name: "consolidate", kind: core.GenerationKindConsolidate},
+	{name: "consolidate-beat", kind: core.GenerationKindConsolidate},
+	{name: "check", kind: core.GenerationKindCheck},
+}
+
+// promptRequest returns the request of a golden variant the fixture holds.
+func (fixture *promptProject) promptRequest(
+	variant, kind string, snapshot *core.ProjectSnapshot,
+) *core.GenerationPlanRequest {
 	request := &core.GenerationPlanRequest{Snapshot: snapshot, Kind: kind}
 
-	switch kind {
+	switch variant {
 	case core.GenerationKindSuggest:
 		suggest := fixture.Requests.Suggest
 		request.Instruction = suggest.Instruction
@@ -218,9 +267,11 @@ func (fixture *promptProject) promptRequest(kind string, snapshot *core.ProjectS
 				ID: fixtureSceneID(scene.Scene), Title: scene.Title, Description: scene.Description,
 			})
 		}
-	case core.GenerationKindConsolidate:
+	case "consolidate":
 		cell := fixture.Requests.Consolidate.Cell
 		request.Cell = &core.GenerationCell{SceneID: fixtureSceneID(cell.Scene), LayerID: fixtureLayerID(cell.Layer)}
+	case "consolidate-beat":
+		request.BeatID = fixtureBeatID(fixture.Requests.ConsolidateBeat.Beat)
 	case core.GenerationKindCheck:
 		request.Scenes = fixture.Requests.Check.Scenes
 		request.Instruction = fixture.Requests.Check.Instruction
@@ -345,6 +396,36 @@ func TestGenerationPlan(t *testing.T) {
 		require.Nil(t, plan)
 	})
 
+	// A project at the store's scene limit, with a paragraph per scene, plans every kind within its default
+	// budget: far beats collapse in the frame.
+	t.Run("Success/LargeProject", func(t *testing.T) {
+		t.Parallel()
+
+		snapshot := planProject(2000)
+		for index, scene := range snapshot.Scenes {
+			scene.BeatID, scene.Position = fixtureBeatID(index/10), index%10
+			scene.Description = strings.Repeat("A scene of the long story. ", 11)
+		}
+
+		snapshot.Beats = snapshot.Beats[:200]
+
+		requests := []*core.GenerationPlanRequest{
+			suggestRequest(snapshot, cellTarget(1000, 0, core.TargetModeRevise)),
+			{Snapshot: snapshot, Kind: core.GenerationKindConsolidate, Cell: &core.GenerationCell{
+				SceneID: fixtureSceneID(1000), LayerID: fixtureLayerID(0),
+			}},
+			{Snapshot: snapshot, Kind: core.GenerationKindCheck},
+		}
+
+		for _, request := range requests {
+			settings := config.GenerationsConfigDefault.Kinds[request.Kind]
+
+			plan, err := planService(request.Kind, settings).Exec(t.Context(), request)
+			require.NoError(t, err, request.Kind)
+			require.LessOrEqual(t, plan.Estimate, settings.Budget, request.Kind)
+		}
+	})
+
 	for _, testCase := range generationPlanCases() {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
@@ -398,8 +479,10 @@ func TestGenerationPlan(t *testing.T) {
 	for _, language := range core.ProjectLanguages {
 		fixture, snapshot := loadPromptProject(t, language)
 
-		for _, kind := range core.GenerationKinds {
-			t.Run("Success/Golden/"+kind+"."+language, func(t *testing.T) {
+		for _, variant := range goldenVariants {
+			kind := variant.kind
+
+			t.Run("Success/Golden/"+variant.name+"."+language, func(t *testing.T) {
 				t.Parallel()
 
 				// The golden prompts run on the default settings of the kind, with a budget of their own.
@@ -410,12 +493,14 @@ func TestGenerationPlan(t *testing.T) {
 				require.GreaterOrEqual(t, settings.Limit, settings.Budget)
 				require.Less(t, settings.Limit, longContextTokens)
 
-				settings.Budget = fixture.Budgets[kind]
+				settings.Budget = fixture.Budgets[variant.name]
 
-				plan, err := planService(kind, settings).Exec(t.Context(), fixture.promptRequest(kind, snapshot))
+				request := fixture.promptRequest(variant.name, kind, snapshot)
+
+				plan, err := planService(kind, settings).Exec(t.Context(), request)
 				require.NoError(t, err)
 
-				name := kind + "." + language + ".golden"
+				name := variant.name + "." + language + ".golden"
 				if *updateGolden {
 					path := filepath.Join("testdata", "prompts", name)
 					require.NoError(t, os.WriteFile(path, []byte(goldenPrompt(plan.Prompt)), 0o600))

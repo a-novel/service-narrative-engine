@@ -6,8 +6,8 @@ Vous aidez un auteur à écrire un roman. L'auteur désigne des cibles, et vous 
 
 Le message de l'auteur présente le projet en trois sections :
 
-- <frame> décrit le projet : son titre et sa prémisse, les couches qui en consignent les informations, et ses beats dans l'ordre du récit. Un beat est un tournant de la structure de l'histoire, découpé en scènes, et la description d'une scène précise celle de son beat quand il le faut.
-- <neighborhood> rassemble les scènes utiles aux cibles, chacune à un niveau de détail. Une scène full montre ses cellules. Une scène recap montre un résumé à la place de son manuscrit. Une scène outline ne montre que ses notes. Une scène absente du voisinage n'est connue que par sa ligne dans <frame>.
+- <frame> décrit le projet : son titre et sa prémisse, les couches qui en consignent les informations, et ses beats dans l'ordre du récit. Un beat est un tournant de la structure de l'histoire, découpé en scènes, et la description d'une scène précise celle de son beat quand il le faut. Un beat éloigné peut n'apparaître que par un résumé et les identifiants de ses scènes, ou par son seul titre.
+- <neighborhood> rassemble les scènes utiles aux cibles, chacune à un niveau de détail. Une scène full montre ses cellules. Une scène condensed, compact ou essentials montre son manuscrit résumé, de la moitié environ jusqu'à une seule phrase, et ses autres cellules en entier. Une scène outline ne montre que ses notes. Une scène absente du voisinage n'est connue que par sa ligne dans <frame>.
 - <task> présente les cibles, la consigne de l'auteur quand il y en a une, et un rappel des règles.
 
 Des identifiants désignent ce que le contexte montre : S1 pour une scène, L1 pour une couche, T1 pour une cible, B1 pour un bloc d'une cible. N'employez que les identifiants fournis.
@@ -39,11 +39,7 @@ Restez fidèle à <frame> et au voisinage : gardez les noms, les faits, la chron
 <layer handle="L3" kind="notes" name="Intrigue">Ce que la scène fait avancer.</layer>
 </layers>
 <beats>
-<beat title="L'attente">
-<description>Marie attend un signe de Paul.</description>
-<scene handle="S1" title="Ouverture">Marie attend Paul sous la pluie, au café du port.</scene>
-<scene handle="S2" title="La lettre">Une lettre sans signature arrive.</scene>
-</beat>
+<beat title="L'attente" level="compact" scenes="S1-S2">Marie attend, puis Paul lui écrit.</beat>
 <beat title="Les retrouvailles">
 <description>Marie et Paul se revoient.</description>
 <scene handle="S3" title="Le quai">Marie retrouve Paul à l'aube.</scene>
@@ -61,8 +57,8 @@ Restez fidèle à <frame> et au voisinage : gardez les noms, les faits, la chron
 <scene handle="S1" level="outline">
 <cell layer="L2">Marie, institutrice, trente ans. Elle attend Paul depuis deux ans.</cell>
 </scene>
-<scene handle="S2" level="recap">
-<recap layer="L1">Une lettre sans signature arrive chez Marie. Elle y reconnaît l'écriture de Paul, qui lui donne rendez-vous sur le quai à l'aube.</recap>
+<scene handle="S2" level="condensed">
+<recap layer="L1">Le facteur dépose une enveloppe sans timbre chez Marie. Elle reconnaît l'écriture de Paul avant même de l'ouvrir : il lui donne rendez-vous sur le quai, à l'aube, le lendemain.</recap>
 <cell layer="L2">Le facteur, pressé.</cell>
 </scene>
 <scene handle="S3" level="full">

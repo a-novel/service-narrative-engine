@@ -1,0 +1,75 @@
+=== call
+model gpt-6-luna, reasoning none, at most 64000 output tokens
+
+=== developer
+You recap one part of an author's novel: a cell of a scene, or a beat with its scenes. Later contexts that cannot hold the part whole show your recap instead, the richer version for nearby parts and the shorter ones for far parts, so each version keeps what the rest of the story relies on.
+
+The author's message describes the project in three sections:
+
+- <frame> holds the project: its title and premise, its layers, and its beats with their scenes, in narrative order. A beat is one turn of the story's structure, split into scenes. A far beat may show as a recap with the handles of its scenes, or as its title alone.
+- <neighborhood> holds the scenes around the part, each at a level of detail, from full down to outline.
+- <task> holds the part to recap as target T1: a cell whole, or a beat with its description and each scene's manuscript, as a recap where one exists.
+
+Handles name what the context shows: S1 for a scene, L1 for a layer. A manuscript cell holds blocks in reading order: narration holds prose, and dialogue holds a character's line, as the words spoken and the tones they are spoken in.
+
+Write three versions of the recap, each standing on its own:
+
+- condensed: about half the length of the part. Keep every event, who acts, what they say that matters, and what changes, in narrative order.
+- compact: about a tenth of the part. Keep the events that matter to the rest of the story, and what changes.
+- essentials: one sentence that says what the part does for the story.
+
+Write plain sentences in the present tense. Recap the part alone; the other scenes only help you tell who is who.
+
+Then list the names the part uses: its characters, places and objects, each once, as the part writes them.
+
+Write in English, the language of the project.
+
+=== schema
+{"additionalProperties":false,"description":"What the model returns for a consolidate generation: the recap of a cell or a beat at three levels of detail, which later contexts show in place of it.","properties":{"compact":{"description":"About a tenth of the part: the events that matter to the rest of the story, and what changes.","type":"string"},"condensed":{"description":"About half the length of the part: every event, who acts, what matters of what they say, and what changes, in narrative order.","type":"string"},"essentials":{"description":"One sentence that says what the part does for the story.","type":"string"},"names":{"description":"Every character, place and object the part names, each once, as the part writes it.","items":{"type":"string"},"maxItems":100,"type":"array"}},"required":["condensed","compact","essentials","names"],"type":"object"}
+
+=== frame
+<frame>
+<project title="The Clear Hours" language="en">
+<premise>In a seaside town, Mary waits for Paul, who left without a word. An unsigned letter revives their story.</premise>
+</project>
+<layers>
+<layer handle="L1" kind="manuscript" name="Manuscript">The text of the novel.</layer>
+<layer handle="L2" kind="notes" name="Characters">Who appears in the scene, and what we learn about each.</layer>
+<layer handle="L3" kind="notes" name="Plot">What the scene moves forward.</layer>
+</layers>
+<beats>
+<beat title="The Wait">
+<description>Mary waits for a sign from Paul. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more.</description>
+<scene handle="S1" title="Opening">Mary waits in the rain.</scene>
+<scene handle="S2" title="The Letter">An unsigned letter arrives.</scene>
+</beat>
+<beat title="The Reunion" level="outline" scenes="S3-S4"/>
+<beat title="A Year On" level="outline" scenes="S5"/>
+</beats>
+</frame>
+
+=== neighborhood
+<neighborhood>
+<scene handle="S1" level="full">
+<cell layer="L1" target="T1"/>
+<cell layer="L2">Mary, a schoolteacher, thirty. She has waited for Paul for two years.</cell>
+<cell layer="L3">Sets up Paul's absence.</cell>
+</scene>
+<scene handle="S2" level="full">
+<cell layer="L1" target="T1"/>
+<cell layer="L2">The postman, in a hurry.</cell>
+</scene>
+</neighborhood>
+
+=== task
+<task>
+<target handle="T1" beat="The Wait">
+<description>Mary waits for a sign from Paul. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more.</description>
+<scene handle="S1">
+<narration>Rain beat against the café windows. Mary kept her eyes on the door.</narration>
+<dialogue speaker="Mary"><tone>under her breath</tone><text>He won't come.</text></dialogue>
+</scene>
+<scene handle="S2"><recap>A letter from Paul asks Mary to meet him on the quay at dawn.</recap></scene>
+</target>
+<rules>Recap T1 three times, at about half, a tenth and one sentence, then list the names it uses. Write in English.</rules>
+</task>

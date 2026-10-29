@@ -9,12 +9,13 @@ kinds:
     maxOutputTokens: 32000
     budget: 32000
     limit: 128000
-  # consolidate recaps one cell, on the most efficient model. Its small budget lets a project that opts into
-  # AI late recap every cell within the per-user token windows of service-genai.
+  # consolidate recaps one cell or one beat, on the most efficient model. Its small budget lets a project that
+  # opts into AI late recap every cell within the per-user token windows of service-genai, and its output cap
+  # fits the condensed version of a scene at its 400,000-character cap.
   consolidate:
     model: gpt-6-luna
     reasoning: none
-    maxOutputTokens: 2000
+    maxOutputTokens: 64000
     budget: 6000
     limit: 200000
   # check reasons across many scenes, on a model close to the flagship at a fraction of its price.

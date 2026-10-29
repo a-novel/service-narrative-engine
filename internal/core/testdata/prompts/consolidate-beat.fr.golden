@@ -1,0 +1,75 @@
+=== call
+model gpt-6-luna, reasoning none, at most 64000 output tokens
+
+=== developer
+Vous résumez une partie du roman d'un auteur : une cellule d'une scène, ou un beat avec ses scènes. Les contextes suivants qui ne peuvent pas contenir cette partie en entier montrent votre résumé à sa place, la version la plus riche pour les parties proches et les plus courtes pour les parties éloignées : chaque version garde donc ce dont la suite de l'histoire a besoin.
+
+Le message de l'auteur présente le projet en trois sections :
+
+- <frame> décrit le projet : son titre et sa prémisse, ses couches, et ses beats avec leurs scènes, dans l'ordre du récit. Un beat est un tournant de la structure de l'histoire, découpé en scènes. Un beat éloigné peut n'apparaître que par un résumé et les identifiants de ses scènes, ou par son seul titre.
+- <neighborhood> rassemble les scènes autour de la partie, chacune à un niveau de détail, de full jusqu'à outline.
+- <task> contient la partie à résumer, sous l'identifiant T1 : une cellule en entier, ou un beat avec sa description et le manuscrit de chaque scène, résumé quand un résumé existe.
+
+Des identifiants désignent ce que le contexte montre : S1 pour une scène, L1 pour une couche. Une cellule de manuscrit contient des blocs dans l'ordre de lecture : un bloc narration contient de la prose, un bloc dialogue la réplique d'un personnage, avec ses paroles et le ton sur lequel il les prononce.
+
+Écrivez trois versions du résumé, chacune lisible seule :
+
+- condensed : environ la moitié de la longueur de la partie. Gardez chaque événement, qui agit, ce qui se dit d'important, et ce qui change, dans l'ordre du récit.
+- compact : environ un dixième de la partie. Gardez les événements qui comptent pour la suite de l'histoire, et ce qui change.
+- essentials : une seule phrase qui dit ce que la partie apporte à l'histoire.
+
+Employez des phrases simples, au présent. Ne résumez que la partie ; les autres scènes vous aident seulement à savoir qui est qui.
+
+Listez ensuite les noms que la partie emploie : ses personnages, ses lieux et ses objets, chacun une seule fois, tels que la partie les écrit.
+
+Écrivez en français, la langue du projet.
+
+=== schema
+{"additionalProperties":false,"description":"What the model returns for a consolidate generation: the recap of a cell or a beat at three levels of detail, which later contexts show in place of it.","properties":{"compact":{"description":"About a tenth of the part: the events that matter to the rest of the story, and what changes.","type":"string"},"condensed":{"description":"About half the length of the part: every event, who acts, what matters of what they say, and what changes, in narrative order.","type":"string"},"essentials":{"description":"One sentence that says what the part does for the story.","type":"string"},"names":{"description":"Every character, place and object the part names, each once, as the part writes it.","items":{"type":"string"},"maxItems":100,"type":"array"}},"required":["condensed","compact","essentials","names"],"type":"object"}
+
+=== frame
+<frame>
+<project title="Les Heures claires" language="fr">
+<premise>Dans une ville de bord de mer, Marie attend le retour de Paul, parti sans un mot. Une lettre sans signature relance leur histoire.</premise>
+</project>
+<layers>
+<layer handle="L1" kind="manuscript" name="Manuscrit">Le texte du roman.</layer>
+<layer handle="L2" kind="notes" name="Personnages">Qui apparaît dans la scène, et ce qu'on apprend de chacun.</layer>
+<layer handle="L3" kind="notes" name="Intrigue">Ce que la scène fait avancer.</layer>
+</layers>
+<beats>
+<beat title="L'attente">
+<description>Marie attend un signe de Paul. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus.</description>
+<scene handle="S1" title="Ouverture">Marie attend sous la pluie.</scene>
+<scene handle="S2" title="La lettre">Une lettre sans signature arrive.</scene>
+</beat>
+<beat title="Les retrouvailles" level="outline" scenes="S3-S4"/>
+<beat title="Un an plus tard" level="outline" scenes="S5"/>
+</beats>
+</frame>
+
+=== neighborhood
+<neighborhood>
+<scene handle="S1" level="full">
+<cell layer="L1" target="T1"/>
+<cell layer="L2">Marie, institutrice, trente ans. Elle attend Paul depuis deux ans.</cell>
+<cell layer="L3">Installe l'absence de Paul.</cell>
+</scene>
+<scene handle="S2" level="full">
+<cell layer="L1" target="T1"/>
+<cell layer="L2">Le facteur, pressé.</cell>
+</scene>
+</neighborhood>
+
+=== task
+<task>
+<target handle="T1" beat="L'attente">
+<description>Marie attend un signe de Paul. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus.</description>
+<scene handle="S1">
+<narration>La pluie battait les vitres du café. Marie gardait les yeux sur la porte.</narration>
+<dialogue speaker="Marie"><tone>à voix basse</tone><text>Il ne viendra pas.</text></dialogue>
+</scene>
+<scene handle="S2"><recap>Une lettre de Paul donne rendez-vous à Marie sur le quai à l'aube.</recap></scene>
+</target>
+<rules>Résumez T1 trois fois, en environ la moitié, un dixième et une phrase, puis listez les noms que la partie emploie. Écrivez en français.</rules>
+</task>

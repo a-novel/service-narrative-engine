@@ -1,4 +1,6 @@
 {
-  "summary": "Paul walks Mary to the lighthouse and tells her about his two years in Brest, working at the shipyard for Captain Morel, and the debt that kept him from writing.",
+  "condensed": "Paul walks Mary to the lighthouse in silence and stops at the rusted gate. He tells her about Brest, the shipyard, Captain Morel who took him under his wing, and the debt. He could not write to her before he had paid it all back.",
+  "compact": "Paul tells Mary he spent two years in Brest paying off a debt to Captain Morel.",
+  "essentials": "Paul explains his absence.",
   "names": ["Paul", "Mary", "Brest", "Captain Morel"]
 }

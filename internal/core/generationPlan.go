@@ -124,8 +124,12 @@ type GenerationPlanRequest struct {
 
 	// Targets lists what a suggest generation writes, from 1 to 20, each once.
 	Targets []*GenerationTarget `validate:"excluded_unless=Kind suggest,max=20,dive,required"`
-	// Cell names the cell a consolidate generation recaps. A recap reads stored content only.
-	Cell *GenerationCell `validate:"required_if=Kind consolidate,excluded_unless=Kind consolidate"`
+	// Cell names the cell a consolidate generation recaps, unless BeatID names a beat. A recap reads stored
+	// content only.
+	Cell *GenerationCell `validate:"excluded_unless=Kind consolidate"`
+	// BeatID names the beat a consolidate generation recaps, from its description and its scenes'
+	// manuscript.
+	BeatID uuid.UUID `validate:"excluded_unless=Kind consolidate"`
 	// Scenes narrows a check generation to a range of scene positions. Nil checks every scene.
 	Scenes *Range `validate:"excluded_unless=Kind check"`
 

@@ -1,19 +1,29 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Consolidate output",
-  "description": "What the model returns for a consolidate generation: the recap of one cell, which stands in for the cell in later contexts.",
+  "description": "What the model returns for a consolidate generation: the recap of a cell or a beat at three levels of detail, which later contexts show in place of it.",
   "type": "object",
-  "required": ["summary", "names"],
+  "required": ["condensed", "compact", "essentials", "names"],
   "additionalProperties": false,
   "properties": {
-    "summary": {
+    "condensed": {
       "type": "string",
-      "description": "What happens in the cell and what it changes, in about 80 words, in the project's language.",
-      "maxLength": 2000
+      "description": "About half the length of the part: every event, who acts, what matters of what they say, and what changes, in narrative order.",
+      "maxLength": 200000
+    },
+    "compact": {
+      "type": "string",
+      "description": "About a tenth of the part: the events that matter to the rest of the story, and what changes.",
+      "maxLength": 40000
+    },
+    "essentials": {
+      "type": "string",
+      "description": "One sentence that says what the part does for the story.",
+      "maxLength": 1000
     },
     "names": {
       "type": "array",
-      "description": "Every character, place and object the cell names, each once, as the cell writes it.",
+      "description": "Every character, place and object the part names, each once, as the part writes it.",
       "maxItems": 100,
       "items": { "type": "string", "maxLength": 200 }
     }

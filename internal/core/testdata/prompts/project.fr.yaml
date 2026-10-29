@@ -17,7 +17,11 @@ layers:
     description: Ce que la scène fait avancer.
 beats:
   - title: "L'attente"
-    description: Marie attend un signe de Paul.
+    description: "Marie attend un signe de Paul. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus. Les jours passent au café du port, entre la pluie et les habitués, et chaque lettre qui n'arrive pas pèse un peu plus."
+    recap:
+      condensed: "Marie attend Paul au café du port, puis une lettre sans signature lui donne rendez-vous sur le quai à l'aube."
+      compact: "Marie attend, puis Paul lui écrit."
+      essentials: "L'attente de Marie."
     scenes:
       - title: Ouverture
         description: Marie attend sous la pluie.
@@ -45,13 +49,18 @@ beats:
             content:
               blocks:
                 - kind: narration
-                  text: Le facteur déposa une enveloppe sans timbre. Marie reconnut l'écriture avant même de l'ouvrir.
+                  text: |-
+                    Le facteur déposa une enveloppe sans timbre. Marie reconnut l'écriture avant même de l'ouvrir.
+
+                    Elle la garda longtemps fermée sur la table de la cuisine, entre la cafetière et le pot de géraniums que Paul avait rapporté de Brest, trois étés plus tôt. Elle pensa à la porte du café, à la pluie, à ces deux années où chaque lettre qui n'arrivait pas avait pesé un peu plus. Puis elle déchira l'enveloppe d'un geste sec. Il n'y avait qu'une ligne, de la main de Paul, sans signature, et une heure : l'aube. Elle relut la ligne jusqu'à la savoir par cœur, plia la feuille en quatre et la glissa dans la poche de son manteau, celle qui fermait, pour être sûre de ne pas la perdre.
                 - kind: dialogue
                   speaker: Marie
                   parts:
                     - text: Demain, à l'aube, sur le quai.
             recap:
-              summary: Une lettre sans signature arrive chez Marie. Elle y reconnaît l'écriture de Paul, qui lui donne rendez-vous sur le quai à l'aube.
+              condensed: "Le facteur dépose une enveloppe sans timbre chez Marie. Elle reconnaît l'écriture de Paul avant même de l'ouvrir : il lui donne rendez-vous sur le quai, à l'aube, le lendemain."
+              compact: "Une lettre de Paul donne rendez-vous à Marie sur le quai à l'aube."
+              essentials: "Paul rappelle Marie."
               names: [Marie, Paul]
           - layer: 1
             content:
@@ -101,7 +110,9 @@ beats:
                     - tone: après un silence
                     - text: Pas avant d'avoir tout remboursé.
             recap:
-              summary: Paul raconte qu'il a travaillé deux ans à Brest pour le capitaine Morel.
+              condensed: "Paul raconte ses deux années à Brest, au chantier du capitaine Morel."
+              compact: "Paul a travaillé deux ans à Brest pour Morel."
+              essentials: "Paul s'explique."
               names: [Paul, Morel]
               stale: true
           - layer: 1
@@ -117,9 +128,10 @@ beats:
             content:
               text: Marie seule sur le quai, une lettre à la main.
 budgets:
-  suggest: 2570
-  consolidate: 1050
-  check: 1400
+  suggest: 2600
+  consolidate: 1170
+  consolidate-beat: 1930
+  check: 1950
 requests:
   suggest:
     targets:
@@ -143,6 +155,8 @@ requests:
           description: Marie attend Paul sous la pluie, au café du port.
   consolidate:
     cell: { scene: 3, layer: 0 }
+  consolidateBeat:
+    beat: 0
   check:
     scenes: { start: 0, end: 3 }
     instruction: Vérifie surtout la chronologie.

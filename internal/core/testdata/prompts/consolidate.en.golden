@@ -1,25 +1,31 @@
 === call
-model gpt-6-luna, reasoning none, at most 2000 output tokens
+model gpt-6-luna, reasoning none, at most 64000 output tokens
 
 === developer
-You recap one cell of an author's novel. The recap stands in for the cell in later contexts that cannot hold it whole, so it keeps what the rest of the story relies on.
+You recap one part of an author's novel: a cell of a scene, or a beat with its scenes. Later contexts that cannot hold the part whole show your recap instead, the richer version for nearby parts and the shorter ones for far parts, so each version keeps what the rest of the story relies on.
 
 The author's message describes the project in three sections:
 
-- <frame> holds the project: its title and premise, its layers, and its beats with their scenes, in narrative order. A beat is one turn of the story's structure, split into scenes.
-- <neighborhood> holds the scenes around the cell, each at a level of detail: full, recap or outline.
-- <task> holds the cell to recap as target T1.
+- <frame> holds the project: its title and premise, its layers, and its beats with their scenes, in narrative order. A beat is one turn of the story's structure, split into scenes. A far beat may show as a recap with the handles of its scenes, or as its title alone.
+- <neighborhood> holds the scenes around the part, each at a level of detail, from full down to outline.
+- <task> holds the part to recap as target T1: a cell whole, or a beat with its description and each scene's manuscript, as a recap where one exists.
 
 Handles name what the context shows: S1 for a scene, L1 for a layer. A manuscript cell holds blocks in reading order: narration holds prose, and dialogue holds a character's line, as the words spoken and the tones they are spoken in.
 
-Write a summary of about 80 words: what happens in the cell, who acts, and what changes for the story. Write plain sentences in the present tense. Recap the cell alone; the other scenes only help you tell who is who.
+Write three versions of the recap, each standing on its own:
 
-Then list the names the cell uses: its characters, places and objects, each once, as the cell writes them.
+- condensed: about half the length of the part. Keep every event, who acts, what they say that matters, and what changes, in narrative order.
+- compact: about a tenth of the part. Keep the events that matter to the rest of the story, and what changes.
+- essentials: one sentence that says what the part does for the story.
+
+Write plain sentences in the present tense. Recap the part alone; the other scenes only help you tell who is who.
+
+Then list the names the part uses: its characters, places and objects, each once, as the part writes them.
 
 Write in English, the language of the project.
 
 === schema
-{"additionalProperties":false,"description":"What the model returns for a consolidate generation: the recap of one cell, which stands in for the cell in later contexts.","properties":{"names":{"description":"Every character, place and object the cell names, each once, as the cell writes it.","items":{"type":"string"},"maxItems":100,"type":"array"},"summary":{"description":"What happens in the cell and what it changes, in about 80 words, in the project's language.","type":"string"}},"required":["summary","names"],"type":"object"}
+{"additionalProperties":false,"description":"What the model returns for a consolidate generation: the recap of a cell or a beat at three levels of detail, which later contexts show in place of it.","properties":{"compact":{"description":"About a tenth of the part: the events that matter to the rest of the story, and what changes.","type":"string"},"condensed":{"description":"About half the length of the part: every event, who acts, what matters of what they say, and what changes, in narrative order.","type":"string"},"essentials":{"description":"One sentence that says what the part does for the story.","type":"string"},"names":{"description":"Every character, place and object the part names, each once, as the part writes it.","items":{"type":"string"},"maxItems":100,"type":"array"}},"required":["condensed","compact","essentials","names"],"type":"object"}
 
 === frame
 <frame>
@@ -32,11 +38,7 @@ Write in English, the language of the project.
 <layer handle="L3" kind="notes" name="Plot">What the scene moves forward.</layer>
 </layers>
 <beats>
-<beat title="The Wait">
-<description>Mary waits for a sign from Paul.</description>
-<scene handle="S1" title="Opening">Mary waits in the rain.</scene>
-<scene handle="S2" title="The Letter">An unsigned letter arrives.</scene>
-</beat>
+<beat title="The Wait" level="compact" scenes="S1-S2">Mary waits, then Paul writes to her.</beat>
 <beat title="The Reunion">
 <description>Mary and Paul meet again.</description>
 <scene handle="S3" title="The Quay">Mary meets Paul at dawn.</scene>
@@ -51,10 +53,6 @@ Write in English, the language of the project.
 
 === neighborhood
 <neighborhood>
-<scene handle="S1" level="outline">
-<cell layer="L2">Mary, a schoolteacher, thirty. She has waited for Paul for two years.</cell>
-<cell layer="L3">Sets up Paul's absence.</cell>
-</scene>
 <scene handle="S2" level="outline">
 <cell layer="L2">The postman, in a hurry.</cell>
 </scene>
@@ -66,9 +64,6 @@ Write in English, the language of the project.
 <cell layer="L1" target="T1"/>
 <cell layer="L2">Paul; Captain Morel, his former employer.</cell>
 </scene>
-<scene handle="S5" level="full">
-<cell layer="L2">Mary alone on the quay, a letter in her hand.</cell>
-</scene>
 </neighborhood>
 
 === task
@@ -79,5 +74,5 @@ Write in English, the language of the project.
 He told her about Brest, the shipyard, Captain Morel who took him under his wing, then the debt.</narration>
 <dialogue speaker="Paul"><text>I couldn't write to you.</text><tone>after a silence</tone><text>Not before I had paid it all back.</text></dialogue>
 </target>
-<rules>Recap T1 in about 80 words, then list the names it uses. Write in English.</rules>
+<rules>Recap T1 three times, at about half, a tenth and one sentence, then list the names it uses. Write in English.</rules>
 </task>

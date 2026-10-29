@@ -138,11 +138,80 @@ func setManuscript(snapshot *core.ProjectSnapshot, scene int, content string) *c
 // UpdatedAt. A recap is fresh only when shift is zero.
 func addRecap(snapshot *core.ProjectSnapshot, shift time.Duration) *core.ProjectSnapshot {
 	snapshot.Recaps = append(snapshot.Recaps, &core.CellRecap{
-		SceneID: fixtureSceneID(1), LayerID: fixtureLayerID(0), Summary: "The tide takes the boat.",
-		Names: []string{"Ana"}, CellUpdatedAt: updatedAt.Add(shift),
+		Recap:   recapOf("The tide takes the boat."),
+		SceneID: fixtureSceneID(1), LayerID: fixtureLayerID(0), CellUpdatedAt: updatedAt.Add(shift),
 	})
 
 	return snapshot
+}
+
+// recapOf returns a recap whose versions repeat text one, three and nine times, from essentials up, and
+// which names Ana.
+func recapOf(text string) core.Recap {
+	return core.Recap{
+		Condensed:  strings.Repeat(text+" ", 9),
+		Compact:    strings.Repeat(text+" ", 3),
+		Essentials: text,
+		Names:      []string{"Ana"},
+	}
+}
+
+// sizedRecap gives the manuscript of the second scene a fresh recap of about 500, 200 and 20 tokens.
+func sizedRecap(snapshot *core.ProjectSnapshot) *core.ProjectSnapshot {
+	snapshot.Recaps = append(snapshot.Recaps, &core.CellRecap{
+		Recap: core.Recap{
+			Condensed:  strings.Repeat("Waves. ", 285),
+			Compact:    strings.Repeat("Tide. ", 133),
+			Essentials: strings.Repeat("Gull. ", 13),
+		},
+		SceneID: fixtureSceneID(1), LayerID: fixtureLayerID(0), CellUpdatedAt: updatedAt,
+	})
+
+	return snapshot
+}
+
+// longBeats gives every beat but the first a description of about 1,500 tokens and a fresh recap whose
+// compact version takes about 300. The beat at stale holds a recap that read the beat before a change.
+func longBeats(snapshot *core.ProjectSnapshot, stale int) *core.ProjectSnapshot {
+	for position, beat := range snapshot.Beats[1:] {
+		beat.Description = strings.Repeat("The harbor wakes. ", 333)
+
+		read := beat.UpdatedAt
+		if position+1 == stale {
+			read = beat.UpdatedAt.Add(-time.Hour)
+		}
+
+		var sources []*core.BeatRecapSource
+
+		for _, scene := range snapshot.Scenes {
+			if scene.BeatID == beat.ID {
+				sources = append(sources, &core.BeatRecapSource{SceneID: scene.ID, CellUpdatedAt: updatedAt})
+			}
+		}
+
+		snapshot.BeatRecaps = append(snapshot.BeatRecaps, &core.BeatRecap{
+			Recap: core.Recap{
+				Compact: strings.Repeat("The boats come back. ", 57), Essentials: "The boats return.",
+			},
+			BeatID: beat.ID, BeatUpdatedAt: read, Sources: sources,
+		})
+	}
+
+	return snapshot
+}
+
+// shortScenes gives every scene a manuscript of one short block.
+func shortScenes(snapshot *core.ProjectSnapshot) *core.ProjectSnapshot {
+	for position := range snapshot.Scenes {
+		setManuscript(snapshot, position, blocks(narration("Dawn.")))
+	}
+
+	return snapshot
+}
+
+// beatLevels returns the level of each beat of a plan, in order.
+func beatLevels(plan *core.ContextPlan) []string {
+	return lo.Map(plan.Beats, func(beat *core.ContextBeat, _ int) string { return beat.Level })
 }
 
 func suggestRequest(snapshot *core.ProjectSnapshot, targets ...*core.GenerationTarget) *core.GenerationPlanRequest {
@@ -175,8 +244,9 @@ var fourBlocks = blocks(
 )
 
 func generationPlanCases() []*generationPlanCase {
-	full, recap, outline, omitted := core.ContextLevelFull, core.ContextLevelRecap, core.ContextLevelOutline,
-		core.ContextLevelOmitted
+	full, condensed, outline, omitted := core.ContextLevelFull, core.ContextLevelCondensed,
+		core.ContextLevelOutline, core.ContextLevelOmitted
+	compact, essentials := core.ContextLevelCompact, core.ContextLevelEssentials
 	write, revise := core.TargetModeWrite, core.TargetModeRevise
 
 	return []*generationPlanCase{
@@ -237,14 +307,67 @@ func generationPlanCases() []*generationPlanCase {
 			name:           "Success/Recap",
 			request:        suggestRequest(addRecap(planProject(4), 0), cellTarget(0, 0, revise)),
 			extra:          3*outlineCost + manuscriptCost/2,
-			expectLevels:   []string{full, recap, outline, outline},
-			expectContains: []string{`<recap layer="L1">The tide takes the boat.</recap>`},
+			expectLevels:   []string{full, condensed, outline, outline},
+			expectContains: []string{`<recap layer="L1">The tide takes the boat. The tide takes the boat.`},
 			expect: func(t *testing.T, plan *core.ContextPlan) {
 				t.Helper()
 				require.Equal(t, []*core.ContextCell{
-					{LayerID: fixtureLayerID(0), Recap: true, UpdatedAt: updatedAt},
+					{LayerID: fixtureLayerID(0), Recap: condensed, UpdatedAt: updatedAt},
 					{LayerID: fixtureLayerID(1), UpdatedAt: updatedAt},
 				}, plan.Scenes[1].Cells)
+			},
+		},
+		{
+			name:         "Success/Condensed",
+			request:      suggestRequest(sizedRecap(planProject(2)), cellTarget(0, 0, revise)),
+			extra:        outlineCost + 600,
+			expectLevels: []string{full, condensed},
+		},
+		{
+			name:         "Success/Compact",
+			request:      suggestRequest(sizedRecap(planProject(2)), cellTarget(0, 0, revise)),
+			extra:        outlineCost + 300,
+			expectLevels: []string{full, compact},
+		},
+		{
+			name:           "Success/Essentials",
+			request:        suggestRequest(sizedRecap(planProject(2)), cellTarget(0, 0, revise)),
+			extra:          outlineCost + 100,
+			expectLevels:   []string{full, essentials},
+			expectContains: []string{`<scene handle="S2" level="essentials">` + "\n" + `<recap layer="L1">Gull. Gull.`},
+		},
+		{
+			// The beats farthest from the target degrade first: whole, then compact, then essentials.
+			name:         "Success/FrameCollapse",
+			request:      suggestRequest(longBeats(shortScenes(planProject(5)), 0), cellTarget(0, 0, revise)),
+			extra:        2200,
+			expectAbsent: []string{`<beat title="Beat 1" level=`},
+			expectContains: []string{
+				`<beat title="Beat 4" level="essentials" scenes="S4">The boats return.</beat>`,
+				`<beat title="Beat 5" level="essentials" scenes="S5">The boats return.</beat>`,
+			},
+			expect: func(t *testing.T, plan *core.ContextPlan) {
+				t.Helper()
+				require.Equal(t, []string{full, full, compact, essentials, essentials}, beatLevels(plan))
+			},
+		},
+		{
+			name:           "Success/FrameStaleBeatRecap",
+			request:        suggestRequest(longBeats(shortScenes(planProject(5)), 2), cellTarget(0, 0, revise)),
+			extra:          2200,
+			expectContains: []string{`<beat title="Beat 3" level="outline" scenes="S3"/>`},
+			expect: func(t *testing.T, plan *core.ContextPlan) {
+				t.Helper()
+				require.Equal(t, []string{full, full, outline, compact, essentials}, beatLevels(plan))
+			},
+		},
+		{
+			name:      "Success/FrameWhole",
+			request:   suggestRequest(longBeats(shortScenes(planProject(3)), 0), cellTarget(0, 0, revise)),
+			unbounded: true,
+			expect: func(t *testing.T, plan *core.ContextPlan) {
+				t.Helper()
+				require.Equal(t, []string{full, full, full}, beatLevels(plan))
 			},
 		},
 		{
@@ -478,6 +601,26 @@ func generationPlanCases() []*generationPlanCase {
 			},
 		},
 		{
+			name: "Success/ConsolidateBeat",
+			request: &core.GenerationPlanRequest{
+				Snapshot: sizedRecap(inOneBeat(planProject(3))), Kind: core.GenerationKindConsolidate,
+				BeatID: fixtureBeatID(0),
+			},
+			unbounded:    true,
+			expectLevels: []string{full, full, full},
+			expectContains: []string{
+				`<target handle="T1" beat="Beat 1">` + "\n" + `<scene handle="S1">` + "\n<narration>The sea",
+				`<scene handle="S2"><recap>Tide. Tide.`,
+				`<cell layer="L1" target="T1"/>`,
+			},
+			expect: func(t *testing.T, plan *core.ContextPlan) {
+				t.Helper()
+				require.Equal(t, []*core.ContextTarget{
+					{Handle: "T1", BeatID: fixtureBeatID(0), UpdatedAt: updatedAt},
+				}, plan.Targets)
+			},
+		},
+		{
 			name: "Success/Check",
 			request: &core.GenerationPlanRequest{
 				Snapshot: planProject(4), Kind: core.GenerationKindCheck, Scenes: &core.Range{Start: 1, End: 3},
@@ -582,6 +725,26 @@ func generationPlanCases() []*generationPlanCase {
 				Cell: &core.GenerationCell{SceneID: fixtureSceneID(1), LayerID: fixtureLayerID(0)},
 			},
 			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/ConsolidateCellAndBeat",
+			request: &core.GenerationPlanRequest{
+				Snapshot: planProject(2), Kind: core.GenerationKindConsolidate, BeatID: fixtureBeatID(0),
+				Cell: &core.GenerationCell{SceneID: fixtureSceneID(1), LayerID: fixtureLayerID(0)},
+			},
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name:      "Error/ConsolidateNothing",
+			request:   &core.GenerationPlanRequest{Snapshot: planProject(2), Kind: core.GenerationKindConsolidate},
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/ConsolidateBeatNotFound",
+			request: &core.GenerationPlanRequest{
+				Snapshot: planProject(2), Kind: core.GenerationKindConsolidate, BeatID: fixtureBeatID(7),
+			},
+			expectErr: core.ErrBeatNotFound,
 		},
 		{
 			name: "Error/ConsolidateSceneNotFound",

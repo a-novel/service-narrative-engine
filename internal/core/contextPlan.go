@@ -9,17 +9,28 @@ import (
 	"github.com/samber/lo"
 )
 
+// The levels of detail a scene enters the neighborhood at, and a beat the frame at, richest first.
 const (
-	// ContextLevelFull shows every cell of a scene the generation reads.
+	// ContextLevelFull shows every cell of a scene the generation reads, or every scene of a beat.
 	ContextLevelFull = "full"
-	// ContextLevelRecap shows the fresh recap of a scene's manuscript in place of the manuscript, and its
-	// other cells whole.
-	ContextLevelRecap = "recap"
-	// ContextLevelOutline shows the cells of a scene other than its manuscript.
+	// ContextLevelCondensed shows a scene's manuscript as its fresh recap's condensed version, about half of
+	// it, and its other cells whole.
+	ContextLevelCondensed = "condensed"
+	// ContextLevelCompact shows a scene's manuscript, or a beat, as its fresh recap's compact version, about
+	// a tenth of it.
+	ContextLevelCompact = "compact"
+	// ContextLevelEssentials shows a scene's manuscript, or a beat, as its fresh recap's essentials, one
+	// sentence.
+	ContextLevelEssentials = "essentials"
+	// ContextLevelOutline shows the cells of a scene other than its manuscript, or the title of a beat and
+	// the handles of its scenes.
 	ContextLevelOutline = "outline"
 	// ContextLevelOmitted leaves a scene out of the neighborhood. The frame still lists it.
 	ContextLevelOmitted = "omitted"
 )
+
+// recapLevels lists the levels that show a recap, richest first.
+var recapLevels = []string{ContextLevelCondensed, ContextLevelCompact, ContextLevelEssentials}
 
 // ContextPlan says what one generation reads and how the model names it. The model sees short handles,
 // such as S1 for a scene or B3 for a block, and the plan maps each back to what it names. A handle the
@@ -28,6 +39,8 @@ type ContextPlan struct {
 	// Kind is the kind of the generation, one of [GenerationKinds].
 	Kind string
 
+	// Beats lists every beat of the project, in order, with the level the frame shows it at.
+	Beats []*ContextBeat
 	// Scenes lists every scene of the project, in narrative order, with the level it enters at.
 	Scenes []*ContextScene
 	// Layers lists the layers the context shows, in order.
@@ -55,13 +68,23 @@ func (plan *ContextPlan) Target(handle string) (*ContextTarget, bool) {
 	return lo.Find(plan.Targets, func(target *ContextTarget) bool { return target.Handle == handle })
 }
 
+// ContextBeat is one beat as the frame of a generation shows it.
+type ContextBeat struct {
+	BeatID uuid.UUID
+
+	// Level is how much of the beat the frame shows: every scene at [ContextLevelFull], a version of its
+	// recap at [ContextLevelCompact] or [ContextLevelEssentials], or its title and the handles of its
+	// scenes at [ContextLevelOutline]. A beat holding a target is always full.
+	Level string
+}
+
 // ContextScene is one scene as a generation reads it.
 type ContextScene struct {
 	Handle  string
 	SceneID uuid.UUID
 
-	// Level is how much of the scene the neighborhood shows: [ContextLevelFull], [ContextLevelRecap],
-	// [ContextLevelOutline] or [ContextLevelOmitted]. A scene a generation writes in is always full.
+	// Level is how much of the scene the neighborhood shows, from [ContextLevelFull] to
+	// [ContextLevelOmitted]. A scene a generation writes in is always full.
 	Level string
 
 	// Override marks a scene whose fields come from the request.
@@ -78,8 +101,9 @@ type ContextScene struct {
 type ContextCell struct {
 	LayerID uuid.UUID
 
-	// Recap marks a cell shown as its recap.
-	Recap bool
+	// Recap names the version of its recap the cell is shown as, such as [ContextLevelCompact]. It is empty
+	// for a cell shown whole.
+	Recap string
 	// Override marks a cell whose content comes from the request.
 	Override bool
 
@@ -100,6 +124,8 @@ type ContextTarget struct {
 	SceneID uuid.UUID
 	// LayerID names the target's cell. It is empty for a scene field.
 	LayerID uuid.UUID
+	// BeatID names the beat a consolidation recaps. SceneID and LayerID are then empty.
+	BeatID uuid.UUID
 	// Field names the target's scene field, one of [SceneFields]. It is empty for a cell.
 	Field string
 

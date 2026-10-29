@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"math"
 	"slices"
 	"strconv"
@@ -108,6 +109,17 @@ type draftCell struct {
 type draftBeat struct {
 	beat   *Beat
 	scenes []*draftScene
+
+	// recap is the beat's fresh recap, nil when it has none.
+	recap *BeatRecap
+	// pinned marks the beat of a target, which the frame always shows whole.
+	pinned bool
+
+	// level is the level the frame shows the beat at, and renders holds the beat rendered at each level it
+	// can take.
+	level   string
+	renders map[string]*sceneRender
+	score   float64
 }
 
 // draftScene is a scene as a generation reads it, with the request's override applied.
@@ -138,8 +150,11 @@ type draftScene struct {
 // draftTarget is a target as a generation reads it.
 type draftTarget struct {
 	handle string
-	scene  *draftScene
-	// cell is the target's cell, nil for a scene field.
+	// scene is the target's scene, nil for a beat.
+	scene *draftScene
+	// beat is the beat a consolidation recaps, nil for any other target.
+	beat *draftBeat
+	// cell is the target's cell, nil for a scene field or a beat.
 	cell  *draftCell
 	field string
 	mode  string
@@ -168,8 +183,9 @@ type contextDraft struct {
 	// targets lists the targets in the order of the request. A consolidate generation's cell is its only
 	// target.
 	targets []*draftTarget
-	// ranked lists the scenes without a target, most relevant first.
-	ranked []*draftScene
+	// ranked lists the scenes without a target, most relevant first, and rankedBeats the beats without one.
+	ranked      []*draftScene
+	rankedBeats []*draftBeat
 
 	sceneByID map[uuid.UUID]*draftScene
 	layerByID map[uuid.UUID]*draftLayer
@@ -211,7 +227,9 @@ func newContextDraft(request *GenerationPlanRequest) (*contextDraft, error) {
 	}
 
 	draft.collectCells()
+	draft.readBeatRecaps()
 	draft.ranked = draft.rank()
+	draft.rankedBeats = draft.rankBeats()
 
 	return draft, nil
 }
@@ -237,7 +255,9 @@ func readBeats(beats []*Beat) []*draftBeat {
 	ordered := slices.Clone(beats)
 	slices.SortStableFunc(ordered, func(a, b *Beat) int { return cmp.Compare(a.Position, b.Position) })
 
-	return lo.Map(ordered, func(beat *Beat, _ int) *draftBeat { return &draftBeat{beat: beat} })
+	return lo.Map(ordered, func(beat *Beat, _ int) *draftBeat {
+		return &draftBeat{beat: beat, level: ContextLevelOutline, renders: map[string]*sceneRender{}}
+	})
 }
 
 // readScenes reads the scenes in narrative order: by the position of their beat, then by their own position
@@ -449,7 +469,7 @@ func (draft *contextDraft) newTarget(request *GenerationTarget, name string, blo
 	}
 
 	target := &draftTarget{handle: name, scene: scene, field: request.Field, mode: request.Mode}
-	scene.pinned, scene.focus = true, true
+	scene.pinned, scene.focus, scene.beat.pinned = true, true, true
 
 	if request.Field != "" {
 		return target, nil
@@ -530,8 +550,17 @@ func (target *draftTarget) inside() []*contentBlock {
 	})
 }
 
-// recapTarget reads the cell a consolidate generation recaps, as its only target.
+// recapTarget reads the cell or the beat a consolidate generation recaps, as its only target. A beat's
+// scenes enter whole, their manuscript in the task.
 func (draft *contextDraft) recapTarget() ([]*draftTarget, error) {
+	if (draft.request.Cell == nil) == (draft.request.BeatID == uuid.Nil) {
+		return nil, fmt.Errorf("%w: a consolidate generation recaps a cell or a beat", ErrInvalidRequest)
+	}
+
+	if draft.request.BeatID != uuid.Nil {
+		return draft.recapBeatTarget()
+	}
+
 	scene, ok := draft.sceneByID[draft.request.Cell.SceneID]
 	if !ok {
 		return nil, ErrSceneNotFound
@@ -544,7 +573,31 @@ func (draft *contextDraft) recapTarget() ([]*draftTarget, error) {
 
 	target := &draftTarget{handle: handle("T", 0), scene: scene, cell: draft.cell(scene, layer)}
 	target.cell.target, layer.target = target, true
-	scene.pinned, scene.focus = true, true
+	scene.pinned, scene.focus, scene.beat.pinned = true, true, true
+
+	return []*draftTarget{target}, nil
+}
+
+// recapBeatTarget reads the beat a consolidate generation recaps. Each scene of the beat pins, and its
+// manuscript cells show in the task.
+func (draft *contextDraft) recapBeatTarget() ([]*draftTarget, error) {
+	beat, ok := lo.Find(draft.beats, func(beat *draftBeat) bool { return beat.beat.ID == draft.request.BeatID })
+	if !ok {
+		return nil, ErrBeatNotFound
+	}
+
+	target := &draftTarget{handle: handle("T", 0), beat: beat}
+	beat.pinned = true
+
+	for _, scene := range beat.scenes {
+		scene.pinned, scene.focus = true, true
+
+		for _, layer := range draft.layers {
+			if layer.layer.Kind == LayerKindManuscript {
+				draft.cell(scene, layer).target, layer.target = target, true
+			}
+		}
+	}
 
 	return []*draftTarget{target}, nil
 }
@@ -599,6 +652,51 @@ func (draft *contextDraft) collectCells() {
 	}
 }
 
+// readBeatRecaps keeps each fresh beat recap with its beat.
+func (draft *contextDraft) readBeatRecaps() {
+	manuscript, ok := lo.Find(draft.layers, func(layer *draftLayer) bool {
+		return layer.layer.Kind == LayerKindManuscript
+	})
+	if !ok {
+		return
+	}
+
+	beatByID := lo.KeyBy(draft.beats, func(beat *draftBeat) uuid.UUID { return beat.beat.ID })
+
+	for _, recap := range draft.request.Snapshot.BeatRecaps {
+		beat, ok := beatByID[recap.BeatID]
+		if ok && draft.beatRecapFresh(beat, recap, manuscript) {
+			beat.recap = recap
+		}
+	}
+}
+
+// beatRecapFresh reports whether a recap read the beat, the order of its scenes and their manuscript cells
+// as they are now, and no request overrides those cells.
+func (draft *contextDraft) beatRecapFresh(beat *draftBeat, recap *BeatRecap, manuscript *draftLayer) bool {
+	if !beat.beat.UpdatedAt.Equal(recap.BeatUpdatedAt) || len(recap.Sources) != len(beat.scenes) {
+		return false
+	}
+
+	for index, scene := range beat.scenes {
+		var (
+			updatedAt time.Time
+			override  bool
+		)
+
+		if cell, ok := draft.cells[cellKey{scene.scene.ID, manuscript.layer.ID}]; ok {
+			updatedAt, override = cell.updatedAt, cell.override
+		}
+
+		source := recap.Sources[index]
+		if override || source.SceneID != scene.scene.ID || !updatedAt.Equal(source.CellUpdatedAt) {
+			return false
+		}
+	}
+
+	return true
+}
+
 // empty reports whether a cell holds no content.
 func (cell *draftCell) empty() bool {
 	return cell.content.Text == "" && len(cell.content.Blocks) == 0
@@ -629,17 +727,13 @@ func (cell *draftCell) addNames(names map[string]bool) {
 // rank scores each scene without a target by its relevance to the focus, and returns them most relevant
 // first. Equal scores keep narrative order.
 func (draft *contextDraft) rank() []*draftScene {
-	focusNames := map[string]bool{}
+	focusNames := draft.focusNames()
 
 	var focus []int
 
 	for position, scene := range draft.scenes {
 		if scene.focus {
 			focus = append(focus, position)
-
-			for name := range scene.names {
-				focusNames[name] = true
-			}
 		}
 	}
 
@@ -650,21 +744,81 @@ func (draft *contextDraft) rank() []*draftScene {
 			continue
 		}
 
-		var shared int
-
-		for name := range scene.names {
-			if focusNames[name] {
-				shared++
-			}
-		}
-
-		scene.score = relevance(distance(position, focus), shared)
+		scene.score = relevance(distance(position, focus), sharedNames(scene.names, focusNames))
 		ranked = append(ranked, scene)
 	}
 
 	slices.SortStableFunc(ranked, func(a, b *draftScene) int { return cmp.Compare(b.score, a.score) })
 
 	return ranked
+}
+
+// rankBeats scores each beat without a target as rank scores scenes: by its distance in beat order to the
+// closest beat holding a focus scene, and by the names its scenes and its recap share with the focus. It
+// returns them most relevant first, and equal scores keep beat order.
+func (draft *contextDraft) rankBeats() []*draftBeat {
+	focusNames := draft.focusNames()
+
+	var focus []int
+
+	for position, beat := range draft.beats {
+		if lo.ContainsBy(beat.scenes, func(scene *draftScene) bool { return scene.focus }) {
+			focus = append(focus, position)
+		}
+	}
+
+	var ranked []*draftBeat
+
+	for position, beat := range draft.beats {
+		if beat.pinned {
+			continue
+		}
+
+		names := map[string]bool{}
+
+		for _, scene := range beat.scenes {
+			maps.Copy(names, scene.names)
+		}
+
+		if beat.recap != nil {
+			for _, name := range beat.recap.Names {
+				names[foldName(name)] = true
+			}
+		}
+
+		beat.score = relevance(distance(position, focus), sharedNames(names, focusNames))
+		ranked = append(ranked, beat)
+	}
+
+	slices.SortStableFunc(ranked, func(a, b *draftBeat) int { return cmp.Compare(b.score, a.score) })
+
+	return ranked
+}
+
+// focusNames returns the folded names the focus scenes use.
+func (draft *contextDraft) focusNames() map[string]bool {
+	names := map[string]bool{}
+
+	for _, scene := range draft.scenes {
+		if scene.focus {
+			maps.Copy(names, scene.names)
+		}
+	}
+
+	return names
+}
+
+// sharedNames counts the names of names that focus holds too.
+func sharedNames(names, focus map[string]bool) int {
+	var shared int
+
+	for name := range names {
+		if focus[name] {
+			shared++
+		}
+	}
+
+	return shared
 }
 
 // relevance scores how much a scene matters to a generation, from its distance to the focus in narrative

@@ -17,7 +17,11 @@ layers:
     description: What the scene moves forward.
 beats:
   - title: The Wait
-    description: Mary waits for a sign from Paul.
+    description: "Mary waits for a sign from Paul. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more. The days go by at the harbor café, between the rain and the regulars, and each letter that does not come weighs a little more."
+    recap:
+      condensed: "Mary waits for Paul at the harbor café, then an unsigned letter asks her to meet him on the quay at dawn."
+      compact: "Mary waits, then Paul writes to her."
+      essentials: "Mary's wait."
     scenes:
       - title: Opening
         description: Mary waits in the rain.
@@ -45,13 +49,18 @@ beats:
             content:
               blocks:
                 - kind: narration
-                  text: The postman left an envelope with no stamp. Mary knew the handwriting before she opened it.
+                  text: |-
+                    The postman left an envelope with no stamp. Mary knew the handwriting before she opened it.
+
+                    She kept it sealed for a long time on the kitchen table, between the coffee pot and the pot of geraniums Paul had brought back from Brest three summers before. She thought of the café door, of the rain, of those two years when each letter that did not come had weighed a little more. Then she tore the envelope open in one sharp move. There was a single line, in Paul's hand, unsigned, and an hour: dawn. She read the line until she knew it by heart, folded the sheet in four and slipped it into her coat pocket, the one that closed, to be sure not to lose it.
                 - kind: dialogue
                   speaker: Mary
                   parts:
                     - text: Tomorrow, at dawn, on the quay.
             recap:
-              summary: An unsigned letter reaches Mary. She knows Paul's handwriting, and he asks to meet her on the quay at dawn.
+              condensed: "The postman leaves an unstamped envelope for Mary. She knows Paul's handwriting before she opens it: he asks to meet her on the quay at dawn the next day."
+              compact: "A letter from Paul asks Mary to meet him on the quay at dawn."
+              essentials: "Paul calls Mary back."
               names: [Mary, Paul]
           - layer: 1
             content:
@@ -101,7 +110,9 @@ beats:
                     - tone: after a silence
                     - text: Not before I had paid it all back.
             recap:
-              summary: Paul says he worked two years in Brest for Captain Morel.
+              condensed: "Paul tells of his two years in Brest, at Captain Morel's shipyard."
+              compact: "Paul worked two years in Brest for Morel."
+              essentials: "Paul explains himself."
               names: [Paul, Morel]
               stale: true
           - layer: 1
@@ -117,9 +128,10 @@ beats:
             content:
               text: Mary alone on the quay, a letter in her hand.
 budgets:
-  suggest: 2470
-  consolidate: 1050
-  check: 1350
+  suggest: 2490
+  consolidate: 1150
+  consolidate-beat: 1870
+  check: 1880
 requests:
   suggest:
     targets:
@@ -143,6 +155,8 @@ requests:
           description: Mary waits for Paul in the rain, at the harbor café.
   consolidate:
     cell: { scene: 3, layer: 0 }
+  consolidateBeat:
+    beat: 0
   check:
     scenes: { start: 0, end: 3 }
     instruction: Look at the timeline above all.
