@@ -5,24 +5,36 @@ import { HTTP_HEADERS } from "@a-novel-kit/nodelib-browser/http";
 
 import { z } from "zod";
 
-/** One scene of an exported manuscript: its title and its blocks, in reading order. */
-export const ManuscriptSceneSchema = ManuscriptContentSchema.extend({ title: z.string().max(200) });
+/** One scene of an exported manuscript: its beat, its title and its blocks, in reading order. */
+export const ManuscriptSceneSchema = ManuscriptContentSchema.extend({
+  beat: z.int().min(0).max(199),
+  title: z.string().max(200),
+});
 
 /** The value {@link ManuscriptSceneSchema} validates. */
 export type ManuscriptScene = z.infer<typeof ManuscriptSceneSchema>;
 
+/** One beat of an exported manuscript, as its beats appendix lists it. */
+export const ManuscriptBeatSchema = z.strictObject({
+  title: z.string().max(200),
+  description: z.string().max(20000),
+});
+
+/** The value {@link ManuscriptBeatSchema} validates. */
+export type ManuscriptBeat = z.infer<typeof ManuscriptBeatSchema>;
+
 /**
  * The text of a narrative in manuscript format v1, which renderers turn into a novel, a screenplay or a
- * game. It mirrors the server's `manuscript.schema.json`, and both agree on the shared test cases. A
- * reader skips an appendix it does not know.
+ * game. It mirrors the server's `manuscript.schema.json`, and both agree on the shared test cases. Each
+ * scene names its beat by its position in the beats appendix. A reader skips an appendix it does not know.
  */
 export const ManuscriptSchema = z.strictObject({
   format: z.literal("manuscript"),
   formatVersion: z.literal(1),
   title: z.string().max(200),
   language: z.string(),
-  scenes: z.array(ManuscriptSceneSchema).max(500),
-  appendices: z.record(z.string(), z.unknown()),
+  scenes: z.array(ManuscriptSceneSchema).max(2000),
+  appendices: z.looseObject({ beats: z.array(ManuscriptBeatSchema).max(200) }),
 });
 
 /** The value {@link ManuscriptSchema} validates. */
@@ -38,9 +50,9 @@ export const ManuscriptExportRequestSchema = z.object({
 export type ManuscriptExportRequest = z.infer<typeof ManuscriptExportRequestSchema>;
 
 /**
- * Exports the text one manuscript layer of a project holds: every scene in narrative order, with no blocks
- * where the layer holds no text. Throws on HTTP 404 when the caller owns no such project, or the project
- * holds no manuscript layer with that ID.
+ * Exports the text one manuscript layer of a project holds: every scene in narrative order with its beat,
+ * with no blocks where the layer holds no text, and every beat in the beats appendix. Throws on HTTP 404
+ * when the caller owns no such project, or the project holds no manuscript layer with that ID.
  */
 export async function manuscriptExport(
   api: NarrativeEngineApi,
