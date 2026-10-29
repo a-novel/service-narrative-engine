@@ -43,6 +43,12 @@ const (
 	ServiceJsonKeysHostDefault = "localhost"
 	// ServiceJsonKeysPortDefault is the JSON Keys service's default gRPC port.
 	ServiceJsonKeysPortDefault = 8080
+	// ServiceGenaiPortDefault is the genai service's default gRPC port.
+	ServiceGenaiPortDefault = 8080
+
+	// RestTimeoutDefault bounds a request and the write of its response. A generation submit plans its
+	// calls, then waits on genai for two of them at most, at 25 seconds each.
+	RestTimeoutDefault = 75 * time.Second
 
 	// RestMaxRequestSizeDefault lets a batch through: up to 100 items, among them cells whose content
 	// the core caps at 2 MiB each. The router applies it to every route.
@@ -81,6 +87,15 @@ var (
 	// ServiceJsonKeysPort is the gRPC port of the JSON Keys service.
 	ServiceJsonKeysPort = config.LoadEnv(getEnv("SERVICE_JSON_KEYS_PORT"), ServiceJsonKeysPortDefault, config.IntParser)
 
+	// ServiceGenaiHost is the hostname of the genai service, without scheme or port. Empty leaves genai
+	// unconfigured, and the generation routes answer 503.
+	ServiceGenaiHost = getEnv("SERVICE_GENAI_HOST")
+	// ServiceGenaiPort is the gRPC port of the genai service.
+	ServiceGenaiPort = config.LoadEnv(getEnv("SERVICE_GENAI_PORT"), ServiceGenaiPortDefault, config.IntParser)
+	// ServiceGenaiTokenPath is the file the kubelet projects this service's token for genai into. When set,
+	// the genai connection sends that token with every call.
+	ServiceGenaiTokenPath = getEnv("SERVICE_GENAI_TOKEN_PATH")
+
 	// AppName is the name of the application, as it appears in logs and tracing.
 	AppName = config.LoadEnv(getEnv("APP_NAME"), AppNameDefault, config.StringParser)
 	// Otel enables OpenTelemetry tracing.
@@ -116,6 +131,7 @@ func restDefaults() httpf.ServerConfig {
 	defaults := httpf.ServerConfigDefault
 	defaults.Liveness = "/v1/ping"
 	defaults.Timeouts.Shutdown = TimeoutShutdownDefault
+	defaults.Timeouts.Write, defaults.Timeouts.Request = RestTimeoutDefault, RestTimeoutDefault
 	defaults.MaxRequestSize = RestMaxRequestSizeDefault
 
 	return defaults

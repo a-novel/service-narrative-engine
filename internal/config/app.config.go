@@ -30,6 +30,14 @@ type Dependencies struct {
 	ServiceJsonKeysPort int `json:"serviceJSONKeysPort" yaml:"serviceJSONKeysPort"`
 	// ServiceJsonKeysCredentials authenticates the calls to the JSON Keys service.
 	ServiceJsonKeysCredentials grpcf.CredentialsProvider `json:"-" yaml:"-"`
+
+	// ServiceGenaiHost is the hostname of the genai service, which runs the model calls of generations.
+	// Empty leaves genai unconfigured.
+	ServiceGenaiHost string `json:"serviceGenaiHost" yaml:"serviceGenaiHost"`
+	// ServiceGenaiPort is the gRPC port of the genai service.
+	ServiceGenaiPort int `json:"serviceGenaiPort" yaml:"serviceGenaiPort"`
+	// ServiceGenaiCredentials authenticates the calls to the genai service.
+	ServiceGenaiCredentials grpcf.CredentialsProvider `json:"-" yaml:"-"`
 }
 
 // Limits bounds what one request carries, below the REST server's own limits. The server's
