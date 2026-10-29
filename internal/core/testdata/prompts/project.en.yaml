@@ -128,7 +128,7 @@ beats:
             content:
               text: Mary alone on the quay, a letter in her hand.
 budgets:
-  suggest: 2490
+  suggest: 2585
   consolidate: 1150
   consolidate-beat: 1870
   check: 1880

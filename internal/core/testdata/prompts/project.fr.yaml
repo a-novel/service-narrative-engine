@@ -128,7 +128,7 @@ beats:
             content:
               text: Marie seule sur le quai, une lettre à la main.
 budgets:
-  suggest: 2600
+  suggest: 2695
   consolidate: 1170
   consolidate-beat: 1930
   check: 1950

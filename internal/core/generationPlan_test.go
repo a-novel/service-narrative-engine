@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -280,17 +281,21 @@ func (fixture *promptProject) promptRequest(
 	return request
 }
 
+// modelSuggestion is one suggestion of a suggest output, with the handles it names.
+type modelSuggestion struct {
+	Target string  `json:"target"`
+	Text   *string `json:"text"`
+	Edits  []struct {
+		Block  *string         `json:"block"`
+		Blocks json.RawMessage `json:"blocks"`
+	} `json:"edits"`
+}
+
 // modelOutput is a model's output of any kind, with the handles it names.
 type modelOutput struct {
-	Suggestions []struct {
-		Target string  `json:"target"`
-		Text   *string `json:"text"`
-		Edits  []struct {
-			Block  *string         `json:"block"`
-			Blocks json.RawMessage `json:"blocks"`
-		} `json:"edits"`
-	} `json:"suggestions"`
-	Findings []struct {
+	Manuscript []modelSuggestion `json:"manuscript"`
+	Text       []modelSuggestion `json:"text"`
+	Findings   []struct {
 		Evidence []struct {
 			Scene string `json:"scene"`
 		} `json:"evidence"`
@@ -299,7 +304,7 @@ type modelOutput struct {
 
 // requireOutput fails unless output, the fixture output of a generation kind, passes the plan's strict
 // schema and the full output schema, and unless every handle it names maps back through the plan to
-// content that passes the content schemas.
+// content that passes the content schemas. A suggest output answers each target once.
 func requireOutput(t *testing.T, plan *core.ContextPlan, snapshot *core.ProjectSnapshot, output []byte) {
 	t.Helper()
 
@@ -320,7 +325,15 @@ func requireOutput(t *testing.T, plan *core.ContextPlan, snapshot *core.ProjectS
 	parsed := &modelOutput{}
 	require.NoError(t, json.Unmarshal(output, parsed))
 
-	for _, suggestion := range parsed.Suggestions {
+	suggestions := slices.Concat(parsed.Manuscript, parsed.Text)
+	if plan.Kind == core.GenerationKindSuggest {
+		// The model answers each target once.
+		require.ElementsMatch(t,
+			lo.Map(plan.Targets, func(target *core.ContextTarget, _ int) string { return target.Handle }),
+			lo.Map(suggestions, func(suggestion modelSuggestion, _ int) string { return suggestion.Target }))
+	}
+
+	for _, suggestion := range suggestions {
 		target, ok := plan.Target(suggestion.Target)
 		require.True(t, ok, suggestion.Target)
 
@@ -330,7 +343,10 @@ func requireOutput(t *testing.T, plan *core.ContextPlan, snapshot *core.ProjectS
 				require.True(t, ok, *edit.Block)
 			}
 
-			requireContent(t, core.LayerKindManuscript, `{"blocks":`+string(edit.Blocks)+`}`)
+			// A delete carries no blocks.
+			if len(edit.Blocks) > 0 {
+				requireContent(t, core.LayerKindManuscript, `{"blocks":`+string(edit.Blocks)+`}`)
+			}
 		}
 
 		if suggestion.Text != nil && target.LayerID != uuid.Nil {

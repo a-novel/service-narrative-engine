@@ -561,14 +561,14 @@ func generationPlanCases() []*generationPlanCase {
 				_, ok = plan.Scene("S4")
 				require.False(t, ok)
 
-				first, ok := plan.Target("T1")
+				first, ok := plan.Target("M1")
 				require.True(t, ok)
 
 				position, ok := first.Block("B4")
 				require.True(t, ok)
 				require.Equal(t, 3, position)
 
-				second, ok := plan.Target("T2")
+				second, ok := plan.Target("M2")
 				require.True(t, ok)
 
 				position, ok = second.Block("B5")
@@ -578,7 +578,7 @@ func generationPlanCases() []*generationPlanCase {
 				_, ok = second.Block("B1")
 				require.False(t, ok, "a block of another target")
 
-				_, ok = plan.Target("T3")
+				_, ok = plan.Target("M3")
 				require.False(t, ok)
 			},
 		},
