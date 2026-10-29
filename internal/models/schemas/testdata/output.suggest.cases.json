@@ -4,9 +4,9 @@
     "strict": true,
     "valid": true,
     "document": {
-      "suggestions": [
+      "manuscript": [
         {
-          "target": "T1",
+          "target": "M1",
           "note": "Shortens the opening.",
           "edits": [
             {
@@ -47,7 +47,9 @@
               "block": "B3"
             }
           ]
-        },
+        }
+      ],
+      "text": [
         {
           "target": "T2",
           "note": "Names the scene after the letter.",
@@ -61,7 +63,52 @@
     "strict": true,
     "valid": true,
     "document": {
-      "suggestions": []
+      "manuscript": [],
+      "text": []
+    }
+  },
+  {
+    "name": "Error/MissingManuscript",
+    "strict": false,
+    "valid": false,
+    "document": {
+      "text": [
+        {
+          "target": "T1",
+          "note": "Names the scene after the letter.",
+          "text": "La lettre"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Error/TextForManuscriptTarget",
+    "strict": false,
+    "valid": false,
+    "document": {
+      "manuscript": [],
+      "text": [
+        {
+          "target": "M1",
+          "note": "Rewrites.",
+          "text": ""
+        }
+      ]
+    }
+  },
+  {
+    "name": "Error/EditsForTextTarget",
+    "strict": false,
+    "valid": false,
+    "document": {
+      "manuscript": [
+        {
+          "target": "T1",
+          "note": "Rewrites.",
+          "edits": []
+        }
+      ],
+      "text": []
     }
   },
   {
@@ -69,7 +116,8 @@
     "strict": true,
     "valid": false,
     "document": {
-      "suggestions": [
+      "manuscript": [],
+      "text": [
         {
           "target": "T1",
           "note": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
@@ -83,7 +131,8 @@
     "strict": false,
     "valid": false,
     "document": {
-      "suggestions": [
+      "manuscript": [],
+      "text": [
         {
           "target": "T1",
           "note": "Both.",
@@ -98,9 +147,9 @@
     "strict": false,
     "valid": false,
     "document": {
-      "suggestions": [
+      "manuscript": [
         {
-          "target": "T1",
+          "target": "M1",
           "note": "Moves a block.",
           "edits": [
             {
@@ -110,7 +159,8 @@
             }
           ]
         }
-      ]
+      ],
+      "text": []
     }
   },
   {
@@ -118,9 +168,9 @@
     "strict": false,
     "valid": false,
     "document": {
-      "suggestions": [
+      "manuscript": [
         {
-          "target": "T1",
+          "target": "M1",
           "note": "Deletes.",
           "edits": [
             {
@@ -130,7 +180,8 @@
             }
           ]
         }
-      ]
+      ],
+      "text": []
     }
   },
   {
@@ -138,9 +189,9 @@
     "strict": false,
     "valid": false,
     "document": {
-      "suggestions": [
+      "manuscript": [
         {
-          "target": "T1",
+          "target": "M1",
           "note": "Deletes.",
           "edits": [
             {
@@ -149,7 +200,8 @@
             }
           ]
         }
-      ]
+      ],
+      "text": []
     }
   },
   {
@@ -157,9 +209,9 @@
     "strict": false,
     "valid": false,
     "document": {
-      "suggestions": [
+      "manuscript": [
         {
-          "target": "T1",
+          "target": "M1",
           "note": "Rewrites.",
           "edits": [
             {
@@ -180,7 +232,8 @@
             }
           ]
         }
-      ]
+      ],
+      "text": []
     }
   }
 ]
