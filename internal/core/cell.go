@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
@@ -27,6 +28,12 @@ type Cell struct {
 	Content json.RawMessage
 
 	UpdatedAt time.Time
+
+	// Recap is the cell's latest recap, nil until one is written. It is fresh while RecapCellUpdatedAt
+	// equals UpdatedAt.
+	Recap *Recap
+	// RecapCellUpdatedAt is the cell's UpdatedAt the recap read. It is zero without a recap.
+	RecapCellUpdatedAt time.Time
 }
 
 func newCell(entity *dao.Cell) *Cell {
@@ -36,6 +43,9 @@ func newCell(entity *dao.Cell) *Cell {
 		LayerID:   entity.LayerID,
 		Content:   entity.Content,
 		UpdatedAt: entity.UpdatedAt,
+
+		Recap:              newRecap(entity.Recap),
+		RecapCellUpdatedAt: lo.FromPtr(entity.RecapCellUpdatedAt),
 	}
 }
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/a-novel-kit/golib/otel"
@@ -144,6 +145,19 @@ func (service *ProjectSnapshotRead) Exec(
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("list cells: %w", err))
 	}
+
+	snapshot.Recaps = lo.FilterMap(snapshot.Cells, func(cell *Cell, _ int) (*CellRecap, bool) {
+		return &CellRecap{
+			Recap: lo.FromPtr(cell.Recap), SceneID: cell.SceneID, LayerID: cell.LayerID,
+			CellUpdatedAt: cell.RecapCellUpdatedAt,
+		}, cell.Recap != nil
+	})
+	snapshot.BeatRecaps = lo.FilterMap(snapshot.Beats, func(beat *Beat, _ int) (*BeatRecap, bool) {
+		return &BeatRecap{
+			Recap: lo.FromPtr(beat.Recap), BeatID: beat.ID, BeatUpdatedAt: beat.RecapBeatUpdatedAt,
+			Sources: beat.RecapSources,
+		}, beat.Recap != nil
+	})
 
 	return snapshot, nil
 }

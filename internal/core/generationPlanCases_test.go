@@ -617,9 +617,15 @@ func generationPlanCases() []*generationPlanCase {
 			},
 			expect: func(t *testing.T, call *core.ContextCall) {
 				t.Helper()
-				require.Equal(t, []*core.ContextTarget{
-					{Handle: "T1", BeatID: fixtureBeatID(0), UpdatedAt: updatedAt},
-				}, call.Targets)
+				// The sources name each scene's manuscript cell, which a recap write sends back.
+				require.Equal(t, []*core.ContextTarget{{
+					Handle: "T1", BeatID: fixtureBeatID(0), UpdatedAt: updatedAt,
+					Sources: []*core.BeatRecapSource{
+						{SceneID: fixtureSceneID(0), CellUpdatedAt: updatedAt},
+						{SceneID: fixtureSceneID(1), CellUpdatedAt: updatedAt},
+						{SceneID: fixtureSceneID(2), CellUpdatedAt: updatedAt},
+					},
+				}}, call.Targets)
 			},
 		},
 		{

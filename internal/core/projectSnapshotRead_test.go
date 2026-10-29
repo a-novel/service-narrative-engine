@@ -36,6 +36,17 @@ func TestProjectSnapshotRead(t *testing.T) {
 		return &dao.CellListRow{Cell: *snapshotCell(index), Total: snapshotCells}
 	})
 
+	// The first cell and the beat hold recaps, which the snapshot also lists apart for the planner.
+	recap := &dao.Recap{Condensed: "Notes.", Compact: "Notes.", Essentials: "Notes.", Names: []string{"Marie"}}
+	cellRows[0].Recap, cellRows[0].RecapCellUpdatedAt = recap, &createdAt
+
+	recappedBeat := daoBeat(beatID1, 0)
+	recappedBeat.Recap, recappedBeat.RecapBeatUpdatedAt = recap, &createdAt
+	recappedBeat.RecapSources = []*dao.BeatRecapSource{{SceneID: sceneID1, CellUpdatedAt: createdAt}, {SceneID: sceneID2}}
+
+	coreRecap := core.Recap{Condensed: "Notes.", Compact: "Notes.", Essentials: "Notes.", Names: []string{"Marie"}}
+	sources := []*core.BeatRecapSource{{SceneID: sceneID1, CellUpdatedAt: createdAt}, {SceneID: sceneID2}}
+
 	testCases := []struct {
 		name string
 
@@ -62,17 +73,30 @@ func TestProjectSnapshotRead(t *testing.T) {
 					ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr",
 					CreatedAt: createdAt, UpdatedAt: updatedAt,
 				},
-				Beats:  []*core.Beat{coreBeat(beatID1, 0)},
+				Beats: []*core.Beat{with(coreBeat(beatID1, 0), func(beat *core.Beat) {
+					beat.Recap, beat.RecapBeatUpdatedAt, beat.RecapSources = &coreRecap, createdAt, sources
+				})},
 				Scenes: []*core.Scene{coreScene(sceneID1, 0), coreScene(sceneID2, 1)},
 				Layers: []*core.Layer{coreLayer(layerID1, 0)},
 				Cells: lo.Times(snapshotCells, func(index int) *core.Cell {
 					cell := snapshotCell(index)
 
-					return &core.Cell{
+					loaded := &core.Cell{
 						ProjectID: projectID, SceneID: sceneID1, LayerID: cell.LayerID, Content: cell.Content,
 						UpdatedAt: updatedAt,
 					}
+					if index == 0 {
+						loaded.Recap, loaded.RecapCellUpdatedAt = &coreRecap, createdAt
+					}
+
+					return loaded
 				}),
+				Recaps: []*core.CellRecap{{
+					Recap: coreRecap, SceneID: sceneID1, LayerID: snapshotCell(0).LayerID, CellUpdatedAt: createdAt,
+				}},
+				BeatRecaps: []*core.BeatRecap{{
+					Recap: coreRecap, BeatID: beatID1, BeatUpdatedAt: createdAt, Sources: sources,
+				}},
 			},
 		},
 		{
@@ -127,7 +151,7 @@ func TestProjectSnapshotRead(t *testing.T) {
 					Return(daoProject(), nil)
 				mockBeats.EXPECT().
 					Exec(mock.Anything, &dao.BeatListRequest{ProjectID: projectID, Limit: 2000}).
-					Return([]*dao.BeatListRow{{Beat: *daoBeat(beatID1, 0), Total: 1}}, nil)
+					Return([]*dao.BeatListRow{{Beat: *recappedBeat, Total: 1}}, nil)
 				mockScenes.EXPECT().
 					Exec(mock.Anything, &dao.SceneListRequest{ProjectID: projectID, Limit: 2000}).
 					Return([]*dao.SceneListRow{

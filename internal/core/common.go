@@ -34,6 +34,11 @@ var (
 	ErrGenerationQuota = errors.New("generation quota reached")
 	// ErrGenaiUnavailable is returned when genai cannot take a call, such as during its downtime.
 	ErrGenaiUnavailable = errors.New("genai unavailable")
+	// ErrCellNotFound is returned when the project holds no cell where the scene and the layer cross.
+	ErrCellNotFound = errors.New("cell not found")
+	// ErrRecapConflict is returned by a recap write that read its source at a version older than the
+	// stored recap's, or newer than the source's own.
+	ErrRecapConflict = errors.New("recap conflict")
 )
 
 // projectOwnerDao checks that a user owns a project. Each service names its own interface, and every

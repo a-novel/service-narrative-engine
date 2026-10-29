@@ -782,7 +782,10 @@ func (draft *contextDraft) call() *ContextCall {
 // plan returns the plan of the target.
 func (target *draftTarget) plan() *ContextTarget {
 	if target.beat != nil {
-		return &ContextTarget{Handle: target.handle, BeatID: target.beat.beat.ID, UpdatedAt: target.beat.beat.UpdatedAt}
+		return &ContextTarget{
+			Handle: target.handle, BeatID: target.beat.beat.ID, UpdatedAt: target.beat.beat.UpdatedAt,
+			Sources: target.sources,
+		}
 	}
 
 	planned := &ContextTarget{

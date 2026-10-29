@@ -136,6 +136,9 @@ type ContextTarget struct {
 	LayerID uuid.UUID
 	// BeatID names the beat a consolidation recaps. SceneID and LayerID are then empty.
 	BeatID uuid.UUID
+	// Sources lists, for each scene of the beat a consolidation recaps in order, the manuscript cell it
+	// reads. The recap write that stores its output sends them back.
+	Sources []*BeatRecapSource
 	// Field names the target's scene field, one of [SceneFields]. It is empty for a cell.
 	Field string
 
