@@ -8,8 +8,6 @@ import (
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel/attribute"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 
 	servicegenai "github.com/a-novel/service-genai/pkg/go"
 
@@ -55,15 +53,14 @@ func (service *GenerationCancel) Exec(
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	response, err := service.genai.GenerationCancel(ctx, &servicegenai.GenerationCancelRequest{
+	genaiCtx, cancel := context.WithTimeout(ctx, genaiTimeout)
+	defer cancel()
+
+	response, err := service.genai.GenerationCancel(genaiCtx, &servicegenai.GenerationCancelRequest{
 		Id: request.ID.String(), OwnerId: request.OwnerID.String(),
 	})
-	if status.Code(err) == codes.NotFound {
-		err = errors.Join(err, ErrGenerationNotFound)
-	}
-
 	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("genai cancel: %w", err))
+		return nil, otel.ReportError(span, fmt.Errorf("genai cancel: %w", genaiError(err, ErrGenerationNotFound)))
 	}
 
 	result, err := newGenerationResult(response.GetGeneration())

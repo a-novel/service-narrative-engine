@@ -32,6 +32,8 @@ var (
 	// ErrGenerationQuota is returned by [GenerationSubmit] when genai admits none of a generation's calls,
 	// for a cap the error names.
 	ErrGenerationQuota = errors.New("generation quota reached")
+	// ErrGenaiUnavailable is returned when genai cannot take a call, such as during its downtime.
+	ErrGenaiUnavailable = errors.New("genai unavailable")
 )
 
 // projectOwnerDao checks that a user owns a project. Each service names its own interface, and every

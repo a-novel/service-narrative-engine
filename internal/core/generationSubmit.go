@@ -145,7 +145,10 @@ func (service *GenerationSubmit) submit(
 		return nil, "", otel.ReportError(span, err)
 	}
 
-	response, err := service.genai.GenerationSubmit(ctx, &servicegenai.GenerationSubmitRequest{
+	genaiCtx, cancel := context.WithTimeout(ctx, genaiTimeout)
+	defer cancel()
+
+	response, err := service.genai.GenerationSubmit(genaiCtx, &servicegenai.GenerationSubmitRequest{
 		OwnerId:  request.OwnerID.String(),
 		Purpose:  generationPurpose,
 		Provider: generationProvider,
@@ -160,7 +163,7 @@ func (service *GenerationSubmit) submit(
 	}
 
 	if err != nil {
-		return nil, "", otel.ReportError(span, fmt.Errorf("genai submit: %w", err))
+		return nil, "", otel.ReportError(span, fmt.Errorf("genai submit: %w", genaiError(err, nil)))
 	}
 
 	result, err := newGenerationResult(response.GetGeneration())

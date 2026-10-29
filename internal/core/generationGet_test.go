@@ -212,6 +212,15 @@ func TestGenerationGet(t *testing.T) {
 			expectErr: core.ErrGenerationNotFound,
 		},
 		{
+			name: "Error/Unavailable",
+
+			request: &core.GenerationGetRequest{OwnerID: ownerID, ID: genaiID},
+
+			genaiMock: &daoMock[*servicegenai.Generation]{err: status.Error(codes.Unavailable, "planned downtime")},
+
+			expectErr: core.ErrGenaiUnavailable,
+		},
+		{
 			name: "Error/Genai",
 
 			request: &core.GenerationGetRequest{OwnerID: ownerID, ID: genaiID},

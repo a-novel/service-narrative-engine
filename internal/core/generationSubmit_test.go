@@ -205,6 +205,20 @@ func TestGenerationSubmit(t *testing.T) {
 			expectErr: core.ErrContextTooLarge,
 		},
 		{
+			name: "Error/Unavailable",
+
+			request: &core.GenerationSubmitRequest{OwnerID: ownerID, ProjectID: projectID, Targets: targets},
+
+			snapshotMock: &daoMock[*core.ProjectSnapshot]{resp: snapshot},
+			planMock: &daoMock[*core.ContextPlan]{resp: &core.ContextPlan{
+				Kind: core.GenerationKindSuggest, Calls: []*core.ContextCall{submitCall("task 1")},
+			}},
+			genaiMocks: []*daoMock[*servicegenai.Generation]{{err: status.Error(codes.Unavailable, "planned downtime")}},
+			tier:       "default",
+
+			expectErr: core.ErrGenaiUnavailable,
+		},
+		{
 			name: "Error/Genai",
 
 			request: &core.GenerationSubmitRequest{OwnerID: ownerID, ProjectID: projectID, Targets: targets},

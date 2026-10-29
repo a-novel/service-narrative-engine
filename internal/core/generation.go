@@ -4,8 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	servicegenai "github.com/a-novel/service-genai/pkg/go"
 
@@ -18,6 +21,22 @@ const (
 	// generationProvider is the provider genai sends every call to.
 	generationProvider = "openai"
 )
+
+// genaiTimeout bounds each call to genai, which answers a submit within 20 seconds and a read within 10.
+const genaiTimeout = 25 * time.Second
+
+// genaiError joins a sentinel to an error genai returned: [ErrGenaiUnavailable] when genai could not take
+// the call, and the sentinel of a miss when it holds no such generation.
+func genaiError(err, notFound error) error {
+	switch status.Code(err) {
+	case codes.Unavailable:
+		return errors.Join(err, ErrGenaiUnavailable)
+	case codes.NotFound:
+		return errors.Join(err, notFound)
+	default:
+		return err
+	}
+}
 
 const (
 	// genaiTierDefault is the tier genai caps a user's generations by.
