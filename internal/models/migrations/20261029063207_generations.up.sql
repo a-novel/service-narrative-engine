@@ -1,9 +1,9 @@
 -- The kinds of generation the service runs through genai.
 CREATE TYPE generation_kind AS ENUM('suggest', 'consolidate', 'check');
 
--- Where a generation or one of its calls stands. A call waits as pending until genai admits it; a
--- generation runs until every call settles.
-CREATE TYPE generation_status AS ENUM(
+-- Where a call of a generation stands. A call waits as pending until genai admits it. A generation's own
+-- status follows from its calls: it runs until every call settles.
+CREATE TYPE generation_call_status AS ENUM(
   'pending',
   'running',
   'succeeded',
@@ -21,15 +21,8 @@ CREATE TABLE generations (
   /* A digest of the request's kind, its variant and the payload of each call. A resent request plans
   the same payloads while the project holds still, so it finds its generation and resumes it. */
   request_key bytea NOT NULL,
-  status generation_status NOT NULL DEFAULT 'running',
   created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  settled_at timestamp with time zone,
-  CONSTRAINT generations_project_id_request_key_key UNIQUE (project_id, request_key),
-  -- A generation runs from the start, and settles once its calls have.
-  CONSTRAINT generations_status_check CHECK (
-    status <> 'pending'
-    AND (status = 'running') = (settled_at IS NULL)
-  )
+  CONSTRAINT generations_project_id_request_key_key UNIQUE (project_id, request_key)
 );
 
 -- Lists a project's generations newest first, and finds those past the latest 100.
@@ -48,7 +41,7 @@ CREATE TABLE generation_calls (
   /* The genai generation that runs the call, once genai admits it. A call cancelled while it waited
   has none. */
   genai_id uuid,
-  status generation_status NOT NULL DEFAULT 'pending',
+  status generation_call_status NOT NULL DEFAULT 'pending',
   /* The call's output, mapped back through its handles. */
   result jsonb,
   /* Why a failed call failed. */

@@ -1,4 +1,4 @@
-migration-history	sha256:e079d3b20f10f90e295c96a8a7a65bff9720f224996cdf86275f1a258367c618
+migration-history	sha256:e21b523cbfe8f80e97d8d41a83543277cad5bd89c4b01ccc20be8c4e54ab767c
 column	beats.color	text NOT NULL
 column	beats.description	text NOT NULL DEFAULT ''::text
 column	beats.id	uuid NOT NULL DEFAULT uuidv7()
@@ -20,15 +20,13 @@ column	generation_calls.payload	bytea
 column	generation_calls.position	integer NOT NULL
 column	generation_calls.result	jsonb
 column	generation_calls.settled_at	timestamp with time zone
-column	generation_calls.status	generation_status NOT NULL DEFAULT 'pending'::generation_status
+column	generation_calls.status	generation_call_status NOT NULL DEFAULT 'pending'::generation_call_status
 column	generations.created_at	timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
 column	generations.id	uuid NOT NULL DEFAULT uuidv7()
 column	generations.kind	generation_kind NOT NULL
 column	generations.project_id	uuid NOT NULL
 column	generations.request	jsonb NOT NULL
 column	generations.request_key	bytea NOT NULL
-column	generations.settled_at	timestamp with time zone
-column	generations.status	generation_status NOT NULL DEFAULT 'running'::generation_status
 column	layers.description	text NOT NULL DEFAULT ''::text
 column	layers.id	uuid NOT NULL DEFAULT uuidv7()
 column	layers.kind	text NOT NULL
@@ -82,7 +80,7 @@ constraint	generation_calls.generation_calls_generation_id_not_null	NOT NULL gen
 constraint	generation_calls.generation_calls_pkey	PRIMARY KEY (generation_id, "position")
 constraint	generation_calls.generation_calls_position_check	CHECK (("position" >= 0))
 constraint	generation_calls.generation_calls_position_not_null	NOT NULL "position"
-constraint	generation_calls.generation_calls_status_check	CHECK ((((status <> 'pending'::generation_status) OR (genai_id IS NULL)) AND ((status <> ALL (ARRAY['running'::generation_status, 'succeeded'::generation_status])) OR (genai_id IS NOT NULL)) AND ((status = ANY (ARRAY['pending'::generation_status, 'running'::generation_status])) = (settled_at IS NULL)) AND ((status = 'succeeded'::generation_status) = (result IS NOT NULL)) AND ((status = 'succeeded'::generation_status) = (payload IS NULL)) AND ((status = 'failed'::generation_status) = (error IS NOT NULL))))
+constraint	generation_calls.generation_calls_status_check	CHECK ((((status <> 'pending'::generation_call_status) OR (genai_id IS NULL)) AND ((status <> ALL (ARRAY['running'::generation_call_status, 'succeeded'::generation_call_status])) OR (genai_id IS NOT NULL)) AND ((status = ANY (ARRAY['pending'::generation_call_status, 'running'::generation_call_status])) = (settled_at IS NULL)) AND ((status = 'succeeded'::generation_call_status) = (result IS NOT NULL)) AND ((status = 'succeeded'::generation_call_status) = (payload IS NULL)) AND ((status = 'failed'::generation_call_status) = (error IS NOT NULL))))
 constraint	generation_calls.generation_calls_status_not_null	NOT NULL status
 constraint	generations.generations_created_at_not_null	NOT NULL created_at
 constraint	generations.generations_id_not_null	NOT NULL id
@@ -93,8 +91,6 @@ constraint	generations.generations_project_id_not_null	NOT NULL project_id
 constraint	generations.generations_project_id_request_key_key	UNIQUE (project_id, request_key)
 constraint	generations.generations_request_key_not_null	NOT NULL request_key
 constraint	generations.generations_request_not_null	NOT NULL request
-constraint	generations.generations_status_check	CHECK (((status <> 'pending'::generation_status) AND ((status = 'running'::generation_status) = (settled_at IS NULL))))
-constraint	generations.generations_status_not_null	NOT NULL status
 constraint	layers.layers_description_not_null	NOT NULL description
 constraint	layers.layers_id_not_null	NOT NULL id
 constraint	layers.layers_kind_check	CHECK ((kind ~ '^[a-z][a-z0-9]*(-[a-z0-9]+)*$'::text))
@@ -159,6 +155,6 @@ relation	layers	r
 relation	projects	r
 relation	scenes	r
 schema	public	pg_database_owner=UC/pg_database_owner,=U/pg_database_owner
+type	generation_call_status	e pending,running,succeeded,failed,cancelled
 type	generation_kind	e suggest,consolidate,check
-type	generation_status	e pending,running,succeeded,failed,cancelled
 type	project_language	e en,fr

@@ -5,6 +5,6 @@ DROP INDEX IF EXISTS generations_project_id_idx;
 
 DROP TABLE IF EXISTS generations;
 
-DROP TYPE IF EXISTS generation_status;
+DROP TYPE IF EXISTS generation_call_status;
 
 DROP TYPE IF EXISTS generation_kind;
