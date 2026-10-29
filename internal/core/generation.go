@@ -137,7 +137,12 @@ func newGenerationResult(generation *servicegenai.Generation) (*GenerationResult
 		return nil, fmt.Errorf("%w: %s", errGenaiStatus, generation.GetStatus())
 	}
 
-	result := &GenerationResult{ID: id, Status: status, Error: generation.GetError()}
+	// genai also says why a cancelled generation stopped, which its status already tells.
+	result := &GenerationResult{ID: id, Status: status}
+	if status == GenerationStatusFailed {
+		result.Error = generation.GetError()
+	}
+
 	if status != GenerationStatusSucceeded {
 		return result, nil
 	}

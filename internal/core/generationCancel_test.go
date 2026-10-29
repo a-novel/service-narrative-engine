@@ -37,7 +37,7 @@ func TestGenerationCancel(t *testing.T) {
 			request: &core.GenerationCancelRequest{OwnerID: ownerID, ID: genaiID},
 
 			genaiMock: &daoMock[*servicegenai.Generation]{
-				resp: genaiGeneration(servicegenai.GenerationStatusCancelled, ""),
+				resp: cancelledGeneration(),
 			},
 
 			expect: &core.GenerationResult{ID: genaiID, Status: core.GenerationStatusCancelled},

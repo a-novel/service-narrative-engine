@@ -120,6 +120,14 @@ func genaiGeneration(status servicegenai.GenerationStatus, response string) *ser
 	return generation
 }
 
+// cancelledGeneration returns a cancelled genai generation, with the error genai gives it.
+func cancelledGeneration() *servicegenai.Generation {
+	generation := genaiGeneration(servicegenai.GenerationStatusCancelled, "")
+	generation.Error = "generation cancelled"
+
+	return generation
+}
+
 // openaiResponse returns a completed OpenAI Responses object, under the output format named after a kind,
 // whose message holds content.
 func openaiResponse(kind string, content ...map[string]string) string {

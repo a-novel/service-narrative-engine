@@ -92,7 +92,7 @@ func TestGenerationGet(t *testing.T) {
 			request: &core.GenerationGetRequest{OwnerID: ownerID, ID: genaiID},
 
 			genaiMock: &daoMock[*servicegenai.Generation]{
-				resp: genaiGeneration(servicegenai.GenerationStatusCancelled, ""),
+				resp: cancelledGeneration(),
 			},
 
 			expect: &core.GenerationResult{ID: genaiID, Status: core.GenerationStatusCancelled},
