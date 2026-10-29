@@ -6,7 +6,7 @@ require (
 	github.com/a-novel-kit/golib v0.56.3
 	github.com/a-novel/service-authentication/v2 v2.18.5
 	github.com/a-novel/service-genai v0.8.0
-	github.com/a-novel/service-json-keys/v2 v2.13.10
+	github.com/a-novel/service-json-keys/v2 v2.14.0
 	github.com/go-chi/chi/v5 v5.5.0
 	github.com/go-playground/validator/v10 v10.30.5
 	github.com/goccy/go-yaml v1.19.2
