@@ -109,7 +109,7 @@ services:
       - narrative-engine-integration-rest-test
 
   postgres-genai:
-    image: ghcr.io/a-novel/service-genai/database:v0.7.4@sha256:880e760f2f03f4ffdaf2affc186d10a91a12f711602a4c0983a9d70d837efb70
+    image: ghcr.io/a-novel/service-genai/database:v0.8.0@sha256:880e760f2f03f4ffdaf2affc186d10a91a12f711602a4c0983a9d70d837efb70
     networks:
       - narrative-engine-integration-rest-test
     environment:
@@ -121,7 +121,7 @@ services:
     healthcheck: *postgres-healthcheck
 
   service-genai:
-    image: ghcr.io/a-novel/service-genai/standalone-grpc:v0.7.4@sha256:cdfc7120582969cd26982e552571cc1cabf2b2b3f9605b421979d45e9b7a53b2
+    image: ghcr.io/a-novel/service-genai/standalone-grpc:v0.8.0@sha256:152ee413ebfa4c558b1406be7d330b27808779331eaa556ace9469323370a01e
     depends_on:
       postgres-genai:
         condition: service_healthy
