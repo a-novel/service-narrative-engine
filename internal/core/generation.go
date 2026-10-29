@@ -22,6 +22,22 @@ const (
 	generationProvider = "openai"
 )
 
+// GenerationQuotaError is returned by [GenerationSubmit] when genai admits none of a generation's calls. It
+// is [ErrGenerationQuota], and names the cap genai refused the first call for.
+type GenerationQuotaError struct {
+	// Cap is genai's message naming the cap, such as its concurrency or a token window.
+	Cap string
+}
+
+func (err *GenerationQuotaError) Error() string {
+	return ErrGenerationQuota.Error() + ": " + err.Cap
+}
+
+// Is reports the error as [ErrGenerationQuota].
+func (err *GenerationQuotaError) Is(target error) bool {
+	return target == ErrGenerationQuota
+}
+
 // genaiTimeout bounds each call to genai, which answers a submit within 20 seconds and a read within 10.
 const genaiTimeout = 25 * time.Second
 

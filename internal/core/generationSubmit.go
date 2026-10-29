@@ -58,7 +58,7 @@ type GenerationSubmitRequest struct {
 // GenerationSubmit plans a suggest generation and submits each of its calls to genai, as the caller. A call
 // genai refuses for a cap waits, and so do the calls after it. Resending the same request admits the
 // calls that wait: genai replays the calls it admitted and those that succeeded, and runs again those that
-// failed or were cancelled. Every call that waits returns [ErrGenerationQuota].
+// failed or were cancelled. A generation whose every call waits returns a [GenerationQuotaError].
 type GenerationSubmit struct {
 	snapshot GenerationSubmitServiceSnapshot
 	plan     GenerationSubmitServicePlan
@@ -124,7 +124,7 @@ func (service *GenerationSubmit) Exec(ctx context.Context, request *GenerationSu
 	span.SetAttributes(attribute.Int("generation.calls", len(generation.Calls)))
 
 	if lo.EveryBy(generation.Calls, func(call *GenerationCall) bool { return call.Waiting != "" }) {
-		return nil, otel.ReportError(span, fmt.Errorf("%w: %s", ErrGenerationQuota, waiting))
+		return nil, otel.ReportError(span, &GenerationQuotaError{Cap: waiting})
 	}
 
 	return generation, nil

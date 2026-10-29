@@ -29,8 +29,8 @@ var (
 	ErrRequiredLayer = errors.New("required layer")
 	// ErrGenerationNotFound is returned when genai holds no generation with the ID for the caller.
 	ErrGenerationNotFound = errors.New("generation not found")
-	// ErrGenerationQuota is returned by [GenerationSubmit] when genai admits none of a generation's calls,
-	// for a cap the error names.
+	// ErrGenerationQuota is returned by [GenerationSubmit], as a [GenerationQuotaError], when genai admits
+	// none of a generation's calls.
 	ErrGenerationQuota = errors.New("generation quota reached")
 	// ErrGenaiUnavailable is returned when genai cannot take a call, such as during its downtime.
 	ErrGenaiUnavailable = errors.New("genai unavailable")

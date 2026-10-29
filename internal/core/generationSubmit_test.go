@@ -277,6 +277,14 @@ func TestGenerationSubmit(t *testing.T) {
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
 
+			// A quota refusal names the cap genai refused the first call for.
+			if errors.Is(err, core.ErrGenerationQuota) {
+				var quota *core.GenerationQuotaError
+
+				require.ErrorAs(t, err, &quota)
+				require.Equal(t, concurrencyCap, quota.Cap)
+			}
+
 			mockSnapshot.AssertExpectations(t)
 			mockPlan.AssertExpectations(t)
 			mockGenai.AssertExpectations(t)
