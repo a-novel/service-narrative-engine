@@ -24,9 +24,9 @@ func TestRestScenesCreate(t *testing.T) {
 
 		return newRequest(t, http.MethodPost, "/v1/scenes", map[string]any{
 			"projectID": projectID,
-			"beatID":    beatID,
-			"position":  2,
 			"scenes": []any{map[string]any{
+				"beatID":      beatID,
+				"position":    2,
 				"title":       "Ouverture",
 				"description": "Marie attend.",
 				"prompt":      "Lent.",
@@ -134,10 +134,8 @@ func TestRestScenesCreate(t *testing.T) {
 					Exec(mock.Anything, &core.ScenesCreateRequest{
 						OwnerID:   ownerID,
 						ProjectID: projectID,
-						BeatID:    beatID,
-						Position:  2,
 						Scenes: []core.ScenesCreateItem{
-							{Title: "Ouverture", Description: "Marie attend.", Prompt: "Lent."},
+							{BeatID: beatID, Position: 2, Title: "Ouverture", Description: "Marie attend.", Prompt: "Lent."},
 						},
 					}).
 					Return(testCase.serviceMock.resp, testCase.serviceMock.err)
