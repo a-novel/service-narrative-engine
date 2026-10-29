@@ -32,6 +32,13 @@ type Dependencies struct {
 	ServiceJsonKeysCredentials grpcf.CredentialsProvider `json:"-" yaml:"-"`
 }
 
+// Limits bounds what one request carries, below the REST server's own limits. The server's
+// MaxRequestSize fits a batch, so the routes that write one item cap their body lower.
+type Limits struct {
+	// ItemMaxRequestSize caps the body of a route that writes one item, in bytes.
+	ItemMaxRequestSize int64 `json:"itemMaxRequestSize" yaml:"itemMaxRequestSize"`
+}
+
 // App is the complete configuration the service reads at startup.
 type App struct {
 	// App holds the top-level application settings.
@@ -42,6 +49,8 @@ type App struct {
 	Permissions serviceauthentication.Permissions `json:"permissions" yaml:"permissions"`
 	// Rest configures the REST server.
 	Rest httpf.ServerConfig `json:"rest" yaml:"rest"`
+	// Limits bounds what one request carries, below the REST server's own limits.
+	Limits Limits `json:"limits" yaml:"limits"`
 
 	// Otel configures the OpenTelemetry exporter.
 	Otel otel.Config `json:"otel" yaml:"otel"`

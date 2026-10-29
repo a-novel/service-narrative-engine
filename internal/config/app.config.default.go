@@ -59,6 +59,7 @@ var AppPresetDefault = App{
 	},
 	Permissions: PermissionsConfigDefault,
 	Rest:        env.Rest,
+	Limits:      Limits{ItemMaxRequestSize: env.RestMaxItemRequestSize},
 
 	Otel:   OtelPresetDefault,
 	Sentry: env.Sentry,

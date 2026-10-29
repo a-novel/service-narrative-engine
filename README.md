@@ -120,7 +120,8 @@ REST tuning (images `rest`, `standalone-rest`):
 
 | Name                          | Description                                                                                                                  | Default                          |
 | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
-| `REST_MAX_REQUEST_SIZE`       | Maximum request body size, in bytes. The default fits a whole cell.                                                          | `4194304` (4MiB)                 |
+| `REST_MAX_REQUEST_SIZE`       | Maximum request body size, in bytes, on every route. The default fits a batch of up to 100 items.                            | `52428800` (50MiB)               |
+| `REST_MAX_ITEM_REQUEST_SIZE`  | Maximum request body size, in bytes, on a route that writes one item. The default fits a whole cell.                         | `4194304` (4MiB)                 |
 | `REST_CLIENT_IP_HEADER`       | Header a trusted proxy sets to the visitor IP. Set it only when every request comes through that proxy.                      | TCP peer                         |
 | `REST_LIVENESS_PATH`          | Ping path, which still answers during a planned downtime and skips the rate limit.                                           | `/v1/ping`                       |
 | `REST_RATE_LIMITS_ENABLED`    | Rate-limit each visitor on every route but the ping. Turn off only in test stacks.                                           | `true`                           |

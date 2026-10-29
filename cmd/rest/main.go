@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/samber/lo"
 
 	serviceauthentication "github.com/a-novel/service-authentication/v2/pkg/go"
@@ -172,34 +173,37 @@ func main() {
 	router := httpf.NewRouter(cfg.Rest, cfg.Otel, cfg.RestLogger, cfg.App.DowntimeStart)
 
 	router.Route("/v1", func(api chi.Router) {
+		// The router's body limit fits a batch; a route that writes one item caps its body lower.
+		item := api.With(middleware.RequestSize(cfg.Limits.ItemMaxRequestSize))
+
 		api.Get("/ping", handlerPing.ServeHTTP)
 		api.Get("/healthcheck", handlerHealth.ServeHTTP)
 
-		withAuth(api, config.PermissionProjectWrite).Post("/projects", handlerProjectCreate.ServeHTTP)
+		withAuth(item, config.PermissionProjectWrite).Post("/projects", handlerProjectCreate.ServeHTTP)
 		withAuth(api, config.PermissionProjectRead).Get("/projects", handlerProjectList.ServeHTTP)
 		withAuth(api, config.PermissionProjectRead).Get("/project", handlerProjectGet.ServeHTTP)
-		withAuth(api, config.PermissionProjectWrite).Put("/project", handlerProjectUpdate.ServeHTTP)
-		withAuth(api, config.PermissionProjectWrite).Delete("/project", handlerProjectDelete.ServeHTTP)
+		withAuth(item, config.PermissionProjectWrite).Put("/project", handlerProjectUpdate.ServeHTTP)
+		withAuth(item, config.PermissionProjectWrite).Delete("/project", handlerProjectDelete.ServeHTTP)
 
-		withAuth(api, config.PermissionProjectWrite).Post("/scene", handlerSceneCreate.ServeHTTP)
-		withAuth(api, config.PermissionProjectWrite).Put("/scene", handlerSceneUpdate.ServeHTTP)
-		withAuth(api, config.PermissionProjectWrite).Delete("/scene", handlerSceneDelete.ServeHTTP)
-		withAuth(api, config.PermissionProjectWrite).Post("/scene/move", handlerSceneMove.ServeHTTP)
+		withAuth(item, config.PermissionProjectWrite).Post("/scene", handlerSceneCreate.ServeHTTP)
+		withAuth(item, config.PermissionProjectWrite).Put("/scene", handlerSceneUpdate.ServeHTTP)
+		withAuth(item, config.PermissionProjectWrite).Delete("/scene", handlerSceneDelete.ServeHTTP)
+		withAuth(item, config.PermissionProjectWrite).Post("/scene/move", handlerSceneMove.ServeHTTP)
 		withAuth(api, config.PermissionProjectRead).Get("/scenes", handlerSceneList.ServeHTTP)
 		withAuth(api, config.PermissionProjectWrite).Post("/scenes", handlerScenesCreate.ServeHTTP)
 		withAuth(api, config.PermissionProjectWrite).Put("/scenes", handlerScenesUpdate.ServeHTTP)
 		withAuth(api, config.PermissionProjectWrite).Delete("/scenes", handlerScenesDelete.ServeHTTP)
 
-		withAuth(api, config.PermissionProjectWrite).Post("/layer", handlerLayerCreate.ServeHTTP)
-		withAuth(api, config.PermissionProjectWrite).Put("/layer", handlerLayerUpdate.ServeHTTP)
-		withAuth(api, config.PermissionProjectWrite).Delete("/layer", handlerLayerDelete.ServeHTTP)
-		withAuth(api, config.PermissionProjectWrite).Post("/layer/move", handlerLayerMove.ServeHTTP)
+		withAuth(item, config.PermissionProjectWrite).Post("/layer", handlerLayerCreate.ServeHTTP)
+		withAuth(item, config.PermissionProjectWrite).Put("/layer", handlerLayerUpdate.ServeHTTP)
+		withAuth(item, config.PermissionProjectWrite).Delete("/layer", handlerLayerDelete.ServeHTTP)
+		withAuth(item, config.PermissionProjectWrite).Post("/layer/move", handlerLayerMove.ServeHTTP)
 		withAuth(api, config.PermissionProjectRead).Get("/layers", handlerLayerList.ServeHTTP)
 		withAuth(api, config.PermissionProjectWrite).Post("/layers", handlerLayersCreate.ServeHTTP)
 		withAuth(api, config.PermissionProjectWrite).Put("/layers", handlerLayersUpdate.ServeHTTP)
 		withAuth(api, config.PermissionProjectWrite).Delete("/layers", handlerLayersDelete.ServeHTTP)
 
-		withAuth(api, config.PermissionProjectWrite).Put("/cell", handlerCellWrite.ServeHTTP)
+		withAuth(item, config.PermissionProjectWrite).Put("/cell", handlerCellWrite.ServeHTTP)
 		withAuth(api, config.PermissionProjectRead).Get("/cells", handlerCellList.ServeHTTP)
 		withAuth(api, config.PermissionProjectWrite).Put("/cells", handlerCellsWrite.ServeHTTP)
 	})

@@ -44,9 +44,12 @@ const (
 	// ServiceJsonKeysPortDefault is the JSON Keys service's default gRPC port.
 	ServiceJsonKeysPortDefault = 8080
 
-	// RestMaxRequestSizeDefault lets a request carry a whole cell, whose content the core caps at 2 MiB,
-	// with room for the rest of the body.
-	RestMaxRequestSizeDefault = 4 << 20
+	// RestMaxRequestSizeDefault lets a batch through: up to 100 items, among them cells whose content
+	// the core caps at 2 MiB each. The router applies it to every route.
+	RestMaxRequestSizeDefault = 50 << 20
+	// RestMaxItemRequestSizeDefault caps a route that writes one item. It fits a whole cell, with room
+	// for the rest of the body.
+	RestMaxItemRequestSizeDefault = 4 << 20
 )
 
 var (
@@ -88,6 +91,10 @@ var (
 
 	// Rest configures the REST server from the REST_* variables.
 	Rest = httpf.LoadServerConfig(getEnv, restDefaults())
+	// RestMaxItemRequestSize caps the body of a route that writes one item, in bytes.
+	RestMaxItemRequestSize = config.LoadEnv(
+		getEnv("REST_MAX_ITEM_REQUEST_SIZE"), RestMaxItemRequestSizeDefault, config.Int64Parser,
+	)
 
 	// GcloudProjectID is the Google Cloud project the service runs in. When set, the JSON Keys
 	// connection authenticates with Google ID tokens.
