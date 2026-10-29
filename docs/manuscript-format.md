@@ -6,16 +6,20 @@ The JSON Schema [`manuscript.schema.json`](../internal/models/schemas/manuscript
 
 ## Document
 
-| Field           | Content                                                                         |
-| --------------- | ------------------------------------------------------------------------------- |
-| `format`        | Always `manuscript`.                                                            |
-| `formatVersion` | Always `1`.                                                                     |
-| `title`         | The title of the project.                                                       |
-| `language`      | The language of the text, as a BCP 47 tag: `en` or `fr` today.                  |
-| `scenes`        | Every scene of the project, in narrative order, each with `title` and `blocks`. |
-| `appendices`    | Data about the text, keyed by appendix name. Format v1 defines none.            |
+| Field           | Content                                                                                 |
+| --------------- | --------------------------------------------------------------------------------------- |
+| `format`        | Always `manuscript`.                                                                    |
+| `formatVersion` | Always `1`.                                                                             |
+| `title`         | The title of the project.                                                               |
+| `language`      | The language of the text, as a BCP 47 tag: `en` or `fr` today.                          |
+| `scenes`        | Every scene of the project, in narrative order, each with `beat`, `title` and `blocks`. |
+| `appendices`    | Data about the text, keyed by appendix name. Format v1 defines `beats`.                 |
 
 A scene the layer holds no text for keeps its place with `"blocks": []`, so the structure of the narrative survives the export.
+
+## Beats
+
+A beat is a turn of the story's structure, and its scenes tell it. The `beats` appendix lists every beat of the project in narrative order, each with its `title` and `description`, so a beat without scenes still appears. Each scene names its beat by `beat`, the beat's position in that list from 0. Narrative order runs through the beats in order, then through the scenes of each beat.
 
 ## Blocks
 
@@ -29,7 +33,7 @@ Blocks carry no ID. An appendix names a block by the position of its scene and i
 ## Reader rules
 
 - A reader checks `format` and `formatVersion` first, and refuses a document it does not know. A change that a reader of version 1 cannot read raises the version.
-- A reader skips an appendix it does not know.
+- A reader skips an appendix it does not know. A reader may also ignore beats, since every scene stands in narrative order on its own.
 - Typography belongs to the renderer. Dialogue parts hold the words without quotation marks or dashes, and the renderer sets them in the style of the target format and `language`, such as French guillemets and the space French puts before `?` and `!`.
 
 ## Example
@@ -42,7 +46,8 @@ Blocks carry no ID. An appendix names a block by the position of its scene and i
   "language": "fr",
   "scenes": [
     {
-      "title": "Ouverture",
+      "beat": 0,
+      "title": "La fenêtre",
       "blocks": [
         { "kind": "narration", "text": "La pluie battait les vitres." },
         {
@@ -52,8 +57,13 @@ Blocks carry no ID. An appendix names a block by the position of its scene and i
         }
       ]
     },
-    { "title": "Interlude", "blocks": [] }
+    { "beat": 0, "title": "Interlude", "blocks": [] }
   ],
-  "appendices": {}
+  "appendices": {
+    "beats": [
+      { "title": "Les retrouvailles", "description": "Marie attend Paul." },
+      { "title": "Épilogue", "description": "" }
+    ]
+  }
 }
 ```
