@@ -1,0 +1,77 @@
+=== developer
+You check the coherence of an author's novel. You look for places where scenes contradict each other or themselves: in the timeline and plot, the characterization, the world-building, the facts and details, or the style.
+
+The author's message describes the project in three sections:
+
+- <frame> holds the project: its title and premise, its layers, and every scene in narrative order.
+- <neighborhood> holds the scenes, each at a level of detail. A full scene shows its cells. A recap scene shows a summary in place of its manuscript. An outline scene shows its notes alone.
+- <task> names the scenes to check, and holds the author's instruction when there is one.
+
+Handles name what the context shows: S1 for a scene, L1 for a layer. A manuscript cell holds blocks in reading order: narration holds prose, and dialogue holds a character's line, as the words spoken and the tones they are spoken in.
+
+Report each possible issue as a finding: its category, a message of one or two sentences, and the quotes that show it. Copy each quote word for word from the cells of a full scene, and name that scene by its handle. A finding needs one quote at least.
+
+Report only what the text supports: a mystery the story keeps on purpose is no issue. Prefer a few strong findings, the most serious first, and return none when the scenes hold together.
+
+Write the messages in English, the language of the project.
+
+=== schema
+{"$defs":{"finding":{"additionalProperties":false,"properties":{"category":{"description":"The kind of issue.","enum":["timeline-and-plot","characterization","world-building","facts-and-details","style"],"type":"string"},"evidence":{"description":"The passages that show the issue, at least one.","items":{"$ref":"#/$defs/quote"},"maxItems":10,"minItems":1,"type":"array"},"message":{"description":"What does not hold together, in one or two sentences, in the project's language.","type":"string"}},"required":["category","message","evidence"],"type":"object"},"quote":{"additionalProperties":false,"properties":{"quote":{"description":"A passage copied word for word from the scene's text as the context shows it.","type":"string"},"scene":{"description":"The handle of the scene the quote comes from, such as S4.","pattern":"^S[0-9]+$","type":"string"}},"required":["scene","quote"],"type":"object"}},"additionalProperties":false,"description":"What the model returns for a check generation: the possible coherence issues it finds, each backed by quotes.","properties":{"findings":{"description":"The possible issues, most serious first. Empty when the scenes hold together.","items":{"$ref":"#/$defs/finding"},"maxItems":50,"type":"array"}},"required":["findings"],"type":"object"}
+
+=== user
+<frame>
+<project title="The Clear Hours" language="en">
+<premise>In a seaside town, Mary waits for Paul, who left without a word. An unsigned letter revives their story.</premise>
+</project>
+<layers>
+<layer handle="L1" kind="manuscript" name="Manuscript">The text of the novel.</layer>
+<layer handle="L2" kind="notes" name="Characters">Who appears in the scene, and what we learn about each.</layer>
+<layer handle="L3" kind="notes" name="Plot">What the scene moves forward.</layer>
+</layers>
+<scenes>
+<scene handle="S1" title="Opening">Mary waits in the rain.</scene>
+<scene handle="S2" title="The Letter">An unsigned letter arrives.</scene>
+<scene handle="S3" title="The Quay">Mary meets Paul at dawn.</scene>
+<scene handle="S4" title="Return">Paul tells of his two years away.</scene>
+<scene handle="S5" title="Epilogue">A year later.</scene>
+</scenes>
+</frame>
+
+<neighborhood>
+<scene handle="S1" level="full">
+<cell layer="L1">
+<narration>Rain beat against the café windows. Mary kept her eyes on the door.</narration>
+<dialogue speaker="Mary"><tone>under her breath</tone><text>He won't come.</text></dialogue>
+</cell>
+<cell layer="L2">Mary, a schoolteacher, thirty. She has waited for Paul for two years.</cell>
+<cell layer="L3">Sets up Paul's absence.</cell>
+</scene>
+<scene handle="S2" level="full">
+<cell layer="L1">
+<narration>The postman left an envelope with no stamp. Mary knew the handwriting before she opened it.</narration>
+<dialogue speaker="Mary"><text>Tomorrow, at dawn, on the quay.</text></dialogue>
+</cell>
+<cell layer="L2">The postman, in a hurry.</cell>
+</scene>
+<scene handle="S3" level="full">
+<cell layer="L1">
+<narration>Dawn turned the harbor gray.</narration>
+<dialogue speaker="Paul"><text>You got my letter.</text></dialogue>
+<narration>Mary did not answer at once.</narration>
+<dialogue speaker="Mary"><tone>curtly</tone><text>Two years, Paul.</text></dialogue>
+</cell>
+<cell layer="L2">Paul, back from Brest. Mary.</cell>
+</scene>
+<scene handle="S4" level="outline">
+<cell layer="L2">Paul; Captain Morel, his former employer.</cell>
+</scene>
+<scene handle="S5" level="full">
+<cell layer="L2">Mary alone on the quay, a letter in her hand.</cell>
+</scene>
+</neighborhood>
+
+<task>
+<check from="S1" to="S3"/>
+<instruction>Look at the timeline above all.</instruction>
+<rules>Check the scenes the task names. Quote word for word from full scenes only. Write in English.</rules>
+</task>

@@ -36,6 +36,24 @@ func ValidateLayerKind(fl validator.FieldLevel) bool {
 	return err == nil
 }
 
+// ValidateGenerationKind reports whether a string is one of [GenerationKinds]. The package registers it as
+// the "generationkind" struct tag.
+func ValidateGenerationKind(fl validator.FieldLevel) bool {
+	return slices.Contains(GenerationKinds, fl.Field().String())
+}
+
+// ValidateTargetMode reports whether a string is one of [TargetModes]. The package registers it as the
+// "targetmode" struct tag.
+func ValidateTargetMode(fl validator.FieldLevel) bool {
+	return slices.Contains(TargetModes, fl.Field().String())
+}
+
+// ValidateSceneField reports whether a string is one of [SceneFields]. The package registers it as the
+// "scenefield" struct tag.
+func ValidateSceneField(fl validator.FieldLevel) bool {
+	return slices.Contains(SceneFields, fl.Field().String())
+}
+
 // ValidateUniqueCells reports whether a list of [CellsWriteItem] names each pair of a scene and a layer
 // once. The package registers it as the "uniquecells" struct tag.
 func ValidateUniqueCells(fl validator.FieldLevel) bool {
@@ -60,10 +78,13 @@ func ValidateUniqueCells(fl validator.FieldLevel) bool {
 
 func init() {
 	for tag, fn := range map[string]validator.Func{
-		"notblank":    ValidateNotBlank,
-		"language":    ValidateLanguage,
-		"layerkind":   ValidateLayerKind,
-		"uniquecells": ValidateUniqueCells,
+		"notblank":       ValidateNotBlank,
+		"language":       ValidateLanguage,
+		"layerkind":      ValidateLayerKind,
+		"uniquecells":    ValidateUniqueCells,
+		"generationkind": ValidateGenerationKind,
+		"targetmode":     ValidateTargetMode,
+		"scenefield":     ValidateSceneField,
 	} {
 		err := validate.RegisterValidation(tag, fn)
 		if err != nil {

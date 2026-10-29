@@ -1,0 +1,73 @@
+=== developer
+Vous vérifiez la cohérence du roman d'un auteur. Vous cherchez les passages où des scènes se contredisent, entre elles ou en elles-mêmes : dans la chronologie et l'intrigue, la caractérisation des personnages, la construction du monde, les faits et les détails, ou le style.
+
+Le message de l'auteur présente le projet en trois sections :
+
+- <frame> décrit le projet : son titre et sa prémisse, ses couches, et toutes les scènes dans l'ordre du récit.
+- <neighborhood> rassemble les scènes, chacune à un niveau de détail. Une scène full montre ses cellules. Une scène recap montre un résumé à la place de son manuscrit. Une scène outline ne montre que ses notes.
+- <task> désigne les scènes à vérifier, et porte la consigne de l'auteur quand il y en a une.
+
+Des identifiants désignent ce que le contexte montre : S1 pour une scène, L1 pour une couche. Une cellule de manuscrit contient des blocs dans l'ordre de lecture : un bloc narration contient de la prose, un bloc dialogue la réplique d'un personnage, avec ses paroles et le ton sur lequel il les prononce.
+
+Signalez chaque problème possible par un constat : sa catégorie, un message d'une ou deux phrases, et les citations qui le montrent. Recopiez chaque citation mot pour mot depuis les cellules d'une scène full, et désignez cette scène par son identifiant. Un constat demande au moins une citation.
+
+Ne signalez que ce que le texte permet d'affirmer : un mystère que l'histoire entretient à dessein n'est pas un problème. Préférez quelques constats solides, les plus graves d'abord, et n'en rendez aucun quand les scènes tiennent ensemble.
+
+Écrivez les messages en français, la langue du projet.
+
+=== schema
+{"$defs":{"finding":{"additionalProperties":false,"properties":{"category":{"description":"The kind of issue.","enum":["timeline-and-plot","characterization","world-building","facts-and-details","style"],"type":"string"},"evidence":{"description":"The passages that show the issue, at least one.","items":{"$ref":"#/$defs/quote"},"maxItems":10,"minItems":1,"type":"array"},"message":{"description":"What does not hold together, in one or two sentences, in the project's language.","type":"string"}},"required":["category","message","evidence"],"type":"object"},"quote":{"additionalProperties":false,"properties":{"quote":{"description":"A passage copied word for word from the scene's text as the context shows it.","type":"string"},"scene":{"description":"The handle of the scene the quote comes from, such as S4.","pattern":"^S[0-9]+$","type":"string"}},"required":["scene","quote"],"type":"object"}},"additionalProperties":false,"description":"What the model returns for a check generation: the possible coherence issues it finds, each backed by quotes.","properties":{"findings":{"description":"The possible issues, most serious first. Empty when the scenes hold together.","items":{"$ref":"#/$defs/finding"},"maxItems":50,"type":"array"}},"required":["findings"],"type":"object"}
+
+=== user
+<frame>
+<project title="Les Heures claires" language="fr">
+<premise>Dans une ville de bord de mer, Marie attend le retour de Paul, parti sans un mot. Une lettre sans signature relance leur histoire.</premise>
+</project>
+<layers>
+<layer handle="L1" kind="manuscript" name="Manuscrit">Le texte du roman.</layer>
+<layer handle="L2" kind="notes" name="Personnages">Qui apparaît dans la scène, et ce qu'on apprend de chacun.</layer>
+<layer handle="L3" kind="notes" name="Intrigue">Ce que la scène fait avancer.</layer>
+</layers>
+<scenes>
+<scene handle="S1" title="Ouverture">Marie attend sous la pluie.</scene>
+<scene handle="S2" title="La lettre">Une lettre sans signature arrive.</scene>
+<scene handle="S3" title="Le quai">Marie retrouve Paul à l'aube.</scene>
+<scene handle="S4" title="Retour">Paul raconte ses deux années.</scene>
+<scene handle="S5" title="Épilogue">Un an plus tard.</scene>
+</scenes>
+</frame>
+
+<neighborhood>
+<scene handle="S1" level="outline">
+<cell layer="L2">Marie, institutrice, trente ans. Elle attend Paul depuis deux ans.</cell>
+<cell layer="L3">Installe l'absence de Paul.</cell>
+</scene>
+<scene handle="S2" level="full">
+<cell layer="L1">
+<narration>Le facteur déposa une enveloppe sans timbre. Marie reconnut l'écriture avant même de l'ouvrir.</narration>
+<dialogue speaker="Marie"><text>Demain, à l'aube, sur le quai.</text></dialogue>
+</cell>
+<cell layer="L2">Le facteur, pressé.</cell>
+</scene>
+<scene handle="S3" level="full">
+<cell layer="L1">
+<narration>L'aube grisait le port.</narration>
+<dialogue speaker="Paul"><text>Tu as reçu ma lettre.</text></dialogue>
+<narration>Marie ne répondit pas tout de suite.</narration>
+<dialogue speaker="Marie"><tone>sèchement</tone><text>Deux ans, Paul.</text></dialogue>
+</cell>
+<cell layer="L2">Paul, revenu de Brest. Marie.</cell>
+</scene>
+<scene handle="S4" level="outline">
+<cell layer="L2">Paul ; le capitaine Morel, son ancien patron.</cell>
+</scene>
+<scene handle="S5" level="full">
+<cell layer="L2">Marie seule sur le quai, une lettre à la main.</cell>
+</scene>
+</neighborhood>
+
+<task>
+<check from="S1" to="S3"/>
+<instruction>Vérifie surtout la chronologie.</instruction>
+<rules>Vérifiez les scènes que désigne la tâche. Ne citez, mot pour mot, que des scènes full. Écrivez en français.</rules>
+</task>

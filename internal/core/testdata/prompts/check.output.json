@@ -1,0 +1,12 @@
+{
+  "findings": [
+    {
+      "category": "timeline-and-plot",
+      "message": "Paul mentions his letter before Mary could have read it.",
+      "evidence": [
+        { "scene": "S2", "quote": "Tomorrow, at dawn, on the quay." },
+        { "scene": "S3", "quote": "You got my letter." }
+      ]
+    }
+  ]
+}
