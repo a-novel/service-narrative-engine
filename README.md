@@ -18,7 +18,7 @@ The backend of the Narrative Engine, a workstation for writing narratives.
 
 ## What it does
 
-The service stores the Scenes Composer of each user's projects: scenes, layers, and the cells where they cross. It serves one public REST API (`cmd/rest`), for any HTTP client, and checks each caller's access token with [JSON Keys](https://github.com/a-novel/service-json-keys).
+The service stores the Scenes Composer of each user's projects: scenes, layers, and the cells where they cross. It exports the text of a manuscript layer in the [manuscript format](./docs/manuscript-format.md), which renderers read. It serves one public REST API (`cmd/rest`), for any HTTP client, and checks each caller's access token with [JSON Keys](https://github.com/a-novel/service-json-keys).
 
 ## Deploying
 
