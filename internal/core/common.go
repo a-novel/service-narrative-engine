@@ -27,6 +27,11 @@ var (
 	// ErrRequiredLayer is returned by a delete that would leave a project without a layer of a required
 	// kind, such as the manuscript.
 	ErrRequiredLayer = errors.New("required layer")
+	// ErrGenerationNotFound is returned when genai holds no generation with the ID for the caller.
+	ErrGenerationNotFound = errors.New("generation not found")
+	// ErrGenerationQuota is returned by [GenerationSubmit] when genai admits none of a generation's calls,
+	// for a cap the error names.
+	ErrGenerationQuota = errors.New("generation quota reached")
 )
 
 // projectOwnerDao checks that a user owns a project. Each service names its own interface, and every

@@ -7,6 +7,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 
+	servicegenai "github.com/a-novel/service-genai/pkg/go"
+
 	"github.com/a-novel/service-narrative-engine/internal/core"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
@@ -96,4 +98,42 @@ func coreLayer(id uuid.UUID, position int) *core.Layer {
 		ID: id, ProjectID: projectID, Position: position, Kind: core.LayerKindNotes, Name: "Layer",
 		UpdatedAt: updatedAt,
 	}
+}
+
+// genaiID names the genai generation of the generation tests.
+var genaiID = uuid.MustParse("00000000-0000-0000-0000-0000000000c1")
+
+// suggestOutput is a valid suggest output, with one text suggestion.
+const suggestOutput = `{"manuscript":[],"text":[{"target":"T1","note":"Names the scene.","text":"La lettre"}]}`
+
+// genaiGeneration returns the genai generation of the test owner at a status. Its last attempt holds
+// response when set.
+func genaiGeneration(status servicegenai.GenerationStatus, response string) *servicegenai.Generation {
+	generation := &servicegenai.Generation{Id: genaiID.String(), OwnerId: ownerID.String(), Status: status}
+	if response != "" {
+		generation.Attempts = []*servicegenai.GenerationAttempt{
+			{Number: 1, Response: []byte(`{"status":"in_progress"}`)},
+			{Number: 2, Response: []byte(response)},
+		}
+	}
+
+	return generation
+}
+
+// openaiResponse returns a completed OpenAI Responses object, under the output format named after a kind,
+// whose message holds content.
+func openaiResponse(kind string, content ...map[string]string) string {
+	return mustJSON(map[string]any{
+		"status": "completed",
+		"text":   map[string]any{"format": map[string]string{"type": "json_schema", "name": kind}},
+		"output": []any{
+			map[string]string{"type": "reasoning"},
+			map[string]any{"type": "message", "content": content},
+		},
+	})
+}
+
+// outputText is a content part of an OpenAI message.
+func outputText(text string) map[string]string {
+	return map[string]string{"type": "output_text", "text": text}
 }
