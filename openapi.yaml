@@ -44,6 +44,8 @@ tags:
     description: The rows of a Scenes Composer.
   - name: cell
     description: What one layer says about one scene.
+  - name: manuscript
+    description: The text of a manuscript layer, exported for renderers.
 
 paths:
   /v1/ping:
@@ -824,6 +826,37 @@ paths:
         default:
           $ref: "#/components/responses/internalError"
 
+  /v1/manuscript:
+    get:
+      operationId: manuscriptExport
+      summary: Export a manuscript.
+      description: |
+        Returns the text one manuscript layer of the project holds, in manuscript format v1: every scene in
+        narrative order, with the layer's blocks for it. A scene the layer holds no text for keeps its place
+        with no blocks. A project may hold several manuscript layers, such as a branch of the story, so the
+        request names the one to export. A layer of another kind answers 404.
+      tags: [manuscript]
+      parameters:
+        - $ref: "#/components/parameters/parentProjectID"
+        - $ref: "#/components/parameters/manuscriptLayerID"
+      responses:
+        "200":
+          $ref: "#/components/responses/manuscript"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/plannedDowntime"
+        default:
+          $ref: "#/components/responses/internalError"
+
 components:
   responses:
     pong:
@@ -957,6 +990,27 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/cellPage"
+
+    manuscript:
+      description: The manuscript, format v1.
+      content:
+        application/json:
+          schema:
+            $ref: "./internal/models/schemas/manuscript.schema.json"
+          examples:
+            french:
+              value:
+                format: manuscript
+                formatVersion: 1
+                title: Les Heures claires
+                language: fr
+                scenes:
+                  - title: Ouverture
+                    blocks:
+                      - { kind: narration, text: La pluie battait les vitres. }
+                      - { kind: dialogue, speaker: Marie, parts: [{ tone: à voix basse }, { text: Tu es venu. }] }
+                  - { title: Interlude, blocks: [] }
+                appendices: {}
 
     badRequest:
       description: |
@@ -1794,6 +1848,14 @@ components:
       required: true
       schema:
         $ref: "#/components/schemas/projectID"
+
+    manuscriptLayerID:
+      name: layerID
+      in: query
+      description: The manuscript layer to export.
+      required: true
+      schema:
+        $ref: "#/components/schemas/layerID"
 
     composerLimit:
       name: limit
