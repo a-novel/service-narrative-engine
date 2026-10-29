@@ -90,11 +90,11 @@ type promptProject struct {
 
 // fixtureSceneID and fixtureLayerID give the scene and the layer at a position of a fixture their ID.
 func fixtureSceneID(position int) uuid.UUID {
-	return uuid.MustParse(fmt.Sprintf("00000000-0000-0000-0000-0000000001%02d", position))
+	return uuid.MustParse(fmt.Sprintf("00000000-0000-0000-0000-00000001%04d", position))
 }
 
 func fixtureLayerID(position int) uuid.UUID {
-	return uuid.MustParse(fmt.Sprintf("00000000-0000-0000-0000-0000000002%02d", position))
+	return uuid.MustParse(fmt.Sprintf("00000000-0000-0000-0000-00000002%04d", position))
 }
 
 // loadPromptProject reads the fixture of a language, and returns its snapshot and budgets.

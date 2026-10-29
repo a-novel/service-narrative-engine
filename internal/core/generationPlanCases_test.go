@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
 	"github.com/a-novel/service-narrative-engine/internal/core"
@@ -190,6 +191,19 @@ func generationPlanCases() []*generationPlanCase {
 			request:      suggestRequest(planProject(4), cellTarget(3, 0, revise)),
 			extra:        outlineCost + outlineCost/10,
 			expectLevels: []string{omitted, omitted, outline, full},
+		},
+		{
+			// The plan stays within the budget while hundreds of scenes share it.
+			name:    "Success/ManyScenes",
+			request: suggestRequest(planProject(200), cellTarget(0, 0, revise)),
+			extra:   100 * outlineCost,
+			expect: func(t *testing.T, plan *core.ContextPlan) {
+				t.Helper()
+
+				outlines := lo.CountBy(plan.Scenes, func(scene *core.ContextScene) bool { return scene.Level == outline })
+				require.Greater(t, outlines, 100)
+				require.Equal(t, omitted, plan.Scenes[199].Level)
+			},
 		},
 		{
 			name: "Success/SharedNames",

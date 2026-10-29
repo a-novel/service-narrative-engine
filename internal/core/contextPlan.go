@@ -34,7 +34,8 @@ type ContextPlan struct {
 	// Targets lists what the generation writes or recaps, in the order of the request.
 	Targets []*ContextTarget
 
-	// Budget caps the token estimate of the prompt, from the configuration of the kind.
+	// Budget is the token estimate the prompt stays within, from the configuration of the kind. Only a frame,
+	// a task and scenes of targets that alone outgrow it make the prompt larger.
 	Budget int
 	// Estimate is the token estimate of the prompt.
 	Estimate int

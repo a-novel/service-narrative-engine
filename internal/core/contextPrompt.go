@@ -164,7 +164,14 @@ func (draft *contextDraft) renderUser(templates *template.Template, budget int) 
 		return "", err
 	}
 
-	budget -= estimateTokens(frame) + estimateTokens(task)
+	// The message without scenes is what every scene adds to, so the sum of the parts' estimates bounds the
+	// whole message's estimate.
+	bare, err := execute(templates, "user", &promptUser{Frame: frame, Task: task})
+	if err != nil {
+		return "", err
+	}
+
+	budget -= estimateTokens(bare)
 
 	for _, scene := range draft.scenes {
 		if scene.pinned {
@@ -208,7 +215,8 @@ func (draft *contextDraft) renderScenes(templates *template.Template) error {
 				return err
 			}
 
-			scene.renders[level] = &sceneRender{text: text, cost: estimateTokens(text)}
+			// The user message writes each scene on a line of its own.
+			scene.renders[level] = &sceneRender{text: text, cost: estimateTokens("\n" + text)}
 		}
 	}
 
