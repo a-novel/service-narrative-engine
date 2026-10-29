@@ -33,6 +33,7 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/handlers"
 )
 
+//nolint:maintidx // main wires the whole dependency graph as one flat list, one line per dependency.
 func main() {
 	cfg := config.AppPresetDefault
 
@@ -100,6 +101,8 @@ func main() {
 	daoSceneMove := dao.NewPgSceneMove()
 	daoSceneDelete := dao.NewPgSceneDelete()
 	daoScenesDelete := dao.NewPgScenesDelete()
+	daoSceneLock := dao.NewPgSceneLock()
+	daoSceneLength := dao.NewPgSceneLength()
 	daoLayerInsert := dao.NewPgLayerInsert()
 	daoLayersInsert := dao.NewPgLayersInsert()
 	daoLayerKind := dao.NewPgLayerKind()
@@ -149,8 +152,12 @@ func main() {
 	serviceLayerDelete := core.NewLayerDelete(daoProjectLock, daoLayerKind, daoLayerDelete, transactor)
 	serviceLayersDelete := core.NewLayersDelete(daoProjectLock, daoLayerKind, daoLayersDelete, transactor)
 	serviceCellList := core.NewCellList(daoProjectOwned, daoCellList)
-	serviceCellWrite := core.NewCellWrite(daoProjectOwned, daoLayerKind, daoCellUpsert)
-	serviceCellsWrite := core.NewCellsWrite(daoProjectOwned, daoLayerKind, daoCellsUpsert)
+	serviceCellWrite := core.NewCellWrite(
+		daoProjectOwned, daoLayerKind, daoSceneLock, daoCellUpsert, daoSceneLength, transactor,
+	)
+	serviceCellsWrite := core.NewCellsWrite(
+		daoProjectOwned, daoLayerKind, daoSceneLock, daoCellsUpsert, daoSceneLength, transactor,
+	)
 	serviceManuscriptExport := core.NewManuscriptExport(
 		daoProjectOwned, daoLayerKind, daoProjectSelect, daoManuscriptSelect,
 	)

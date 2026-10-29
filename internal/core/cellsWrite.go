@@ -12,6 +12,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/a-novel-kit/golib/otel"
+	"github.com/a-novel-kit/golib/transaction"
 
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 	"github.com/a-novel/service-narrative-engine/internal/models/schemas"
@@ -27,9 +28,19 @@ type CellsWriteDaoKind interface {
 	Exec(ctx context.Context, request *dao.LayerKindRequest) ([]*dao.LayerKind, error)
 }
 
+// CellsWriteDaoLock locks the cells' scenes, so writes to their cells run one at a time.
+type CellsWriteDaoLock interface {
+	Exec(ctx context.Context, request *dao.SceneLockRequest) error
+}
+
 // CellsWriteDao writes the cells. It refuses a scene or a layer of another project.
 type CellsWriteDao interface {
 	Exec(ctx context.Context, request *dao.CellsUpsertRequest) ([]*dao.CellUpsertRow, error)
+}
+
+// CellsWriteDaoLength reads how many characters the cells of the scenes hold.
+type CellsWriteDaoLength interface {
+	Exec(ctx context.Context, request *dao.SceneLengthRequest) ([]*dao.SceneLength, error)
 }
 
 // CellsWriteItem is one cell of a [CellsWriteRequest].
@@ -53,15 +64,28 @@ type CellsWriteRequest struct {
 
 // CellsWrite writes the content of cells, which it validates against the content schema of each
 // layer's kind, and returns the written cells in the order of the request, without their content. The
-// first write of a cell creates it, and it writes all of them or none.
+// first write of a cell creates it, and it writes all of them or none: none when one of their scenes would
+// hold more than [SceneContentMax] characters.
 type CellsWrite struct {
-	daoOwner CellsWriteDaoOwner
-	daoKind  CellsWriteDaoKind
-	dao      CellsWriteDao
+	daoOwner   CellsWriteDaoOwner
+	daoKind    CellsWriteDaoKind
+	daoLock    CellsWriteDaoLock
+	dao        CellsWriteDao
+	daoLength  CellsWriteDaoLength
+	transactor transaction.Transactor
 }
 
-func NewCellsWrite(daoOwner CellsWriteDaoOwner, daoKind CellsWriteDaoKind, dao CellsWriteDao) *CellsWrite {
-	return &CellsWrite{daoOwner: daoOwner, daoKind: daoKind, dao: dao}
+func NewCellsWrite(
+	daoOwner CellsWriteDaoOwner,
+	daoKind CellsWriteDaoKind,
+	daoLock CellsWriteDaoLock,
+	dao CellsWriteDao,
+	daoLength CellsWriteDaoLength,
+	transactor transaction.Transactor,
+) *CellsWrite {
+	return &CellsWrite{
+		daoOwner: daoOwner, daoKind: daoKind, daoLock: daoLock, dao: dao, daoLength: daoLength, transactor: transactor,
+	}
 }
 
 func (service *CellsWrite) Exec(ctx context.Context, request *CellsWriteRequest) ([]*WrittenCell, error) {
@@ -114,23 +138,44 @@ func (service *CellsWrite) Exec(ctx context.Context, request *CellsWriteRequest)
 		}
 	}
 
-	entities, err := service.dao.Exec(ctx, &dao.CellsUpsertRequest{
-		ProjectID: request.ProjectID,
-		Cells: lo.Map(request.Cells, func(cell CellsWriteItem, _ int) dao.CellsUpsertItem {
-			return dao.CellsUpsertItem{SceneID: cell.SceneID, LayerID: cell.LayerID, Content: cell.Content}
-		}),
-		Now: time.Now(),
+	sceneIDs := lo.Uniq(lo.Map(request.Cells, func(cell CellsWriteItem, _ int) uuid.UUID { return cell.SceneID }))
+
+	var entities []*dao.CellUpsertRow
+
+	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
+		err := service.daoLock.Exec(ctx, &dao.SceneLockRequest{ProjectID: request.ProjectID, IDs: sceneIDs})
+		if err != nil {
+			return fmt.Errorf("lock scenes: %w", err)
+		}
+
+		entities, err = service.dao.Exec(ctx, &dao.CellsUpsertRequest{
+			ProjectID: request.ProjectID,
+			Cells: lo.Map(request.Cells, func(cell CellsWriteItem, _ int) dao.CellsUpsertItem {
+				return dao.CellsUpsertItem{SceneID: cell.SceneID, LayerID: cell.LayerID, Content: cell.Content}
+			}),
+			Now: time.Now(),
+		})
+
+		switch {
+		case errors.Is(err, dao.ErrCellsUpsertSceneNotFound):
+			err = errors.Join(err, ErrSceneNotFound)
+		case errors.Is(err, dao.ErrCellsUpsertLayerNotFound):
+			err = errors.Join(err, ErrLayerNotFound)
+		}
+
+		if err != nil {
+			return fmt.Errorf("write cells: %w", err)
+		}
+
+		err = checkSceneContent(ctx, service.daoLength, request.ProjectID, sceneIDs)
+		if err != nil {
+			return fmt.Errorf("check scene content: %w", err)
+		}
+
+		return nil
 	})
-
-	switch {
-	case errors.Is(err, dao.ErrCellsUpsertSceneNotFound):
-		err = errors.Join(err, ErrSceneNotFound)
-	case errors.Is(err, dao.ErrCellsUpsertLayerNotFound):
-		err = errors.Join(err, ErrLayerNotFound)
-	}
-
 	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("write cells: %w", err))
+		return nil, otel.ReportError(span, fmt.Errorf("run transaction: %w", err))
 	}
 
 	written := lo.KeyBy(entities, func(row *dao.CellUpsertRow) [2]uuid.UUID {

@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/a-novel-kit/golib/otel"
+	"github.com/a-novel-kit/golib/transaction"
 
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 	"github.com/a-novel/service-narrative-engine/internal/models/schemas"
@@ -26,9 +27,19 @@ type CellWriteDaoKind interface {
 	Exec(ctx context.Context, request *dao.LayerKindRequest) ([]*dao.LayerKind, error)
 }
 
+// CellWriteDaoLock locks the cell's scene, so writes to its cells run one at a time.
+type CellWriteDaoLock interface {
+	Exec(ctx context.Context, request *dao.SceneLockRequest) error
+}
+
 // CellWriteDao writes the cell. It refuses a scene or a layer of another project.
 type CellWriteDao interface {
 	Exec(ctx context.Context, request *dao.CellUpsertRequest) (*dao.CellUpsertRow, error)
+}
+
+// CellWriteDaoLength reads how many characters the cells of the scene hold.
+type CellWriteDaoLength interface {
+	Exec(ctx context.Context, request *dao.SceneLengthRequest) ([]*dao.SceneLength, error)
 }
 
 // CellWriteRequest carries the new content of a cell.
@@ -45,16 +56,29 @@ type CellWriteRequest struct {
 }
 
 // CellWrite writes the content of one cell, which it validates against the content schema of the layer's
-// kind, and returns the written cell without its content. The first write creates the cell. [CellsWrite]
-// writes several at once.
+// kind, and returns the written cell without its content. The first write creates the cell. It writes
+// nothing when the scene would hold more than [SceneContentMax] characters. [CellsWrite] writes several at
+// once.
 type CellWrite struct {
-	daoOwner CellWriteDaoOwner
-	daoKind  CellWriteDaoKind
-	dao      CellWriteDao
+	daoOwner   CellWriteDaoOwner
+	daoKind    CellWriteDaoKind
+	daoLock    CellWriteDaoLock
+	dao        CellWriteDao
+	daoLength  CellWriteDaoLength
+	transactor transaction.Transactor
 }
 
-func NewCellWrite(daoOwner CellWriteDaoOwner, daoKind CellWriteDaoKind, dao CellWriteDao) *CellWrite {
-	return &CellWrite{daoOwner: daoOwner, daoKind: daoKind, dao: dao}
+func NewCellWrite(
+	daoOwner CellWriteDaoOwner,
+	daoKind CellWriteDaoKind,
+	daoLock CellWriteDaoLock,
+	dao CellWriteDao,
+	daoLength CellWriteDaoLength,
+	transactor transaction.Transactor,
+) *CellWrite {
+	return &CellWrite{
+		daoOwner: daoOwner, daoKind: daoKind, daoLock: daoLock, dao: dao, daoLength: daoLength, transactor: transactor,
+	}
 }
 
 func (service *CellWrite) Exec(ctx context.Context, request *CellWriteRequest) (*WrittenCell, error) {
@@ -103,24 +127,47 @@ func (service *CellWrite) Exec(ctx context.Context, request *CellWriteRequest) (
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	row, err := service.dao.Exec(ctx, &dao.CellUpsertRequest{
-		ProjectID: request.ProjectID,
-		SceneID:   request.SceneID,
-		LayerID:   request.LayerID,
-		Content:   request.Content,
-		Now:       time.Now(),
+	sceneIDs := []uuid.UUID{request.SceneID}
+
+	var cell *WrittenCell
+
+	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
+		err := service.daoLock.Exec(ctx, &dao.SceneLockRequest{ProjectID: request.ProjectID, IDs: sceneIDs})
+		if err != nil {
+			return fmt.Errorf("lock scene: %w", err)
+		}
+
+		row, err := service.dao.Exec(ctx, &dao.CellUpsertRequest{
+			ProjectID: request.ProjectID,
+			SceneID:   request.SceneID,
+			LayerID:   request.LayerID,
+			Content:   request.Content,
+			Now:       time.Now(),
+		})
+
+		switch {
+		case errors.Is(err, dao.ErrCellUpsertSceneNotFound):
+			err = errors.Join(err, ErrSceneNotFound)
+		case errors.Is(err, dao.ErrCellUpsertLayerNotFound):
+			err = errors.Join(err, ErrLayerNotFound)
+		}
+
+		if err != nil {
+			return fmt.Errorf("write cell: %w", err)
+		}
+
+		err = checkSceneContent(ctx, service.daoLength, request.ProjectID, sceneIDs)
+		if err != nil {
+			return fmt.Errorf("check scene content: %w", err)
+		}
+
+		cell = newWrittenCell(row)
+
+		return nil
 	})
-
-	switch {
-	case errors.Is(err, dao.ErrCellUpsertSceneNotFound):
-		err = errors.Join(err, ErrSceneNotFound)
-	case errors.Is(err, dao.ErrCellUpsertLayerNotFound):
-		err = errors.Join(err, ErrLayerNotFound)
-	}
-
 	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("write cell: %w", err))
+		return nil, otel.ReportError(span, fmt.Errorf("run transaction: %w", err))
 	}
 
-	return newWrittenCell(row), nil
+	return cell, nil
 }

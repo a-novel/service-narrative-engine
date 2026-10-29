@@ -21,8 +21,8 @@ var (
 	ErrSceneNotFound = errors.New("scene not found")
 	// ErrLayerNotFound is returned when the project holds no layer with the ID.
 	ErrLayerNotFound = errors.New("layer not found")
-	// ErrProjectFull is returned when a project already holds as many beats or layers as it may, or a beat as
-	// many scenes.
+	// ErrProjectFull is returned when a project already holds as many beats or layers as it may, a beat as
+	// many scenes, or a write would bring a scene past [SceneContentMax] characters.
 	ErrProjectFull = errors.New("project full")
 	// ErrRequiredLayer is returned by a delete that would leave a project without a layer of a required
 	// kind, such as the manuscript.
@@ -78,6 +78,35 @@ func lockOwnedProject(ctx context.Context, daoLock projectLockDao, opts projectO
 
 	if !owned {
 		return otel.ReportError(span, ErrProjectNotFound)
+	}
+
+	return nil
+}
+
+// sceneLengthDao reads how many characters the cells of scenes hold. Each service names its own interface,
+// and every one satisfies this.
+type sceneLengthDao interface {
+	Exec(ctx context.Context, request *dao.SceneLengthRequest) ([]*dao.SceneLength, error)
+}
+
+// checkSceneContent returns [ErrProjectFull] when one of the scenes holds more than [SceneContentMax]
+// characters. A cell write runs it after its write, in the transaction that locked the scenes, so the count
+// holds that write and every earlier one.
+func checkSceneContent(ctx context.Context, daoLength sceneLengthDao, projectID uuid.UUID, sceneIDs []uuid.UUID) error {
+	ctx, span := otel.Tracer().Start(ctx, "core.checkSceneContent")
+	defer span.End()
+
+	lengths, err := daoLength.Exec(ctx, &dao.SceneLengthRequest{ProjectID: projectID, IDs: sceneIDs})
+	if err != nil {
+		return otel.ReportError(span, err)
+	}
+
+	for _, scene := range lengths {
+		if scene.Length > SceneContentMax {
+			return otel.ReportError(span, fmt.Errorf(
+				"%w: scene %s would hold %d characters", ErrProjectFull, scene.SceneID, scene.Length,
+			))
+		}
 	}
 
 	return nil

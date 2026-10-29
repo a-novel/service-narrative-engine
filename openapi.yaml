@@ -992,7 +992,8 @@ paths:
         Writes the content of the cell where a scene and a layer of the project cross, and returns the cell's
         scene, layer and write time without the content the client already holds. The content follows the
         content schema of the layer's kind and weighs at most 2 MiB, and the body at most 4 MiB. The first
-        write creates the cell. cellsWrite writes several at once.
+        write creates the cell. A write that would bring the scene's cells past 400,000 characters, counted
+        over their stored JSON documents, writes nothing and answers 422. cellsWrite writes several at once.
       tags: [cell]
       requestBody:
         required: true
@@ -1011,6 +1012,8 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/projectFull"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -1057,7 +1060,8 @@ paths:
         scene, layer and write time, in the order of the request, without the content the client already
         holds. Each content follows the content schema of its layer's kind and weighs at most 2 MiB, and the
         whole body at most 50 MiB. The first write of a cell creates it. The cells are all written, or none
-        are.
+        are: none when one of their scenes would hold more than 400,000 characters over its cells' stored
+        JSON documents, which answers 422.
       tags: [cell]
       requestBody:
         required: true
@@ -1076,6 +1080,8 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/projectFull"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -1326,7 +1332,8 @@ components:
 
     projectFull:
       description: |
-        The project already holds as many beats or layers as it may, or the beat as many scenes.
+        The project already holds as many beats or layers as it may, the beat as many scenes, or the write
+        would bring a scene past 400,000 characters.
 
     requiredLayer:
       description: |
