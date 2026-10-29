@@ -2,6 +2,7 @@ package dao
 
 import (
 	"context"
+	"database/sql"
 	_ "embed"
 	"encoding/json"
 	"errors"
@@ -19,7 +20,7 @@ var cellUpsertQuery string
 
 var (
 	// ErrCellUpsertSceneNotFound is returned by [PgCellUpsert.Exec] when the project holds no scene
-	// with the ID.
+	// with the ID, as when the scene and the layer already form a cell of another project.
 	ErrCellUpsertSceneNotFound = errors.New("scene not found")
 	// ErrCellUpsertLayerNotFound is returned by [PgCellUpsert.Exec] when the project holds no layer
 	// with the ID.
@@ -76,7 +77,7 @@ func (dao *PgCellUpsert) Exec(ctx context.Context, request *CellUpsertRequest) (
 	).Scan(ctx, entity)
 
 	switch {
-	case isViolation(err, pgForeignKeyViolation, "cells_scene_fkey"):
+	case errors.Is(err, sql.ErrNoRows), isViolation(err, pgForeignKeyViolation, "cells_scene_fkey"):
 		err = errors.Join(err, ErrCellUpsertSceneNotFound)
 	case isViolation(err, pgForeignKeyViolation, "cells_layer_fkey"):
 		err = errors.Join(err, ErrCellUpsertLayerNotFound)

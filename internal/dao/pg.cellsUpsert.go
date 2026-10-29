@@ -21,7 +21,7 @@ var cellsUpsertQuery string
 
 var (
 	// ErrCellsUpsertSceneNotFound is returned by [PgCellsUpsert.Exec] when the project holds no scene
-	// with the ID.
+	// with the ID, as when a scene and a layer already form a cell of another project.
 	ErrCellsUpsertSceneNotFound = errors.New("scene not found")
 	// ErrCellsUpsertLayerNotFound is returned by [PgCellsUpsert.Exec] when the project holds no layer
 	// with the ID.
@@ -86,6 +86,11 @@ func (dao *PgCellsUpsert) Exec(ctx context.Context, request *CellsUpsertRequest)
 
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("execute query: %w", err))
+	}
+
+	// A pair that forms a cell of another project makes the statement write no row.
+	if len(entities) < len(request.Cells) {
+		return nil, otel.ReportError(span, ErrCellsUpsertSceneNotFound)
 	}
 
 	return entities, nil

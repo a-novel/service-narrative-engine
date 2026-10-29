@@ -24,6 +24,12 @@ func TestPgCellsUpsert(t *testing.T) {
 	content := json.RawMessage(`{"text": "Marie, Paul"}`)
 	manuscriptContent := json.RawMessage(`{"blocks": ["Marie attend."]}`)
 
+	// otherCell is a cell of the other project, which no write of the test project may change.
+	otherCell := &dao.Cell{
+		ProjectID: otherProjectID, SceneID: otherSceneID, LayerID: otherLayerID,
+		Content: json.RawMessage(`{"blocks": []}`), UpdatedAt: updatedAt,
+	}
+
 	testCases := []struct {
 		name string
 
@@ -126,6 +132,20 @@ func TestPgCellsUpsert(t *testing.T) {
 
 			expectErr: dao.ErrCellsUpsertSceneNotFound,
 		},
+		{
+			name: "Error/OtherProjectCell",
+
+			request: &dao.CellsUpsertRequest{
+				ProjectID: projectID,
+				Cells: []dao.CellsUpsertItem{
+					{SceneID: sceneID1, LayerID: notesLayerID, Content: content},
+					{SceneID: otherSceneID, LayerID: otherLayerID, Content: content},
+				},
+				Now: now,
+			},
+
+			expectErr: dao.ErrCellsUpsertSceneNotFound,
+		},
 	}
 
 	daoCellsUpsert := dao.NewPgCellsUpsert()
@@ -137,10 +157,13 @@ func TestPgCellsUpsert(t *testing.T) {
 			postgrestest.RunDBTest(t, configtest.PostgresPreset, migrations.Migrations, func(ctx context.Context, t *testing.T) {
 				t.Helper()
 
-				insertFixtures(ctx, t, composerFixtures())
+				data := composerFixtures()
+				data.cells = append(data.cells, otherCell)
+				insertFixtures(ctx, t, data)
 
 				result, err := daoCellsUpsert.Exec(ctx, testCase.request)
 				require.ErrorIs(t, err, testCase.expectErr)
+				requireCellsEqual(t, []*dao.Cell{otherCell}, listCells(ctx, t, otherProjectID))
 
 				// A failed batch writes none of its cells, the valid ones included.
 				if testCase.expectErr != nil {
