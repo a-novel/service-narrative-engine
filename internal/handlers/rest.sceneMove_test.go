@@ -25,6 +25,7 @@ func TestRestSceneMove(t *testing.T) {
 		return newRequest(t, http.MethodPost, "/v1/scene/move", map[string]any{
 			"projectID": projectID,
 			"id":        sceneID,
+			"beatID":    beatID,
 			"position":  2,
 		})
 	}
@@ -90,6 +91,24 @@ func TestRestSceneMove(t *testing.T) {
 			expectStatus: http.StatusNotFound,
 		},
 		{
+			name: "Error/BeatNotFound",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[*core.Scene]{err: core.ErrBeatNotFound},
+
+			expectStatus: http.StatusNotFound,
+		},
+		{
+			name: "Error/BeatFull",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[*core.Scene]{err: core.ErrProjectFull},
+
+			expectStatus: http.StatusUnprocessableEntity,
+		},
+		{
 			name: "Error/InvalidRequest",
 
 			request: validRequest,
@@ -117,7 +136,9 @@ func TestRestSceneMove(t *testing.T) {
 
 			if testCase.serviceMock != nil {
 				service.EXPECT().
-					Exec(mock.Anything, &core.SceneMoveRequest{OwnerID: ownerID, ProjectID: projectID, ID: sceneID, Position: 2}).
+					Exec(mock.Anything, &core.SceneMoveRequest{
+						OwnerID: ownerID, ProjectID: projectID, ID: sceneID, BeatID: beatID, Position: 2,
+					}).
 					Return(testCase.serviceMock.resp, testCase.serviceMock.err)
 			}
 

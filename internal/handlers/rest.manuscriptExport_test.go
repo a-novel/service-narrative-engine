@@ -18,8 +18,9 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/models/schemas"
 )
 
-// manuscriptGolden is the export of a French project with narration, dialogue with tones, and an empty
-// scene. The JS client's tests expect the same document from a running service.
+// manuscriptGolden is the export of a French project with narration, dialogue with tones, an empty scene,
+// a beat holding two scenes and a beat holding none. The JS client's tests expect the same document from a
+// running service.
 //
 //go:embed testdata/manuscript.golden.json
 var manuscriptGolden []byte
@@ -38,17 +39,25 @@ func TestRestManuscriptExport(t *testing.T) {
 	coreManuscript := &core.Manuscript{
 		Title:    "Les Heures claires",
 		Language: "fr",
+		Beats: []*core.ManuscriptBeat{
+			{Title: "Les retrouvailles", Description: "Marie attend Paul, qui revient enfin."},
+			{Title: "Le doute"},
+			{Title: "Le départ", Description: "Paul repart sans prévenir."},
+			{Title: "Épilogue", Description: "Des années plus tard."},
+		},
 		Scenes: []*core.ManuscriptScene{
-			{Title: "Ouverture", Blocks: json.RawMessage(`[
+			{Beat: 0, Title: "La fenêtre", Blocks: json.RawMessage(`[
 				{"kind":"narration","text":"La pluie battait les vitres. Marie guettait la rue depuis l’aube."},
 				{"kind":"dialogue","speaker":"Marie","parts":[
 					{"tone":"à voix basse"},{"text":"Tu es venu."},
 					{"tone":"plus fort, sans se retourner"},{"text":"Tu avais promis d’écrire."}
-				]},
-				{"kind":"dialogue","speaker":"Paul","parts":[{"text":"Je suis là, maintenant."}]}
+				]}
 			]`)},
-			{Title: "Interlude", Blocks: json.RawMessage(`[]`)},
-			{Title: "Dénouement", Blocks: json.RawMessage(
+			{Beat: 0, Title: "Le seuil", Blocks: json.RawMessage(
+				`[{"kind":"dialogue","speaker":"Paul","parts":[{"text":"Je suis là, maintenant."}]}]`,
+			)},
+			{Beat: 1, Title: "Interlude", Blocks: json.RawMessage(`[]`)},
+			{Beat: 2, Title: "Le matin", Blocks: json.RawMessage(
 				`[{"kind":"narration","text":"Au matin, la pluie avait cessé.\n\nPaul était parti."}]`,
 			)},
 		},

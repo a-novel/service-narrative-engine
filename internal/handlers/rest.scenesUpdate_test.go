@@ -27,7 +27,6 @@ func TestRestScenesUpdate(t *testing.T) {
 			"scenes": []any{map[string]any{
 				"id":          sceneID,
 				"title":       "Ouverture",
-				"color":       "#e0457b",
 				"description": "Marie attend.",
 				"prompt":      "Lent.",
 			}},
@@ -126,7 +125,7 @@ func TestRestScenesUpdate(t *testing.T) {
 						OwnerID:   ownerID,
 						ProjectID: projectID,
 						Scenes: []core.ScenesUpdateItem{{
-							ID: sceneID, Title: "Ouverture", Color: "#e0457b", Description: "Marie attend.", Prompt: "Lent.",
+							ID: sceneID, Title: "Ouverture", Description: "Marie attend.", Prompt: "Lent.",
 						}},
 					}).
 					Return(testCase.serviceMock.resp, testCase.serviceMock.err)

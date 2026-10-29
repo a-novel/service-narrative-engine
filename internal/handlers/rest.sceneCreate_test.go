@@ -24,9 +24,9 @@ func TestRestSceneCreate(t *testing.T) {
 
 		return newRequest(t, http.MethodPost, "/v1/scene", map[string]any{
 			"projectID":   projectID,
+			"beatID":      beatID,
 			"position":    2,
 			"title":       "Ouverture",
-			"color":       "#e0457b",
 			"description": "Marie attend.",
 			"prompt":      "Lent.",
 		})
@@ -84,7 +84,16 @@ func TestRestSceneCreate(t *testing.T) {
 			expectStatus: http.StatusNotFound,
 		},
 		{
-			name: "Error/ProjectFull",
+			name: "Error/BeatNotFound",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[*core.Scene]{err: core.ErrBeatNotFound},
+
+			expectStatus: http.StatusNotFound,
+		},
+		{
+			name: "Error/BeatFull",
 
 			request: validRequest,
 
@@ -123,9 +132,9 @@ func TestRestSceneCreate(t *testing.T) {
 					Exec(mock.Anything, &core.SceneCreateRequest{
 						OwnerID:     ownerID,
 						ProjectID:   projectID,
+						BeatID:      beatID,
 						Position:    2,
 						Title:       "Ouverture",
-						Color:       "#e0457b",
 						Description: "Marie attend.",
 						Prompt:      "Lent.",
 					}).

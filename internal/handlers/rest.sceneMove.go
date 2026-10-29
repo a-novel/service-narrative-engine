@@ -23,7 +23,9 @@ type RestSceneMoveRequest struct {
 	ProjectID uuid.UUID `json:"projectID"`
 	ID        uuid.UUID `json:"id"`
 
-	// Position is the scene's place in narrative order after the move, from 0. A position past the last
+	// BeatID is the beat that holds the scene after the move: its own, or another beat of the project.
+	BeatID uuid.UUID `json:"beatID"`
+	// Position is the scene's place in that beat after the move, from 0. A position past the beat's last
 	// scene moves it last.
 	Position int `json:"position"`
 }
@@ -63,6 +65,7 @@ func (handler *RestSceneMove) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		OwnerID:   ownerID,
 		ProjectID: request.ProjectID,
 		ID:        request.ID,
+		BeatID:    request.BeatID,
 		Position:  request.Position,
 	}
 

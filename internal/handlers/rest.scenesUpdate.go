@@ -25,11 +25,9 @@ type RestScenesUpdateItem struct {
 
 	// Title names the scene in the composer.
 	Title string `json:"title"`
-	// Color is the scene's color in the composer, as a #rrggbb hex code in either case.
-	Color string `json:"color"`
-	// Description says what the scene is for, written for the author.
+	// Description refines the beat's description for the scene. Empty keeps the beat's.
 	Description string `json:"description"`
-	// Prompt holds extra instructions for the model when it writes about the scene.
+	// Prompt refines the beat's prompt for the scene. Empty keeps the beat's.
 	Prompt string `json:"prompt"`
 }
 
@@ -94,6 +92,6 @@ func (handler *RestScenesUpdate) ServeHTTP(w http.ResponseWriter, r *http.Reques
 // loadScenesUpdateItem converts one item of the request body to its core counterpart.
 func loadScenesUpdateItem(item RestScenesUpdateItem) core.ScenesUpdateItem {
 	return core.ScenesUpdateItem{
-		ID: item.ID, Title: item.Title, Color: item.Color, Description: item.Description, Prompt: item.Prompt,
+		ID: item.ID, Title: item.Title, Description: item.Description, Prompt: item.Prompt,
 	}
 }
