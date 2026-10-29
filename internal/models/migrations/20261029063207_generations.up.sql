@@ -45,7 +45,8 @@ CREATE TABLE generation_calls (
   /* The body genai sends the provider, byte for byte. It stays until the call succeeds, so a call that
   waits, fails or is cancelled resubmits it as genai expects to replay it. */
   payload bytea,
-  /* The genai generation that runs the call, once genai admits it. */
+  /* The genai generation that runs the call, once genai admits it. A call cancelled while it waited
+  has none. */
   genai_id uuid,
   status generation_status NOT NULL DEFAULT 'pending',
   /* The call's output, mapped back through its handles. */
@@ -57,7 +58,14 @@ CREATE TABLE generation_calls (
   -- genai admits a call before it runs, a success drops its payload for its result, and only a
   -- failure carries a reason.
   CONSTRAINT generation_calls_status_check CHECK (
-    (status = 'pending') = (genai_id IS NULL)
+    (
+      status <> 'pending'
+      OR genai_id IS NULL
+    )
+    AND (
+      status NOT IN ('running', 'succeeded')
+      OR genai_id IS NOT NULL
+    )
     AND (status IN ('pending', 'running')) = (settled_at IS NULL)
     AND (status = 'succeeded') = (result IS NOT NULL)
     AND (status = 'succeeded') = (payload IS NULL)

@@ -1,4 +1,4 @@
-migration-history	sha256:263b5189202f3b63c333aeda716da03dc290e1798174dab41a4e6a98c808e675
+migration-history	sha256:e079d3b20f10f90e295c96a8a7a65bff9720f224996cdf86275f1a258367c618
 column	beats.color	text NOT NULL
 column	beats.description	text NOT NULL DEFAULT ''::text
 column	beats.id	uuid NOT NULL DEFAULT uuidv7()
@@ -82,7 +82,7 @@ constraint	generation_calls.generation_calls_generation_id_not_null	NOT NULL gen
 constraint	generation_calls.generation_calls_pkey	PRIMARY KEY (generation_id, "position")
 constraint	generation_calls.generation_calls_position_check	CHECK (("position" >= 0))
 constraint	generation_calls.generation_calls_position_not_null	NOT NULL "position"
-constraint	generation_calls.generation_calls_status_check	CHECK ((((status = 'pending'::generation_status) = (genai_id IS NULL)) AND ((status = ANY (ARRAY['pending'::generation_status, 'running'::generation_status])) = (settled_at IS NULL)) AND ((status = 'succeeded'::generation_status) = (result IS NOT NULL)) AND ((status = 'succeeded'::generation_status) = (payload IS NULL)) AND ((status = 'failed'::generation_status) = (error IS NOT NULL))))
+constraint	generation_calls.generation_calls_status_check	CHECK ((((status <> 'pending'::generation_status) OR (genai_id IS NULL)) AND ((status <> ALL (ARRAY['running'::generation_status, 'succeeded'::generation_status])) OR (genai_id IS NOT NULL)) AND ((status = ANY (ARRAY['pending'::generation_status, 'running'::generation_status])) = (settled_at IS NULL)) AND ((status = 'succeeded'::generation_status) = (result IS NOT NULL)) AND ((status = 'succeeded'::generation_status) = (payload IS NULL)) AND ((status = 'failed'::generation_status) = (error IS NOT NULL))))
 constraint	generation_calls.generation_calls_status_not_null	NOT NULL status
 constraint	generations.generations_created_at_not_null	NOT NULL created_at
 constraint	generations.generations_id_not_null	NOT NULL id
