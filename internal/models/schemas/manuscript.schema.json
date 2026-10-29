@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Manuscript",
+  "description": "The text of a narrative in manuscript format v1: every scene in narrative order, each with its blocks in reading order. A renderer turns it into a consumer format, such as a novel, a screenplay or a game.",
+  "type": "object",
+  "required": ["format", "formatVersion", "title", "language", "scenes", "appendices"],
+  "additionalProperties": false,
+  "properties": {
+    "format": {
+      "const": "manuscript",
+      "description": "Names the document a manuscript."
+    },
+    "formatVersion": {
+      "const": 1,
+      "description": "The version of the format the document follows."
+    },
+    "title": {
+      "type": "string",
+      "description": "The title of the narrative.",
+      "maxLength": 200
+    },
+    "language": {
+      "type": "string",
+      "description": "The language of the text, as a BCP 47 tag such as en or fr. The renderer applies its typography."
+    },
+    "scenes": {
+      "type": "array",
+      "description": "Every scene of the narrative, in narrative order. A scene without text keeps its place with no blocks.",
+      "maxItems": 500,
+      "items": { "$ref": "#/$defs/scene" }
+    },
+    "appendices": {
+      "type": "object",
+      "description": "Data about the text, keyed by appendix name. A reader skips an appendix it does not know."
+    }
+  },
+  "$defs": {
+    "scene": {
+      "type": "object",
+      "description": "One scene of the narrative. A block of the scene is named by its position, from 0.",
+      "required": ["title", "blocks"],
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "The title of the scene.",
+          "maxLength": 200
+        },
+        "blocks": { "$ref": "content.manuscript.schema.json#/properties/blocks" }
+      }
+    }
+  }
+}

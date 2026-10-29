@@ -16,6 +16,8 @@ var (
 	notesCases []byte
 	//go:embed testdata/content.manuscript.cases.json
 	manuscriptCases []byte
+	//go:embed testdata/manuscript.cases.json
+	formatCases []byte
 )
 
 // schemaCase is one document a content schema accepts or refuses.
@@ -64,26 +66,33 @@ func TestContent(t *testing.T) {
 func TestSchema(t *testing.T) {
 	t.Parallel()
 
-	suites := map[string][]byte{
-		"notes":      notesCases,
-		"manuscript": manuscriptCases,
+	notes, err := schemas.Content("notes")
+	require.NoError(t, err)
+
+	manuscript, err := schemas.Content("manuscript")
+	require.NoError(t, err)
+
+	suites := map[string]struct {
+		schema *schemas.Schema
+		cases  []byte
+	}{
+		"notes":      {schema: notes, cases: notesCases},
+		"manuscript": {schema: manuscript, cases: manuscriptCases},
+		"format":     {schema: schemas.Manuscript, cases: formatCases},
 	}
 
-	for kind, data := range suites {
+	for name, suite := range suites {
 		var cases []schemaCase
-		require.NoError(t, json.Unmarshal(data, &cases))
+		require.NoError(t, json.Unmarshal(suite.cases, &cases))
 
-		schema, err := schemas.Content(kind)
-		require.NoError(t, err)
-
-		t.Run(kind, func(t *testing.T) {
+		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
 			for _, testCase := range cases {
 				t.Run(testCase.Name, func(t *testing.T) {
 					t.Parallel()
 
-					err := schema.Validate(testCase.Document)
+					err := suite.schema.Validate(testCase.Document)
 					if testCase.Valid {
 						require.NoError(t, err)
 					} else {
@@ -95,7 +104,7 @@ func TestSchema(t *testing.T) {
 			t.Run("Error/NotJSON", func(t *testing.T) {
 				t.Parallel()
 
-				require.ErrorIs(t, schema.Validate(json.RawMessage(`{"text":`)), schemas.ErrInvalidDocument)
+				require.ErrorIs(t, suite.schema.Validate(json.RawMessage(`{"text":`)), schemas.ErrInvalidDocument)
 			})
 		})
 	}
