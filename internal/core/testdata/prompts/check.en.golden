@@ -51,7 +51,11 @@ Write the messages in English, the language of the project.
 
 === neighborhood
 <neighborhood>
-<scene handle="S1" level="outline">
+<scene handle="S1" level="full">
+<cell layer="L1">
+<narration>Rain beat against the café windows. Mary kept her eyes on the door.</narration>
+<dialogue speaker="Mary"><tone>under her breath</tone><text>He won't come.</text></dialogue>
+</cell>
 <cell layer="L2">Mary, a schoolteacher, thirty. She has waited for Paul for two years.</cell>
 <cell layer="L3">Sets up Paul's absence.</cell>
 </scene>

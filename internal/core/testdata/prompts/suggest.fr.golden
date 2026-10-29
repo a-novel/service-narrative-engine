@@ -1,5 +1,5 @@
 === call
-model gpt-6.1-terra, reasoning medium, at most 32000 output tokens
+model gpt-6.1-terra, reasoning medium, at most 64000 output tokens
 
 === developer
 Vous aidez un auteur à écrire un roman. L'auteur désigne des cibles, et vous proposez une suggestion pour chacune : un nouveau texte pour le titre ou la description d'une scène, ou pour une cellule de notes, ou bien des modifications du manuscrit d'une scène.

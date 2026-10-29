@@ -51,7 +51,11 @@ Ne signalez que ce que le texte permet d'affirmer : un mystère que l'histoire e
 
 === neighborhood
 <neighborhood>
-<scene handle="S1" level="outline">
+<scene handle="S1" level="full">
+<cell layer="L1">
+<narration>La pluie battait les vitres du café. Marie gardait les yeux sur la porte.</narration>
+<dialogue speaker="Marie"><tone>à voix basse</tone><text>Il ne viendra pas.</text></dialogue>
+</cell>
 <cell layer="L2">Marie, institutrice, trente ans. Elle attend Paul depuis deux ans.</cell>
 <cell layer="L3">Installe l'absence de Paul.</cell>
 </scene>

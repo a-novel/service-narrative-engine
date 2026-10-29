@@ -32,25 +32,35 @@ const (
 // recapLevels lists the levels that show a recap, richest first.
 var recapLevels = []string{ContextLevelCondensed, ContextLevelCompact, ContextLevelEssentials}
 
-// ContextPlan says what one generation reads and how the model names it. The model sees short handles,
-// such as S1 for a scene or B3 for a block, and the plan maps each back to what it names. A handle the
-// plan does not hold was never issued.
+// ContextPlan says what one generation reads, in one model call or several. A generation runs one call
+// unless it outgrows it and its kind splits it: suggest then gives each target a call of its own, and check
+// checks consecutive windows of scenes.
 type ContextPlan struct {
 	// Kind is the kind of the generation, one of [GenerationKinds].
 	Kind string
+	// Budget is the token estimate each prompt fills up to, from the configuration of the kind. Only a frame,
+	// a task and scenes that always enter make a prompt larger, up to the kind's limit, or its long limit as
+	// long context.
+	Budget int
 
+	// Calls lists the model calls of the generation. Handles keep one meaning across them, so the output of
+	// every call maps back through the call that produced it.
+	Calls []*ContextCall
+}
+
+// ContextCall says what one model call of a generation reads and how the model names it. The model sees
+// short handles, such as S1 for a scene or B3 for a block, and the call maps each back to what it names. A
+// handle the call does not hold was never issued to it.
+type ContextCall struct {
 	// Beats lists every beat of the project, in order, with the level the frame shows it at.
 	Beats []*ContextBeat
 	// Scenes lists every scene of the project, in narrative order, with the level it enters at.
 	Scenes []*ContextScene
 	// Layers lists the layers the context shows, in order.
 	Layers []*ContextLayer
-	// Targets lists what the generation writes or recaps, in the order of the request.
+	// Targets lists what the call writes or recaps, in the order of the request.
 	Targets []*ContextTarget
 
-	// Budget is the token estimate the prompt fills up to, from the configuration of the kind. Only a frame,
-	// a task and scenes of targets that alone outgrow it make the prompt larger, up to the kind's limit.
-	Budget int
 	// Estimate is the token estimate of the prompt.
 	Estimate int
 
@@ -59,13 +69,13 @@ type ContextPlan struct {
 }
 
 // Scene returns the scene the model names by handle, such as S1.
-func (plan *ContextPlan) Scene(handle string) (*ContextScene, bool) {
-	return lo.Find(plan.Scenes, func(scene *ContextScene) bool { return scene.Handle == handle })
+func (call *ContextCall) Scene(handle string) (*ContextScene, bool) {
+	return lo.Find(call.Scenes, func(scene *ContextScene) bool { return scene.Handle == handle })
 }
 
 // Target returns the target the model names by handle, such as T1.
-func (plan *ContextPlan) Target(handle string) (*ContextTarget, bool) {
-	return lo.Find(plan.Targets, func(target *ContextTarget) bool { return target.Handle == handle })
+func (call *ContextCall) Target(handle string) (*ContextTarget, bool) {
+	return lo.Find(call.Targets, func(target *ContextTarget) bool { return target.Handle == handle })
 }
 
 // ContextBeat is one beat as the frame of a generation shows it.
@@ -131,7 +141,8 @@ type ContextTarget struct {
 
 	// Mode is how the generation writes the target, one of [TargetModes]. It is empty for a recap.
 	Mode string
-	// Range is the span of a manuscript target's blocks the generation may change.
+	// Range is the span of a manuscript target's blocks the call may change. A target whose rewrite outgrows
+	// one call takes consecutive spans of its range in several calls, under one handle.
 	Range *Range
 	// Kept lists the positions of the blocks in the range that stay unchanged.
 	Kept []int

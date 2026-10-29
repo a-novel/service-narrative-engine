@@ -7,11 +7,14 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/a-novel-kit/golib/otel"
 
 	"github.com/a-novel/service-narrative-engine/internal/config"
+	"github.com/a-novel/service-narrative-engine/internal/config/prompts"
+	"github.com/a-novel/service-narrative-engine/internal/models/schemas"
 )
 
 const (
@@ -47,8 +50,10 @@ const (
 // SceneFields lists the fields of a scene a suggest generation may write.
 var SceneFields = []string{SceneFieldTitle, SceneFieldDescription}
 
-// ErrContextTooLarge is returned by [GenerationPlan] when the frame, the task and the scenes of the targets
-// alone outgrow the limit of the generation's kind. A narrower range or fewer targets fit.
+// ErrContextTooLarge is returned by [GenerationPlan] when a call outgrows its kind: the frame, the task and
+// the scenes that always enter pass the kind's limit, or its long limit as long context, or a suggestion's
+// rewrite passes its share of the output cap. A kind that splits gives each target or window a call of its
+// own first. A narrower range, fewer targets or excluded layers fit.
 var ErrContextTooLarge = errors.New("context too large")
 
 var errKindNotConfigured = errors.New("generation kind not configured")
@@ -141,9 +146,10 @@ type GenerationPlanRequest struct {
 	Overrides *GenerationOverrides `validate:"excluded_if=Kind consolidate"`
 }
 
-// GenerationPlan plans what one generation reads and renders its prompt, in the project's language, with
+// GenerationPlan plans what one generation reads and renders its prompts, in the project's language, with
 // the model settings of its kind. Each scene enters at the richest level the budget of the kind allows, the
-// targets' scenes always whole. The same request always gives the same plan and the same prompt.
+// targets' scenes always whole. A generation that outgrows one regular call runs as long context, then as
+// several calls, as its kind allows. The same request always gives the same plan and the same prompts.
 type GenerationPlan struct {
 	config config.Generations
 }
@@ -170,17 +176,34 @@ func (service *GenerationPlan) Exec(ctx context.Context, request *GenerationPlan
 		return nil, otel.ReportError(span, fmt.Errorf("%w: %s", errKindNotConfigured, request.Kind))
 	}
 
-	draft, err := newContextDraft(request)
+	templates, err := prompts.Lookup(request.Kind, request.Snapshot.Project.Language)
 	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("read project: %w", err))
+		return nil, otel.ReportError(span, fmt.Errorf("templates: %w", err))
 	}
 
-	plan, err := draft.render(kind)
+	output, err := schemas.Output(request.Kind)
 	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("render prompt: %w", err))
+		return nil, otel.ReportError(span, fmt.Errorf("output schema: %w", err))
 	}
 
-	span.SetAttributes(attribute.Int("prompt.estimate", plan.Estimate))
+	schema, err := output.Strict()
+	if err != nil {
+		return nil, otel.ReportError(span, fmt.Errorf("strict output schema: %w", err))
+	}
 
-	return plan, nil
+	splitter := &contextSplitter{
+		request: request, kind: kind, templates: templates, schema: schema, contents: map[cellKey]*cellContent{},
+	}
+
+	calls, err := splitter.calls()
+	if err != nil {
+		return nil, otel.ReportError(span, fmt.Errorf("plan calls: %w", err))
+	}
+
+	span.SetAttributes(
+		attribute.Int("prompt.calls", len(calls)),
+		attribute.Int("prompt.estimate", lo.SumBy(calls, func(call *ContextCall) int { return call.Estimate })),
+	)
+
+	return &ContextPlan{Kind: request.Kind, Budget: kind.Budget, Calls: calls}, nil
 }

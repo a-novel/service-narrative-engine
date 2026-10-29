@@ -48,11 +48,7 @@ func (content *cellContent) size() int {
 	size := utf8.RuneCountInString(content.Text)
 
 	for _, block := range content.Blocks {
-		size += utf8.RuneCountInString(block.Text) + utf8.RuneCountInString(block.Speaker)
-
-		for _, part := range block.Parts {
-			size += utf8.RuneCountInString(part.Text) + utf8.RuneCountInString(part.Tone)
-		}
+		size += block.size()
 	}
 
 	return size
@@ -67,6 +63,17 @@ type contentBlock struct {
 
 	Handle string `json:"-"`
 	Kept   bool   `json:"-"`
+}
+
+// size returns how many characters the block's text holds, before any markup.
+func (block *contentBlock) size() int {
+	size := utf8.RuneCountInString(block.Text) + utf8.RuneCountInString(block.Speaker)
+
+	for _, part := range block.Parts {
+		size += utf8.RuneCountInString(part.Text) + utf8.RuneCountInString(part.Tone)
+	}
+
+	return size
 }
 
 // contentPart is one part of a dialogue block: words spoken, or the tone of the next ones.
@@ -177,12 +184,26 @@ type draftTarget struct {
 	after  int
 }
 
+// callPart is the part of a generation one call reads. Its handles start after those of the calls before
+// it, so a handle keeps one meaning across the generation's calls.
+type callPart struct {
+	// handles counts, by prefix, the targets the calls before it named, and blocks the block handles they
+	// took.
+	handles map[string]int
+	blocks  int
+	// window marks one window of a check, whose scenes enter whole.
+	window bool
+}
+
 // contextDraft is a project as one generation reads it, while the planner builds the generation's
 // context: the snapshot with the request's overrides and exclusions applied, and a handle for every scene,
 // layer, target and block the model may see.
 type contextDraft struct {
 	request *GenerationPlanRequest
+	part    *callPart
 	project *Project
+	// contents holds the content of each stored cell once read, shared by every call of the generation.
+	contents map[cellKey]*cellContent
 
 	// beats lists every beat in order, scenes every scene in narrative order, and layers every layer in order.
 	beats  []*draftBeat
@@ -200,10 +221,12 @@ type contextDraft struct {
 	cells     map[cellKey]*draftCell
 }
 
-// newContextDraft reads the snapshot of a request as the generation sees it, and ranks the scenes the
-// generation does not write in.
-func newContextDraft(request *GenerationPlanRequest) (*contextDraft, error) {
-	draft := &contextDraft{request: request, project: request.Snapshot.Project}
+// newContextDraft reads the snapshot of a request as one call of the generation sees it, and ranks the
+// scenes the call does not write in. Contents keeps each stored cell's content once read.
+func newContextDraft(
+	request *GenerationPlanRequest, part *callPart, contents map[cellKey]*cellContent,
+) (*contextDraft, error) {
+	draft := &contextDraft{request: request, part: part, project: request.Snapshot.Project, contents: contents}
 	draft.layers, draft.layerByID = readLayers(request.Snapshot.Layers)
 	draft.beats = readBeats(request.Snapshot.Beats)
 
@@ -328,13 +351,27 @@ func (draft *contextDraft) readCells() (map[cellKey]*draftCell, error) {
 	cells := make(map[cellKey]*draftCell, len(draft.request.Snapshot.Cells))
 
 	for _, cell := range draft.request.Snapshot.Cells {
-		read, err := draft.newCell(cell.SceneID, cell.LayerID, cell.Content)
+		key := cellKey{cell.SceneID, cell.LayerID}
+
+		content, ok := draft.contents[key]
+		if !ok {
+			var err error
+
+			content, err = readContent(cell.Content)
+			if err != nil {
+				return nil, err
+			}
+
+			draft.contents[key] = content
+		}
+
+		read, err := draft.newCell(cell.SceneID, cell.LayerID, content)
 		if err != nil {
 			return nil, err
 		}
 
 		read.updatedAt = cell.UpdatedAt
-		cells[cellKey{cell.SceneID, cell.LayerID}] = read
+		cells[key] = read
 	}
 
 	err := draft.readCellOverrides(cells)
@@ -369,7 +406,12 @@ func (draft *contextDraft) readCellOverrides(cells map[cellKey]*draftCell) error
 
 		overridden[key] = true
 
-		read, err := draft.newCell(override.SceneID, override.LayerID, override.Content)
+		content, err := readContent(override.Content)
+		if err != nil {
+			return err
+		}
+
+		read, err := draft.newCell(override.SceneID, override.LayerID, content)
 		if err != nil {
 			return err
 		}
@@ -391,8 +433,8 @@ func (draft *contextDraft) readCellOverrides(cells map[cellKey]*draftCell) error
 	return nil
 }
 
-// newCell reads the content of the cell of a scene in a layer.
-func (draft *contextDraft) newCell(sceneID, layerID uuid.UUID, content json.RawMessage) (*draftCell, error) {
+// newCell returns the cell of a scene in a layer, with its content.
+func (draft *contextDraft) newCell(sceneID, layerID uuid.UUID, content *cellContent) (*draftCell, error) {
 	if _, ok := draft.sceneByID[sceneID]; !ok {
 		return nil, fmt.Errorf("%w: cell of %s", ErrSceneNotFound, sceneID)
 	}
@@ -402,14 +444,19 @@ func (draft *contextDraft) newCell(sceneID, layerID uuid.UUID, content json.RawM
 		return nil, fmt.Errorf("%w: cell of %s", ErrLayerNotFound, layerID)
 	}
 
-	read := &draftCell{layer: layer, content: &cellContent{}}
+	return &draftCell{layer: layer, content: content}, nil
+}
 
-	err := json.Unmarshal(content, read.content)
+// readContent reads the JSON content of a cell.
+func readContent(raw json.RawMessage) (*cellContent, error) {
+	content := &cellContent{}
+
+	err := json.Unmarshal(raw, content)
 	if err != nil {
 		return nil, errors.Join(fmt.Errorf("read cell content: %w", err), ErrInvalidRequest)
 	}
 
-	return read, nil
+	return content, nil
 }
 
 // cell returns the cell of a scene in a layer, empty when it was never written.
@@ -446,9 +493,8 @@ func (draft *contextDraft) suggestTargets() ([]*draftTarget, error) {
 
 	targets := make([]*draftTarget, len(draft.request.Targets))
 	written := make(map[targetKey]bool, len(draft.request.Targets))
-	counts := map[string]int{}
-
-	var blocks int
+	counts := lo.Assign(draft.part.handles)
+	blocks := draft.part.blocks
 
 	for index, request := range draft.request.Targets {
 		key := targetKey{cellKey{request.SceneID, request.LayerID}, request.Field}
@@ -463,8 +509,7 @@ func (draft *contextDraft) suggestTargets() ([]*draftTarget, error) {
 			return nil, fmt.Errorf("target %d: %w", index, err)
 		}
 
-		// A handle names its target's shape, so the output schema can require edits for a manuscript target.
-		prefix := lo.Ternary(target.span != nil, manuscriptTargetPrefix, textTargetPrefix)
+		prefix := targetPrefix(target)
 		target.handle = handle(prefix, counts[prefix])
 		counts[prefix]++
 
@@ -472,6 +517,12 @@ func (draft *contextDraft) suggestTargets() ([]*draftTarget, error) {
 	}
 
 	return targets, nil
+}
+
+// targetPrefix returns the prefix of a suggest target's handle. A handle names its target's shape, so the
+// output schema can require edits for a manuscript target.
+func targetPrefix(target *draftTarget) string {
+	return lo.Ternary(target.span != nil, manuscriptTargetPrefix, textTargetPrefix)
 }
 
 // newTarget reads the scene field or the cell a target writes, and pins its scene. Blocks counts the block
@@ -522,7 +573,13 @@ func targetRange(cell *draftCell, request *GenerationTarget, blocks *int) (*Rang
 		return nil, nil, nil
 	}
 
-	content := cell.content.Blocks
+	// The target marks the blocks it shows, on a copy, since the calls of a generation share stored content.
+	content := lo.Map(cell.content.Blocks, func(block *contentBlock, _ int) *contentBlock {
+		copied := *block
+
+		return &copied
+	})
+	cell.content = &cellContent{Text: cell.content.Text, Blocks: content}
 	span := &Range{Start: 0, End: len(content)}
 
 	if request.Range != nil {
@@ -562,6 +619,66 @@ func (target *draftTarget) inside() []*contentBlock {
 	return lo.Filter(target.cell.content.Blocks[target.span.Start:target.span.End], func(block *contentBlock, _ int) bool {
 		return target.mode == TargetModeRevise || block.Kept
 	})
+}
+
+// rewrite returns how many characters the target's suggestion rewrites at most: the current text of a text
+// target, or the blocks of a manuscript range not kept, in revise mode. A target written anew rewrites
+// nothing the planner can measure.
+func (target *draftTarget) rewrite() int {
+	switch {
+	case target.mode == TargetModeWrite:
+		return 0
+	case target.cell == nil:
+		return utf8.RuneCountInString(
+			lo.Ternary(target.field == SceneFieldTitle, target.scene.scene.Title, target.scene.scene.Description),
+		)
+	case target.span == nil:
+		return utf8.RuneCountInString(target.cell.content.Text)
+	default:
+		return lo.SumBy(target.rewritten(), (*contentBlock).size)
+	}
+}
+
+// rewritten returns the blocks of a manuscript range a suggestion may rewrite: those not kept.
+func (target *draftTarget) rewritten() []*contentBlock {
+	return lo.Reject(target.inside(), func(block *contentBlock, _ int) bool { return block.Kept })
+}
+
+// single reports whether the target rewrites one text or at most one block, which no span divides.
+func (target *draftTarget) single() bool {
+	return target.span == nil || len(target.rewritten()) <= 1
+}
+
+// spans divides the range of a manuscript target into consecutive spans whose rewrite each fits in share
+// characters. A block past share takes a span of its own. A text target, or a range that fits, keeps one
+// span.
+func (target *draftTarget) spans(share int) []*Range {
+	if target.span == nil || target.rewrite() <= share {
+		return []*Range{target.span}
+	}
+
+	var (
+		spans []*Range
+		size  int
+	)
+
+	start := target.span.Start
+
+	for position := target.span.Start; position < target.span.End; position++ {
+		block := target.cell.content.Blocks[position]
+		if block.Kept {
+			continue
+		}
+
+		if size > 0 && size+block.size() > share {
+			spans = append(spans, &Range{Start: start, End: position})
+			start, size = position, 0
+		}
+
+		size += block.size()
+	}
+
+	return append(spans, &Range{Start: start, End: target.span.End})
 }
 
 // recapTarget reads the cell or the beat a consolidate generation recaps, as its only target. A beat's
@@ -616,7 +733,8 @@ func (draft *contextDraft) recapBeatTarget() ([]*draftTarget, error) {
 	return []*draftTarget{target}, nil
 }
 
-// markChecked marks the scenes a check generation checks: the range of the request, or every scene.
+// markChecked marks the scenes a check generation checks: the range of the request, or every scene. The
+// scenes of a window pin.
 func (draft *contextDraft) markChecked() error {
 	span := Range{Start: 0, End: len(draft.scenes)}
 
@@ -629,6 +747,11 @@ func (draft *contextDraft) markChecked() error {
 
 	for _, scene := range draft.scenes[span.Start:span.End] {
 		scene.focus = true
+
+		// The scenes of a window enter whole, and the frame shows their beats whole.
+		if draft.part.window {
+			scene.pinned, scene.beat.pinned = true, true
+		}
 	}
 
 	return nil
