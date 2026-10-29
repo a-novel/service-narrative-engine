@@ -1,0 +1,186 @@
+[
+  {
+    "name": "Success",
+    "strict": true,
+    "valid": true,
+    "document": {
+      "suggestions": [
+        {
+          "target": "T1",
+          "note": "Shortens the opening.",
+          "edits": [
+            {
+              "op": "replace",
+              "block": "B1",
+              "blocks": [
+                {
+                  "kind": "narration",
+                  "text": "La pluie battait les vitres."
+                }
+              ]
+            },
+            {
+              "op": "insert_after",
+              "block": null,
+              "blocks": [
+                {
+                  "kind": "dialogue",
+                  "speaker": "Marie",
+                  "parts": [
+                    {
+                      "tone": "à voix basse"
+                    },
+                    {
+                      "text": "Tu es venu."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "op": "insert_after",
+              "block": "B2",
+              "blocks": []
+            },
+            {
+              "op": "delete",
+              "block": "B3"
+            }
+          ]
+        },
+        {
+          "target": "T2",
+          "note": "Names the scene after the letter.",
+          "text": "La lettre"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Success/Empty",
+    "strict": true,
+    "valid": true,
+    "document": {
+      "suggestions": []
+    }
+  },
+  {
+    "name": "Error/NoteTooLong",
+    "strict": true,
+    "valid": false,
+    "document": {
+      "suggestions": [
+        {
+          "target": "T1",
+          "note": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "text": "La lettre"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Error/TextAndEdits",
+    "strict": false,
+    "valid": false,
+    "document": {
+      "suggestions": [
+        {
+          "target": "T1",
+          "note": "Both.",
+          "text": "La lettre",
+          "edits": []
+        }
+      ]
+    }
+  },
+  {
+    "name": "Error/UnknownOp",
+    "strict": false,
+    "valid": false,
+    "document": {
+      "suggestions": [
+        {
+          "target": "T1",
+          "note": "Moves a block.",
+          "edits": [
+            {
+              "op": "move",
+              "block": "B1",
+              "blocks": []
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "Error/DeleteWithBlocks",
+    "strict": false,
+    "valid": false,
+    "document": {
+      "suggestions": [
+        {
+          "target": "T1",
+          "note": "Deletes.",
+          "edits": [
+            {
+              "op": "delete",
+              "block": "B1",
+              "blocks": []
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "Error/SceneHandleAsBlock",
+    "strict": false,
+    "valid": false,
+    "document": {
+      "suggestions": [
+        {
+          "target": "T1",
+          "note": "Deletes.",
+          "edits": [
+            {
+              "op": "delete",
+              "block": "S1"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "Error/PartWithTextAndTone",
+    "strict": false,
+    "valid": false,
+    "document": {
+      "suggestions": [
+        {
+          "target": "T1",
+          "note": "Rewrites.",
+          "edits": [
+            {
+              "op": "replace",
+              "block": "B1",
+              "blocks": [
+                {
+                  "kind": "dialogue",
+                  "speaker": "Marie",
+                  "parts": [
+                    {
+                      "text": "Tu es venu.",
+                      "tone": "à voix basse"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

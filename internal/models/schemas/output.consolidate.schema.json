@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Consolidate output",
+  "description": "What the model returns for a consolidate generation: the recap of one cell, which stands in for the cell in later contexts.",
+  "type": "object",
+  "required": ["summary", "names"],
+  "additionalProperties": false,
+  "properties": {
+    "summary": {
+      "type": "string",
+      "description": "What happens in the cell and what it changes, in about 80 words, in the project's language.",
+      "maxLength": 2000
+    },
+    "names": {
+      "type": "array",
+      "description": "Every character, place and object the cell names, each once, as the cell writes it.",
+      "maxItems": 100,
+      "items": { "type": "string", "maxLength": 200 }
+    }
+  }
+}

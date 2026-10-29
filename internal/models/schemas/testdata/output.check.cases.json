@@ -1,0 +1,85 @@
+[
+  {
+    "name": "Success",
+    "strict": true,
+    "valid": true,
+    "document": {
+      "findings": [
+        {
+          "category": "timeline-and-plot",
+          "message": "Paul arrive avant d'avoir reçu la lettre.",
+          "evidence": [
+            {
+              "scene": "S1",
+              "quote": "Tu es venu."
+            },
+            {
+              "scene": "S3",
+              "quote": "Paul ouvrit enfin la lettre."
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "Success/Empty",
+    "strict": true,
+    "valid": true,
+    "document": {
+      "findings": []
+    }
+  },
+  {
+    "name": "Error/QuoteTooLong",
+    "strict": true,
+    "valid": false,
+    "document": {
+      "findings": [
+        {
+          "category": "style",
+          "message": "Le registre change.",
+          "evidence": [
+            {
+              "scene": "S1",
+              "quote": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "Error/NoEvidence",
+    "strict": false,
+    "valid": false,
+    "document": {
+      "findings": [
+        {
+          "category": "style",
+          "message": "Le registre change.",
+          "evidence": []
+        }
+      ]
+    }
+  },
+  {
+    "name": "Error/UnknownCategory",
+    "strict": false,
+    "valid": false,
+    "document": {
+      "findings": [
+        {
+          "category": "spelling",
+          "message": "Une faute.",
+          "evidence": [
+            {
+              "scene": "S1",
+              "quote": "Tu es venu."
+            }
+          ]
+        }
+      ]
+    }
+  }
+]
