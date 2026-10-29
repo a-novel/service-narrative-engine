@@ -34,8 +34,7 @@ func TestRestLayersCreate(t *testing.T) {
 
 		request func(t *testing.T) *http.Request
 
-		serviceCalled bool
-		serviceErr    error
+		serviceMock *serviceMock[[]*core.Layer]
 
 		expectStatus   int
 		expectResponse any
@@ -45,7 +44,7 @@ func TestRestLayersCreate(t *testing.T) {
 
 			request: validRequest,
 
-			serviceCalled: true,
+			serviceMock: &serviceMock[[]*core.Layer]{resp: []*core.Layer{coreLayer}},
 
 			expectStatus:   http.StatusCreated,
 			expectResponse: []any{jsonLayer},
@@ -73,12 +72,11 @@ func TestRestLayersCreate(t *testing.T) {
 			expectStatus: http.StatusBadRequest,
 		},
 		{
-			name: "Error/NotFound",
+			name: "Error/ProjectNotFound",
 
 			request: validRequest,
 
-			serviceCalled: true,
-			serviceErr:    core.ErrProjectNotFound,
+			serviceMock: &serviceMock[[]*core.Layer]{err: core.ErrProjectNotFound},
 
 			expectStatus: http.StatusNotFound,
 		},
@@ -87,18 +85,25 @@ func TestRestLayersCreate(t *testing.T) {
 
 			request: validRequest,
 
-			serviceCalled: true,
-			serviceErr:    core.ErrProjectFull,
+			serviceMock: &serviceMock[[]*core.Layer]{err: core.ErrProjectFull},
 
 			expectStatus: http.StatusUnprocessableEntity,
+		},
+		{
+			name: "Error/InvalidRequest",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[[]*core.Layer]{err: core.ErrInvalidRequest},
+
+			expectStatus: http.StatusBadRequest,
 		},
 		{
 			name: "Error/Internal",
 
 			request: validRequest,
 
-			serviceCalled: true,
-			serviceErr:    errFoo,
+			serviceMock: &serviceMock[[]*core.Layer]{err: errFoo},
 
 			expectStatus: http.StatusInternalServerError,
 		},
@@ -110,12 +115,7 @@ func TestRestLayersCreate(t *testing.T) {
 
 			service := handlersmocks.NewMockRestLayersCreateService(t)
 
-			if testCase.serviceCalled {
-				var resp []*core.Layer
-				if testCase.serviceErr == nil {
-					resp = []*core.Layer{coreLayer}
-				}
-
+			if testCase.serviceMock != nil {
 				service.EXPECT().
 					Exec(mock.Anything, &core.LayersCreateRequest{
 						OwnerID:   ownerID,
@@ -125,13 +125,14 @@ func TestRestLayersCreate(t *testing.T) {
 							{Kind: core.LayerKindNotes, Name: "Characters", Description: "Who appears"},
 						},
 					}).
-					Return(resp, testCase.serviceErr)
+					Return(testCase.serviceMock.resp, testCase.serviceMock.err)
 			}
 
 			w := httptest.NewRecorder()
 			handlers.NewRestLayersCreate(service, config.LoggerDev).ServeHTTP(w, testCase.request(t))
 
 			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
+			service.AssertExpectations(t)
 		})
 	}
 }

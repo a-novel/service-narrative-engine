@@ -36,8 +36,7 @@ func TestRestLayerCreate(t *testing.T) {
 
 		request func(t *testing.T) *http.Request
 
-		serviceCalled bool
-		serviceErr    error
+		serviceMock *serviceMock[*core.Layer]
 
 		expectStatus   int
 		expectResponse any
@@ -47,7 +46,7 @@ func TestRestLayerCreate(t *testing.T) {
 
 			request: validRequest,
 
-			serviceCalled: true,
+			serviceMock: &serviceMock[*core.Layer]{resp: coreLayer},
 
 			expectStatus:   http.StatusCreated,
 			expectResponse: jsonLayer,
@@ -75,12 +74,11 @@ func TestRestLayerCreate(t *testing.T) {
 			expectStatus: http.StatusBadRequest,
 		},
 		{
-			name: "Error/NotFound",
+			name: "Error/ProjectNotFound",
 
 			request: validRequest,
 
-			serviceCalled: true,
-			serviceErr:    core.ErrProjectNotFound,
+			serviceMock: &serviceMock[*core.Layer]{err: core.ErrProjectNotFound},
 
 			expectStatus: http.StatusNotFound,
 		},
@@ -89,18 +87,25 @@ func TestRestLayerCreate(t *testing.T) {
 
 			request: validRequest,
 
-			serviceCalled: true,
-			serviceErr:    core.ErrProjectFull,
+			serviceMock: &serviceMock[*core.Layer]{err: core.ErrProjectFull},
 
 			expectStatus: http.StatusUnprocessableEntity,
+		},
+		{
+			name: "Error/InvalidRequest",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[*core.Layer]{err: core.ErrInvalidRequest},
+
+			expectStatus: http.StatusBadRequest,
 		},
 		{
 			name: "Error/Internal",
 
 			request: validRequest,
 
-			serviceCalled: true,
-			serviceErr:    errFoo,
+			serviceMock: &serviceMock[*core.Layer]{err: errFoo},
 
 			expectStatus: http.StatusInternalServerError,
 		},
@@ -112,12 +117,7 @@ func TestRestLayerCreate(t *testing.T) {
 
 			service := handlersmocks.NewMockRestLayerCreateService(t)
 
-			if testCase.serviceCalled {
-				var resp *core.Layer
-				if testCase.serviceErr == nil {
-					resp = coreLayer
-				}
-
+			if testCase.serviceMock != nil {
 				service.EXPECT().
 					Exec(mock.Anything, &core.LayerCreateRequest{
 						OwnerID:     ownerID,
@@ -127,13 +127,14 @@ func TestRestLayerCreate(t *testing.T) {
 						Name:        "Characters",
 						Description: "Who appears",
 					}).
-					Return(resp, testCase.serviceErr)
+					Return(testCase.serviceMock.resp, testCase.serviceMock.err)
 			}
 
 			w := httptest.NewRecorder()
 			handlers.NewRestLayerCreate(service, config.LoggerDev).ServeHTTP(w, testCase.request(t))
 
 			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
+			service.AssertExpectations(t)
 		})
 	}
 }

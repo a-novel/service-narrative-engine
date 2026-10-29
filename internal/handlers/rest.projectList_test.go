@@ -30,8 +30,7 @@ func TestRestProjectList(t *testing.T) {
 
 		request func(t *testing.T) *http.Request
 
-		serviceCalled bool
-		serviceErr    error
+		serviceMock *serviceMock[*core.ProjectPage]
 
 		expectStatus   int
 		expectResponse any
@@ -41,10 +40,22 @@ func TestRestProjectList(t *testing.T) {
 
 			request: validRequest,
 
-			serviceCalled: true,
+			serviceMock: &serviceMock[*core.ProjectPage]{
+				resp: &core.ProjectPage{Projects: []*core.Project{coreProject}, Total: 3},
+			},
 
 			expectStatus:   http.StatusOK,
 			expectResponse: map[string]any{"projects": []any{jsonProject}, "total": 3.0},
+		},
+		{
+			name: "Success/Empty",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[*core.ProjectPage]{resp: &core.ProjectPage{Projects: []*core.Project{}}},
+
+			expectStatus:   http.StatusOK,
+			expectResponse: map[string]any{"projects": []any{}, "total": 0.0},
 		},
 		{
 			name: "Error/Anonymous",
@@ -73,8 +84,7 @@ func TestRestProjectList(t *testing.T) {
 
 			request: validRequest,
 
-			serviceCalled: true,
-			serviceErr:    core.ErrInvalidRequest,
+			serviceMock: &serviceMock[*core.ProjectPage]{err: core.ErrInvalidRequest},
 
 			expectStatus: http.StatusBadRequest,
 		},
@@ -83,8 +93,7 @@ func TestRestProjectList(t *testing.T) {
 
 			request: validRequest,
 
-			serviceCalled: true,
-			serviceErr:    errFoo,
+			serviceMock: &serviceMock[*core.ProjectPage]{err: errFoo},
 
 			expectStatus: http.StatusInternalServerError,
 		},
@@ -96,21 +105,17 @@ func TestRestProjectList(t *testing.T) {
 
 			service := handlersmocks.NewMockRestProjectListService(t)
 
-			if testCase.serviceCalled {
-				var resp *core.ProjectPage
-				if testCase.serviceErr == nil {
-					resp = &core.ProjectPage{Projects: []*core.Project{coreProject}, Total: 3}
-				}
-
+			if testCase.serviceMock != nil {
 				service.EXPECT().
 					Exec(mock.Anything, &core.ProjectListRequest{OwnerID: ownerID, Limit: 10, Offset: 20}).
-					Return(resp, testCase.serviceErr)
+					Return(testCase.serviceMock.resp, testCase.serviceMock.err)
 			}
 
 			w := httptest.NewRecorder()
 			handlers.NewRestProjectList(service, config.LoggerDev).ServeHTTP(w, testCase.request(t))
 
 			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
+			service.AssertExpectations(t)
 		})
 	}
 }

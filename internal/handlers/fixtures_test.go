@@ -71,6 +71,13 @@ var (
 	}
 )
 
+// serviceMock is what the service mock of a handler test case returns. A nil one means the handler
+// must not call the service.
+type serviceMock[Resp any] struct {
+	resp Resp
+	err  error
+}
+
 // withComposer returns the JSON of a new project carrying the layers it starts with.
 func withComposer(project map[string]any, layers []any) map[string]any {
 	composer := maps.Clone(project)

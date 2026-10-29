@@ -41,8 +41,7 @@ func TestRestLayersDelete(t *testing.T) {
 
 		request func(t *testing.T) *http.Request
 
-		serviceCalled bool
-		serviceErr    error
+		serviceMock *serviceMock[[]*core.Layer]
 
 		expectStatus   int
 		expectResponse any
@@ -52,7 +51,7 @@ func TestRestLayersDelete(t *testing.T) {
 
 			request: validRequest,
 
-			serviceCalled: true,
+			serviceMock: &serviceMock[[]*core.Layer]{resp: []*core.Layer{coreLayer, &otherLayer}},
 
 			expectStatus:   http.StatusOK,
 			expectResponse: []any{jsonLayer, otherJSON},
@@ -80,22 +79,47 @@ func TestRestLayersDelete(t *testing.T) {
 			expectStatus: http.StatusBadRequest,
 		},
 		{
+			name: "Error/ProjectNotFound",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[[]*core.Layer]{err: core.ErrProjectNotFound},
+
+			expectStatus: http.StatusNotFound,
+		},
+		{
+			name: "Error/LayerNotFound",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[[]*core.Layer]{err: core.ErrLayerNotFound},
+
+			expectStatus: http.StatusNotFound,
+		},
+		{
 			name: "Error/RequiredLayer",
 
 			request: validRequest,
 
-			serviceCalled: true,
-			serviceErr:    core.ErrRequiredLayer,
+			serviceMock: &serviceMock[[]*core.Layer]{err: core.ErrRequiredLayer},
 
 			expectStatus: http.StatusUnprocessableEntity,
+		},
+		{
+			name: "Error/InvalidRequest",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[[]*core.Layer]{err: core.ErrInvalidRequest},
+
+			expectStatus: http.StatusBadRequest,
 		},
 		{
 			name: "Error/Internal",
 
 			request: validRequest,
 
-			serviceCalled: true,
-			serviceErr:    errFoo,
+			serviceMock: &serviceMock[[]*core.Layer]{err: errFoo},
 
 			expectStatus: http.StatusInternalServerError,
 		},
@@ -107,23 +131,19 @@ func TestRestLayersDelete(t *testing.T) {
 
 			service := handlersmocks.NewMockRestLayersDeleteService(t)
 
-			if testCase.serviceCalled {
-				var resp []*core.Layer
-				if testCase.serviceErr == nil {
-					resp = []*core.Layer{coreLayer, &otherLayer}
-				}
-
+			if testCase.serviceMock != nil {
 				service.EXPECT().
 					Exec(mock.Anything, &core.LayersDeleteRequest{
 						OwnerID: ownerID, ProjectID: projectID, IDs: []uuid.UUID{layerID, otherLayer.ID},
 					}).
-					Return(resp, testCase.serviceErr)
+					Return(testCase.serviceMock.resp, testCase.serviceMock.err)
 			}
 
 			w := httptest.NewRecorder()
 			handlers.NewRestLayersDelete(service, config.LoggerDev).ServeHTTP(w, testCase.request(t))
 
 			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
+			service.AssertExpectations(t)
 		})
 	}
 }

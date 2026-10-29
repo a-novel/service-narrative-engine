@@ -41,8 +41,7 @@ func TestRestScenesDelete(t *testing.T) {
 
 		request func(t *testing.T) *http.Request
 
-		serviceCalled bool
-		serviceErr    error
+		serviceMock *serviceMock[[]*core.Scene]
 
 		expectStatus   int
 		expectResponse any
@@ -52,7 +51,7 @@ func TestRestScenesDelete(t *testing.T) {
 
 			request: validRequest,
 
-			serviceCalled: true,
+			serviceMock: &serviceMock[[]*core.Scene]{resp: []*core.Scene{coreScene, &otherScene}},
 
 			expectStatus:   http.StatusOK,
 			expectResponse: []any{jsonScene, otherJSON},
@@ -80,22 +79,38 @@ func TestRestScenesDelete(t *testing.T) {
 			expectStatus: http.StatusBadRequest,
 		},
 		{
-			name: "Error/NotFound",
+			name: "Error/ProjectNotFound",
 
 			request: validRequest,
 
-			serviceCalled: true,
-			serviceErr:    core.ErrSceneNotFound,
+			serviceMock: &serviceMock[[]*core.Scene]{err: core.ErrProjectNotFound},
 
 			expectStatus: http.StatusNotFound,
+		},
+		{
+			name: "Error/SceneNotFound",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[[]*core.Scene]{err: core.ErrSceneNotFound},
+
+			expectStatus: http.StatusNotFound,
+		},
+		{
+			name: "Error/InvalidRequest",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[[]*core.Scene]{err: core.ErrInvalidRequest},
+
+			expectStatus: http.StatusBadRequest,
 		},
 		{
 			name: "Error/Internal",
 
 			request: validRequest,
 
-			serviceCalled: true,
-			serviceErr:    errFoo,
+			serviceMock: &serviceMock[[]*core.Scene]{err: errFoo},
 
 			expectStatus: http.StatusInternalServerError,
 		},
@@ -107,23 +122,19 @@ func TestRestScenesDelete(t *testing.T) {
 
 			service := handlersmocks.NewMockRestScenesDeleteService(t)
 
-			if testCase.serviceCalled {
-				var resp []*core.Scene
-				if testCase.serviceErr == nil {
-					resp = []*core.Scene{coreScene, &otherScene}
-				}
-
+			if testCase.serviceMock != nil {
 				service.EXPECT().
 					Exec(mock.Anything, &core.ScenesDeleteRequest{
 						OwnerID: ownerID, ProjectID: projectID, IDs: []uuid.UUID{sceneID, otherScene.ID},
 					}).
-					Return(resp, testCase.serviceErr)
+					Return(testCase.serviceMock.resp, testCase.serviceMock.err)
 			}
 
 			w := httptest.NewRecorder()
 			handlers.NewRestScenesDelete(service, config.LoggerDev).ServeHTTP(w, testCase.request(t))
 
 			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
+			service.AssertExpectations(t)
 		})
 	}
 }

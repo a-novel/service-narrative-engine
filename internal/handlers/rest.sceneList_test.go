@@ -30,8 +30,7 @@ func TestRestSceneList(t *testing.T) {
 
 		request func(t *testing.T) *http.Request
 
-		serviceCalled bool
-		serviceErr    error
+		serviceMock *serviceMock[*core.ScenePage]
 
 		expectStatus   int
 		expectResponse any
@@ -41,10 +40,20 @@ func TestRestSceneList(t *testing.T) {
 
 			request: validRequest,
 
-			serviceCalled: true,
+			serviceMock: &serviceMock[*core.ScenePage]{resp: &core.ScenePage{Scenes: []*core.Scene{coreScene}, Total: 3}},
 
 			expectStatus:   http.StatusOK,
 			expectResponse: map[string]any{"scenes": []any{jsonScene}, "total": 3.0},
+		},
+		{
+			name: "Success/Empty",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[*core.ScenePage]{resp: &core.ScenePage{Scenes: []*core.Scene{}}},
+
+			expectStatus:   http.StatusOK,
+			expectResponse: map[string]any{"scenes": []any{}, "total": 0.0},
 		},
 		{
 			name: "Error/Anonymous",
@@ -73,8 +82,7 @@ func TestRestSceneList(t *testing.T) {
 
 			request: validRequest,
 
-			serviceCalled: true,
-			serviceErr:    core.ErrProjectNotFound,
+			serviceMock: &serviceMock[*core.ScenePage]{err: core.ErrProjectNotFound},
 
 			expectStatus: http.StatusNotFound,
 		},
@@ -83,8 +91,7 @@ func TestRestSceneList(t *testing.T) {
 
 			request: validRequest,
 
-			serviceCalled: true,
-			serviceErr:    core.ErrInvalidRequest,
+			serviceMock: &serviceMock[*core.ScenePage]{err: core.ErrInvalidRequest},
 
 			expectStatus: http.StatusBadRequest,
 		},
@@ -93,8 +100,7 @@ func TestRestSceneList(t *testing.T) {
 
 			request: validRequest,
 
-			serviceCalled: true,
-			serviceErr:    errFoo,
+			serviceMock: &serviceMock[*core.ScenePage]{err: errFoo},
 
 			expectStatus: http.StatusInternalServerError,
 		},
@@ -106,21 +112,17 @@ func TestRestSceneList(t *testing.T) {
 
 			service := handlersmocks.NewMockRestSceneListService(t)
 
-			if testCase.serviceCalled {
-				var resp *core.ScenePage
-				if testCase.serviceErr == nil {
-					resp = &core.ScenePage{Scenes: []*core.Scene{coreScene}, Total: 3}
-				}
-
+			if testCase.serviceMock != nil {
 				service.EXPECT().
 					Exec(mock.Anything, &core.SceneListRequest{OwnerID: ownerID, ProjectID: projectID, Limit: 10, Offset: 20}).
-					Return(resp, testCase.serviceErr)
+					Return(testCase.serviceMock.resp, testCase.serviceMock.err)
 			}
 
 			w := httptest.NewRecorder()
 			handlers.NewRestSceneList(service, config.LoggerDev).ServeHTTP(w, testCase.request(t))
 
 			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
+			service.AssertExpectations(t)
 		})
 	}
 }

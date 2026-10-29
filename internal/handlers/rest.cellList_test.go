@@ -30,8 +30,7 @@ func TestRestCellList(t *testing.T) {
 
 		request func(t *testing.T) *http.Request
 
-		serviceCalled bool
-		serviceErr    error
+		serviceMock *serviceMock[*core.CellPage]
 
 		expectStatus   int
 		expectResponse any
@@ -41,10 +40,20 @@ func TestRestCellList(t *testing.T) {
 
 			request: validRequest,
 
-			serviceCalled: true,
+			serviceMock: &serviceMock[*core.CellPage]{resp: &core.CellPage{Cells: []*core.Cell{coreCell}, Total: 3}},
 
 			expectStatus:   http.StatusOK,
 			expectResponse: map[string]any{"cells": []any{jsonCell}, "total": 3.0},
+		},
+		{
+			name: "Success/Empty",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[*core.CellPage]{resp: &core.CellPage{Cells: []*core.Cell{}}},
+
+			expectStatus:   http.StatusOK,
+			expectResponse: map[string]any{"cells": []any{}, "total": 0.0},
 		},
 		{
 			name: "Error/Anonymous",
@@ -73,8 +82,7 @@ func TestRestCellList(t *testing.T) {
 
 			request: validRequest,
 
-			serviceCalled: true,
-			serviceErr:    core.ErrProjectNotFound,
+			serviceMock: &serviceMock[*core.CellPage]{err: core.ErrProjectNotFound},
 
 			expectStatus: http.StatusNotFound,
 		},
@@ -83,8 +91,7 @@ func TestRestCellList(t *testing.T) {
 
 			request: validRequest,
 
-			serviceCalled: true,
-			serviceErr:    core.ErrInvalidRequest,
+			serviceMock: &serviceMock[*core.CellPage]{err: core.ErrInvalidRequest},
 
 			expectStatus: http.StatusBadRequest,
 		},
@@ -93,8 +100,7 @@ func TestRestCellList(t *testing.T) {
 
 			request: validRequest,
 
-			serviceCalled: true,
-			serviceErr:    errFoo,
+			serviceMock: &serviceMock[*core.CellPage]{err: errFoo},
 
 			expectStatus: http.StatusInternalServerError,
 		},
@@ -106,21 +112,17 @@ func TestRestCellList(t *testing.T) {
 
 			service := handlersmocks.NewMockRestCellListService(t)
 
-			if testCase.serviceCalled {
-				var resp *core.CellPage
-				if testCase.serviceErr == nil {
-					resp = &core.CellPage{Cells: []*core.Cell{coreCell}, Total: 3}
-				}
-
+			if testCase.serviceMock != nil {
 				service.EXPECT().
 					Exec(mock.Anything, &core.CellListRequest{OwnerID: ownerID, ProjectID: projectID, Limit: 10, Offset: 20}).
-					Return(resp, testCase.serviceErr)
+					Return(testCase.serviceMock.resp, testCase.serviceMock.err)
 			}
 
 			w := httptest.NewRecorder()
 			handlers.NewRestCellList(service, config.LoggerDev).ServeHTTP(w, testCase.request(t))
 
 			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
+			service.AssertExpectations(t)
 		})
 	}
 }

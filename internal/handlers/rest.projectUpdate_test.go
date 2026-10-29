@@ -35,8 +35,7 @@ func TestRestProjectUpdate(t *testing.T) {
 
 		request func(t *testing.T) *http.Request
 
-		serviceCalled bool
-		serviceErr    error
+		serviceMock *serviceMock[*core.Project]
 
 		expectStatus   int
 		expectResponse any
@@ -46,7 +45,7 @@ func TestRestProjectUpdate(t *testing.T) {
 
 			request: validRequest,
 
-			serviceCalled: true,
+			serviceMock: &serviceMock[*core.Project]{resp: coreProject},
 
 			expectStatus:   http.StatusOK,
 			expectResponse: jsonProject,
@@ -74,22 +73,29 @@ func TestRestProjectUpdate(t *testing.T) {
 			expectStatus: http.StatusBadRequest,
 		},
 		{
-			name: "Error/NotFound",
+			name: "Error/ProjectNotFound",
 
 			request: validRequest,
 
-			serviceCalled: true,
-			serviceErr:    core.ErrProjectNotFound,
+			serviceMock: &serviceMock[*core.Project]{err: core.ErrProjectNotFound},
 
 			expectStatus: http.StatusNotFound,
+		},
+		{
+			name: "Error/InvalidRequest",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[*core.Project]{err: core.ErrInvalidRequest},
+
+			expectStatus: http.StatusBadRequest,
 		},
 		{
 			name: "Error/Internal",
 
 			request: validRequest,
 
-			serviceCalled: true,
-			serviceErr:    errFoo,
+			serviceMock: &serviceMock[*core.Project]{err: errFoo},
 
 			expectStatus: http.StatusInternalServerError,
 		},
@@ -101,12 +107,7 @@ func TestRestProjectUpdate(t *testing.T) {
 
 			service := handlersmocks.NewMockRestProjectUpdateService(t)
 
-			if testCase.serviceCalled {
-				var resp *core.Project
-				if testCase.serviceErr == nil {
-					resp = coreProject
-				}
-
+			if testCase.serviceMock != nil {
 				service.EXPECT().
 					Exec(mock.Anything, &core.ProjectUpdateRequest{
 						OwnerID:  ownerID,
@@ -115,13 +116,14 @@ func TestRestProjectUpdate(t *testing.T) {
 						Premise:  "Marie attend.",
 						Language: "fr",
 					}).
-					Return(resp, testCase.serviceErr)
+					Return(testCase.serviceMock.resp, testCase.serviceMock.err)
 			}
 
 			w := httptest.NewRecorder()
 			handlers.NewRestProjectUpdate(service, config.LoggerDev).ServeHTTP(w, testCase.request(t))
 
 			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
+			service.AssertExpectations(t)
 		})
 	}
 }

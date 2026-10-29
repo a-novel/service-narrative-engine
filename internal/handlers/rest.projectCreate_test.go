@@ -34,8 +34,7 @@ func TestRestProjectCreate(t *testing.T) {
 
 		request func(t *testing.T) *http.Request
 
-		serviceCalled bool
-		serviceErr    error
+		serviceMock *serviceMock[*core.ProjectComposer]
 
 		expectStatus   int
 		expectResponse any
@@ -45,7 +44,9 @@ func TestRestProjectCreate(t *testing.T) {
 
 			request: validRequest,
 
-			serviceCalled: true,
+			serviceMock: &serviceMock[*core.ProjectComposer]{
+				resp: &core.ProjectComposer{Project: coreProject, Layers: []*core.Layer{coreLayer}},
+			},
 
 			expectStatus:   http.StatusCreated,
 			expectResponse: withComposer(jsonProject, []any{jsonLayer}),
@@ -77,8 +78,7 @@ func TestRestProjectCreate(t *testing.T) {
 
 			request: validRequest,
 
-			serviceCalled: true,
-			serviceErr:    core.ErrInvalidRequest,
+			serviceMock: &serviceMock[*core.ProjectComposer]{err: core.ErrInvalidRequest},
 
 			expectStatus: http.StatusBadRequest,
 		},
@@ -87,8 +87,7 @@ func TestRestProjectCreate(t *testing.T) {
 
 			request: validRequest,
 
-			serviceCalled: true,
-			serviceErr:    errFoo,
+			serviceMock: &serviceMock[*core.ProjectComposer]{err: errFoo},
 
 			expectStatus: http.StatusInternalServerError,
 		},
@@ -100,12 +99,7 @@ func TestRestProjectCreate(t *testing.T) {
 
 			service := handlersmocks.NewMockRestProjectCreateService(t)
 
-			if testCase.serviceCalled {
-				var resp *core.ProjectComposer
-				if testCase.serviceErr == nil {
-					resp = &core.ProjectComposer{Project: coreProject, Layers: []*core.Layer{coreLayer}}
-				}
-
+			if testCase.serviceMock != nil {
 				service.EXPECT().
 					Exec(mock.Anything, &core.ProjectCreateRequest{
 						OwnerID:  ownerID,
@@ -113,13 +107,14 @@ func TestRestProjectCreate(t *testing.T) {
 						Premise:  "Marie attend.",
 						Language: "fr",
 					}).
-					Return(resp, testCase.serviceErr)
+					Return(testCase.serviceMock.resp, testCase.serviceMock.err)
 			}
 
 			w := httptest.NewRecorder()
 			handlers.NewRestProjectCreate(service, config.LoggerDev).ServeHTTP(w, testCase.request(t))
 
 			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
+			service.AssertExpectations(t)
 		})
 	}
 }

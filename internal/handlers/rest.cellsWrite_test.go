@@ -33,8 +33,7 @@ func TestRestCellsWrite(t *testing.T) {
 
 		request func(t *testing.T) *http.Request
 
-		serviceCalled bool
-		serviceErr    error
+		serviceMock *serviceMock[[]*core.WrittenCell]
 
 		expectStatus   int
 		expectResponse any
@@ -44,7 +43,7 @@ func TestRestCellsWrite(t *testing.T) {
 
 			request: validRequest,
 
-			serviceCalled: true,
+			serviceMock: &serviceMock[[]*core.WrittenCell]{resp: []*core.WrittenCell{coreWrittenCell}},
 
 			expectStatus:   http.StatusOK,
 			expectResponse: []any{jsonWrittenCell},
@@ -72,12 +71,38 @@ func TestRestCellsWrite(t *testing.T) {
 			expectStatus: http.StatusBadRequest,
 		},
 		{
+			name: "Error/ProjectNotFound",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[[]*core.WrittenCell]{err: core.ErrProjectNotFound},
+
+			expectStatus: http.StatusNotFound,
+		},
+		{
+			name: "Error/SceneNotFound",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[[]*core.WrittenCell]{err: core.ErrSceneNotFound},
+
+			expectStatus: http.StatusNotFound,
+		},
+		{
+			name: "Error/LayerNotFound",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[[]*core.WrittenCell]{err: core.ErrLayerNotFound},
+
+			expectStatus: http.StatusNotFound,
+		},
+		{
 			name: "Error/InvalidContent",
 
 			request: validRequest,
 
-			serviceCalled: true,
-			serviceErr:    core.ErrInvalidRequest,
+			serviceMock: &serviceMock[[]*core.WrittenCell]{err: core.ErrInvalidRequest},
 
 			expectStatus: http.StatusBadRequest,
 		},
@@ -86,8 +111,7 @@ func TestRestCellsWrite(t *testing.T) {
 
 			request: validRequest,
 
-			serviceCalled: true,
-			serviceErr:    errFoo,
+			serviceMock: &serviceMock[[]*core.WrittenCell]{err: errFoo},
 
 			expectStatus: http.StatusInternalServerError,
 		},
@@ -99,25 +123,21 @@ func TestRestCellsWrite(t *testing.T) {
 
 			service := handlersmocks.NewMockRestCellsWriteService(t)
 
-			if testCase.serviceCalled {
-				var resp []*core.WrittenCell
-				if testCase.serviceErr == nil {
-					resp = []*core.WrittenCell{coreWrittenCell}
-				}
-
+			if testCase.serviceMock != nil {
 				service.EXPECT().
 					Exec(mock.Anything, &core.CellsWriteRequest{
 						OwnerID:   ownerID,
 						ProjectID: projectID,
 						Cells:     []core.CellsWriteItem{{SceneID: sceneID, LayerID: layerID, Content: coreCell.Content}},
 					}).
-					Return(resp, testCase.serviceErr)
+					Return(testCase.serviceMock.resp, testCase.serviceMock.err)
 			}
 
 			w := httptest.NewRecorder()
 			handlers.NewRestCellsWrite(service, config.LoggerDev).ServeHTTP(w, testCase.request(t))
 
 			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
+			service.AssertExpectations(t)
 		})
 	}
 }

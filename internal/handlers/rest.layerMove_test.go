@@ -33,8 +33,7 @@ func TestRestLayerMove(t *testing.T) {
 
 		request func(t *testing.T) *http.Request
 
-		serviceCalled bool
-		serviceErr    error
+		serviceMock *serviceMock[*core.Layer]
 
 		expectStatus   int
 		expectResponse any
@@ -44,7 +43,7 @@ func TestRestLayerMove(t *testing.T) {
 
 			request: validRequest,
 
-			serviceCalled: true,
+			serviceMock: &serviceMock[*core.Layer]{resp: coreLayer},
 
 			expectStatus:   http.StatusOK,
 			expectResponse: jsonLayer,
@@ -72,22 +71,38 @@ func TestRestLayerMove(t *testing.T) {
 			expectStatus: http.StatusBadRequest,
 		},
 		{
-			name: "Error/NotFound",
+			name: "Error/ProjectNotFound",
 
 			request: validRequest,
 
-			serviceCalled: true,
-			serviceErr:    core.ErrLayerNotFound,
+			serviceMock: &serviceMock[*core.Layer]{err: core.ErrProjectNotFound},
 
 			expectStatus: http.StatusNotFound,
+		},
+		{
+			name: "Error/LayerNotFound",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[*core.Layer]{err: core.ErrLayerNotFound},
+
+			expectStatus: http.StatusNotFound,
+		},
+		{
+			name: "Error/InvalidRequest",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[*core.Layer]{err: core.ErrInvalidRequest},
+
+			expectStatus: http.StatusBadRequest,
 		},
 		{
 			name: "Error/Internal",
 
 			request: validRequest,
 
-			serviceCalled: true,
-			serviceErr:    errFoo,
+			serviceMock: &serviceMock[*core.Layer]{err: errFoo},
 
 			expectStatus: http.StatusInternalServerError,
 		},
@@ -99,21 +114,17 @@ func TestRestLayerMove(t *testing.T) {
 
 			service := handlersmocks.NewMockRestLayerMoveService(t)
 
-			if testCase.serviceCalled {
-				var resp *core.Layer
-				if testCase.serviceErr == nil {
-					resp = coreLayer
-				}
-
+			if testCase.serviceMock != nil {
 				service.EXPECT().
 					Exec(mock.Anything, &core.LayerMoveRequest{OwnerID: ownerID, ProjectID: projectID, ID: layerID}).
-					Return(resp, testCase.serviceErr)
+					Return(testCase.serviceMock.resp, testCase.serviceMock.err)
 			}
 
 			w := httptest.NewRecorder()
 			handlers.NewRestLayerMove(service, config.LoggerDev).ServeHTTP(w, testCase.request(t))
 
 			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
+			service.AssertExpectations(t)
 		})
 	}
 }

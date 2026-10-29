@@ -30,8 +30,7 @@ func TestRestLayerList(t *testing.T) {
 
 		request func(t *testing.T) *http.Request
 
-		serviceCalled bool
-		serviceErr    error
+		serviceMock *serviceMock[*core.LayerPage]
 
 		expectStatus   int
 		expectResponse any
@@ -41,10 +40,20 @@ func TestRestLayerList(t *testing.T) {
 
 			request: validRequest,
 
-			serviceCalled: true,
+			serviceMock: &serviceMock[*core.LayerPage]{resp: &core.LayerPage{Layers: []*core.Layer{coreLayer}, Total: 3}},
 
 			expectStatus:   http.StatusOK,
 			expectResponse: map[string]any{"layers": []any{jsonLayer}, "total": 3.0},
+		},
+		{
+			name: "Success/Empty",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[*core.LayerPage]{resp: &core.LayerPage{Layers: []*core.Layer{}}},
+
+			expectStatus:   http.StatusOK,
+			expectResponse: map[string]any{"layers": []any{}, "total": 0.0},
 		},
 		{
 			name: "Error/Anonymous",
@@ -73,8 +82,7 @@ func TestRestLayerList(t *testing.T) {
 
 			request: validRequest,
 
-			serviceCalled: true,
-			serviceErr:    core.ErrProjectNotFound,
+			serviceMock: &serviceMock[*core.LayerPage]{err: core.ErrProjectNotFound},
 
 			expectStatus: http.StatusNotFound,
 		},
@@ -83,8 +91,7 @@ func TestRestLayerList(t *testing.T) {
 
 			request: validRequest,
 
-			serviceCalled: true,
-			serviceErr:    core.ErrInvalidRequest,
+			serviceMock: &serviceMock[*core.LayerPage]{err: core.ErrInvalidRequest},
 
 			expectStatus: http.StatusBadRequest,
 		},
@@ -93,8 +100,7 @@ func TestRestLayerList(t *testing.T) {
 
 			request: validRequest,
 
-			serviceCalled: true,
-			serviceErr:    errFoo,
+			serviceMock: &serviceMock[*core.LayerPage]{err: errFoo},
 
 			expectStatus: http.StatusInternalServerError,
 		},
@@ -106,21 +112,17 @@ func TestRestLayerList(t *testing.T) {
 
 			service := handlersmocks.NewMockRestLayerListService(t)
 
-			if testCase.serviceCalled {
-				var resp *core.LayerPage
-				if testCase.serviceErr == nil {
-					resp = &core.LayerPage{Layers: []*core.Layer{coreLayer}, Total: 3}
-				}
-
+			if testCase.serviceMock != nil {
 				service.EXPECT().
 					Exec(mock.Anything, &core.LayerListRequest{OwnerID: ownerID, ProjectID: projectID, Limit: 10, Offset: 20}).
-					Return(resp, testCase.serviceErr)
+					Return(testCase.serviceMock.resp, testCase.serviceMock.err)
 			}
 
 			w := httptest.NewRecorder()
 			handlers.NewRestLayerList(service, config.LoggerDev).ServeHTTP(w, testCase.request(t))
 
 			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
+			service.AssertExpectations(t)
 		})
 	}
 }

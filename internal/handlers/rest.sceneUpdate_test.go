@@ -37,8 +37,7 @@ func TestRestSceneUpdate(t *testing.T) {
 
 		request func(t *testing.T) *http.Request
 
-		serviceCalled bool
-		serviceErr    error
+		serviceMock *serviceMock[*core.Scene]
 
 		expectStatus   int
 		expectResponse any
@@ -48,7 +47,7 @@ func TestRestSceneUpdate(t *testing.T) {
 
 			request: validRequest,
 
-			serviceCalled: true,
+			serviceMock: &serviceMock[*core.Scene]{resp: coreScene},
 
 			expectStatus:   http.StatusOK,
 			expectResponse: jsonScene,
@@ -76,22 +75,38 @@ func TestRestSceneUpdate(t *testing.T) {
 			expectStatus: http.StatusBadRequest,
 		},
 		{
-			name: "Error/NotFound",
+			name: "Error/ProjectNotFound",
 
 			request: validRequest,
 
-			serviceCalled: true,
-			serviceErr:    core.ErrSceneNotFound,
+			serviceMock: &serviceMock[*core.Scene]{err: core.ErrProjectNotFound},
 
 			expectStatus: http.StatusNotFound,
+		},
+		{
+			name: "Error/SceneNotFound",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[*core.Scene]{err: core.ErrSceneNotFound},
+
+			expectStatus: http.StatusNotFound,
+		},
+		{
+			name: "Error/InvalidRequest",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[*core.Scene]{err: core.ErrInvalidRequest},
+
+			expectStatus: http.StatusBadRequest,
 		},
 		{
 			name: "Error/Internal",
 
 			request: validRequest,
 
-			serviceCalled: true,
-			serviceErr:    errFoo,
+			serviceMock: &serviceMock[*core.Scene]{err: errFoo},
 
 			expectStatus: http.StatusInternalServerError,
 		},
@@ -103,12 +118,7 @@ func TestRestSceneUpdate(t *testing.T) {
 
 			service := handlersmocks.NewMockRestSceneUpdateService(t)
 
-			if testCase.serviceCalled {
-				var resp *core.Scene
-				if testCase.serviceErr == nil {
-					resp = coreScene
-				}
-
+			if testCase.serviceMock != nil {
 				service.EXPECT().
 					Exec(mock.Anything, &core.SceneUpdateRequest{
 						OwnerID:     ownerID,
@@ -119,13 +129,14 @@ func TestRestSceneUpdate(t *testing.T) {
 						Description: "Marie attend.",
 						Prompt:      "Lent.",
 					}).
-					Return(resp, testCase.serviceErr)
+					Return(testCase.serviceMock.resp, testCase.serviceMock.err)
 			}
 
 			w := httptest.NewRecorder()
 			handlers.NewRestSceneUpdate(service, config.LoggerDev).ServeHTTP(w, testCase.request(t))
 
 			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
+			service.AssertExpectations(t)
 		})
 	}
 }
