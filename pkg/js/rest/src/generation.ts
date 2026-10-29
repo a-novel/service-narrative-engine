@@ -1,10 +1,24 @@
 import type { NarrativeEngineApi } from "./api";
 import { ManuscriptContentSchema, NotesContentSchema } from "./content";
+import { BeatRecapSourceSchema } from "./recap";
 import { SceneDescriptionSchema, ScenePromptSchema, SceneTitleSchema } from "./scene";
 
 import { HTTP_HEADERS } from "@a-novel-kit/nodelib-browser/http";
 
 import { z } from "zod";
+
+/** The kinds of generation. */
+export enum GenerationKind {
+  /** Writes targets: scene fields and cells. */
+  Suggest = "suggest",
+  /** Recaps one cell or one beat, from stored content. */
+  Consolidate = "consolidate",
+  /** Looks for coherence issues across scenes. */
+  Check = "check",
+}
+
+/** Validates a {@link GenerationKind}. */
+export const GenerationKindSchema = z.enum([GenerationKind.Suggest, GenerationKind.Consolidate, GenerationKind.Check]);
 
 /** How a generation writes a target. */
 export enum TargetMode {
@@ -123,18 +137,52 @@ export const GenerationOverridesSchema = z.object({
 /** The value {@link GenerationOverridesSchema} validates. */
 export type GenerationOverrides = z.infer<typeof GenerationOverridesSchema>;
 
-/**
- * A suggest generation on a project of the caller: its targets, each once, what the author asks of it, and
- * the layers it does not read. `variant` asks for another result of the same calls.
- */
-export const GenerationSubmitRequestSchema = z.object({
+/** The cell a consolidate generation recaps. */
+export const GenerationCellSchema = z.object({
+  sceneID: z.uuid(),
+  layerID: z.uuid(),
+});
+
+/** The value {@link GenerationCellSchema} validates. */
+export type GenerationCell = z.infer<typeof GenerationCellSchema>;
+
+const generationBase = {
   projectID: z.uuid(),
-  targets: z.array(GenerationTargetSchema).min(1).max(20),
+  variant: z.int().min(0).max(4294967295).optional(),
+};
+
+// What a generation that reads the author's work as it stands takes beside its kind's own fields.
+const generationReading = {
   instruction: z.string().max(4000).optional(),
   exclude: z.array(z.uuid()).max(1000).optional(),
   overrides: GenerationOverridesSchema.optional(),
-  variant: z.int().min(0).max(4294967295).optional(),
-});
+};
+
+/**
+ * A generation on a project of the caller, by its kind. A suggest generation writes its targets, each once. A
+ * consolidate generation recaps a cell or a beat from stored content. A check generation reads a range of
+ * scene positions, every scene when omitted. `variant` asks for another result of the same calls.
+ */
+export const GenerationSubmitRequestSchema = z.discriminatedUnion("kind", [
+  z.object({
+    ...generationBase,
+    ...generationReading,
+    kind: z.literal(GenerationKind.Suggest),
+    targets: z.array(GenerationTargetSchema).min(1).max(20),
+  }),
+  z.object({
+    ...generationBase,
+    kind: z.literal(GenerationKind.Consolidate),
+    cell: GenerationCellSchema.optional(),
+    beatID: z.uuid().optional(),
+  }),
+  z.object({
+    ...generationBase,
+    ...generationReading,
+    kind: z.literal(GenerationKind.Check),
+    scenes: GenerationRangeSchema.optional(),
+  }),
+]);
 
 /** The value {@link GenerationSubmitRequestSchema} validates. */
 export type GenerationSubmitRequest = z.infer<typeof GenerationSubmitRequestSchema>;
@@ -164,23 +212,24 @@ export type ContextBlock = z.infer<typeof ContextBlockSchema>;
 
 /**
  * One target of a call, with the handles the model names it and its blocks by. A manuscript target always
- * has a range, the whole cell by default, and a text target none. `updatedAt` names the stored content the
- * call read, and is null for an override or a cell never written.
+ * has a range, the whole cell by default, and a text target none. A consolidation's target is the cell or the
+ * beat it recaps, and a beat's carries the manuscript cell it reads in each scene in `sources`. `updatedAt`
+ * names the stored content the call read, and is null for an override or a cell never written. It stays the
+ * string the server wrote, to the microsecond, since a recap write sends it back unchanged.
  */
 export const ContextTargetSchema = z.object({
   handle: z.string(),
-  sceneID: z.uuid(),
+  sceneID: z.uuid().nullable(),
   layerID: z.uuid().nullable(),
+  beatID: z.uuid().nullable(),
   field: SceneFieldSchema.optional(),
-  mode: TargetModeSchema,
+  mode: TargetModeSchema.optional(),
   range: GenerationRangeSchema.optional(),
   kept: z.array(z.int().min(0)).optional(),
   blocks: z.array(ContextBlockSchema).optional(),
   override: z.boolean(),
-  updatedAt: z.iso
-    .datetime()
-    .transform((value) => new Date(value))
-    .nullable(),
+  updatedAt: z.iso.datetime().nullable(),
+  sources: z.array(BeatRecapSourceSchema).optional(),
 });
 
 /** The value {@link ContextTargetSchema} validates. */
@@ -231,7 +280,7 @@ export type GenerationCall = z.infer<typeof GenerationCallSchema>;
 
 /** A generation as its submit left it: its model calls, in order. */
 export const GenerationSchema = z.object({
-  kind: z.literal("suggest"),
+  kind: GenerationKindSchema,
   calls: z.array(GenerationCallSchema),
 });
 
@@ -247,14 +296,15 @@ export const GenerationGetRequestSchema = z.object({
 export type GenerationGetRequest = z.infer<typeof GenerationGetRequestSchema>;
 
 /**
- * Plans a suggest generation on a project of the caller, and submits each of its model calls to genai. Each
- * call returns with its genai generation, or with the cap it waits on, and with the handles that map its
- * output back through `suggestionsMap`. genai admits 2 calls per user at a time on the default tier: resend
- * the same request as calls settle, and genai admits the calls that wait, replays those it admitted or that
- * succeeded, and runs again those that failed or were cancelled. Throws on HTTP 400 when the request is
- * invalid, 404 when the caller owns no such project or it lacks a target's scene or layer, 422 when the
- * generation outgrows every call its kind allows, 429 when genai admitted none of its calls, with the cap
- * in the error's `tags.cap`, and 503 when genai is unavailable.
+ * Plans a generation on a project of the caller, and submits each of its model calls to genai. Each call
+ * returns with its genai generation, or with the cap it waits on, and with the context its output maps back
+ * through: `suggestionsMap` for a suggestion, `findingsVerify` for a check, and the recap writes for a
+ * consolidation. genai admits 2 calls per user at a time on the default tier: resend the same request as
+ * calls settle, and genai admits the calls that wait, replays those it admitted or that succeeded, and runs
+ * again those that failed or were cancelled. Throws on HTTP 400 when the request is invalid, 404 when the
+ * caller owns no such project or it lacks a target's scene, layer or beat, 422 when the generation outgrows
+ * every call its kind allows, 429 when genai admitted none of its calls, with the cap in the error's
+ * `tags.cap`, and 503 when genai is unavailable.
  */
 export async function generationSubmit(
   api: NarrativeEngineApi,

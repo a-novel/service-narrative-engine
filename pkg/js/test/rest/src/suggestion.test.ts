@@ -28,6 +28,7 @@ function manuscriptTarget(fields: Partial<ContextTarget> = {}): ContextTarget {
     handle: "M1",
     sceneID: SCENE_ID,
     layerID: LAYER_ID,
+    beatID: null,
     mode: TargetMode.Revise,
     range: { start: 1, end: 4 },
     blocks: [
@@ -36,7 +37,7 @@ function manuscriptTarget(fields: Partial<ContextTarget> = {}): ContextTarget {
       { handle: "B3", position: 3 },
     ],
     override: false,
-    updatedAt: new Date("2026-10-29T00:00:00Z"),
+    updatedAt: "2026-10-29T00:00:00.123456Z",
     ...fields,
   };
 }
@@ -45,10 +46,11 @@ const titleTarget: ContextTarget = {
   handle: "T2",
   sceneID: SCENE_ID,
   layerID: null,
+  beatID: null,
   field: SceneField.Title,
   mode: TargetMode.Write,
   override: false,
-  updatedAt: new Date("2026-10-29T00:00:00Z"),
+  updatedAt: "2026-10-29T00:00:00.123456Z",
 };
 
 /** Returns the context of a call that writes the given targets. */

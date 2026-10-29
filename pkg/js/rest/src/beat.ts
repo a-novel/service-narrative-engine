@@ -1,10 +1,15 @@
 import type { NarrativeEngineApi } from "./api";
+import { BeatRecapSourceSchema, RecapSchema } from "./recap";
 
 import { HTTP_HEADERS } from "@a-novel-kit/nodelib-browser/http";
 
 import { z } from "zod";
 
-/** A column of the Scenes Composer, at its place in narrative order. Its scenes split it into subcolumns. */
+/**
+ * A column of the Scenes Composer, at its place in narrative order. Its scenes split it into subcolumns. A
+ * beat recapped once holds its latest recap, the `updatedAt` it read in `recapBeatUpdatedAt`, and for each
+ * scene the manuscript cell it read in `recapSources`.
+ */
 export const BeatSchema = z.object({
   id: z.uuid(),
   projectID: z.uuid(),
@@ -14,6 +19,12 @@ export const BeatSchema = z.object({
   description: z.string(),
   prompt: z.string(),
   updatedAt: z.iso.datetime().transform((value) => new Date(value)),
+  recap: RecapSchema.optional(),
+  recapBeatUpdatedAt: z.iso
+    .datetime()
+    .transform((value) => new Date(value))
+    .optional(),
+  recapSources: z.array(BeatRecapSourceSchema).optional(),
 });
 
 /** The value {@link BeatSchema} validates. */
