@@ -71,6 +71,9 @@ func main() {
 	))
 	defer jsonKeysClient.Close()
 
+	genaiClient := newGenaiClient(ctx, cfg.Dependencies)
+	defer genaiClient.Close()
+
 	claimsVerifier := lo.Must(servicejsonkeys.NewClaimsVerifier[serviceauthentication.Claims](jsonKeysClient))
 	withAuth := serviceauthentication.NewAuthHandler(claimsVerifier, cfg.Permissions, cfg.Logger)
 
@@ -161,6 +164,13 @@ func main() {
 	serviceManuscriptExport := core.NewManuscriptExport(
 		daoProjectOwned, daoLayerKind, daoProjectSelect, daoManuscriptSelect,
 	)
+	serviceProjectSnapshotRead := core.NewProjectSnapshotRead(
+		daoProjectOwned, daoProjectSelect, daoBeatList, daoSceneList, daoLayerList, daoCellList,
+	)
+	serviceGenerationPlan := core.NewGenerationPlan(cfg.Generations)
+	serviceGenerationSubmit := core.NewGenerationSubmit(serviceProjectSnapshotRead, serviceGenerationPlan, genaiClient)
+	serviceGenerationGet := core.NewGenerationGet(genaiClient)
+	serviceGenerationCancel := core.NewGenerationCancel(genaiClient)
 
 	// =================================================================================================================
 	// HANDLERS
@@ -201,6 +211,9 @@ func main() {
 	handlerCellWrite := handlers.NewRestCellWrite(serviceCellWrite, cfg.Logger)
 	handlerCellsWrite := handlers.NewRestCellsWrite(serviceCellsWrite, cfg.Logger)
 	handlerManuscriptExport := handlers.NewRestManuscriptExport(serviceManuscriptExport, cfg.Logger)
+	handlerGenerationSubmit := handlers.NewRestGenerationSubmit(serviceGenerationSubmit, cfg.Permissions, cfg.Logger)
+	handlerGenerationGet := handlers.NewRestGenerationGet(serviceGenerationGet, cfg.Logger)
+	handlerGenerationCancel := handlers.NewRestGenerationCancel(serviceGenerationCancel, cfg.Logger)
 
 	// =================================================================================================================
 	// ROUTER
@@ -253,6 +266,11 @@ func main() {
 		withAuth(api, config.PermissionProjectWrite).Put("/cells", handlerCellsWrite.ServeHTTP)
 
 		withAuth(api, config.PermissionProjectRead).Get("/manuscript", handlerManuscriptExport.ServeHTTP)
+
+		// A submit carries its overrides, so it takes a batch's body limit.
+		withAuth(api, config.PermissionProjectWrite).Post("/generation", handlerGenerationSubmit.ServeHTTP)
+		withAuth(api, config.PermissionProjectRead).Get("/generation", handlerGenerationGet.ServeHTTP)
+		withAuth(api, config.PermissionProjectWrite).Delete("/generation", handlerGenerationCancel.ServeHTTP)
 	})
 
 	// =================================================================================================================
