@@ -46,6 +46,10 @@ func newSchema(name string) *Schema {
 // content. and .schema.json.
 var contentSchemas = loadContentSchemas()
 
+// Manuscript is the schema of an exported manuscript, format v1. Its scenes hold the blocks of the
+// manuscript content schema.
+var Manuscript = newSchema("manuscript.schema.json")
+
 // Content returns the content schema of a layer kind.
 func Content(kind string) (*Schema, error) {
 	schema, ok := contentSchemas[kind]

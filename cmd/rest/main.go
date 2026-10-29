@@ -104,6 +104,7 @@ func main() {
 	daoCellUpsert := dao.NewPgCellUpsert()
 	daoCellsUpsert := dao.NewPgCellsUpsert()
 	daoCellList := dao.NewPgCellList()
+	daoManuscriptSelect := dao.NewPgManuscriptSelect()
 	transactor := postgres.NewTransactor(nil)
 
 	// =================================================================================================================
@@ -134,6 +135,9 @@ func main() {
 	serviceCellList := core.NewCellList(daoProjectOwned, daoCellList)
 	serviceCellWrite := core.NewCellWrite(daoProjectOwned, daoLayerKind, daoCellUpsert)
 	serviceCellsWrite := core.NewCellsWrite(daoProjectOwned, daoLayerKind, daoCellsUpsert)
+	serviceManuscriptExport := core.NewManuscriptExport(
+		daoProjectOwned, daoLayerKind, daoProjectSelect, daoManuscriptSelect,
+	)
 
 	// =================================================================================================================
 	// HANDLERS
@@ -165,6 +169,7 @@ func main() {
 	handlerCellList := handlers.NewRestCellList(serviceCellList, cfg.Logger)
 	handlerCellWrite := handlers.NewRestCellWrite(serviceCellWrite, cfg.Logger)
 	handlerCellsWrite := handlers.NewRestCellsWrite(serviceCellsWrite, cfg.Logger)
+	handlerManuscriptExport := handlers.NewRestManuscriptExport(serviceManuscriptExport, cfg.Logger)
 
 	// =================================================================================================================
 	// ROUTER
@@ -206,6 +211,8 @@ func main() {
 		withAuth(item, config.PermissionProjectWrite).Put("/cell", handlerCellWrite.ServeHTTP)
 		withAuth(api, config.PermissionProjectRead).Get("/cells", handlerCellList.ServeHTTP)
 		withAuth(api, config.PermissionProjectWrite).Put("/cells", handlerCellsWrite.ServeHTTP)
+
+		withAuth(api, config.PermissionProjectRead).Get("/manuscript", handlerManuscriptExport.ServeHTTP)
 	})
 
 	// =================================================================================================================
