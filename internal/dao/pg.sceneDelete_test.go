@@ -34,7 +34,7 @@ func TestPgSceneDelete(t *testing.T) {
 			request: &dao.SceneDeleteRequest{ProjectID: projectID, ID: sceneID1},
 
 			expect:       scenes[0],
-			expectScenes: []*dao.Scene{sceneAt(scenes[1], 0), sceneAt(scenes[2], 1)},
+			expectScenes: []*dao.Scene{sceneAt(scenes[1], 0), sceneAt(scenes[2], 1), scenes[3]},
 			expectCells:  []*dao.Cell{},
 		},
 		{
@@ -43,7 +43,7 @@ func TestPgSceneDelete(t *testing.T) {
 			request: &dao.SceneDeleteRequest{ProjectID: projectID, ID: sceneID2},
 
 			expect:       scenes[1],
-			expectScenes: []*dao.Scene{scenes[0], sceneAt(scenes[2], 1)},
+			expectScenes: []*dao.Scene{scenes[0], sceneAt(scenes[2], 1), scenes[3]},
 			expectCells:  composerFixtures().cells,
 		},
 		{
@@ -51,7 +51,7 @@ func TestPgSceneDelete(t *testing.T) {
 
 			request: &dao.SceneDeleteRequest{ProjectID: projectID, ID: absentID},
 
-			expectScenes: scenes[:3],
+			expectScenes: scenes[:4],
 			expectCells:  composerFixtures().cells,
 			expectErr:    dao.ErrSceneDeleteNotFound,
 		},
@@ -60,7 +60,7 @@ func TestPgSceneDelete(t *testing.T) {
 
 			request: &dao.SceneDeleteRequest{ProjectID: projectID, ID: otherSceneID},
 
-			expectScenes: scenes[:3],
+			expectScenes: scenes[:4],
 			expectCells:  composerFixtures().cells,
 			expectErr:    dao.ErrSceneDeleteNotFound,
 		},
@@ -81,7 +81,7 @@ func TestPgSceneDelete(t *testing.T) {
 				require.ErrorIs(t, err, testCase.expectErr)
 				require.Equal(t, testCase.expect, result)
 
-				// The scenes after the deleted one move up, and its cells go with it.
+				// The scenes after the deleted one in its beat move up, and its cells go with it.
 				require.Equal(t, testCase.expectScenes, listScenes(ctx, t, projectID))
 				requireCellsEqual(t, testCase.expectCells, listCells(ctx, t, projectID))
 			})

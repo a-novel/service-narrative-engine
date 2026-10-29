@@ -25,7 +25,7 @@ type SceneDeleteRequest struct {
 	ID        uuid.UUID
 }
 
-// PgSceneDelete removes a scene with its cells, and moves the scenes after it up by one.
+// PgSceneDelete removes a scene with its cells, and moves the scenes after it in its beat up by one.
 type PgSceneDelete struct{}
 
 func NewPgSceneDelete() *PgSceneDelete {

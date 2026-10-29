@@ -18,7 +18,7 @@ func TestPgSceneList(t *testing.T) {
 
 	scenes := composerFixtures().scenes
 
-	row := func(scene *dao.Scene) *dao.SceneListRow { return &dao.SceneListRow{Scene: *scene, Total: 3} }
+	row := func(scene *dao.Scene) *dao.SceneListRow { return &dao.SceneListRow{Scene: *scene, Total: 4} }
 
 	testCases := []struct {
 		name string
@@ -33,7 +33,8 @@ func TestPgSceneList(t *testing.T) {
 
 			request: &dao.SceneListRequest{ProjectID: projectID, Limit: 10},
 
-			expect: []*dao.SceneListRow{row(scenes[0]), row(scenes[1]), row(scenes[2])},
+			// The second beat's scene comes after the first beat's, though its position in its beat is 0.
+			expect: []*dao.SceneListRow{row(scenes[0]), row(scenes[1]), row(scenes[2]), row(scenes[3])},
 		},
 		{
 			name: "Success/Page",
@@ -45,7 +46,7 @@ func TestPgSceneList(t *testing.T) {
 		{
 			name: "Success/PastEnd",
 
-			request: &dao.SceneListRequest{ProjectID: projectID, Limit: 10, Offset: 3},
+			request: &dao.SceneListRequest{ProjectID: projectID, Limit: 10, Offset: 4},
 		},
 	}
 

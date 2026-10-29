@@ -24,11 +24,9 @@ type ScenesUpdateItem struct {
 
 	// Title names the scene in the composer.
 	Title string
-	// Color is the scene's color in the composer, as a lowercase #rrggbb hex code.
-	Color string
-	// Description says what the scene is for, written for the author.
+	// Description refines the beat's description for the scene.
 	Description string
-	// Prompt holds extra instructions for the model when it writes about the scene.
+	// Prompt refines the beat's prompt for the scene.
 	Prompt string
 }
 
@@ -61,14 +59,13 @@ func (dao *PgScenesUpdate) Exec(ctx context.Context, request *ScenesUpdateReques
 
 	ids := lo.Map(request.Scenes, func(item ScenesUpdateItem, _ int) uuid.UUID { return item.ID })
 	titles := lo.Map(request.Scenes, func(item ScenesUpdateItem, _ int) string { return item.Title })
-	colors := lo.Map(request.Scenes, func(item ScenesUpdateItem, _ int) string { return item.Color })
 	descriptions := lo.Map(request.Scenes, func(item ScenesUpdateItem, _ int) string { return item.Description })
 	prompts := lo.Map(request.Scenes, func(item ScenesUpdateItem, _ int) string { return item.Prompt })
 
 	var entities []*Scene
 
 	err = db.NewRaw(
-		scenesUpdateQuery, request.ProjectID, bun.List(ids), bun.List(titles), bun.List(colors),
+		scenesUpdateQuery, request.ProjectID, bun.List(ids), bun.List(titles),
 		bun.List(descriptions), bun.List(prompts), request.Now,
 	).
 		Scan(ctx, &entities)

@@ -23,9 +23,9 @@ type ScenesDeleteRequest struct {
 	IDs []uuid.UUID
 }
 
-// PgScenesDelete removes scenes of a project with their cells, and moves the scenes after them up to close
-// the gaps. It returns the deleted scenes, in no particular order, and skips an ID the project does not
-// hold.
+// PgScenesDelete removes scenes of a project with their cells, and moves the scenes after them in their
+// beats up to close the gaps. It returns the deleted scenes, in no particular order, and skips an ID the
+// project does not hold.
 type PgScenesDelete struct{}
 
 func NewPgScenesDelete() *PgScenesDelete {

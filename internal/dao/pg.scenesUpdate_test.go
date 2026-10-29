@@ -20,15 +20,15 @@ func TestPgScenesUpdate(t *testing.T) {
 
 	// updateScene2 and updateScene3 rewrite the second and third scenes, which become scene2 and scene3.
 	updateScene2 := dao.ScenesUpdateItem{
-		ID: sceneID2, Title: "Le mensonge", Color: "#e0457b", Description: "Paul ment.", Prompt: "Garder le suspense.",
+		ID: sceneID2, Title: "Le mensonge", Description: "Paul ment.", Prompt: "Garder le suspense.",
 	}
-	updateScene3 := dao.ScenesUpdateItem{ID: sceneID3, Title: "Le départ", Color: "#2bb673"}
+	updateScene3 := dao.ScenesUpdateItem{ID: sceneID3, Title: "Le départ"}
 	scene2 := &dao.Scene{
-		ID: sceneID2, ProjectID: projectID, Position: 1, Title: "Le mensonge", Color: "#e0457b",
+		ID: sceneID2, ProjectID: projectID, BeatID: beatID1, Position: 1, Title: "Le mensonge",
 		Description: "Paul ment.", Prompt: "Garder le suspense.", UpdatedAt: now,
 	}
 	scene3 := &dao.Scene{
-		ID: sceneID3, ProjectID: projectID, Position: 2, Title: "Le départ", Color: "#2bb673", UpdatedAt: now,
+		ID: sceneID3, ProjectID: projectID, BeatID: beatID1, Position: 2, Title: "Le départ", UpdatedAt: now,
 	}
 
 	testCases := []struct {
@@ -46,7 +46,7 @@ func TestPgScenesUpdate(t *testing.T) {
 			request: &dao.ScenesUpdateRequest{ProjectID: projectID, Scenes: []dao.ScenesUpdateItem{updateScene2}, Now: now},
 
 			expect:       []*dao.Scene{scene2},
-			expectScenes: []*dao.Scene{scenes[0], scene2, scenes[2]},
+			expectScenes: []*dao.Scene{scenes[0], scene2, scenes[2], scenes[3]},
 		},
 		{
 			name: "Success/Batch",
@@ -56,29 +56,29 @@ func TestPgScenesUpdate(t *testing.T) {
 			},
 
 			expect:       []*dao.Scene{scene2, scene3},
-			expectScenes: []*dao.Scene{scenes[0], scene2, scene3},
+			expectScenes: []*dao.Scene{scenes[0], scene2, scene3, scenes[3]},
 		},
 		{
 			name: "Success/NotFound",
 
 			request: &dao.ScenesUpdateRequest{
 				ProjectID: projectID,
-				Scenes:    []dao.ScenesUpdateItem{updateScene2, {ID: absentID, Title: "Le départ", Color: "#2bb673"}},
+				Scenes:    []dao.ScenesUpdateItem{updateScene2, {ID: absentID, Title: "Le départ"}},
 				Now:       now,
 			},
 
-			expectScenes: scenes[:3],
+			expectScenes: scenes[:4],
 		},
 		{
 			name: "Success/OtherProject",
 
 			request: &dao.ScenesUpdateRequest{
 				ProjectID: projectID,
-				Scenes:    []dao.ScenesUpdateItem{updateScene2, {ID: otherSceneID, Title: "Le départ", Color: "#2bb673"}},
+				Scenes:    []dao.ScenesUpdateItem{updateScene2, {ID: otherSceneID, Title: "Le départ"}},
 				Now:       now,
 			},
 
-			expectScenes: scenes[:3],
+			expectScenes: scenes[:4],
 		},
 	}
 

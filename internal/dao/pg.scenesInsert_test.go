@@ -28,9 +28,9 @@ func TestPgScenesInsert(t *testing.T) {
 		request *dao.ScenesInsertRequest
 
 		expect []*dao.Scene
-		// expectScenes is the project's order after the insert, when the case checks it.
+		// expectScenes is the first beat's order after the insert, when the case checks it.
 		expectScenes []*dao.Scene
-		// full fills the project up to its last position before the insert.
+		// full fills the first beat up to its last position before the insert.
 		full      bool
 		expectErr error
 	}{
@@ -39,20 +39,21 @@ func TestPgScenesInsert(t *testing.T) {
 
 			request: &dao.ScenesInsertRequest{
 				ProjectID: projectID,
+				BeatID:    beatID1,
 				Position:  3,
 				Scenes: []dao.ScenesInsertItem{
-					{ID: newSceneID1, Title: "Le débat", Color: "#e0457b", Description: "Marie hésite.", Prompt: "Lent."},
-					{ID: newSceneID2, Title: "Le passage", Color: "#2bb673"},
+					{ID: newSceneID1, Title: "Le débat", Description: "Marie hésite.", Prompt: "Lent."},
+					{ID: newSceneID2, Title: "Le passage"},
 				},
 				Now: now,
 			},
 
 			expect: []*dao.Scene{
 				{
-					ID: newSceneID1, ProjectID: projectID, Position: 3, Title: "Le débat", Color: "#e0457b",
+					ID: newSceneID1, ProjectID: projectID, BeatID: beatID1, Position: 3, Title: "Le débat",
 					Description: "Marie hésite.", Prompt: "Lent.", UpdatedAt: now,
 				},
-				{ID: newSceneID2, ProjectID: projectID, Position: 4, Title: "Le passage", Color: "#2bb673", UpdatedAt: now},
+				{ID: newSceneID2, ProjectID: projectID, BeatID: beatID1, Position: 4, Title: "Le passage", UpdatedAt: now},
 			},
 		},
 		{
@@ -60,22 +61,24 @@ func TestPgScenesInsert(t *testing.T) {
 
 			request: &dao.ScenesInsertRequest{
 				ProjectID: projectID,
-				Position:  499,
-				Scenes:    []dao.ScenesInsertItem{{ID: newSceneID1, Title: "Le débat", Color: "#e0457b"}},
+				BeatID:    beatID1,
+				Position:  9,
+				Scenes:    []dao.ScenesInsertItem{{ID: newSceneID1, Title: "Le débat"}},
 				Now:       now,
 			},
 
 			expect: []*dao.Scene{
-				{ID: newSceneID1, ProjectID: projectID, Position: 3, Title: "Le débat", Color: "#e0457b", UpdatedAt: now},
+				{ID: newSceneID1, ProjectID: projectID, BeatID: beatID1, Position: 3, Title: "Le débat", UpdatedAt: now},
 			},
 		},
 		{
-			name: "Error/ProjectFull",
+			name: "Error/BeatFull",
 
 			request: &dao.ScenesInsertRequest{
 				ProjectID: projectID,
+				BeatID:    beatID1,
 				Position:  0,
-				Scenes:    []dao.ScenesInsertItem{{ID: newSceneID1, Title: "Le débat", Color: "#e0457b"}},
+				Scenes:    []dao.ScenesInsertItem{{ID: newSceneID1, Title: "Le débat"}},
 				Now:       now,
 			},
 
@@ -83,26 +86,40 @@ func TestPgScenesInsert(t *testing.T) {
 			expectErr: dao.ErrScenesInsertFull,
 		},
 		{
+			name: "Error/BeatOfOtherProject",
+
+			request: &dao.ScenesInsertRequest{
+				ProjectID: projectID,
+				BeatID:    otherBeatID,
+				Position:  0,
+				Scenes:    []dao.ScenesInsertItem{{ID: newSceneID1, Title: "Le débat"}},
+				Now:       now,
+			},
+
+			expectErr: dao.ErrScenesInsertBeatNotFound,
+		},
+		{
 			name: "Success/Shift",
 
 			request: &dao.ScenesInsertRequest{
 				ProjectID: projectID,
+				BeatID:    beatID1,
 				Position:  1,
 				Scenes: []dao.ScenesInsertItem{
-					{ID: newSceneID1, Title: "Le débat", Color: "#e0457b"},
-					{ID: newSceneID2, Title: "Le passage", Color: "#2bb673"},
+					{ID: newSceneID1, Title: "Le débat"},
+					{ID: newSceneID2, Title: "Le passage"},
 				},
 				Now: now,
 			},
 
 			expect: []*dao.Scene{
-				{ID: newSceneID1, ProjectID: projectID, Position: 1, Title: "Le débat", Color: "#e0457b", UpdatedAt: now},
-				{ID: newSceneID2, ProjectID: projectID, Position: 2, Title: "Le passage", Color: "#2bb673", UpdatedAt: now},
+				{ID: newSceneID1, ProjectID: projectID, BeatID: beatID1, Position: 1, Title: "Le débat", UpdatedAt: now},
+				{ID: newSceneID2, ProjectID: projectID, BeatID: beatID1, Position: 2, Title: "Le passage", UpdatedAt: now},
 			},
 			expectScenes: []*dao.Scene{
 				composerFixtures().scenes[0],
-				{ID: newSceneID1, ProjectID: projectID, Position: 1, Title: "Le débat", Color: "#e0457b", UpdatedAt: now},
-				{ID: newSceneID2, ProjectID: projectID, Position: 2, Title: "Le passage", Color: "#2bb673", UpdatedAt: now},
+				{ID: newSceneID1, ProjectID: projectID, BeatID: beatID1, Position: 1, Title: "Le débat", UpdatedAt: now},
+				{ID: newSceneID2, ProjectID: projectID, BeatID: beatID1, Position: 2, Title: "Le passage", UpdatedAt: now},
 				sceneAt(composerFixtures().scenes[1], 3),
 				sceneAt(composerFixtures().scenes[2], 4),
 			},
@@ -132,7 +149,7 @@ func TestPgScenesInsert(t *testing.T) {
 				require.Equal(t, testCase.expect, result)
 
 				if testCase.expectScenes != nil {
-					require.Equal(t, testCase.expectScenes, listScenes(ctx, t, projectID))
+					require.Equal(t, testCase.expectScenes, beatScenes(ctx, t, beatID1))
 				}
 			})
 		})

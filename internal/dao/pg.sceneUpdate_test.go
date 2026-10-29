@@ -28,12 +28,12 @@ func TestPgSceneUpdate(t *testing.T) {
 			name: "Success",
 
 			request: &dao.SceneUpdateRequest{
-				ProjectID: projectID, ID: sceneID2, Title: "Le mensonge", Color: "#e0457b", Description: "Paul ment.",
+				ProjectID: projectID, ID: sceneID2, Title: "Le mensonge", Description: "Paul ment.",
 				Prompt: "Garder le suspense.", Now: now,
 			},
 
 			expect: &dao.Scene{
-				ID: sceneID2, ProjectID: projectID, Position: 1, Title: "Le mensonge", Color: "#e0457b",
+				ID: sceneID2, ProjectID: projectID, BeatID: beatID1, Position: 1, Title: "Le mensonge",
 				Description: "Paul ment.", Prompt: "Garder le suspense.", UpdatedAt: now,
 			},
 		},
@@ -41,7 +41,7 @@ func TestPgSceneUpdate(t *testing.T) {
 			name: "Error/NotFound",
 
 			request: &dao.SceneUpdateRequest{
-				ProjectID: projectID, ID: absentID, Title: "Le mensonge", Color: "#e0457b", Now: now,
+				ProjectID: projectID, ID: absentID, Title: "Le mensonge", Now: now,
 			},
 
 			expectErr: dao.ErrSceneUpdateNotFound,
@@ -50,7 +50,7 @@ func TestPgSceneUpdate(t *testing.T) {
 			name: "Error/OtherProject",
 
 			request: &dao.SceneUpdateRequest{
-				ProjectID: projectID, ID: otherSceneID, Title: "Le mensonge", Color: "#e0457b", Now: now,
+				ProjectID: projectID, ID: otherSceneID, Title: "Le mensonge", Now: now,
 			},
 
 			expectErr: dao.ErrSceneUpdateNotFound,
