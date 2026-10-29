@@ -9,6 +9,11 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
+// SceneContentMax caps the characters all the cells of a scene hold together, counted over their stored
+// JSON documents. That is about 100K tokens, so a generation that reads a whole scene fits one regular
+// model call.
+const SceneContentMax = 400000
+
 // Cell is the content of one layer in one scene.
 type Cell struct {
 	// ProjectID is the project the cell's scene and layer belong to.

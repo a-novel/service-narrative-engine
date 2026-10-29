@@ -100,6 +100,15 @@ func TestRestCellWrite(t *testing.T) {
 			expectStatus: http.StatusNotFound,
 		},
 		{
+			name: "Error/SceneContentFull",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[*core.WrittenCell]{err: core.ErrProjectFull},
+
+			expectStatus: http.StatusUnprocessableEntity,
+		},
+		{
 			name: "Error/InvalidContent",
 
 			request: validRequest,
