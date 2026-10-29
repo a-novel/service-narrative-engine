@@ -1,0 +1,8 @@
+# Token estimates a prompt stays within, by generation kind. An estimate counts four characters per token.
+budgets:
+  # suggest writes targets and reads the scenes around them.
+  suggest: 32000
+  # consolidate recaps one cell, and reads little beyond it.
+  consolidate: 12000
+  # check reads a range of scenes, or the whole project.
+  check: 64000

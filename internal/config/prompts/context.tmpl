@@ -1,0 +1,134 @@
+{{- /*
+The sections of a generation's user message, most stable first: the frame, the neighborhood, then the
+task. Handles name scenes (S1), layers (L1), targets (T1) and the blocks of targets (B1).
+*/ -}}
+
+{{- define "user" -}}
+{{.Frame}}
+
+<neighborhood>
+{{- range .Scenes}}
+{{.}}
+{{- end}}
+</neighborhood>
+
+{{.Task}}
+{{- end}}
+
+{{- /* frame: the project, its layers and every scene. */ -}}
+{{- define "frame" -}}
+<frame>
+<project title="{{xml .Title}}" language="{{.Language}}">
+{{- with .Premise}}
+<premise>{{xml .}}</premise>
+{{- end}}
+</project>
+<layers>
+{{- range .Layers}}
+<layer handle="{{.Handle}}" kind="{{.Kind}}" name="{{xml .Name}}">{{xml .Description}}</layer>
+{{- end}}
+</layers>
+<scenes>
+{{- range .Scenes}}
+<scene handle="{{.Handle}}"{{with .Title}} title="{{xml .}}"{{end}}>{{xml .Description}}</scene>
+{{- end}}
+</scenes>
+</frame>
+{{- end}}
+
+{{- /* scene: one scene of the neighborhood, at its level. A target cell shows in the task. */ -}}
+{{- define "scene" -}}
+<scene handle="{{.Handle}}" level="{{.Level}}">
+{{- with .Prompt}}
+<prompt>{{xml .}}</prompt>
+{{- end}}
+{{- range .Cells}}
+{{- if .Target}}
+<cell layer="{{.Layer}}" target="{{.Target}}"/>
+{{- else if .Recap}}
+<recap layer="{{.Layer}}">{{xml .Recap}}</recap>
+{{- else}}
+<cell layer="{{.Layer}}">{{template "content" .Content}}</cell>
+{{- end}}
+{{- end}}
+</scene>
+{{- end}}
+
+{{- /* content: the text of a cell, or its blocks one per line. */ -}}
+{{- define "content" -}}
+{{- if .Blocks}}
+{{- range .Blocks}}
+{{template "block" .}}
+{{- end}}
+{{else}}{{xml .Text}}{{end}}
+{{- end}}
+
+{{- define "block" -}}
+{{- if eq .Kind "dialogue" -}}
+<dialogue{{with .Handle}} handle="{{.}}"{{end}}{{if .Kept}} kept="true"{{end}} speaker="{{xml .Speaker}}">
+{{- range .Parts}}{{if .Tone}}<tone>{{xml .Tone}}</tone>{{else}}<text>{{xml .Text}}</text>{{end}}{{end -}}
+</dialogue>
+{{- else -}}
+<narration{{with .Handle}} handle="{{.}}"{{end}}{{if .Kept}} kept="true"{{end}}>{{xml .Text}}</narration>
+{{- end -}}
+{{- end}}
+
+{{- define "blocks" -}}
+{{- range .}}
+{{template "block" .}}
+{{- end}}
+{{end}}
+
+{{- /* task.suggest: the targets, each with the content its mode shows. */ -}}
+{{- define "task.suggest" -}}
+<task>
+{{- range .Targets}}
+<target handle="{{.Handle}}" scene="{{.Scene}}"{{with .Layer}} layer="{{.}}"{{end}}{{with .Field}} field="{{.}}"{{end}} mode="{{.Mode}}"
+{{- if .HasText}}>
+<text>{{xml .Text}}</text>
+</target>
+{{- else if .Manuscript}}>
+{{- with .Before}}
+<before>{{template "blocks" .}}</before>
+{{- end}}
+<range>{{template "blocks" .Range}}</range>
+{{- with .After}}
+<after>{{template "blocks" .}}</after>
+{{- end}}
+</target>
+{{- else}}/>
+{{- end}}
+{{- end}}
+{{- template "instruction" .}}
+<rules>{{template "rules"}}</rules>
+</task>
+{{- end}}
+
+{{- /* task.consolidate: the cell to recap, in full. */ -}}
+{{- define "task.consolidate" -}}
+<task>
+{{- with .Cell}}
+<target handle="T1" scene="{{.Scene}}" layer="{{.Layer}}">{{template "content" .Content}}</target>
+{{- end}}
+<rules>{{template "rules"}}</rules>
+</task>
+{{- end}}
+
+{{- /* task.check: the scenes to check. */ -}}
+{{- define "task.check" -}}
+<task>
+{{- with .Scenes}}
+<check from="{{.First}}" to="{{.Last}}"/>
+{{- else}}
+<check scenes="all"/>
+{{- end}}
+{{- template "instruction" .}}
+<rules>{{template "rules"}}</rules>
+</task>
+{{- end}}
+
+{{- define "instruction" -}}
+{{- with .Instruction}}
+<instruction>{{xml .}}</instruction>
+{{- end}}
+{{- end}}
