@@ -108,6 +108,36 @@ services:
     networks:
       - narrative-engine-integration-rest-test
 
+  postgres-genai:
+    image: ghcr.io/a-novel/service-genai/database:v0.7.4@sha256:880e760f2f03f4ffdaf2affc186d10a91a12f711602a4c0983a9d70d837efb70
+    networks:
+      - narrative-engine-integration-rest-test
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+      POSTGRES_INITDB_ARGS: --auth=scram-sha-256
+    healthcheck: *postgres-healthcheck
+
+  service-genai:
+    image: ghcr.io/a-novel/service-genai/standalone-grpc:v0.7.4@sha256:cdfc7120582969cd26982e552571cc1cabf2b2b3f9605b421979d45e9b7a53b2
+    depends_on:
+      postgres-genai:
+        condition: service_healthy
+    environment:
+      POSTGRES_DSN: postgres://postgres:postgres@postgres-genai:5432/postgres?sslmode=disable
+      # A closed port: starts are refused before reaching any provider, so generations stay pending.
+      OPENAI_BASE_URL: "http://127.0.0.1:1/v1"
+      OPENAI_API_KEY: "test"
+    healthcheck:
+      test: ["CMD", "grpcurl", "--plaintext", "-d", "", "localhost:8080", "grpc.health.v1.Health/Check"]
+      interval: 1s
+      timeout: 5s
+      retries: 30
+    networks:
+      - narrative-engine-integration-rest-test
+
   postgres-narrative-engine:
     build:
       context: ..
@@ -133,10 +163,14 @@ services:
         condition: service_healthy
       service-json-keys:
         condition: service_healthy
+      service-genai:
+        condition: service_healthy
     environment:
       POSTGRES_DSN: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-narrative-engine:5432/${POSTGRES_DB}?sslmode=disable"
       SERVICE_JSON_KEYS_HOST: service-json-keys
       SERVICE_JSON_KEYS_PORT: 8080
+      SERVICE_GENAI_HOST: service-genai
+      SERVICE_GENAI_PORT: 8080
       # The suite sends many requests per route within a second from one address.
       REST_RATE_LIMITS_ENABLED: false
     networks:
