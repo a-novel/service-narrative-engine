@@ -1,11 +1,9 @@
 package core
 
 import (
-	"cmp"
 	"context"
 	"errors"
 	"fmt"
-	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -30,6 +28,13 @@ type ScenesCreateDaoInsert interface {
 
 // ScenesCreateItem is one scene of a [ScenesCreateRequest].
 type ScenesCreateItem struct {
+	// BeatID is the beat the scene joins.
+	BeatID uuid.UUID `validate:"required"`
+
+	// Position is the scene's place in its beat, from 0: before the beat's scene at that position, or last
+	// past the end. New scenes at one position keep the order of the request.
+	Position int `validate:"min=0"`
+
 	// Title names the scene in the composer.
 	Title string `validate:"required,notblank,max=200"`
 	// Description refines the beat's description for the scene. Empty keeps the beat's.
@@ -38,22 +43,18 @@ type ScenesCreateItem struct {
 	Prompt string `validate:"max=20000"`
 }
 
-// ScenesCreateRequest carries new scenes and their place in a beat.
+// ScenesCreateRequest carries new scenes, each with its beat and its place in it.
 type ScenesCreateRequest struct {
 	OwnerID   uuid.UUID `validate:"required"`
 	ProjectID uuid.UUID `validate:"required"`
-	// BeatID is the beat the scenes join.
-	BeatID uuid.UUID `validate:"required"`
 
-	// Position is the place of the first new scene in its beat, from 0, and the others follow it. A
-	// position past the beat's last scene appends them.
-	Position int `validate:"min=0"`
-	// Scenes lists the scenes to add, in order, at most 100. A beat holds at most 10.
+	// Scenes lists the scenes to add, at most 100, in any beats of the project. A beat holds at most 10.
 	Scenes []ScenesCreateItem `validate:"required,min=1,max=100,dive"`
 }
 
-// ScenesCreate adds scenes to a beat at the position the caller names. The beat's scenes from that
-// position on move down to make room.
+// ScenesCreate adds scenes to beats of a project, each at its position in its beat, and returns them in
+// the order of the request. The scenes after them in their beats move down to make room. A beat the project
+// does not hold answers [ErrBeatNotFound], and no scene is added.
 type ScenesCreate struct {
 	daoLock    ScenesCreateDaoLock
 	daoInsert  ScenesCreateDaoInsert
@@ -75,7 +76,6 @@ func (service *ScenesCreate) Exec(ctx context.Context, request *ScenesCreateRequ
 	span.SetAttributes(
 		attribute.String("project.id", request.ProjectID.String()),
 		attribute.String("project.owner_id", request.OwnerID.String()),
-		attribute.Int("scenes.position", request.Position),
 		attribute.Int("scenes.count", len(request.Scenes)),
 	)
 
@@ -102,11 +102,10 @@ func (service *ScenesCreate) Exec(ctx context.Context, request *ScenesCreateRequ
 
 		inserted, err := service.daoInsert.Exec(ctx, &dao.ScenesInsertRequest{
 			ProjectID: request.ProjectID,
-			BeatID:    request.BeatID,
-			Position:  request.Position,
 			Scenes: lo.Map(request.Scenes, func(item ScenesCreateItem, index int) dao.ScenesInsertItem {
 				return dao.ScenesInsertItem{
-					ID: ids[index], Title: item.Title, Description: item.Description, Prompt: item.Prompt,
+					ID: ids[index], BeatID: item.BeatID, Position: item.Position, Title: item.Title,
+					Description: item.Description, Prompt: item.Prompt,
 				}
 			}),
 			Now: time.Now(),
@@ -122,8 +121,8 @@ func (service *ScenesCreate) Exec(ctx context.Context, request *ScenesCreateRequ
 			return fmt.Errorf("insert scenes: %w", err)
 		}
 
-		slices.SortFunc(inserted, func(a, b *dao.Scene) int { return cmp.Compare(a.Position, b.Position) })
-		scenes = lo.Map(inserted, func(entity *dao.Scene, _ int) *Scene { return newScene(entity) })
+		byID := lo.KeyBy(inserted, func(entity *dao.Scene) uuid.UUID { return entity.ID })
+		scenes = lo.Map(ids, func(id uuid.UUID, _ int) *Scene { return newScene(byID[id]) })
 
 		return nil
 	})
