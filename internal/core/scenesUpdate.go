@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -32,11 +31,9 @@ type ScenesUpdateItem struct {
 
 	// Title names the scene in the composer.
 	Title string `validate:"required,notblank,max=200"`
-	// Color is the scene's color in the composer, as a #rrggbb hex code in either case.
-	Color string `validate:"required,len=7,hexcolor"`
-	// Description says what the scene is for, written for the author.
+	// Description refines the beat's description for the scene. Empty keeps the beat's.
 	Description string `validate:"max=20000"`
-	// Prompt holds extra instructions for the model when it writes about the scene.
+	// Prompt refines the beat's prompt for the scene. Empty keeps the beat's.
 	Prompt string `validate:"max=20000"`
 }
 
@@ -86,8 +83,7 @@ func (service *ScenesUpdate) Exec(ctx context.Context, request *ScenesUpdateRequ
 		ProjectID: request.ProjectID,
 		Scenes: lo.Map(request.Scenes, func(item ScenesUpdateItem, _ int) dao.ScenesUpdateItem {
 			return dao.ScenesUpdateItem{
-				ID: item.ID, Title: item.Title, Color: strings.ToLower(item.Color),
-				Description: item.Description, Prompt: item.Prompt,
+				ID: item.ID, Title: item.Title, Description: item.Description, Prompt: item.Prompt,
 			}
 		}),
 		Now: time.Now(),

@@ -20,6 +20,7 @@ func TestManuscriptExport(t *testing.T) {
 	errFoo := errors.New("foo")
 
 	blocks := `[{"kind":"narration","text":"La pluie battait les vitres."}]`
+	title := func(value string) *string { return &value }
 
 	request := &core.ManuscriptExportRequest{OwnerID: ownerID, ProjectID: projectID, LayerID: layerID1}
 
@@ -31,7 +32,7 @@ func TestManuscriptExport(t *testing.T) {
 		ownerMock   *daoMock[bool]
 		kindMock    *daoMock[[]*dao.LayerKind]
 		projectMock *daoMock[*dao.Project]
-		daoMock     *daoMock[[]*dao.ManuscriptScene]
+		daoMock     *daoMock[[]*dao.ManuscriptRow]
 
 		expect    *core.Manuscript
 		expectErr error
@@ -44,33 +45,48 @@ func TestManuscriptExport(t *testing.T) {
 			ownerMock:   &daoMock[bool]{resp: true},
 			kindMock:    &daoMock[[]*dao.LayerKind]{resp: []*dao.LayerKind{{ID: layerID1, Kind: "manuscript", Count: 2}}},
 			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
-			daoMock: &daoMock[[]*dao.ManuscriptScene]{resp: []*dao.ManuscriptScene{
-				{Title: "Ouverture", Content: json.RawMessage(`{"blocks":` + blocks + `}`)},
-				{Title: "Interlude"},
-				{Title: "Dénouement", Content: json.RawMessage(`{"blocks":[]}`)},
+			// The first beat holds two scenes, the second one with an empty cell, and the last none.
+			daoMock: &daoMock[[]*dao.ManuscriptRow]{resp: []*dao.ManuscriptRow{
+				{
+					BeatID: beatID1, BeatTitle: "Ouverture", BeatDescription: "Marie attend.", SceneTitle: title("La fenêtre"),
+					Content: json.RawMessage(`{"blocks":` + blocks + `}`),
+				},
+				{BeatID: beatID1, BeatTitle: "Ouverture", BeatDescription: "Marie attend.", SceneTitle: title("Interlude")},
+				{
+					BeatID: beatID2, BeatTitle: "Dénouement", SceneTitle: title("Le matin"),
+					Content: json.RawMessage(`{"blocks":[]}`),
+				},
+				{BeatID: beatID3, BeatTitle: "Épilogue"},
 			}},
 
 			expect: &core.Manuscript{
 				Title:    "Les Heures claires",
 				Language: "fr",
+				Beats: []*core.ManuscriptBeat{
+					{Title: "Ouverture", Description: "Marie attend."},
+					{Title: "Dénouement"},
+					{Title: "Épilogue"},
+				},
 				Scenes: []*core.ManuscriptScene{
-					{Title: "Ouverture", Blocks: json.RawMessage(blocks)},
-					{Title: "Interlude", Blocks: json.RawMessage(`[]`)},
-					{Title: "Dénouement", Blocks: json.RawMessage(`[]`)},
+					{Beat: 0, Title: "La fenêtre", Blocks: json.RawMessage(blocks)},
+					{Beat: 0, Title: "Interlude", Blocks: json.RawMessage(`[]`)},
+					{Beat: 1, Title: "Le matin", Blocks: json.RawMessage(`[]`)},
 				},
 			},
 		},
 		{
-			name: "Success/NoScenes",
+			name: "Success/NoBeats",
 
 			request: request,
 
 			ownerMock:   &daoMock[bool]{resp: true},
 			kindMock:    &daoMock[[]*dao.LayerKind]{resp: []*dao.LayerKind{{ID: layerID1, Kind: "manuscript", Count: 1}}},
 			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
-			daoMock:     &daoMock[[]*dao.ManuscriptScene]{resp: []*dao.ManuscriptScene{}},
+			daoMock:     &daoMock[[]*dao.ManuscriptRow]{resp: []*dao.ManuscriptRow{}},
 
-			expect: &core.Manuscript{Title: "Les Heures claires", Language: "fr", Scenes: []*core.ManuscriptScene{}},
+			expect: &core.Manuscript{
+				Title: "Les Heures claires", Language: "fr", Beats: []*core.ManuscriptBeat{}, Scenes: []*core.ManuscriptScene{},
+			},
 		},
 		{
 			name: "Error/MissingLayerID",
@@ -146,7 +162,7 @@ func TestManuscriptExport(t *testing.T) {
 			ownerMock:   &daoMock[bool]{resp: true},
 			kindMock:    &daoMock[[]*dao.LayerKind]{resp: []*dao.LayerKind{{ID: layerID1, Kind: "manuscript", Count: 1}}},
 			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
-			daoMock:     &daoMock[[]*dao.ManuscriptScene]{err: errFoo},
+			daoMock:     &daoMock[[]*dao.ManuscriptRow]{err: errFoo},
 
 			expectErr: errFoo,
 		},

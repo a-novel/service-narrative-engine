@@ -21,7 +21,9 @@ func TestSceneMove(t *testing.T) {
 	errFoo := errors.New("foo")
 
 	request := func(position int) *core.SceneMoveRequest {
-		return &core.SceneMoveRequest{OwnerID: ownerID, ProjectID: projectID, ID: sceneID2, Position: position}
+		return &core.SceneMoveRequest{
+			OwnerID: ownerID, ProjectID: projectID, ID: sceneID2, BeatID: beatID2, Position: position,
+		}
 	}
 
 	testCases := []struct {
@@ -59,7 +61,7 @@ func TestSceneMove(t *testing.T) {
 		{
 			name: "Error/InvalidRequest",
 
-			request: &core.SceneMoveRequest{OwnerID: ownerID, ProjectID: projectID},
+			request: &core.SceneMoveRequest{OwnerID: ownerID, ProjectID: projectID, ID: sceneID2},
 
 			expectErr: core.ErrInvalidRequest,
 		},
@@ -99,6 +101,26 @@ func TestSceneMove(t *testing.T) {
 			expectErr: core.ErrSceneNotFound,
 		},
 		{
+			name: "Error/BeatNotFound",
+
+			request: request(0),
+
+			lockMock: &daoMock[bool]{resp: true},
+			moveMock: &daoMock[*dao.Scene]{err: dao.ErrSceneMoveBeatNotFound},
+
+			expectErr: core.ErrBeatNotFound,
+		},
+		{
+			name: "Error/BeatFull",
+
+			request: request(0),
+
+			lockMock: &daoMock[bool]{resp: true},
+			moveMock: &daoMock[*dao.Scene]{err: dao.ErrSceneMoveFull},
+
+			expectErr: core.ErrProjectFull,
+		},
+		{
 			name: "Error/Move",
 
 			request: request(0),
@@ -135,7 +157,7 @@ func TestSceneMove(t *testing.T) {
 			if testCase.moveMock != nil {
 				mockMove.EXPECT().
 					Exec(mock.Anything, &dao.SceneMoveRequest{
-						ProjectID: projectID, ID: sceneID2, Position: testCase.request.Position,
+						ProjectID: projectID, ID: sceneID2, BeatID: beatID2, Position: testCase.request.Position,
 					}).
 					Return(testCase.moveMock.resp, testCase.moveMock.err)
 			}

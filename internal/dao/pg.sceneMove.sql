@@ -1,9 +1,12 @@
--- A position past the last scene moves it last. The scenes between the old and the new position move by one
--- toward the old position, so positions stay dense. The positions unique constraint is deferred, so they
--- all change in one statement.
+-- The scene leaves its beat, whose later scenes move up by one, then joins the target beat at the target
+-- position, whose scenes from there on move down by one. The target beat may be the scene's own. A position
+-- past the target beat's last scene moves it last. The positions unique constraint is deferred, so every
+-- position changes in one statement.
 WITH
   moving AS (
     SELECT
+      id,
+      beat_id,
       position
     FROM
       scenes
@@ -11,28 +14,60 @@ WITH
       project_id = ?0
       AND id = ?1
   ),
+  closed AS (
+    SELECT
+      scenes.id,
+      scenes.beat_id,
+      scenes.position - (
+        scenes.beat_id = moving.beat_id
+        AND scenes.position > moving.position
+      )::integer AS position
+    FROM
+      scenes,
+      moving
+    WHERE
+      scenes.project_id = ?0
+      AND scenes.beat_id IN (moving.beat_id, ?2)
+      AND scenes.id <> moving.id
+  ),
   target AS (
     SELECT
-      LEAST(?2, count(*) - 1)::integer AS position
+      LEAST(?3, count(*))::integer AS position
     FROM
-      scenes
+      closed
     WHERE
-      project_id = ?0
+      beat_id = ?2
+  ),
+  placed AS (
+    SELECT
+      moving.id,
+      ?2::uuid AS beat_id,
+      target.position
+    FROM
+      moving,
+      target
+    UNION ALL
+    SELECT
+      closed.id,
+      closed.beat_id,
+      closed.position + (
+        closed.beat_id = ?2
+        AND closed.position >= target.position
+      )::integer
+    FROM
+      closed,
+      target
   ),
   moved AS (
     UPDATE scenes
     SET
-      position = CASE
-        WHEN scenes.id = ?1 THEN target.position
-        WHEN target.position < moving.position THEN scenes.position + 1
-        ELSE scenes.position - 1
-      END
+      beat_id = placed.beat_id,
+      position = placed.position
     FROM
-      moving,
-      target
+      placed
     WHERE
       scenes.project_id = ?0
-      AND scenes.position BETWEEN LEAST(moving.position, target.position) AND GREATEST(moving.position, target.position)
+      AND scenes.id = placed.id
     RETURNING
       scenes.*
   )

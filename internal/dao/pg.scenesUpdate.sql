@@ -8,9 +8,8 @@ WITH
         ARRAY[?1]::uuid[],
         ARRAY[?2]::text[],
         ARRAY[?3]::text[],
-        ARRAY[?4]::text[],
-        ARRAY[?5]::text[]
-      ) AS data (id, title, color, description, prompt)
+        ARRAY[?4]::text[]
+      ) AS data (id, title, description, prompt)
   ),
   held AS (
     SELECT
@@ -24,10 +23,9 @@ WITH
 UPDATE scenes
 SET
   title = data.title,
-  color = data.color,
   description = data.description,
   prompt = data.prompt,
-  updated_at = ?6
+  updated_at = ?5
 FROM
   data,
   held

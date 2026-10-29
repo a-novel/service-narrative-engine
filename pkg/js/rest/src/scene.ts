@@ -4,13 +4,13 @@ import { HTTP_HEADERS } from "@a-novel-kit/nodelib-browser/http";
 
 import { z } from "zod";
 
-/** A column of the Scenes Composer, at its place in narrative order. */
+/** A subcolumn of the Scenes Composer: a part of a beat, at its place in the beat. */
 export const SceneSchema = z.object({
   id: z.uuid(),
   projectID: z.uuid(),
+  beatID: z.uuid(),
   position: z.int().min(0),
   title: z.string(),
-  color: z.string(),
   description: z.string(),
   prompt: z.string(),
   updatedAt: z.iso.datetime().transform((value) => new Date(value)),
@@ -22,26 +22,26 @@ export type Scene = z.infer<typeof SceneSchema>;
 /** The title of a scene, which is not blank. */
 export const SceneTitleSchema = z.string().max(200).regex(/\S/);
 
-/** The color of a scene in the composer, as a `#rrggbb` hex code in either case. */
-export const SceneColorSchema = z.string().regex(/^#[0-9A-Fa-f]{6}$/);
-
-/** What a scene is for, written for the author. */
+/** What refines the beat's description for a scene, written for the author. */
 export const SceneDescriptionSchema = z.string().max(20000);
 
-/** Extra instructions for the model when it writes about a scene. */
+/** What refines the beat's prompt for a scene, for the model. */
 export const ScenePromptSchema = z.string().max(20000);
 
-/** The fields of a scene: a required title and color, and an optional description and prompt. */
+/** The fields of a scene: a required title, and an optional description and prompt that refine the beat's. */
 export const SceneFieldsSchema = z.object({
   title: SceneTitleSchema,
-  color: SceneColorSchema,
   description: SceneDescriptionSchema.optional(),
   prompt: ScenePromptSchema.optional(),
 });
 
-/** The scene to add at `position`, first when omitted. A position past the last scene appends it. */
+/**
+ * The scene to add to a beat at `position`, first when omitted. A position past the beat's last scene
+ * appends it.
+ */
 export const SceneCreateRequestSchema = SceneFieldsSchema.extend({
   projectID: z.uuid(),
+  beatID: z.uuid(),
   position: z.int().min(0).optional(),
 });
 
@@ -49,13 +49,15 @@ export const SceneCreateRequestSchema = SceneFieldsSchema.extend({
 export type SceneCreateRequest = z.infer<typeof SceneCreateRequestSchema>;
 
 /**
- * Up to 100 scenes to add at `position`, in narrative order, first when omitted. A position past the last
- * scene appends them.
+ * Up to 100 scenes to add to beats of the project. Each goes before the scene of its beat at its `position`,
+ * first when omitted, or last past the end. New scenes at one position keep the order of the request.
  */
 export const ScenesCreateRequestSchema = z.object({
   projectID: z.uuid(),
-  position: z.int().min(0).optional(),
-  scenes: z.array(SceneFieldsSchema).min(1).max(100),
+  scenes: z
+    .array(SceneFieldsSchema.extend({ beatID: z.uuid(), position: z.int().min(0).optional() }))
+    .min(1)
+    .max(100),
 });
 
 /** The value {@link ScenesCreateRequestSchema} validates. */
@@ -82,10 +84,14 @@ export const ScenesUpdateRequestSchema = z.object({
 /** The value {@link ScenesUpdateRequestSchema} validates. */
 export type ScenesUpdateRequest = z.infer<typeof ScenesUpdateRequestSchema>;
 
-/** The scene to move, and its new position. A position past the last scene moves it last. */
+/**
+ * The scene to move, and the beat and position it moves to. The beat is its own or another of the project.
+ * A position past the beat's last scene moves it last.
+ */
 export const SceneMoveRequestSchema = z.object({
   projectID: z.uuid(),
   id: z.uuid(),
+  beatID: z.uuid(),
   position: z.int().min(0),
 });
 
@@ -130,9 +136,9 @@ export const SceneListRequestSchema = z.object({
 export type SceneListRequest = z.infer<typeof SceneListRequestSchema>;
 
 /**
- * Adds one scene to a project and returns it at its place; the scenes from there on move down one place.
- * Throws on HTTP 404 when the caller owns no such project, and 422 when the project holds 500 scenes
- * already. {@link scenesCreate} adds several at once.
+ * Adds one scene to a beat and returns it at its place; the beat's scenes from there on move down one
+ * place. Throws on HTTP 404 when the caller owns no such project or beat, and 422 when the beat holds 10
+ * scenes already. {@link scenesCreate} adds several at once.
  */
 export async function sceneCreate(
   api: NarrativeEngineApi,
@@ -147,9 +153,9 @@ export async function sceneCreate(
 }
 
 /**
- * Adds scenes to a project and returns them in narrative order; the scenes from there on move down.
- * They are all added, or none are. Throws on HTTP 404 when the caller owns no such project, and 422
- * when the project would hold more than 500 scenes.
+ * Adds scenes to beats of the project and returns them in the order of the request; the scenes after them
+ * in their beats move down. They are all added, or none are. Throws on HTTP 404 when the caller owns no such
+ * project or one of the beats, and 422 when a beat would hold more than 10 scenes.
  */
 export async function scenesCreate(
   api: NarrativeEngineApi,
@@ -164,7 +170,7 @@ export async function scenesCreate(
 }
 
 /**
- * Replaces the title, color, description and prompt of a scene. Throws on HTTP 404 when the caller
+ * Replaces the title, description and prompt of a scene. Throws on HTTP 404 when the caller
  * owns no such project, or the project holds no such scene.
  */
 export async function sceneUpdate(
@@ -197,8 +203,9 @@ export async function scenesUpdate(
 }
 
 /**
- * Moves a scene and returns it at its new position. The scenes between its old and new position shift by
- * one. Throws on HTTP 404 when the caller owns no such project, or the project holds no such scene.
+ * Moves a scene to a position in a beat, its own or another, and returns it there. The scene keeps its
+ * ID and its cells. Throws on HTTP 404 when the caller owns no such project, or the project holds no such
+ * scene or beat, and 422 when the target beat holds 10 scenes already.
  */
 export async function sceneMove(
   api: NarrativeEngineApi,
@@ -213,7 +220,8 @@ export async function sceneMove(
 }
 
 /**
- * Deletes one scene with its cells and returns it as it was; the scenes after it move up one place.
+ * Deletes one scene with its cells and returns it as it was; the scenes after it in its beat move up one
+ * place.
  * Throws on HTTP 404 when the caller owns no such project, or the project holds no such scene.
  */
 export async function sceneDelete(
@@ -229,8 +237,8 @@ export async function sceneDelete(
 }
 
 /**
- * Deletes scenes with their cells and returns them as they were; the scenes after them move up to
- * close the gaps. They are all deleted, or none are. Throws on HTTP 404 when the caller owns no such
+ * Deletes scenes with their cells and returns them as they were; the scenes after them in their beats
+ * move up to close the gaps. They are all deleted, or none are. Throws on HTTP 404 when the caller owns no such
  * project, or the project lacks one of the scenes.
  */
 export async function scenesDelete(
@@ -246,8 +254,9 @@ export async function scenesDelete(
 }
 
 /**
- * Lists a page of a project's scenes, in narrative order, with their total. Raise `offset` by the page size for
- * the next page. Throws on HTTP 404 when the caller owns no such project.
+ * Lists a page of a project's scenes, in narrative order: by beat, then by position in the beat, with their
+ * total. Raise `offset` by the page size for the next page. Throws on HTTP 404 when the caller owns no such
+ * project.
  */
 export async function sceneList(
   api: NarrativeEngineApi,

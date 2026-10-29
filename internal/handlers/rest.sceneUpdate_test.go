@@ -26,7 +26,6 @@ func TestRestSceneUpdate(t *testing.T) {
 			"projectID":   projectID,
 			"id":          sceneID,
 			"title":       "Ouverture",
-			"color":       "#e0457b",
 			"description": "Marie attend.",
 			"prompt":      "Lent.",
 		})
@@ -125,7 +124,6 @@ func TestRestSceneUpdate(t *testing.T) {
 						ProjectID:   projectID,
 						ID:          sceneID,
 						Title:       "Ouverture",
-						Color:       "#e0457b",
 						Description: "Marie attend.",
 						Prompt:      "Lent.",
 					}).

@@ -14,8 +14,8 @@ info:
 
     ## Scenes Composer
 
-    A project holds one narrative. Its Scenes Composer is a grid: scenes are the columns, in narrative
-    order, and layers are the rows. A cell holds what one layer says about one scene. Every project keeps
+    A project holds one narrative. Its Scenes Composer is a grid: beats are the columns, in narrative order,
+    each split into scenes, and layers are the rows. A cell holds what one layer says about one scene. Every project keeps
     at least one manuscript layer, whose cells carry the text the manuscript exports. Notes layers hold
     free text the author keeps beside it.
 
@@ -38,8 +38,10 @@ tags:
     description: Liveness and dependency checks.
   - name: project
     description: Projects and the layout of their Scenes Composer.
-  - name: scene
+  - name: beat
     description: The columns of a Scenes Composer, in narrative order.
+  - name: scene
+    description: The subcolumns of a Scenes Composer, each part of a beat.
   - name: layer
     description: The rows of a Scenes Composer.
   - name: cell
@@ -224,14 +226,263 @@ paths:
         default:
           $ref: "#/components/responses/internalError"
 
+  /v1/beat:
+    post:
+      operationId: beatCreate
+      summary: Create a beat.
+      description: |
+        Adds one beat to a project at `position`, and moves the beats from there on down one place. A
+        position past the last beat appends it. A project holds at most 200 beats. beatsCreate adds several
+        at once. The beat starts with no scene.
+      tags: [beat]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/beatCreateRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/beat"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/projectFull"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/plannedDowntime"
+        default:
+          $ref: "#/components/responses/internalError"
+
+    put:
+      operationId: beatUpdate
+      summary: Update a beat.
+      description: |
+        Replaces the title, color, description and prompt of a beat.
+      tags: [beat]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/beatUpdateRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/beat"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/plannedDowntime"
+        default:
+          $ref: "#/components/responses/internalError"
+
+    delete:
+      operationId: beatDelete
+      summary: Delete a beat.
+      description: |
+        Deletes one beat with its scenes and their cells, and returns it as it was. The beats after it move up
+        one place. beatsDelete deletes several at once.
+      tags: [beat]
+      parameters:
+        - $ref: "#/components/parameters/parentProjectID"
+        - $ref: "#/components/parameters/beatID"
+      responses:
+        "200":
+          $ref: "#/components/responses/beat"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/plannedDowntime"
+        default:
+          $ref: "#/components/responses/internalError"
+
+  /v1/beat/move:
+    post:
+      operationId: beatMove
+      summary: Move a beat.
+      description: |
+        Moves a beat to `position`, and returns it there. The beats between its old and new position shift
+        by one. A position past the last beat moves it last.
+      tags: [beat]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/beatMoveRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/beat"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/plannedDowntime"
+        default:
+          $ref: "#/components/responses/internalError"
+
+  /v1/beats:
+    get:
+      operationId: beatList
+      summary: List the beats of a project.
+      description: |
+        Returns a page of a project's beats, in narrative order, with how many the project holds in all. To read the next
+        page, raise `offset` by the page size.
+      tags: [beat]
+      parameters:
+        - $ref: "#/components/parameters/parentProjectID"
+        - $ref: "#/components/parameters/composerLimit"
+        - $ref: "#/components/parameters/offset"
+      responses:
+        "200":
+          $ref: "#/components/responses/beatPage"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/plannedDowntime"
+        default:
+          $ref: "#/components/responses/internalError"
+
+    post:
+      operationId: beatsCreate
+      summary: Create beats.
+      description: |
+        Adds up to 100 beats to a project at `position`, in order, and moves the beats from there on down.
+        A position past the last beat appends them. A project holds at most 200 beats. The beats are all
+        added, or none are.
+      tags: [beat]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/beatsCreateRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/beats"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/projectFull"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/plannedDowntime"
+        default:
+          $ref: "#/components/responses/internalError"
+
+    put:
+      operationId: beatsUpdate
+      summary: Update beats.
+      description: |
+        Replaces the title, color, description and prompt of up to 100 beats, and returns them in the order
+        of the request. The beats are all updated, or none are: an id the project does not hold answers 404.
+      tags: [beat]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/beatsUpdateRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/beats"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/plannedDowntime"
+        default:
+          $ref: "#/components/responses/internalError"
+
+    delete:
+      operationId: beatsDelete
+      summary: Delete beats.
+      description: |
+        Deletes up to 100 beats with their scenes and cells, and returns them as they were. The beats after
+        them move up to close the gaps. The beats are all deleted, or none are: an id the project does not hold
+        answers 404.
+      tags: [beat]
+      parameters:
+        - $ref: "#/components/parameters/parentProjectID"
+        - $ref: "#/components/parameters/beatIDs"
+      responses:
+        "200":
+          $ref: "#/components/responses/beats"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/plannedDowntime"
+        default:
+          $ref: "#/components/responses/internalError"
+
   /v1/scene:
     post:
       operationId: sceneCreate
       summary: Create a scene.
       description: |
-        Adds one scene to a project at `position`, and moves the scenes from there on down one place. A
-        position past the last scene appends it. A project holds at most 500 scenes. scenesCreate adds several
-        at once.
+        Adds one scene to a beat at `position`, and moves the beat's scenes from there on down one place. A
+        position past the beat's last scene appends it. A beat holds at most 10 scenes. scenesCreate adds
+        several at once.
       tags: [scene]
       requestBody:
         required: true
@@ -263,7 +514,7 @@ paths:
       operationId: sceneUpdate
       summary: Update a scene.
       description: |
-        Replaces the title, color, description and prompt of a scene.
+        Replaces the title, description and prompt of a scene.
       tags: [scene]
       requestBody:
         required: true
@@ -293,8 +544,8 @@ paths:
       operationId: sceneDelete
       summary: Delete a scene.
       description: |
-        Deletes one scene with its cells, and returns it as it was. The scenes after it move up one place.
-        scenesDelete deletes several at once.
+        Deletes one scene with its cells, and returns it as it was. The scenes after it in its beat move up one
+        place. scenesDelete deletes several at once.
       tags: [scene]
       parameters:
         - $ref: "#/components/parameters/parentProjectID"
@@ -322,8 +573,10 @@ paths:
       operationId: sceneMove
       summary: Move a scene.
       description: |
-        Moves a scene to `position`, and returns it there. The scenes between its old and new position shift
-        by one. A position past the last scene moves it last.
+        Moves a scene to `position` in the beat `beatID` names, its own or another beat of the project, and
+        returns it there. Its old beat closes the gap and the target beat opens one, so the scene keeps its id
+        and its cells. A position past the target beat's last scene moves it last. A full target beat answers
+        422.
       tags: [scene]
       requestBody:
         required: true
@@ -342,6 +595,8 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/projectFull"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -354,8 +609,9 @@ paths:
       operationId: sceneList
       summary: List the scenes of a project.
       description: |
-        Returns a page of a project's scenes, in narrative order, with how many the project holds in all. To read the next
-        page, raise `offset` by the page size.
+        Returns a page of a project's scenes, in narrative order: by beat, then by position in the beat. The
+        page comes with how many scenes the project holds in all. To read the next page, raise `offset` by the
+        page size.
       tags: [scene]
       parameters:
         - $ref: "#/components/parameters/parentProjectID"
@@ -383,9 +639,10 @@ paths:
       operationId: scenesCreate
       summary: Create scenes.
       description: |
-        Adds up to 100 scenes to a project at `position`, in order, and moves the scenes from there on down.
-        A position past the last scene appends them. A project holds at most 500 scenes. The scenes are all
-        added, or none are.
+        Adds up to 100 scenes to beats of the project, and returns them in the order of the request. Each scene
+        goes before the scene of its beat at its `position`, or last past the end, and the scenes after it
+        move down. New scenes at one position keep the order of the request. A beat holds at most 10 scenes.
+        The scenes are all added, or none are: a beat the project does not hold answers 404.
       tags: [scene]
       requestBody:
         required: true
@@ -417,7 +674,7 @@ paths:
       operationId: scenesUpdate
       summary: Update scenes.
       description: |
-        Replaces the title, color, description and prompt of up to 100 scenes, and returns them in the order
+        Replaces the title, description and prompt of up to 100 scenes, and returns them in the order
         of the request. The scenes are all updated, or none are: an id the project does not hold answers 404.
       tags: [scene]
       requestBody:
@@ -448,8 +705,8 @@ paths:
       operationId: scenesDelete
       summary: Delete scenes.
       description: |
-        Deletes up to 100 scenes with their cells, and returns them as they were. The scenes after them move
-        up to close the gaps. The scenes are all deleted, or none are: an id the project does not hold
+        Deletes up to 100 scenes with their cells, and returns them as they were. The scenes after them in
+        their beats move up to close the gaps. The scenes are all deleted, or none are: an id the project does not hold
         answers 404.
       tags: [scene]
       parameters:
@@ -766,8 +1023,8 @@ paths:
       operationId: cellList
       summary: List the cells of a project.
       description: |
-        Returns a page of the cells written so far in a project, by the position of their scene, then of their
-        layer, with how many the project holds in all. A cell nobody wrote yet is absent. To read the next
+        Returns a page of the cells written so far in a project, by the narrative order of their scene, then
+        the position of their layer, with how many the project holds in all. A cell nobody wrote yet is absent. To read the next
         page, raise `offset` by the page size.
       tags: [cell]
       parameters:
@@ -832,9 +1089,10 @@ paths:
       summary: Export a manuscript.
       description: |
         Returns the text one manuscript layer of the project holds, in manuscript format v1: every scene in
-        narrative order, with the layer's blocks for it. A scene the layer holds no text for keeps its place
-        with no blocks. A project may hold several manuscript layers, such as a branch of the story, so the
-        request names the one to export. A layer of another kind answers 404.
+        narrative order, with its beat and the layer's blocks for it. The beats appendix lists every beat in
+        order, those without scenes included. A scene the layer holds no text for keeps its place with no
+        blocks. A project may hold several manuscript layers, such as a branch of the story, so the request
+        names the one to export. A layer of another kind answers 404.
       tags: [manuscript]
       parameters:
         - $ref: "#/components/parameters/parentProjectID"
@@ -922,12 +1180,26 @@ components:
           schema:
             $ref: "#/components/schemas/projectComposer"
 
+    beat:
+      description: A beat.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/beat"
+
     scene:
       description: A scene.
       content:
         application/json:
           schema:
             $ref: "#/components/schemas/scene"
+
+    beatPage:
+      description: A page of a project's beats, in narrative order, with their total.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/beatPage"
 
     scenePage:
       description: A page of a project's scenes, in narrative order, with their total.
@@ -950,8 +1222,17 @@ components:
           schema:
             $ref: "#/components/schemas/layerPage"
 
+    beats:
+      description: Beats, in narrative order.
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/beat"
+
     scenes:
-      description: Scenes, in narrative order.
+      description: Scenes, in the order the operation states.
       content:
         application/json:
           schema:
@@ -985,7 +1266,7 @@ components:
               $ref: "#/components/schemas/writtenCell"
 
     cellPage:
-      description: A page of a project's cells, by the position of their scene, then of their layer, with their total.
+      description: A page of a project's cells, by the narrative order of their scene, then the position of their layer, with their total.
       content:
         application/json:
           schema:
@@ -1005,12 +1286,16 @@ components:
                 title: Les Heures claires
                 language: fr
                 scenes:
-                  - title: Ouverture
+                  - beat: 0
+                    title: La fenêtre
                     blocks:
                       - { kind: narration, text: La pluie battait les vitres. }
                       - { kind: dialogue, speaker: Marie, parts: [{ tone: à voix basse }, { text: Tu es venu. }] }
-                  - { title: Interlude, blocks: [] }
-                appendices: {}
+                  - { beat: 0, title: Interlude, blocks: [] }
+                appendices:
+                  beats:
+                    - { title: Les retrouvailles, description: Marie attend Paul. }
+                    - { title: Épilogue, description: "" }
 
     badRequest:
       description: |
@@ -1037,11 +1322,11 @@ components:
 
     notFound:
       description: |
-        The caller owns no such project, or the project holds no such scene or layer.
+        The caller owns no such project, or the project holds no such beat, scene or layer.
 
     projectFull:
       description: |
-        The project already holds as many scenes or layers as it may.
+        The project already holds as many beats or layers as it may, or the beat as many scenes.
 
     requiredLayer:
       description: |
@@ -1102,6 +1387,12 @@ components:
       description: The unique identifier of a project.
       format: uuid
       examples: ["01920000-0000-7000-8000-000000000001"]
+
+    beatID:
+      type: string
+      description: The unique identifier of a beat.
+      format: uuid
+      examples: ["01920000-0000-7000-8000-000000000011"]
 
     sceneID:
       type: string
@@ -1193,37 +1484,74 @@ components:
           minimum: 0
           examples: [42]
 
-    scene:
+    beat:
       type: object
       description: A column of the Scenes Composer.
       required: [id, projectID, position, title, color, description, prompt, updatedAt]
       additionalProperties: false
       properties:
         id:
-          $ref: "#/components/schemas/sceneID"
+          $ref: "#/components/schemas/beatID"
         projectID:
           $ref: "#/components/schemas/projectID"
         position:
           type: integer
-          description: The place of the scene in narrative order, from 0, with no gap.
+          description: The place of the beat in narrative order, from 0, with no gap.
           minimum: 0
+          maximum: 199
           examples: [0]
         title:
           type: string
-          description: The title of the scene.
+          description: The title of the beat.
           examples: ["Ouverture"]
         color:
           type: string
-          description: The scene's color in the composer, as a lowercase `#rrggbb` hex code.
+          description: The beat's color in the composer, as a lowercase `#rrggbb` hex code.
           pattern: "^#[0-9a-f]{6}$"
           examples: ["#e0457b"]
         description:
           type: string
-          description: What the scene is for, written for the author. May be empty.
+          description: What the beat is for, written for the author. May be empty.
           examples: ["Marie attend sur le quai."]
         prompt:
           type: string
-          description: Extra instructions for the model when it writes about the scene. May be empty.
+          description: Extra instructions for the model when it writes about the beat. May be empty.
+          examples: ["Garder le suspense jusqu'au dernier dialogue."]
+        updatedAt:
+          type: string
+          description: When the beat was last written.
+          format: date-time
+          examples: ["2021-01-02T00:00:00Z"]
+
+    scene:
+      type: object
+      description: A subcolumn of the Scenes Composer, part of a beat.
+      required: [id, projectID, beatID, position, title, description, prompt, updatedAt]
+      additionalProperties: false
+      properties:
+        id:
+          $ref: "#/components/schemas/sceneID"
+        projectID:
+          $ref: "#/components/schemas/projectID"
+        beatID:
+          $ref: "#/components/schemas/beatID"
+        position:
+          type: integer
+          description: The place of the scene in its beat, from 0, with no gap.
+          minimum: 0
+          maximum: 9
+          examples: [0]
+        title:
+          type: string
+          description: The title of the scene.
+          examples: ["La fenêtre"]
+        description:
+          type: string
+          description: Refines the beat's description for the scene. Empty when the beat's is enough.
+          examples: ["Marie guette la rue."]
+        prompt:
+          type: string
+          description: Refines the beat's prompt for the scene. Empty when the beat's is enough.
           examples: ["Garder le suspense jusqu'au dernier dialogue."]
         updatedAt:
           type: string
@@ -1306,6 +1634,25 @@ components:
         updatedAt:
           $ref: "#/components/schemas/cell/properties/updatedAt"
 
+    beatPage:
+      type: object
+      description: A page of a project's beats, in narrative order.
+      required: [beats, total]
+      additionalProperties: false
+      properties:
+        beats:
+          type: array
+          description: The beats of the page.
+          items:
+            $ref: "#/components/schemas/beat"
+        total:
+          type: integer
+          description: |
+            How many beats the project holds in all, so a client paging through them knows when it holds them
+            all. A page past the end reports 0.
+          minimum: 0
+          examples: [120]
+
     scenePage:
       type: object
       description: A page of a project's scenes, in narrative order.
@@ -1346,7 +1693,7 @@ components:
 
     cellPage:
       type: object
-      description: A page of a project's cells, by the position of their scene, then of their layer.
+      description: A page of a project's cells, by the narrative order of their scene, then the position of their layer.
       required: [cells, total]
       additionalProperties: false
       properties:
@@ -1395,30 +1742,60 @@ components:
         language:
           $ref: "#/components/schemas/language"
 
-    sceneCreateItem:
+    beatCreateItem:
       type: object
-      description: A scene to add.
+      description: A beat to add.
       required: [title, color]
       additionalProperties: false
       properties:
         title:
           type: string
-          description: The title of the scene. Not blank.
+          description: The title of the beat. Not blank.
           maxLength: 200
           examples: ["Ouverture"]
         color:
           type: string
-          description: The scene's color in the composer, as a `#rrggbb` hex code in either case. It is stored in lowercase.
+          description: The beat's color in the composer, as a `#rrggbb` hex code in either case. It is stored in lowercase.
           pattern: "^#[0-9A-Fa-f]{6}$"
           examples: ["#E0457B"]
         description:
           type: string
-          description: What the scene is for, written for the author.
+          description: What the beat is for, written for the author.
           maxLength: 20000
           examples: ["Marie attend sur le quai."]
         prompt:
           type: string
-          description: Extra instructions for the model when it writes about the scene.
+          description: Extra instructions for the model when it writes about the beat.
+          maxLength: 20000
+          examples: ["Garder le suspense jusqu'au dernier dialogue."]
+
+    sceneCreateItem:
+      type: object
+      description: A scene to add, and where.
+      required: [beatID, title]
+      additionalProperties: false
+      properties:
+        beatID:
+          $ref: "#/components/schemas/beatID"
+        position:
+          type: integer
+          description: The scene's place in its beat, from 0. It goes before the beat's scene at this position, or last past the end. New scenes at one position keep the order of the request.
+          minimum: 0
+          default: 0
+          examples: [1]
+        title:
+          type: string
+          description: The title of the scene. Not blank.
+          maxLength: 200
+          examples: ["La fenêtre"]
+        description:
+          type: string
+          description: Refines the beat's description for the scene. Omitted, the beat's is enough.
+          maxLength: 20000
+          examples: ["Marie guette la rue."]
+        prompt:
+          type: string
+          description: Refines the beat's prompt for the scene. Omitted, the beat's is enough.
           maxLength: 20000
           examples: ["Garder le suspense jusqu'au dernier dialogue."]
 
@@ -1437,31 +1814,47 @@ components:
         language:
           $ref: "#/components/schemas/language"
 
-    scenesCreateRequest:
+    beatsCreateRequest:
       type: object
-      description: The scenes to add, and where.
-      required: [projectID, scenes]
+      description: The beats to add, and where.
+      required: [projectID, beats]
       additionalProperties: false
       properties:
         projectID:
           $ref: "#/components/schemas/projectID"
         position:
           type: integer
-          description: The place of the first new scene in narrative order, from 0, and the others follow it. A position past the last scene appends them.
+          description: The place of the first new beat in narrative order, from 0, and the others follow it. A position past the last beat appends them.
           minimum: 0
           default: 0
           examples: [2]
+        beats:
+          type: array
+          description: The beats to add, in narrative order.
+          minItems: 1
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/beatCreateItem"
+
+    scenesCreateRequest:
+      type: object
+      description: The scenes to add, each with its beat and its place in it.
+      required: [projectID, scenes]
+      additionalProperties: false
+      properties:
+        projectID:
+          $ref: "#/components/schemas/projectID"
         scenes:
           type: array
-          description: The scenes to add, in narrative order.
+          description: The scenes to add, at most 100, in any beats of the project.
           minItems: 1
           maxItems: 100
           items:
             $ref: "#/components/schemas/sceneCreateItem"
 
-    sceneCreateRequest:
+    beatCreateRequest:
       type: object
-      description: The scene to add, and where.
+      description: The beat to add, and where.
       required: [projectID, title, color]
       additionalProperties: false
       properties:
@@ -1469,23 +1862,61 @@ components:
           $ref: "#/components/schemas/projectID"
         position:
           type: integer
-          description: The scene's place in narrative order, from 0. A position past the last scene appends it.
+          description: The beat's place in narrative order, from 0. A position past the last beat appends it.
           minimum: 0
           default: 0
           examples: [2]
         title:
-          $ref: "#/components/schemas/sceneCreateItem/properties/title"
+          $ref: "#/components/schemas/beatCreateItem/properties/title"
         color:
-          $ref: "#/components/schemas/sceneCreateItem/properties/color"
+          $ref: "#/components/schemas/beatCreateItem/properties/color"
+        description:
+          $ref: "#/components/schemas/beatCreateItem/properties/description"
+        prompt:
+          $ref: "#/components/schemas/beatCreateItem/properties/prompt"
+
+    sceneCreateRequest:
+      type: object
+      description: The scene to add, and where.
+      required: [projectID, beatID, title]
+      additionalProperties: false
+      properties:
+        projectID:
+          $ref: "#/components/schemas/projectID"
+        beatID:
+          $ref: "#/components/schemas/sceneCreateItem/properties/beatID"
+        position:
+          $ref: "#/components/schemas/sceneCreateItem/properties/position"
+        title:
+          $ref: "#/components/schemas/sceneCreateItem/properties/title"
         description:
           $ref: "#/components/schemas/sceneCreateItem/properties/description"
         prompt:
           $ref: "#/components/schemas/sceneCreateItem/properties/prompt"
 
+    beatUpdateRequest:
+      type: object
+      description: The new fields of a beat.
+      required: [projectID, id, title, color]
+      additionalProperties: false
+      properties:
+        projectID:
+          $ref: "#/components/schemas/projectID"
+        id:
+          $ref: "#/components/schemas/beatID"
+        title:
+          $ref: "#/components/schemas/beatCreateItem/properties/title"
+        color:
+          $ref: "#/components/schemas/beatCreateItem/properties/color"
+        description:
+          $ref: "#/components/schemas/beatCreateItem/properties/description"
+        prompt:
+          $ref: "#/components/schemas/beatCreateItem/properties/prompt"
+
     sceneUpdateRequest:
       type: object
       description: The new fields of a scene.
-      required: [projectID, id, title, color]
+      required: [projectID, id, title]
       additionalProperties: false
       properties:
         projectID:
@@ -1494,29 +1925,58 @@ components:
           $ref: "#/components/schemas/sceneID"
         title:
           $ref: "#/components/schemas/sceneCreateItem/properties/title"
-        color:
-          $ref: "#/components/schemas/sceneCreateItem/properties/color"
         description:
           $ref: "#/components/schemas/sceneCreateItem/properties/description"
         prompt:
           $ref: "#/components/schemas/sceneCreateItem/properties/prompt"
 
+    beatUpdateItem:
+      type: object
+      description: The new fields of one beat.
+      required: [id, title, color]
+      additionalProperties: false
+      properties:
+        id:
+          $ref: "#/components/schemas/beatID"
+        title:
+          $ref: "#/components/schemas/beatCreateItem/properties/title"
+        color:
+          $ref: "#/components/schemas/beatCreateItem/properties/color"
+        description:
+          $ref: "#/components/schemas/beatCreateItem/properties/description"
+        prompt:
+          $ref: "#/components/schemas/beatCreateItem/properties/prompt"
+
     sceneUpdateItem:
       type: object
       description: The new fields of one scene.
-      required: [id, title, color]
+      required: [id, title]
       additionalProperties: false
       properties:
         id:
           $ref: "#/components/schemas/sceneID"
         title:
           $ref: "#/components/schemas/sceneCreateItem/properties/title"
-        color:
-          $ref: "#/components/schemas/sceneCreateItem/properties/color"
         description:
           $ref: "#/components/schemas/sceneCreateItem/properties/description"
         prompt:
           $ref: "#/components/schemas/sceneCreateItem/properties/prompt"
+
+    beatsUpdateRequest:
+      type: object
+      description: The beats to update, each once.
+      required: [projectID, beats]
+      additionalProperties: false
+      properties:
+        projectID:
+          $ref: "#/components/schemas/projectID"
+        beats:
+          type: array
+          description: The beats to update, each once, at most 100.
+          minItems: 1
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/beatUpdateItem"
 
     scenesUpdateRequest:
       type: object
@@ -1534,19 +1994,37 @@ components:
           items:
             $ref: "#/components/schemas/sceneUpdateItem"
 
-    sceneMoveRequest:
+    beatMoveRequest:
       type: object
-      description: The scene to move, and where.
+      description: The beat to move, and where.
       required: [projectID, id, position]
       additionalProperties: false
       properties:
         projectID:
           $ref: "#/components/schemas/projectID"
         id:
-          $ref: "#/components/schemas/sceneID"
+          $ref: "#/components/schemas/beatID"
         position:
           type: integer
-          description: The scene's place in narrative order after the move, from 0. A position past the last scene moves it last.
+          description: The beat's place in narrative order after the move, from 0. A position past the last beat moves it last.
+          minimum: 0
+          examples: [2]
+
+    sceneMoveRequest:
+      type: object
+      description: The scene to move, and where.
+      required: [projectID, id, beatID, position]
+      additionalProperties: false
+      properties:
+        projectID:
+          $ref: "#/components/schemas/projectID"
+        id:
+          $ref: "#/components/schemas/sceneID"
+        beatID:
+          $ref: "#/components/schemas/beatID"
+        position:
+          type: integer
+          description: The scene's place in the beat after the move, from 0. A position past the beat's last scene moves it last.
           minimum: 0
           examples: [2]
 
@@ -1783,6 +2261,14 @@ components:
       schema:
         $ref: "#/components/schemas/projectID"
 
+    beatID:
+      name: id
+      in: query
+      description: The beat to act on.
+      required: true
+      schema:
+        $ref: "#/components/schemas/beatID"
+
     sceneID:
       name: id
       in: query
@@ -1798,6 +2284,21 @@ components:
       required: true
       schema:
         $ref: "#/components/schemas/layerID"
+
+    beatIDs:
+      name: id
+      in: query
+      description: The beats to act on, one parameter each.
+      required: true
+      style: form
+      explode: true
+      schema:
+        type: array
+        minItems: 1
+        maxItems: 100
+        uniqueItems: true
+        items:
+          $ref: "#/components/schemas/beatID"
 
     sceneIDs:
       name: id
@@ -1844,7 +2345,7 @@ components:
     parentProjectID:
       name: projectID
       in: query
-      description: The project that holds the scenes, layers or cells.
+      description: The project that holds the beats, scenes, layers or cells.
       required: true
       schema:
         $ref: "#/components/schemas/projectID"

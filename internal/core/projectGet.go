@@ -29,8 +29,8 @@ type ProjectGetRequest struct {
 	ID      uuid.UUID `validate:"required"`
 }
 
-// ProjectGet reads a project of the caller. Its scenes, layers and cells come page by page from
-// [SceneList], [LayerList] and [CellList].
+// ProjectGet reads a project of the caller. Its beats, scenes, layers and cells come page by page from
+// [BeatList], [SceneList], [LayerList] and [CellList].
 type ProjectGet struct {
 	daoOwner ProjectGetDaoOwner
 	dao      ProjectGetDao

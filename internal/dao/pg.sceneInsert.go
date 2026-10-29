@@ -16,34 +16,39 @@ import (
 //go:embed pg.sceneInsert.sql
 var sceneInsertQuery string
 
-// ErrSceneInsertFull is returned by [PgSceneInsert.Exec] when the scene would take a position past 499,
-// so the project would hold more than the 500 scenes the schema allows.
-var ErrSceneInsertFull = errors.New("project holds the most scenes it can")
+var (
+	// ErrSceneInsertFull is returned by [PgSceneInsert.Exec] when the scene would take a position past 9,
+	// so the beat would hold more than the 10 scenes the schema allows.
+	ErrSceneInsertFull = errors.New("beat holds the most scenes it can")
+	// ErrSceneInsertBeatNotFound is returned by [PgSceneInsert.Exec] when the project holds no beat with
+	// the ID.
+	ErrSceneInsertBeatNotFound = errors.New("beat not found")
+)
 
 // SceneInsertRequest is the input to [PgSceneInsert.Exec].
 type SceneInsertRequest struct {
 	ID uuid.UUID
 	// ProjectID is the project the scene joins.
 	ProjectID uuid.UUID
+	// BeatID is the beat the scene joins.
+	BeatID uuid.UUID
 
-	// Position is the scene's place in narrative order, from 0. A position past the last scene appends.
+	// Position is the scene's place in its beat, from 0. A position past the beat's last scene appends.
 	Position int
 
 	// Title names the scene in the composer.
 	Title string
-	// Color is the scene's color in the composer, as a lowercase #rrggbb hex code.
-	Color string
-	// Description says what the scene is for, written for the author.
+	// Description refines the beat's description for the scene.
 	Description string
-	// Prompt holds extra instructions for the model when it writes about the scene.
+	// Prompt refines the beat's prompt for the scene.
 	Prompt string
 
 	// Now is the instant stored as updated_at.
 	Now time.Time
 }
 
-// PgSceneInsert creates a scene at Position, and moves the scenes at or after Position down to make
-// room.
+// PgSceneInsert creates a scene at Position in its beat, and moves the beat's scenes at or after Position
+// down to make room.
 type PgSceneInsert struct{}
 
 func NewPgSceneInsert() *PgSceneInsert {
@@ -63,11 +68,15 @@ func (dao *PgSceneInsert) Exec(ctx context.Context, request *SceneInsertRequest)
 
 	err = db.NewRaw(
 		sceneInsertQuery,
-		request.ID, request.ProjectID, request.Position, request.Title, request.Color,
+		request.ID, request.ProjectID, request.BeatID, request.Position, request.Title,
 		request.Description, request.Prompt, request.Now,
 	).Scan(ctx, entity)
-	if isViolation(err, pgCheckViolation, "scenes_position_check") {
+
+	switch {
+	case isViolation(err, pgCheckViolation, "scenes_position_check"):
 		err = errors.Join(err, ErrSceneInsertFull)
+	case isViolation(err, pgForeignKeyViolation, "scenes_beat_fkey"):
+		err = errors.Join(err, ErrSceneInsertBeatNotFound)
 	}
 
 	if err != nil {

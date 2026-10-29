@@ -21,18 +21,17 @@ type RestSceneCreateService interface {
 // RestSceneCreateRequest is the JSON body the create-scene endpoint accepts.
 type RestSceneCreateRequest struct {
 	ProjectID uuid.UUID `json:"projectID"`
+	// BeatID is the beat the scene joins.
+	BeatID uuid.UUID `json:"beatID"`
 
-	// Position is the scene's place in narrative order, from 0. A position past the last scene appends
-	// it.
+	// Position is the scene's place in its beat, from 0. A position past the beat's last scene appends it.
 	Position int `json:"position"`
 
 	// Title names the scene in the composer.
 	Title string `json:"title"`
-	// Color is the scene's color in the composer, as a #rrggbb hex code in either case.
-	Color string `json:"color"`
-	// Description says what the scene is for, written for the author.
+	// Description refines the beat's description for the scene. Empty keeps the beat's.
 	Description string `json:"description"`
-	// Prompt holds extra instructions for the model when it writes about the scene.
+	// Prompt refines the beat's prompt for the scene. Empty keeps the beat's.
 	Prompt string `json:"prompt"`
 }
 
@@ -70,9 +69,9 @@ func (handler *RestSceneCreate) ServeHTTP(w http.ResponseWriter, r *http.Request
 	serviceRequest := &core.SceneCreateRequest{
 		OwnerID:     ownerID,
 		ProjectID:   request.ProjectID,
+		BeatID:      request.BeatID,
 		Position:    request.Position,
 		Title:       request.Title,
-		Color:       request.Color,
 		Description: request.Description,
 		Prompt:      request.Prompt,
 	}

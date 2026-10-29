@@ -34,12 +34,13 @@ type CellListRequest struct {
 
 	// Limit caps the page at 500 cells. It defaults to [CellListLimitDefault] when zero.
 	Limit int `validate:"min=0,max=500"`
-	// Offset is how many cells come before the page, by the position of their scene, then of their layer.
+	// Offset is how many cells come before the page, by the narrative order of their scene, then the position
+	// of their layer.
 	Offset int `validate:"min=0"`
 }
 
-// CellList reads a project's cells page by page, by the position of their scene, then of their
-// layer. Each page carries the total, so a client knows when it holds every cell.
+// CellList reads a project's cells page by page, by the narrative order of their scene, then the position
+// of their layer. Each page carries the total, so a client knows when it holds every cell.
 type CellList struct {
 	daoOwner CellListDaoOwner
 	dao      CellListDao

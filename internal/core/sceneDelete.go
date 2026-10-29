@@ -19,7 +19,7 @@ type SceneDeleteDaoLock interface {
 	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
 }
 
-// SceneDeleteDao removes the scene, and moves the scenes after it up.
+// SceneDeleteDao removes the scene, and moves the scenes after it in its beat up.
 type SceneDeleteDao interface {
 	Exec(ctx context.Context, request *dao.SceneDeleteRequest) (*dao.Scene, error)
 }
@@ -31,8 +31,8 @@ type SceneDeleteRequest struct {
 	ID        uuid.UUID `validate:"required"`
 }
 
-// SceneDelete deletes one scene with its cells, and moves the scenes after it up by one. [ScenesDelete]
-// deletes several at once.
+// SceneDelete deletes one scene with its cells, and moves the scenes after it in its beat up by one.
+// [ScenesDelete] deletes several at once.
 type SceneDelete struct {
 	daoLock    SceneDeleteDaoLock
 	dao        SceneDeleteDao

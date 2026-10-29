@@ -24,12 +24,13 @@ type RestCellListRequest struct {
 
 	// Limit caps the page. Zero takes the default size.
 	Limit int `schema:"limit"`
-	// Offset is how many cells come before the page, by the position of their scene, then of their layer.
+	// Offset is how many cells come before the page, by the narrative order of their scene, then the position
+	// of their layer.
 	Offset int `schema:"offset"`
 }
 
-// RestCellList is the HTTP handler for the list-cells endpoint. It responds with a page of a
-// project's cells, by the position of their scene, then of their layer, and their total.
+// RestCellList is the HTTP handler for the list-cells endpoint. It responds with a page of a project's
+// cells, by the narrative order of their scene, then the position of their layer, and their total.
 type RestCellList struct {
 	service RestCellListService
 	logger  logging.Log

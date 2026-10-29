@@ -18,7 +18,7 @@ func TestSceneUpdate(t *testing.T) {
 	errFoo := errors.New("foo")
 
 	request := &core.SceneUpdateRequest{
-		OwnerID: ownerID, ProjectID: projectID, ID: sceneID2, Title: "Scene", Color: "#4A90D9",
+		OwnerID: ownerID, ProjectID: projectID, ID: sceneID2, Title: "Scene",
 	}
 
 	testCases := []struct {
@@ -45,7 +45,7 @@ func TestSceneUpdate(t *testing.T) {
 		{
 			name: "Error/InvalidRequest",
 
-			request: &core.SceneUpdateRequest{OwnerID: ownerID, ProjectID: projectID, ID: sceneID2, Color: "#4A90D9"},
+			request: &core.SceneUpdateRequest{OwnerID: ownerID, ProjectID: projectID, ID: sceneID2},
 
 			expectErr: core.ErrInvalidRequest,
 		},
@@ -106,7 +106,7 @@ func TestSceneUpdate(t *testing.T) {
 				mockUpdate.EXPECT().
 					Exec(mock.Anything, mock.MatchedBy(func(req *dao.SceneUpdateRequest) bool {
 						return req.ProjectID == projectID && req.ID == sceneID2 &&
-							req.Title == "Scene" && req.Color == sceneColor && recent(req.Now)
+							req.Title == "Scene" && recent(req.Now)
 					})).
 					Return(testCase.updateMock.resp, testCase.updateMock.err)
 			}

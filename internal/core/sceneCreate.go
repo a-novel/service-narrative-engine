@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -21,30 +20,30 @@ type SceneCreateDaoLock interface {
 	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
 }
 
-// SceneCreateDaoInsert inserts the scene, and moves the scenes at or after its position down.
+// SceneCreateDaoInsert inserts the scene, and moves the beat's scenes at or after its position down.
 type SceneCreateDaoInsert interface {
 	Exec(ctx context.Context, request *dao.SceneInsertRequest) (*dao.Scene, error)
 }
 
-// SceneCreateRequest carries a new scene and its place in the project.
+// SceneCreateRequest carries a new scene and its place in a beat.
 type SceneCreateRequest struct {
 	OwnerID   uuid.UUID `validate:"required"`
 	ProjectID uuid.UUID `validate:"required"`
+	// BeatID is the beat the scene joins.
+	BeatID uuid.UUID `validate:"required"`
 
-	// Position is the scene's place in narrative order, from 0. A position past the last scene appends it.
+	// Position is the scene's place in its beat, from 0. A position past the beat's last scene appends it.
 	Position int `validate:"min=0"`
 
 	// Title names the scene in the composer.
 	Title string `validate:"required,notblank,max=200"`
-	// Color is the scene's color in the composer, as a #rrggbb hex code in either case.
-	Color string `validate:"required,len=7,hexcolor"`
-	// Description says what the scene is for, written for the author.
+	// Description refines the beat's description for the scene. Empty keeps the beat's.
 	Description string `validate:"max=20000"`
-	// Prompt holds extra instructions for the model when it writes about the scene.
+	// Prompt refines the beat's prompt for the scene. Empty keeps the beat's.
 	Prompt string `validate:"max=20000"`
 }
 
-// SceneCreate adds one scene to a project at the position the caller names. The scenes from that
+// SceneCreate adds one scene to a beat at the position the caller names. The beat's scenes from that
 // position on move down by one. [ScenesCreate] adds several at once.
 type SceneCreate struct {
 	daoLock    SceneCreateDaoLock
@@ -67,6 +66,7 @@ func (service *SceneCreate) Exec(ctx context.Context, request *SceneCreateReques
 	span.SetAttributes(
 		attribute.String("project.id", request.ProjectID.String()),
 		attribute.String("project.owner_id", request.OwnerID.String()),
+		attribute.String("beat.id", request.BeatID.String()),
 		attribute.Int("scene.position", request.Position),
 	)
 
@@ -94,15 +94,18 @@ func (service *SceneCreate) Exec(ctx context.Context, request *SceneCreateReques
 		inserted, err := service.daoInsert.Exec(ctx, &dao.SceneInsertRequest{
 			ID:          ids[0],
 			ProjectID:   request.ProjectID,
+			BeatID:      request.BeatID,
 			Position:    request.Position,
 			Title:       request.Title,
-			Color:       strings.ToLower(request.Color),
 			Description: request.Description,
 			Prompt:      request.Prompt,
 			Now:         time.Now(),
 		})
-		if errors.Is(err, dao.ErrSceneInsertFull) {
+		switch {
+		case errors.Is(err, dao.ErrSceneInsertFull):
 			err = errors.Join(err, ErrProjectFull)
+		case errors.Is(err, dao.ErrSceneInsertBeatNotFound):
+			err = errors.Join(err, ErrBeatNotFound)
 		}
 
 		if err != nil {

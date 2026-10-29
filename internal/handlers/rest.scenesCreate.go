@@ -21,13 +21,18 @@ type RestScenesCreateService interface {
 
 // RestScenesCreateItem is one scene of a [RestScenesCreateRequest].
 type RestScenesCreateItem struct {
+	// BeatID is the beat the scene joins.
+	BeatID uuid.UUID `json:"beatID"`
+
+	// Position is the scene's place in its beat, from 0: before the beat's scene at that position, or last
+	// past the end. New scenes at one position keep the order of the request.
+	Position int `json:"position"`
+
 	// Title names the scene in the composer.
 	Title string `json:"title"`
-	// Color is the scene's color in the composer, as a #rrggbb hex code in either case.
-	Color string `json:"color"`
-	// Description says what the scene is for, written for the author.
+	// Description refines the beat's description for the scene. Empty keeps the beat's.
 	Description string `json:"description"`
-	// Prompt holds extra instructions for the model when it writes about the scene.
+	// Prompt refines the beat's prompt for the scene. Empty keeps the beat's.
 	Prompt string `json:"prompt"`
 }
 
@@ -35,16 +40,12 @@ type RestScenesCreateItem struct {
 type RestScenesCreateRequest struct {
 	ProjectID uuid.UUID `json:"projectID"`
 
-	// Position is the place of the first new scene in narrative order, from 0, and the others follow it.
-	// A position past the last scene appends them.
-	Position int `json:"position"`
-
-	// Scenes lists the scenes to add, in narrative order.
+	// Scenes lists the scenes to add, each with its beat and its place in it.
 	Scenes []RestScenesCreateItem `json:"scenes"`
 }
 
 // RestScenesCreate is the HTTP handler for the create-scenes endpoint. It responds 201 with the new scenes in
-// narrative order.
+// the order of the request.
 type RestScenesCreate struct {
 	service RestScenesCreateService
 	logger  logging.Log
@@ -77,7 +78,6 @@ func (handler *RestScenesCreate) ServeHTTP(w http.ResponseWriter, r *http.Reques
 	serviceRequest := &core.ScenesCreateRequest{
 		OwnerID:   ownerID,
 		ProjectID: request.ProjectID,
-		Position:  request.Position,
 		Scenes: lo.Map(request.Scenes, func(item RestScenesCreateItem, _ int) core.ScenesCreateItem {
 			return loadScenesCreateItem(item)
 		}),
@@ -96,5 +96,8 @@ func (handler *RestScenesCreate) ServeHTTP(w http.ResponseWriter, r *http.Reques
 
 // loadScenesCreateItem converts one item of the request body to its core counterpart.
 func loadScenesCreateItem(item RestScenesCreateItem) core.ScenesCreateItem {
-	return core.ScenesCreateItem{Title: item.Title, Color: item.Color, Description: item.Description, Prompt: item.Prompt}
+	return core.ScenesCreateItem{
+		BeatID: item.BeatID, Position: item.Position, Title: item.Title, Description: item.Description,
+		Prompt: item.Prompt,
+	}
 }

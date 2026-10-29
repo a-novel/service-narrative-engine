@@ -22,6 +22,7 @@ import (
 var (
 	ownerID   = uuid.MustParse("00000000-0000-0000-0000-0000000000a1")
 	projectID = uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	beatID    = uuid.MustParse("00000000-0000-0000-0000-000000000031")
 	sceneID   = uuid.MustParse("00000000-0000-0000-0000-000000000011")
 	layerID   = uuid.MustParse("00000000-0000-0000-0000-000000000021")
 
@@ -37,13 +38,22 @@ var (
 		"createdAt": "2021-01-01T00:00:00Z", "updatedAt": "2021-01-02T00:00:00Z",
 	}
 
-	coreScene = &core.Scene{
-		ID: sceneID, ProjectID: projectID, Position: 1, Title: "Ouverture", Color: "#e0457b",
+	coreBeat = &core.Beat{
+		ID: beatID, ProjectID: projectID, Position: 1, Title: "Ouverture", Color: "#e0457b",
 		Description: "Marie attend.", Prompt: "Lent.", UpdatedAt: updatedAt,
 	}
-	jsonScene = map[string]any{
-		"id": sceneID.String(), "projectID": projectID.String(), "position": 1.0, "title": "Ouverture",
+	jsonBeat = map[string]any{
+		"id": beatID.String(), "projectID": projectID.String(), "position": 1.0, "title": "Ouverture",
 		"color": "#e0457b", "description": "Marie attend.", "prompt": "Lent.", "updatedAt": "2021-01-02T00:00:00Z",
+	}
+
+	coreScene = &core.Scene{
+		ID: sceneID, ProjectID: projectID, BeatID: beatID, Position: 1, Title: "La fenêtre",
+		Description: "Marie guette.", Prompt: "Lent.", UpdatedAt: updatedAt,
+	}
+	jsonScene = map[string]any{
+		"id": sceneID.String(), "projectID": projectID.String(), "beatID": beatID.String(), "position": 1.0,
+		"title": "La fenêtre", "description": "Marie guette.", "prompt": "Lent.", "updatedAt": "2021-01-02T00:00:00Z",
 	}
 
 	coreLayer = &core.Layer{

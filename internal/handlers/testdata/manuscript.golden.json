@@ -5,7 +5,8 @@
   "language": "fr",
   "scenes": [
     {
-      "title": "Ouverture",
+      "beat": 0,
+      "title": "La fenêtre",
       "blocks": [
         {
           "kind": "narration",
@@ -20,7 +21,13 @@
             { "tone": "plus fort, sans se retourner" },
             { "text": "Tu avais promis d’écrire." }
           ]
-        },
+        }
+      ]
+    },
+    {
+      "beat": 0,
+      "title": "Le seuil",
+      "blocks": [
         {
           "kind": "dialogue",
           "speaker": "Paul",
@@ -29,11 +36,13 @@
       ]
     },
     {
+      "beat": 1,
       "title": "Interlude",
       "blocks": []
     },
     {
-      "title": "Dénouement",
+      "beat": 2,
+      "title": "Le matin",
       "blocks": [
         {
           "kind": "narration",
@@ -42,5 +51,12 @@
       ]
     }
   ],
-  "appendices": {}
+  "appendices": {
+    "beats": [
+      { "title": "Les retrouvailles", "description": "Marie attend Paul, qui revient enfin." },
+      { "title": "Le doute", "description": "" },
+      { "title": "Le départ", "description": "Paul repart sans prévenir." },
+      { "title": "Épilogue", "description": "Des années plus tard." }
+    ]
+  }
 }

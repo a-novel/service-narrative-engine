@@ -22,7 +22,7 @@ type ScenesDeleteDaoLock interface {
 	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
 }
 
-// ScenesDeleteDao removes the scenes, and moves the scenes after them up.
+// ScenesDeleteDao removes the scenes, and moves the scenes after them in their beats up.
 type ScenesDeleteDao interface {
 	Exec(ctx context.Context, request *dao.ScenesDeleteRequest) ([]*dao.Scene, error)
 }
@@ -35,8 +35,8 @@ type ScenesDeleteRequest struct {
 	IDs []uuid.UUID `validate:"required,min=1,max=100,unique,dive,required"`
 }
 
-// ScenesDelete deletes scenes with their cells, and moves the scenes after them up to close the gaps. It
-// deletes all of them or none.
+// ScenesDelete deletes scenes with their cells, and moves the scenes after them in their beats up to close
+// the gaps. It deletes all of them or none.
 type ScenesDelete struct {
 	daoLock    ScenesDeleteDaoLock
 	dao        ScenesDeleteDao

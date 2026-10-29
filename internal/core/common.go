@@ -15,11 +15,14 @@ import (
 var (
 	// ErrProjectNotFound is returned when no project has the ID, or another user owns it.
 	ErrProjectNotFound = errors.New("project not found")
+	// ErrBeatNotFound is returned when the project holds no beat with the ID.
+	ErrBeatNotFound = errors.New("beat not found")
 	// ErrSceneNotFound is returned when the project holds no scene with the ID.
 	ErrSceneNotFound = errors.New("scene not found")
 	// ErrLayerNotFound is returned when the project holds no layer with the ID.
 	ErrLayerNotFound = errors.New("layer not found")
-	// ErrProjectFull is returned when a project already holds as many scenes or layers as it may.
+	// ErrProjectFull is returned when a project already holds as many beats or layers as it may, or a beat as
+	// many scenes.
 	ErrProjectFull = errors.New("project full")
 	// ErrRequiredLayer is returned by a delete that would leave a project without a layer of a required
 	// kind, such as the manuscript.

@@ -34,8 +34,8 @@ type CellListRow struct {
 	Total int `bun:"total"`
 }
 
-// PgCellList reads a page of a project's cells, by the position of their scene, then of their
-// layer. Each row carries the total, and a page past the end comes back empty.
+// PgCellList reads a page of a project's cells, by the narrative order of their scene, then the position
+// of their layer. Each row carries the total, and a page past the end comes back empty.
 type PgCellList struct{}
 
 func NewPgCellList() *PgCellList {

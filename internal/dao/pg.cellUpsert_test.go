@@ -20,6 +20,12 @@ func TestPgCellUpsert(t *testing.T) {
 	content := json.RawMessage(`{"text": "Marie, Paul"}`)
 	cells := composerFixtures().cells
 
+	// otherCell is a cell of the other project, which no write of the test project may change.
+	otherCell := &dao.Cell{
+		ProjectID: otherProjectID, SceneID: otherSceneID, LayerID: otherLayerID,
+		Content: json.RawMessage(`{"blocks": []}`), UpdatedAt: updatedAt,
+	}
+
 	testCases := []struct {
 		name string
 
@@ -87,6 +93,16 @@ func TestPgCellUpsert(t *testing.T) {
 			expectCells: cells,
 			expectErr:   dao.ErrCellUpsertLayerNotFound,
 		},
+		{
+			name: "Error/OtherProjectCell",
+
+			request: &dao.CellUpsertRequest{
+				ProjectID: projectID, SceneID: otherSceneID, LayerID: otherLayerID, Content: content, Now: now,
+			},
+
+			expectCells: cells,
+			expectErr:   dao.ErrCellUpsertSceneNotFound,
+		},
 	}
 
 	daoCellUpsert := dao.NewPgCellUpsert()
@@ -98,7 +114,9 @@ func TestPgCellUpsert(t *testing.T) {
 			postgrestest.RunDBTest(t, configtest.PostgresPreset, migrations.Migrations, func(ctx context.Context, t *testing.T) {
 				t.Helper()
 
-				insertFixtures(ctx, t, composerFixtures())
+				data := composerFixtures()
+				data.cells = append(data.cells, otherCell)
+				insertFixtures(ctx, t, data)
 
 				result, err := daoCellUpsert.Exec(ctx, testCase.request)
 				require.ErrorIs(t, err, testCase.expectErr)
@@ -106,6 +124,7 @@ func TestPgCellUpsert(t *testing.T) {
 
 				// The write returns the cell's key alone, so the stored cells carry the content.
 				requireCellsEqual(t, testCase.expectCells, listCells(ctx, t, projectID))
+				requireCellsEqual(t, []*dao.Cell{otherCell}, listCells(ctx, t, otherProjectID))
 			})
 		})
 	}

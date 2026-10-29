@@ -27,11 +27,9 @@ type SceneUpdateRequest struct {
 
 	// Title names the scene in the composer.
 	Title string
-	// Color is the scene's color in the composer, as a lowercase #rrggbb hex code.
-	Color string
-	// Description says what the scene is for, written for the author.
+	// Description refines the beat's description for the scene.
 	Description string
-	// Prompt holds extra instructions for the model when it writes about the scene.
+	// Prompt refines the beat's prompt for the scene.
 	Prompt string
 
 	// Now is the instant stored as updated_at.
@@ -58,7 +56,7 @@ func (dao *PgSceneUpdate) Exec(ctx context.Context, request *SceneUpdateRequest)
 
 	err = db.NewRaw(
 		sceneUpdateQuery, request.ProjectID, request.ID,
-		request.Title, request.Color, request.Description, request.Prompt, request.Now,
+		request.Title, request.Description, request.Prompt, request.Now,
 	).Scan(ctx, entity)
 	if errors.Is(err, sql.ErrNoRows) {
 		err = errors.Join(err, ErrSceneUpdateNotFound)

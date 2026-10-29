@@ -32,8 +32,8 @@ export const WrittenCellSchema = z.object({
 export type WrittenCell = z.infer<typeof WrittenCellSchema>;
 
 /**
- * A page of a project's cells, by the position of their scene, then of their layer, with how many the
- * project holds in all.
+ * A page of a project's cells, by the narrative order of their scene, then the position of their layer,
+ * with how many the project holds in all.
  */
 export const CellPageSchema = z.object({
   cells: z.array(CellSchema),

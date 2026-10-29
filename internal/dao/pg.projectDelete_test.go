@@ -38,7 +38,7 @@ func TestPgProjectDelete(t *testing.T) {
 
 			request: &dao.ProjectDeleteRequest{ID: absentID},
 
-			expectScenes: composerFixtures().scenes[:3],
+			expectScenes: composerFixtures().scenes[:4],
 			expectErr:    dao.ErrProjectDeleteNotFound,
 		},
 	}

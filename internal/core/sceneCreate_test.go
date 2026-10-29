@@ -23,8 +23,8 @@ func TestSceneCreate(t *testing.T) {
 
 	request := func(position int) *core.SceneCreateRequest {
 		return &core.SceneCreateRequest{
-			OwnerID: ownerID, ProjectID: projectID, Position: position,
-			Title: "Scene", Color: "#4A90D9", Description: "Paul ment.", Prompt: "Lent.",
+			OwnerID: ownerID, ProjectID: projectID, BeatID: beatID1, Position: position,
+			Title: "Scene", Description: "Paul ment.", Prompt: "Lent.",
 		}
 	}
 
@@ -63,7 +63,7 @@ func TestSceneCreate(t *testing.T) {
 		{
 			name: "Error/InvalidRequest",
 
-			request: &core.SceneCreateRequest{OwnerID: ownerID, ProjectID: projectID, Color: "#4A90D9"},
+			request: &core.SceneCreateRequest{OwnerID: ownerID, ProjectID: projectID, BeatID: beatID1},
 
 			expectErr: core.ErrInvalidRequest,
 		},
@@ -93,7 +93,7 @@ func TestSceneCreate(t *testing.T) {
 			expectErr: errFoo,
 		},
 		{
-			name: "Error/ProjectFull",
+			name: "Error/BeatFull",
 
 			request: request(0),
 
@@ -101,6 +101,16 @@ func TestSceneCreate(t *testing.T) {
 			insertMock: &daoMock[*dao.Scene]{err: dao.ErrSceneInsertFull},
 
 			expectErr: core.ErrProjectFull,
+		},
+		{
+			name: "Error/BeatNotFound",
+
+			request: request(0),
+
+			lockMock:   &daoMock[bool]{resp: true},
+			insertMock: &daoMock[*dao.Scene]{err: dao.ErrSceneInsertBeatNotFound},
+
+			expectErr: core.ErrBeatNotFound,
 		},
 		{
 			name: "Error/Insert",
@@ -139,9 +149,9 @@ func TestSceneCreate(t *testing.T) {
 			if testCase.insertMock != nil {
 				mockInsert.EXPECT().
 					Exec(mock.Anything, mock.MatchedBy(func(req *dao.SceneInsertRequest) bool {
-						return req.ID != uuid.Nil && req.ProjectID == projectID && req.Position == testCase.request.Position &&
-							req.Title == "Scene" && req.Color == sceneColor && req.Description == "Paul ment." &&
-							req.Prompt == "Lent." && recent(req.Now)
+						return req.ID != uuid.Nil && req.ProjectID == projectID && req.BeatID == beatID1 &&
+							req.Position == testCase.request.Position && req.Title == "Scene" &&
+							req.Description == "Paul ment." && req.Prompt == "Lent." && recent(req.Now)
 					})).
 					Return(testCase.insertMock.resp, testCase.insertMock.err)
 			}

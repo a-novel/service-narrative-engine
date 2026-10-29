@@ -23,9 +23,15 @@ var (
 	projectID      = uuid.MustParse("00000000-0000-0000-0000-000000000001")
 	otherProjectID = uuid.MustParse("00000000-0000-0000-0000-000000000002")
 
+	beatID1     = uuid.MustParse("00000000-0000-0000-0000-000000000031")
+	beatID2     = uuid.MustParse("00000000-0000-0000-0000-000000000032")
+	beatID3     = uuid.MustParse("00000000-0000-0000-0000-000000000033")
+	otherBeatID = uuid.MustParse("00000000-0000-0000-0000-000000000039")
+
 	sceneID1     = uuid.MustParse("00000000-0000-0000-0000-000000000011")
 	sceneID2     = uuid.MustParse("00000000-0000-0000-0000-000000000012")
 	sceneID3     = uuid.MustParse("00000000-0000-0000-0000-000000000013")
+	sceneID4     = uuid.MustParse("00000000-0000-0000-0000-000000000016")
 	otherSceneID = uuid.MustParse("00000000-0000-0000-0000-000000000019")
 
 	manuscriptLayerID = uuid.MustParse("00000000-0000-0000-0000-000000000021")
@@ -35,8 +41,8 @@ var (
 	// absentID names no row of the fixtures.
 	absentID = uuid.MustParse("00000000-0000-0000-0000-0000000000ff")
 
-	// sceneColor is the color of every fixture scene.
-	sceneColor = "#4a90d9"
+	// beatColor is the color of every fixture beat.
+	beatColor = "#4a90d9"
 
 	createdAt = time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
 	updatedAt = time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC)
@@ -46,13 +52,15 @@ var (
 // fixtures is the data a DAO test seeds before it runs the operation under test.
 type fixtures struct {
 	projects []*dao.Project
+	beats    []*dao.Beat
 	scenes   []*dao.Scene
 	layers   []*dao.Layer
 	cells    []*dao.Cell
 }
 
-// composerFixtures returns a project of three scenes and two layers, with cells in its first scene,
-// beside a project of another owner. Each call returns fresh values, so a case may change them.
+// composerFixtures returns a project of three beats and two layers beside a project of another owner.
+// The first beat holds three scenes, the second one, and the third none. The first scene holds the
+// cells. Each call returns fresh values, so a case may change them.
 func composerFixtures() fixtures {
 	return fixtures{
 		projects: []*dao.Project{
@@ -65,11 +73,21 @@ func composerFixtures() fixtures {
 				CreatedAt: createdAt, UpdatedAt: updatedAt,
 			},
 		},
+		beats: []*dao.Beat{
+			{ID: beatID1, ProjectID: projectID, Position: 0, Title: "Ouverture", Color: beatColor, UpdatedAt: updatedAt},
+			{ID: beatID2, ProjectID: projectID, Position: 1, Title: "Le thème", Color: beatColor, UpdatedAt: updatedAt},
+			{ID: beatID3, ProjectID: projectID, Position: 2, Title: "Le déclencheur", Color: beatColor, UpdatedAt: updatedAt},
+			{ID: otherBeatID, ProjectID: otherProjectID, Position: 0, Title: "Other", Color: beatColor, UpdatedAt: updatedAt},
+		},
 		scenes: []*dao.Scene{
-			{ID: sceneID1, ProjectID: projectID, Position: 0, Title: "Ouverture", Color: sceneColor, UpdatedAt: updatedAt},
-			{ID: sceneID2, ProjectID: projectID, Position: 1, Title: "Le thème", Color: sceneColor, UpdatedAt: updatedAt},
-			{ID: sceneID3, ProjectID: projectID, Position: 2, Title: "Le déclencheur", Color: sceneColor, UpdatedAt: updatedAt},
-			{ID: otherSceneID, ProjectID: otherProjectID, Position: 0, Title: "Other", Color: sceneColor, UpdatedAt: updatedAt},
+			{ID: sceneID1, ProjectID: projectID, BeatID: beatID1, Position: 0, Title: "La fenêtre", UpdatedAt: updatedAt},
+			{ID: sceneID2, ProjectID: projectID, BeatID: beatID1, Position: 1, Title: "La rue", UpdatedAt: updatedAt},
+			{ID: sceneID3, ProjectID: projectID, BeatID: beatID1, Position: 2, Title: "La porte", UpdatedAt: updatedAt},
+			{ID: sceneID4, ProjectID: projectID, BeatID: beatID2, Position: 0, Title: "Le retour", UpdatedAt: updatedAt},
+			{
+				ID: otherSceneID, ProjectID: otherProjectID, BeatID: otherBeatID, Position: 0, Title: "Other",
+				UpdatedAt: updatedAt,
+			},
 		},
 		layers: []*dao.Layer{
 			{
@@ -103,13 +121,26 @@ func fillerID(kind string, position int) uuid.UUID {
 	return uuid.NewSHA1(uuid.NameSpaceOID, []byte(kind+strconv.Itoa(position)))
 }
 
-// fillerScenes returns the scenes that fill the test project up to its last position, 499.
+// fillerBeats returns the beats that fill the test project up to its last position, 199.
+func fillerBeats() []*dao.Beat {
+	beats := make([]*dao.Beat, 0, 197)
+	for position := 3; position < 200; position++ {
+		beats = append(beats, &dao.Beat{
+			ID: fillerID("beat", position), ProjectID: projectID, Position: position, Title: "Filler",
+			Color: beatColor, UpdatedAt: updatedAt,
+		})
+	}
+
+	return beats
+}
+
+// fillerScenes returns the scenes that fill the first beat up to its last position, 9.
 func fillerScenes() []*dao.Scene {
-	scenes := make([]*dao.Scene, 0, 497)
-	for position := 3; position < 500; position++ {
+	scenes := make([]*dao.Scene, 0, 7)
+	for position := 3; position < 10; position++ {
 		scenes = append(scenes, &dao.Scene{
-			ID: fillerID("scene", position), ProjectID: projectID, Position: position, Title: "Filler",
-			Color: sceneColor, UpdatedAt: updatedAt,
+			ID: fillerID("scene", position), ProjectID: projectID, BeatID: beatID1, Position: position,
+			Title: "Filler", UpdatedAt: updatedAt,
 		})
 	}
 
@@ -138,6 +169,11 @@ func insertFixtures(ctx context.Context, t *testing.T, data fixtures) {
 
 	if len(data.projects) > 0 {
 		_, err = db.NewInsert().Model(&data.projects).Exec(ctx)
+		require.NoError(t, err)
+	}
+
+	if len(data.beats) > 0 {
+		_, err = db.NewInsert().Model(&data.beats).Exec(ctx)
 		require.NoError(t, err)
 	}
 
@@ -173,6 +209,14 @@ func requireCellsEqual(t *testing.T, expect, actual []*dao.Cell) {
 	}
 }
 
+// beatAt returns a copy of a beat, moved to position.
+func beatAt(beat *dao.Beat, position int) *dao.Beat {
+	moved := *beat
+	moved.Position = position
+
+	return &moved
+}
+
 // sceneAt returns a copy of a scene, moved to position.
 func sceneAt(scene *dao.Scene, position int) *dao.Scene {
 	moved := *scene
@@ -189,6 +233,15 @@ func layerAt(layer *dao.Layer, position int) *dao.Layer {
 	return &moved
 }
 
+// sceneIn returns a copy of a scene, moved to position in beat.
+func sceneIn(scene *dao.Scene, beat uuid.UUID, position int) *dao.Scene {
+	moved := *scene
+	moved.BeatID = beat
+	moved.Position = position
+
+	return &moved
+}
+
 // listScenes reads every scene of a project, in narrative order.
 func listScenes(ctx context.Context, t *testing.T, project uuid.UUID) []*dao.Scene {
 	t.Helper()
@@ -197,6 +250,23 @@ func listScenes(ctx context.Context, t *testing.T, project uuid.UUID) []*dao.Sce
 	require.NoError(t, err)
 
 	return lo.Map(rows, func(row *dao.SceneListRow, _ int) *dao.Scene { return &row.Scene })
+}
+
+// listBeats reads every beat of a project, in narrative order.
+func listBeats(ctx context.Context, t *testing.T, project uuid.UUID) []*dao.Beat {
+	t.Helper()
+
+	rows, err := dao.NewPgBeatList().Exec(ctx, &dao.BeatListRequest{ProjectID: project, Limit: 100})
+	require.NoError(t, err)
+
+	return lo.Map(rows, func(row *dao.BeatListRow, _ int) *dao.Beat { return &row.Beat })
+}
+
+// beatScenes reads every scene of a beat, in order.
+func beatScenes(ctx context.Context, t *testing.T, beat uuid.UUID) []*dao.Scene {
+	t.Helper()
+
+	return lo.Filter(listScenes(ctx, t, projectID), func(scene *dao.Scene, _ int) bool { return scene.BeatID == beat })
 }
 
 // listLayers reads every layer of a project, in order.

@@ -12,6 +12,7 @@ import {
   NarrativeEngineApi,
   type ProjectComposer,
   type Scene,
+  beatCreate,
   cellList,
   cellWrite,
   cellsWrite,
@@ -33,12 +34,13 @@ let other: ProjectComposer;
 let otherScenes: Scene[];
 let notes: Layer;
 
-/** Creates a project with one scene per title. */
+/** Creates a project with one beat, holding one scene per title. */
 async function projectWithScenes(title: string, titles: string[]): Promise<[ProjectComposer, Scene[]]> {
   const created = await projectCreate(api, accessToken, { title, language: Language.En });
+  const beat = await beatCreate(api, accessToken, { projectID: created.id, title: "Beat", color: COLOR });
   const createdScenes = await scenesCreate(api, accessToken, {
     projectID: created.id,
-    scenes: titles.map((sceneTitle) => ({ title: sceneTitle, color: COLOR })),
+    scenes: titles.map((sceneTitle, position) => ({ beatID: beat.id, position, title: sceneTitle })),
   });
 
   return [created, createdScenes];

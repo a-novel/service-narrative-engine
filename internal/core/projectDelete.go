@@ -29,7 +29,7 @@ type ProjectDeleteRequest struct {
 	ID      uuid.UUID `validate:"required"`
 }
 
-// ProjectDelete deletes a project with its scenes, layers and cells.
+// ProjectDelete deletes a project with its beats, scenes, layers and cells.
 type ProjectDelete struct {
 	daoOwner ProjectDeleteDaoOwner
 	dao      ProjectDeleteDao
