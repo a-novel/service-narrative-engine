@@ -181,8 +181,8 @@ export async function sceneUpdate(
 
 /**
  * Replaces the fields of several scenes at once and returns them in the order of the request. They are
- * all updated, or none are. Throws on HTTP 404 when the caller owns no such project, or the project holds
- * one of the scenes not.
+ * all updated, or none are. Throws on HTTP 404 when the caller owns no such project, or the project lacks
+ * one of the scenes.
  */
 export async function scenesUpdate(
   api: NarrativeEngineApi,
@@ -231,7 +231,7 @@ export async function sceneDelete(
 /**
  * Deletes scenes with their cells and returns them as they were; the scenes after them move up to
  * close the gaps. They are all deleted, or none are. Throws on HTTP 404 when the caller owns no such
- * project, or the project holds one of the scenes not.
+ * project, or the project lacks one of the scenes.
  */
 export async function scenesDelete(
   api: NarrativeEngineApi,

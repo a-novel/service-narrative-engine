@@ -101,9 +101,9 @@ export async function cellWrite(
 /**
  * Writes cells where scenes and layers of the project cross, and returns each written cell, without its
  * content, in the order of the request. The first write of a cell creates it, and the cells are all
- * written or none are. Throws on
- * HTTP 400 when a content breaks the schema of its layer's kind or weighs over 2 MiB, and 404 when the
- * caller owns no such project, or the project holds one of the scenes or layers not.
+ * written or none are. Throws on HTTP 400 when a content breaks the schema of its layer's kind or weighs
+ * over 2 MiB, and 404 when the caller owns no such project, or the project lacks one of the scenes or
+ * layers.
  */
 export async function cellsWrite(
   api: NarrativeEngineApi,

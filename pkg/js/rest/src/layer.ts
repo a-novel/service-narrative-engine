@@ -6,7 +6,7 @@ import { z } from "zod";
 
 /** The kinds of layer this client knows. A kind names the content schema the cells of a layer follow. */
 export enum LayerKind {
-  /** The one layer of a project whose cells carry the text the manuscript exports. */
+  /** A layer whose cells carry the text the manuscript exports. A project keeps at least one. */
   Manuscript = "manuscript",
   /** A layer of free text the author keeps beside the manuscript. */
   Notes = "notes",
@@ -188,7 +188,7 @@ export async function layerUpdate(
 /**
  * Replaces the name and description of several layers at once and returns them in the order of the
  * request. They are all updated, or none are. Throws on HTTP 404 when the caller owns no such project,
- * or the project holds one of the layers not.
+ * or the project lacks one of the layers.
  */
 export async function layersUpdate(
   api: NarrativeEngineApi,
@@ -238,7 +238,7 @@ export async function layerDelete(
 /**
  * Deletes layers with their cells and returns them as they were; the layers after them move up to
  * close the gaps. They are all deleted, or none are. Throws on HTTP 404 when the caller owns no such
- * project, or the project holds one of the layers not, and 422 when the delete would leave no layer of a
+ * project, or the project lacks one of the layers, and 422 when the delete would leave no layer of a
  * required kind, such as the manuscript.
  */
 export async function layersDelete(

@@ -15,9 +15,9 @@ info:
     ## Scenes Composer
 
     A project holds one narrative. Its Scenes Composer is a grid: scenes are the columns, in narrative
-    order, and layers are the rows. A cell holds what one layer says about one scene. Every project has
-    one manuscript layer, whose cells carry the text the manuscript exports. Notes layers hold free
-    text the author keeps beside it.
+    order, and layers are the rows. A cell holds what one layer says about one scene. Every project keeps
+    at least one manuscript layer, whose cells carry the text the manuscript exports. Notes layers hold
+    free text the author keeps beside it.
 
     Every route but the health ones acts for the signed-in user, who owns the projects it reads and
     writes. A project of another user answers as if it did not exist.
@@ -87,8 +87,8 @@ paths:
       operationId: projectCreate
       summary: Create a project.
       description: |
-        Creates a project with its required layers, today one manuscript layer, in one step. Its scenes
-        come next, from sceneCreate.
+        Creates a project with its required layers, one of each required kind, in one step. Its scenes come
+        next, from sceneCreate or scenesCreate.
       tags: [project]
       requestBody:
         required: true
@@ -732,8 +732,8 @@ paths:
       description: |
         Writes the content of the cell where a scene and a layer of the project cross, and returns the cell's
         scene, layer and write time without the content the client already holds. The content follows the
-        content schema of the layer's kind and weighs at most 2 MiB. The first write creates the cell. cellsWrite
-        writes several at once.
+        content schema of the layer's kind and weighs at most 2 MiB, and the body at most 4 MiB. The first
+        write creates the cell. cellsWrite writes several at once.
       tags: [cell]
       requestBody:
         required: true
@@ -797,7 +797,7 @@ paths:
         Writes up to 100 cells where scenes and layers of the project cross, and returns each written cell's
         scene, layer and write time, in the order of the request, without the content the client already
         holds. Each content follows the content schema of its layer's kind and weighs at most 2 MiB, and the
-        whole body at most 4 MiB. The first write of a cell creates it. The cells are all written, or none
+        whole body at most 50 MiB. The first write of a cell creates it. The cells are all written, or none
         are.
       tags: [cell]
       requestBody:
@@ -961,8 +961,8 @@ components:
     badRequest:
       description: |
         The request could not be parsed, or failed validation. A field that breaks its rule answers a
-        problem naming each invalid field and the rule it broke. Malformed JSON, content that breaks its
-        schema answer the status text alone.
+        problem naming each invalid field and the rule it broke. Malformed JSON, a body over its limit and
+        content that breaks its schema answer the status text alone.
       content:
         application/problem+json:
           schema:
@@ -991,7 +991,7 @@ components:
 
     requiredLayer:
       description: |
-        A required layer, such as the manuscript, stays for the life of its project.
+        A project keeps at least one layer of each required kind, such as the manuscript.
 
     tooManyRequests:
       description: |
@@ -1065,6 +1065,7 @@ components:
       type: string
       description: The language the project is written in, as a BCP 47 tag.
       enum: [en, fr]
+      examples: [fr]
 
     project:
       type: object
@@ -1225,7 +1226,13 @@ components:
         layerID:
           $ref: "#/components/schemas/layerID"
         content:
-          $ref: "#/components/schemas/cellContent"
+          type: object
+          description: |
+            A JSON document that follows the content schema of the layer's kind: cellContent for the kinds this
+            release knows. A later release may add kinds, so a client keeps the content of an unknown kind as it
+            is.
+          examples:
+            - { "blocks": [{ "kind": "narration", "text": "La pluie battait les vitres." }] }
         updatedAt:
           type: string
           description: When the cell was last written.
@@ -1306,6 +1313,9 @@ components:
       description: |
         A JSON document that follows the content schema of its layer's kind. The server validates it with
         the same schema files this definition references.
+      examples:
+        - { "blocks": [{ "kind": "narration", "text": "La pluie battait les vitres." }] }
+        - { "text": "Marie, Paul." }
       anyOf:
         - $ref: "./internal/models/schemas/content.manuscript.schema.json"
         - $ref: "./internal/models/schemas/content.notes.schema.json"
@@ -1464,6 +1474,7 @@ components:
           $ref: "#/components/schemas/projectID"
         scenes:
           type: array
+          description: The scenes to update, each once, at most 100.
           minItems: 1
           maxItems: 100
           items:
@@ -1587,6 +1598,7 @@ components:
           $ref: "#/components/schemas/projectID"
         layers:
           type: array
+          description: The layers to update, each once, at most 100.
           minItems: 1
           maxItems: 100
           items:
@@ -1631,6 +1643,7 @@ components:
           $ref: "#/components/schemas/projectID"
         cells:
           type: array
+          description: The cells to write, at most 100.
           minItems: 1
           maxItems: 100
           items:

@@ -1,6 +1,6 @@
 import { superAdminAccessToken } from "./token";
 
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, onTestFinished } from "vitest";
 
 import { expectStatus } from "@a-novel-kit/nodelib-test/http";
 import {
@@ -155,6 +155,7 @@ describe("cellsWrite", () => {
 describe("cellList", () => {
   it("pages through the cells of a project, with their total", async () => {
     const [paged, pagedScenes] = await projectWithScenes("Paged", ["One", "Two", "Three"]);
+    onTestFinished(() => projectDelete(api, accessToken, paged).then(() => undefined));
 
     const written = await cellsWrite(api, accessToken, {
       projectID: paged.id,
@@ -170,8 +171,6 @@ describe("cellList", () => {
     const second = await cellList(api, accessToken, { projectID: paged.id, limit: 2, offset: 2 });
     expect(second.total).toBe(3);
     expect(keys(second.cells)).toEqual(keys(written.slice(2)));
-
-    await projectDelete(api, accessToken, paged);
   });
 
   it("returns 400 for a page over 500 cells", async () => {

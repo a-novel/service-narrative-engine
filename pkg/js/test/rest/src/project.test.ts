@@ -1,12 +1,14 @@
 import { anonymousAccessToken, superAdminAccessToken } from "./token";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, onTestFinished } from "vitest";
 
 import { expectStatus } from "@a-novel-kit/nodelib-test/http";
 import {
   Language,
   LayerKind,
   NarrativeEngineApi,
+  type ProjectComposer,
+  type ProjectCreateRequest,
   projectCreate,
   projectDelete,
   projectGet,
@@ -19,9 +21,22 @@ const accessToken = await superAdminAccessToken();
 
 const ABSENT_ID = "01920000-0000-7000-8000-000000000000";
 
+/** Creates a project the test deletes when it finishes, whatever its outcome. */
+async function createProject(request: ProjectCreateRequest): Promise<ProjectComposer> {
+  const project = await projectCreate(api, accessToken, request);
+  onTestFinished(() =>
+    projectDelete(api, accessToken, project).then(
+      () => undefined,
+      () => undefined
+    )
+  );
+
+  return project;
+}
+
 describe("projectCreate", () => {
   it("creates a project with its required layers", async () => {
-    const project = await projectCreate(api, accessToken, {
+    const project = await createProject({
       title: "Les Heures claires",
       premise: "Marie attend.",
       language: Language.Fr,
@@ -33,8 +48,6 @@ describe("projectCreate", () => {
       language: "fr",
     });
     expect(project.layers.map((layer) => [layer.position, layer.kind])).toEqual([[0, LayerKind.Manuscript]]);
-
-    await projectDelete(api, accessToken, project);
   });
 
   it("names the invalid field of a blank title", async () => {
@@ -55,7 +68,7 @@ describe("projectCreate", () => {
 
 describe("projectGet", () => {
   it("returns the project", async () => {
-    const created = await projectCreate(api, accessToken, {
+    const created = await createProject({
       title: "Clear Hours",
       premise: "Marie waits.",
       language: Language.En,
@@ -70,8 +83,6 @@ describe("projectGet", () => {
       createdAt: created.createdAt,
       updatedAt: created.updatedAt,
     });
-
-    await projectDelete(api, accessToken, project);
   });
 
   it("returns 400 for a malformed ID", async () => {
@@ -85,8 +96,8 @@ describe("projectGet", () => {
 
 describe("projectList", () => {
   it("lists projects newest first, a page at a time, with their total", async () => {
-    const older = await projectCreate(api, accessToken, { title: "Older", language: Language.En });
-    const newer = await projectCreate(api, accessToken, { title: "Newer", language: Language.En });
+    const older = await createProject({ title: "Older", language: Language.En });
+    const newer = await createProject({ title: "Newer", language: Language.En });
 
     const ids = (await projectList(api, accessToken)).projects.map((project) => project.id);
     expect(ids.indexOf(newer.id)).toBeGreaterThanOrEqual(0);
@@ -102,9 +113,6 @@ describe("projectList", () => {
     const firstPage = await projectList(api, accessToken, { limit: 1 });
     expect(firstPage.projects).toHaveLength(1);
     expect(firstPage.total).toBeGreaterThanOrEqual(2);
-
-    await projectDelete(api, accessToken, older);
-    await projectDelete(api, accessToken, newer);
   });
 
   it("returns 400 for a page over 100 projects", async () => {
@@ -118,7 +126,7 @@ describe("projectList", () => {
 
 describe("projectUpdate", () => {
   it("replaces the fields", async () => {
-    const created = await projectCreate(api, accessToken, { title: "Draft", language: Language.En });
+    const created = await createProject({ title: "Draft", language: Language.En });
 
     const project = await projectUpdate(api, accessToken, {
       id: created.id,
@@ -131,8 +139,6 @@ describe("projectUpdate", () => {
       premise: "Marie attend.",
       language: "fr",
     });
-
-    await projectDelete(api, accessToken, project);
   });
 
   it("returns 404 for an absent project", async () => {
@@ -143,9 +149,13 @@ describe("projectUpdate", () => {
 
 describe("projectDelete", () => {
   it("deletes the project", async () => {
-    const created = await projectCreate(api, accessToken, { title: "Doomed", language: Language.En });
+    const created = await createProject({ title: "Doomed", language: Language.En });
 
     await expect(projectDelete(api, accessToken, created)).resolves.toMatchObject({ id: created.id });
     await expectStatus(projectGet(api, accessToken, { id: created.id }), 404);
+  });
+
+  it("returns 404 for an absent project", async () => {
+    await expectStatus(projectDelete(api, accessToken, { id: ABSENT_ID }), 404);
   });
 });
