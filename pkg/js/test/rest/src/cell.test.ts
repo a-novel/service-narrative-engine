@@ -2,9 +2,11 @@ import { superAdminAccessToken } from "./token";
 
 import { afterAll, beforeAll, describe, expect, it, onTestFinished } from "vitest";
 
+import { isHttpStatusError } from "@a-novel-kit/nodelib-browser/http";
 import { expectStatus } from "@a-novel-kit/nodelib-test/http";
 import {
   type Cell,
+  type CellWriteItem,
   Language,
   type Layer,
   LayerKind,
@@ -44,6 +46,39 @@ async function projectWithScenes(title: string, titles: string[]): Promise<[Proj
   });
 
   return [created, createdScenes];
+}
+
+/** Contents of about 200,000 characters each: a scene holds either, but not both within 400,000. */
+const HALF_NOTES = { text: "a".repeat(200000) };
+const HALF_MANUSCRIPT = {
+  blocks: [
+    { kind: "narration" as const, text: "b".repeat(100000) },
+    { kind: "narration" as const, text: "c".repeat(100000) },
+  ],
+};
+
+/**
+ * Creates a project of one empty scene, with a notes layer after its manuscript, deleted after the test. Returns
+ * the cells that write {@link HALF_NOTES} and {@link HALF_MANUSCRIPT} in that scene.
+ */
+async function halfCells(): Promise<{ projectID: string; cells: CellWriteItem[] }> {
+  const [created, [scene]] = await projectWithScenes("Full", ["Full"]);
+  onTestFinished(() => projectDelete(api, accessToken, created).then(() => undefined));
+
+  const notesLayer = await layerCreate(api, accessToken, {
+    projectID: created.id,
+    position: 1,
+    kind: LayerKind.Notes,
+    name: "Notes",
+  });
+
+  return {
+    projectID: created.id,
+    cells: [
+      { sceneID: scene.id, layerID: notesLayer.id, content: HALF_NOTES },
+      { sceneID: scene.id, layerID: created.layers[0].id, content: HALF_MANUSCRIPT },
+    ],
+  };
 }
 
 /** Returns the stored cell of the test project where a scene and a layer cross. */
@@ -105,6 +140,24 @@ describe("cellWrite", () => {
     const request = { projectID: project.id, sceneID: otherScenes[0].id, layerID: notes.id, content: { text: "M" } };
     await expectStatus(cellWrite(api, accessToken, request), 404);
   });
+
+  it("returns 422 for a write that would bring its scene past 400,000 characters, and writes nothing", async () => {
+    const { projectID, cells } = await halfCells();
+    await cellWrite(api, accessToken, { projectID, ...cells[0] });
+    await expectStatus(cellWrite(api, accessToken, { projectID, ...cells[1] }), 422);
+
+    const stored = (await cellList(api, accessToken, { projectID })).cells;
+    expect(stored.map((cell) => cell.layerID)).toEqual([cells[0].layerID]);
+  });
+
+  it("lets one of two concurrent writes through when together they would pass 400,000 characters", async () => {
+    const { projectID, cells } = await halfCells();
+    const settled = await Promise.allSettled(cells.map((cell) => cellWrite(api, accessToken, { projectID, ...cell })));
+
+    const refused = settled.filter((result) => result.status === "rejected");
+    expect(refused).toHaveLength(1);
+    expect(isHttpStatusError(refused[0].reason, 422)).toBe(true);
+  });
 });
 
 describe("cellsWrite", () => {
@@ -151,6 +204,13 @@ describe("cellsWrite", () => {
   it("returns 404 for a layer of another project", async () => {
     const cells = [{ sceneID: otherScenes[0].id, layerID: notes.id, content: { text: "Marie" } }];
     await expectStatus(cellsWrite(api, accessToken, { projectID: other.id, cells }), 404);
+  });
+
+  it("returns 422 for cells that would bring their scene past 400,000 characters, and writes none", async () => {
+    const { projectID, cells } = await halfCells();
+    await expectStatus(cellsWrite(api, accessToken, { projectID, cells }), 422);
+
+    await expect(cellList(api, accessToken, { projectID })).resolves.toMatchObject({ cells: [] });
   });
 });
 
