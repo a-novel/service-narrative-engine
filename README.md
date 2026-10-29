@@ -199,6 +199,14 @@ const api = new NarrativeEngineApi("http://service-narrative-engine:8080");
 await api.ping();
 ```
 
+Every resource helper acts for a signed-in user, and takes that user's access token from the authentication service:
+
+```typescript
+import { Language, projectCreate } from "@a-novel/service-narrative-engine-rest";
+
+const project = await projectCreate(api, accessToken, { title: "Les Heures claires", language: Language.Fr });
+```
+
 ## Running locally
 
 The **standalone** images bundle a server with the migrations, which they apply on every boot. Use them for a throwaway instance without the dev toolchain, never for a deployment with several replicas. Run a JSON Keys server beside it, as its own README shows.
