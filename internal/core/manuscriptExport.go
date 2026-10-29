@@ -28,9 +28,9 @@ type ManuscriptExportDaoProject interface {
 	Exec(ctx context.Context, request *dao.ProjectSelectRequest) (*dao.Project, error)
 }
 
-// ManuscriptExportDao reads every scene of the project, with its cell in the layer.
+// ManuscriptExportDao reads every beat and scene of the project, each scene with its cell in the layer.
 type ManuscriptExportDao interface {
-	Exec(ctx context.Context, request *dao.ManuscriptSelectRequest) ([]*dao.ManuscriptScene, error)
+	Exec(ctx context.Context, request *dao.ManuscriptSelectRequest) ([]*dao.ManuscriptRow, error)
 }
 
 // ManuscriptExportRequest names the manuscript layer to export.
@@ -41,8 +41,9 @@ type ManuscriptExportRequest struct {
 	LayerID uuid.UUID `validate:"required"`
 }
 
-// ManuscriptExport reads the text a manuscript layer holds across every scene of the project. A layer
-// the project does not hold, or of another kind, answers [ErrLayerNotFound].
+// ManuscriptExport reads the text a manuscript layer holds across every scene of the project, with the
+// beats the scenes belong to. A layer the project does not hold, or of another kind, answers
+// [ErrLayerNotFound].
 type ManuscriptExport struct {
 	daoOwner   ManuscriptExportDaoOwner
 	daoKind    ManuscriptExportDaoKind
@@ -98,24 +99,16 @@ func (service *ManuscriptExport) Exec(ctx context.Context, request *ManuscriptEx
 		return nil, otel.ReportError(span, fmt.Errorf("select project: %w", err))
 	}
 
-	entities, err := service.dao.Exec(ctx, &dao.ManuscriptSelectRequest{
+	rows, err := service.dao.Exec(ctx, &dao.ManuscriptSelectRequest{
 		ProjectID: request.ProjectID, LayerID: request.LayerID,
 	})
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("select manuscript: %w", err))
 	}
 
-	manuscript := &Manuscript{
-		Title:    project.Title,
-		Language: project.Language,
-		Scenes:   make([]*ManuscriptScene, len(entities)),
-	}
-
-	for i, entity := range entities {
-		manuscript.Scenes[i], err = newManuscriptScene(entity)
-		if err != nil {
-			return nil, otel.ReportError(span, fmt.Errorf("scene %d: %w", i, err))
-		}
+	manuscript, err := newManuscript(project, rows)
+	if err != nil {
+		return nil, otel.ReportError(span, err)
 	}
 
 	return manuscript, nil

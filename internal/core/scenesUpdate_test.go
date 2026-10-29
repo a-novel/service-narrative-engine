@@ -21,12 +21,12 @@ func TestScenesUpdate(t *testing.T) {
 	errFoo := errors.New("foo")
 
 	scene := func(id uuid.UUID) core.ScenesUpdateItem {
-		return core.ScenesUpdateItem{ID: id, Title: "Scene", Color: "#4A90D9"}
+		return core.ScenesUpdateItem{ID: id, Title: "Scene"}
 	}
 
 	// updateScene is scene as the update receives it.
 	updateScene := func(id uuid.UUID) dao.ScenesUpdateItem {
-		return dao.ScenesUpdateItem{ID: id, Title: "Scene", Color: sceneColor}
+		return dao.ScenesUpdateItem{ID: id, Title: "Scene"}
 	}
 
 	request := func(scenes ...core.ScenesUpdateItem) *core.ScenesUpdateRequest {
@@ -61,7 +61,7 @@ func TestScenesUpdate(t *testing.T) {
 			name: "Success/Batch",
 
 			request: request(scene(sceneID3), core.ScenesUpdateItem{
-				ID: sceneID1, Title: "Le thème", Color: "#E0457B", Description: "Paul ment.", Prompt: "Lent.",
+				ID: sceneID1, Title: "Le thème", Description: "Paul ment.", Prompt: "Lent.",
 			}),
 
 			ownerMock: &daoMock[bool]{resp: true},
@@ -69,7 +69,7 @@ func TestScenesUpdate(t *testing.T) {
 			updateMock: &daoMock[[]*dao.Scene]{resp: []*dao.Scene{daoScene(sceneID1, 0), daoScene(sceneID3, 2)}},
 			updateScenes: []dao.ScenesUpdateItem{
 				updateScene(sceneID3),
-				{ID: sceneID1, Title: "Le thème", Color: "#e0457b", Description: "Paul ment.", Prompt: "Lent."},
+				{ID: sceneID1, Title: "Le thème", Description: "Paul ment.", Prompt: "Lent."},
 			},
 
 			expect: []*core.Scene{coreScene(sceneID3, 2), coreScene(sceneID1, 0)},
@@ -77,7 +77,7 @@ func TestScenesUpdate(t *testing.T) {
 		{
 			name: "Error/InvalidRequest",
 
-			request: request(core.ScenesUpdateItem{ID: sceneID2, Color: "#4A90D9"}),
+			request: request(core.ScenesUpdateItem{ID: sceneID2, Description: "Paul ment."}),
 
 			expectErr: core.ErrInvalidRequest,
 		},

@@ -9,7 +9,8 @@
       "language": "fr",
       "scenes": [
         {
-          "title": "Ouverture",
+          "beat": 0,
+          "title": "La fenêtre",
           "blocks": [
             {
               "kind": "narration",
@@ -30,15 +31,27 @@
           ]
         },
         {
+          "beat": 0,
           "title": "Interlude",
           "blocks": []
         }
       ],
-      "appendices": {}
+      "appendices": {
+        "beats": [
+          {
+            "title": "Ouverture",
+            "description": "Marie attend Paul."
+          },
+          {
+            "title": "Épilogue",
+            "description": ""
+          }
+        ]
+      }
     }
   },
   {
-    "name": "Success/NoScenes",
+    "name": "Success/NoBeats",
     "valid": true,
     "document": {
       "format": "manuscript",
@@ -46,7 +59,9 @@
       "title": "Les Heures claires",
       "language": "fr",
       "scenes": [],
-      "appendices": {}
+      "appendices": {
+        "beats": []
+      }
     }
   },
   {
@@ -59,7 +74,8 @@
       "language": "fr",
       "scenes": [
         {
-          "title": "Ouverture",
+          "beat": 0,
+          "title": "La fenêtre",
           "blocks": [
             {
               "kind": "narration",
@@ -80,11 +96,22 @@
           ]
         },
         {
+          "beat": 0,
           "title": "Interlude",
           "blocks": []
         }
       ],
       "appendices": {
+        "beats": [
+          {
+            "title": "Ouverture",
+            "description": "Marie attend Paul."
+          },
+          {
+            "title": "Épilogue",
+            "description": ""
+          }
+        ],
         "timeline": {
           "scenes": [0, 1]
         }
@@ -101,7 +128,8 @@
       "language": "fr",
       "scenes": [
         {
-          "title": "Ouverture",
+          "beat": 0,
+          "title": "La fenêtre",
           "blocks": [
             {
               "kind": "narration",
@@ -122,10 +150,51 @@
           ]
         },
         {
+          "beat": 0,
           "title": "Interlude",
           "blocks": []
         }
       ]
+    }
+  },
+  {
+    "name": "Error/MissingBeatsAppendix",
+    "valid": false,
+    "document": {
+      "format": "manuscript",
+      "formatVersion": 1,
+      "title": "Les Heures claires",
+      "language": "fr",
+      "scenes": [
+        {
+          "beat": 0,
+          "title": "La fenêtre",
+          "blocks": [
+            {
+              "kind": "narration",
+              "text": "La pluie battait les vitres."
+            },
+            {
+              "kind": "dialogue",
+              "speaker": "Marie",
+              "parts": [
+                {
+                  "tone": "à voix basse"
+                },
+                {
+                  "text": "Tu es venu."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "beat": 0,
+          "title": "Interlude",
+          "blocks": []
+        }
+      ],
+      "appendices": {}
     }
   },
   {
@@ -138,7 +207,8 @@
       "language": "fr",
       "scenes": [
         {
-          "title": "Ouverture",
+          "beat": 0,
+          "title": "La fenêtre",
           "blocks": [
             {
               "kind": "narration",
@@ -159,11 +229,23 @@
           ]
         },
         {
+          "beat": 0,
           "title": "Interlude",
           "blocks": []
         }
       ],
-      "appendices": {}
+      "appendices": {
+        "beats": [
+          {
+            "title": "Ouverture",
+            "description": "Marie attend Paul."
+          },
+          {
+            "title": "Épilogue",
+            "description": ""
+          }
+        ]
+      }
     }
   },
   {
@@ -176,7 +258,8 @@
       "language": "fr",
       "scenes": [
         {
-          "title": "Ouverture",
+          "beat": 0,
+          "title": "La fenêtre",
           "blocks": [
             {
               "kind": "narration",
@@ -197,11 +280,23 @@
           ]
         },
         {
+          "beat": 0,
           "title": "Interlude",
           "blocks": []
         }
       ],
-      "appendices": {}
+      "appendices": {
+        "beats": [
+          {
+            "title": "Ouverture",
+            "description": "Marie attend Paul."
+          },
+          {
+            "title": "Épilogue",
+            "description": ""
+          }
+        ]
+      }
     }
   },
   {
@@ -214,7 +309,8 @@
       "language": "fr",
       "scenes": [
         {
-          "title": "Ouverture",
+          "beat": 0,
+          "title": "La fenêtre",
           "blocks": [
             {
               "kind": "narration",
@@ -235,11 +331,23 @@
           ]
         },
         {
+          "beat": 0,
           "title": "Interlude",
           "blocks": []
         }
       ],
-      "appendices": {},
+      "appendices": {
+        "beats": [
+          {
+            "title": "Ouverture",
+            "description": "Marie attend Paul."
+          },
+          {
+            "title": "Épilogue",
+            "description": ""
+          }
+        ]
+      },
       "author": "Marie"
     }
   },
@@ -253,7 +361,8 @@
       "language": "fr",
       "scenes": [
         {
-          "title": "Ouverture",
+          "beat": 0,
+          "title": "La fenêtre",
           "blocks": [
             {
               "kind": "narration",
@@ -274,11 +383,80 @@
           ]
         },
         {
+          "beat": 0,
           "title": "Interlude",
           "blocks": []
         }
       ],
-      "appendices": {}
+      "appendices": {
+        "beats": [
+          {
+            "title": "Ouverture",
+            "description": "Marie attend Paul."
+          },
+          {
+            "title": "Épilogue",
+            "description": ""
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "Error/SceneWithoutBeat",
+    "valid": false,
+    "document": {
+      "format": "manuscript",
+      "formatVersion": 1,
+      "title": "Les Heures claires",
+      "language": "fr",
+      "scenes": [
+        {
+          "title": "La fenêtre",
+          "blocks": []
+        }
+      ],
+      "appendices": {
+        "beats": [
+          {
+            "title": "Ouverture",
+            "description": "Marie attend Paul."
+          },
+          {
+            "title": "Épilogue",
+            "description": ""
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "Error/NegativeBeat",
+    "valid": false,
+    "document": {
+      "format": "manuscript",
+      "formatVersion": 1,
+      "title": "Les Heures claires",
+      "language": "fr",
+      "scenes": [
+        {
+          "beat": -1,
+          "title": "La fenêtre",
+          "blocks": []
+        }
+      ],
+      "appendices": {
+        "beats": [
+          {
+            "title": "Ouverture",
+            "description": "Marie attend Paul."
+          },
+          {
+            "title": "Épilogue",
+            "description": ""
+          }
+        ]
+      }
     }
   },
   {
@@ -291,10 +469,22 @@
       "language": "fr",
       "scenes": [
         {
-          "title": "Ouverture"
+          "beat": 0,
+          "title": "La fenêtre"
         }
       ],
-      "appendices": {}
+      "appendices": {
+        "beats": [
+          {
+            "title": "Ouverture",
+            "description": "Marie attend Paul."
+          },
+          {
+            "title": "Épilogue",
+            "description": ""
+          }
+        ]
+      }
     }
   },
   {
@@ -307,12 +497,24 @@
       "language": "fr",
       "scenes": [
         {
-          "title": "Ouverture",
+          "beat": 0,
+          "title": "La fenêtre",
           "blocks": [],
           "color": "#4a90d9"
         }
       ],
-      "appendices": {}
+      "appendices": {
+        "beats": [
+          {
+            "title": "Ouverture",
+            "description": "Marie attend Paul."
+          },
+          {
+            "title": "Épilogue",
+            "description": ""
+          }
+        ]
+      }
     }
   },
   {
@@ -325,7 +527,8 @@
       "language": "fr",
       "scenes": [
         {
-          "title": "Ouverture",
+          "beat": 0,
+          "title": "La fenêtre",
           "blocks": [
             {
               "id": "b1",
@@ -335,11 +538,22 @@
           ]
         }
       ],
-      "appendices": {}
+      "appendices": {
+        "beats": [
+          {
+            "title": "Ouverture",
+            "description": "Marie attend Paul."
+          },
+          {
+            "title": "Épilogue",
+            "description": ""
+          }
+        ]
+      }
     }
   },
   {
-    "name": "Error/AppendicesNotObject",
+    "name": "Error/BeatWithoutDescription",
     "valid": false,
     "document": {
       "format": "manuscript",
@@ -348,7 +562,8 @@
       "language": "fr",
       "scenes": [
         {
-          "title": "Ouverture",
+          "beat": 0,
+          "title": "La fenêtre",
           "blocks": [
             {
               "kind": "narration",
@@ -369,6 +584,53 @@
           ]
         },
         {
+          "beat": 0,
+          "title": "Interlude",
+          "blocks": []
+        }
+      ],
+      "appendices": {
+        "beats": [
+          {
+            "title": "Ouverture"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "Error/AppendicesNotObject",
+    "valid": false,
+    "document": {
+      "format": "manuscript",
+      "formatVersion": 1,
+      "title": "Les Heures claires",
+      "language": "fr",
+      "scenes": [
+        {
+          "beat": 0,
+          "title": "La fenêtre",
+          "blocks": [
+            {
+              "kind": "narration",
+              "text": "La pluie battait les vitres."
+            },
+            {
+              "kind": "dialogue",
+              "speaker": "Marie",
+              "parts": [
+                {
+                  "tone": "à voix basse"
+                },
+                {
+                  "text": "Tu es venu."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "beat": 0,
           "title": "Interlude",
           "blocks": []
         }

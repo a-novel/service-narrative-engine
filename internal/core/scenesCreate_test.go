@@ -23,12 +23,14 @@ func TestScenesCreate(t *testing.T) {
 
 	errFoo := errors.New("foo")
 
-	scene := core.ScenesCreateItem{Title: "Scene", Color: "#4A90D9"}
+	scene := core.ScenesCreateItem{Title: "Scene"}
 	// insertScene is scene as the insert receives it, without its generated ID.
-	insertScene := dao.ScenesInsertItem{Title: "Scene", Color: sceneColor}
+	insertScene := dao.ScenesInsertItem{Title: "Scene"}
 
 	request := func(position int, scenes ...core.ScenesCreateItem) *core.ScenesCreateRequest {
-		return &core.ScenesCreateRequest{OwnerID: ownerID, ProjectID: projectID, Position: position, Scenes: scenes}
+		return &core.ScenesCreateRequest{
+			OwnerID: ownerID, ProjectID: projectID, BeatID: beatID1, Position: position, Scenes: scenes,
+		}
 	}
 
 	testCases := []struct {
@@ -71,7 +73,7 @@ func TestScenesCreate(t *testing.T) {
 			name: "Success/Batch",
 
 			request: request(1, scene, core.ScenesCreateItem{
-				Title: "Le thème", Color: "#E0457B", Description: "Paul ment.", Prompt: "Lent.",
+				Title: "Le thème", Description: "Paul ment.", Prompt: "Lent.",
 			}),
 
 			lockMock: &daoMock[bool]{resp: true},
@@ -79,7 +81,7 @@ func TestScenesCreate(t *testing.T) {
 			insertMock: &daoMock[[]*dao.Scene]{resp: []*dao.Scene{daoScene(sceneID2, 2), daoScene(sceneID1, 1)}},
 			insertScenes: []dao.ScenesInsertItem{
 				insertScene,
-				{Title: "Le thème", Color: "#e0457b", Description: "Paul ment.", Prompt: "Lent."},
+				{Title: "Le thème", Description: "Paul ment.", Prompt: "Lent."},
 			},
 
 			expect: []*core.Scene{coreScene(sceneID1, 1), coreScene(sceneID2, 2)},
@@ -87,7 +89,7 @@ func TestScenesCreate(t *testing.T) {
 		{
 			name: "Error/InvalidRequest",
 
-			request: request(0, core.ScenesCreateItem{Color: "#4A90D9"}),
+			request: request(0, core.ScenesCreateItem{Description: "Paul ment."}),
 
 			expectErr: core.ErrInvalidRequest,
 		},
@@ -131,7 +133,7 @@ func TestScenesCreate(t *testing.T) {
 			expectErr: errFoo,
 		},
 		{
-			name: "Error/ProjectFull",
+			name: "Error/BeatFull",
 
 			request: request(0, scene),
 
@@ -140,6 +142,17 @@ func TestScenesCreate(t *testing.T) {
 			insertScenes: []dao.ScenesInsertItem{insertScene},
 
 			expectErr: core.ErrProjectFull,
+		},
+		{
+			name: "Error/BeatNotFound",
+
+			request: request(0, scene),
+
+			lockMock:     &daoMock[bool]{resp: true},
+			insertMock:   &daoMock[[]*dao.Scene]{err: dao.ErrScenesInsertBeatNotFound},
+			insertScenes: []dao.ScenesInsertItem{insertScene},
+
+			expectErr: core.ErrBeatNotFound,
 		},
 		{
 			name: "Error/Insert",
@@ -186,7 +199,8 @@ func TestScenesCreate(t *testing.T) {
 							return item
 						})
 
-						return req.ProjectID == projectID && req.Position == testCase.request.Position && recent(req.Now) &&
+						return req.ProjectID == projectID && req.BeatID == beatID1 && req.Position == testCase.request.Position &&
+							recent(req.Now) &&
 							freshIDs(ids) && slices.Equal(scenes, testCase.insertScenes)
 					})).
 					Return(testCase.insertMock.resp, testCase.insertMock.err)

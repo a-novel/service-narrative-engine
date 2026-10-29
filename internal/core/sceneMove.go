@@ -19,24 +19,26 @@ type SceneMoveDaoLock interface {
 	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
 }
 
-// SceneMoveDao moves the scene, and shifts the scenes between its old and new position.
+// SceneMoveDao moves the scene, and closes and opens the gaps in its old and new beat.
 type SceneMoveDao interface {
 	Exec(ctx context.Context, request *dao.SceneMoveRequest) (*dao.Scene, error)
 }
 
-// SceneMoveRequest names the scene to move and its new position.
+// SceneMoveRequest names the scene to move, and the beat and position it moves to.
 type SceneMoveRequest struct {
 	OwnerID   uuid.UUID `validate:"required"`
 	ProjectID uuid.UUID `validate:"required"`
 	ID        uuid.UUID `validate:"required"`
 
-	// Position is the scene's place in narrative order after the move, from 0. A position past the last
+	// BeatID is the beat that holds the scene after the move: its own, or another beat of the project.
+	BeatID uuid.UUID `validate:"required"`
+	// Position is the scene's place in that beat after the move, from 0. A position past the beat's last
 	// scene moves it last.
 	Position int `validate:"min=0"`
 }
 
-// SceneMove moves a scene within its project, and returns it at its new position. The scenes between its
-// old and new position shift by one.
+// SceneMove moves a scene to a position in a beat of its project, and returns it there. Its old beat closes
+// the gap and the target beat opens one, so the scene keeps its ID and its cells.
 type SceneMove struct {
 	daoLock    SceneMoveDaoLock
 	dao        SceneMoveDao
@@ -59,6 +61,7 @@ func (service *SceneMove) Exec(ctx context.Context, request *SceneMoveRequest) (
 		attribute.String("project.id", request.ProjectID.String()),
 		attribute.String("scene.id", request.ID.String()),
 		attribute.String("project.owner_id", request.OwnerID.String()),
+		attribute.String("beat.id", request.BeatID.String()),
 		attribute.Int("scene.position", request.Position),
 	)
 
@@ -79,10 +82,16 @@ func (service *SceneMove) Exec(ctx context.Context, request *SceneMoveRequest) (
 		}
 
 		moved, err := service.dao.Exec(ctx, &dao.SceneMoveRequest{
-			ProjectID: request.ProjectID, ID: request.ID, Position: request.Position,
+			ProjectID: request.ProjectID, ID: request.ID, BeatID: request.BeatID, Position: request.Position,
 		})
-		if errors.Is(err, dao.ErrSceneMoveNotFound) {
+
+		switch {
+		case errors.Is(err, dao.ErrSceneMoveNotFound):
 			err = errors.Join(err, ErrSceneNotFound)
+		case errors.Is(err, dao.ErrSceneMoveBeatNotFound):
+			err = errors.Join(err, ErrBeatNotFound)
+		case errors.Is(err, dao.ErrSceneMoveFull):
+			err = errors.Join(err, ErrProjectFull)
 		}
 
 		if err != nil {

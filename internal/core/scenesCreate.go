@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -33,27 +32,27 @@ type ScenesCreateDaoInsert interface {
 type ScenesCreateItem struct {
 	// Title names the scene in the composer.
 	Title string `validate:"required,notblank,max=200"`
-	// Color is the scene's color in the composer, as a #rrggbb hex code in either case.
-	Color string `validate:"required,len=7,hexcolor"`
-	// Description says what the scene is for, written for the author.
+	// Description refines the beat's description for the scene. Empty keeps the beat's.
 	Description string `validate:"max=20000"`
-	// Prompt holds extra instructions for the model when it writes about the scene.
+	// Prompt refines the beat's prompt for the scene. Empty keeps the beat's.
 	Prompt string `validate:"max=20000"`
 }
 
-// ScenesCreateRequest carries new scenes and their place in the project.
+// ScenesCreateRequest carries new scenes and their place in a beat.
 type ScenesCreateRequest struct {
 	OwnerID   uuid.UUID `validate:"required"`
 	ProjectID uuid.UUID `validate:"required"`
+	// BeatID is the beat the scenes join.
+	BeatID uuid.UUID `validate:"required"`
 
-	// Position is the place of the first new scene in narrative order, from 0, and the others follow it.
-	// A position past the last scene appends them.
+	// Position is the place of the first new scene in its beat, from 0, and the others follow it. A
+	// position past the beat's last scene appends them.
 	Position int `validate:"min=0"`
-	// Scenes lists the scenes to add, in narrative order, at most 100.
+	// Scenes lists the scenes to add, in order, at most 100. A beat holds at most 10.
 	Scenes []ScenesCreateItem `validate:"required,min=1,max=100,dive"`
 }
 
-// ScenesCreate adds scenes to a project at the position the caller names. The scenes from that
+// ScenesCreate adds scenes to a beat at the position the caller names. The beat's scenes from that
 // position on move down to make room.
 type ScenesCreate struct {
 	daoLock    ScenesCreateDaoLock
@@ -103,17 +102,20 @@ func (service *ScenesCreate) Exec(ctx context.Context, request *ScenesCreateRequ
 
 		inserted, err := service.daoInsert.Exec(ctx, &dao.ScenesInsertRequest{
 			ProjectID: request.ProjectID,
+			BeatID:    request.BeatID,
 			Position:  request.Position,
 			Scenes: lo.Map(request.Scenes, func(item ScenesCreateItem, index int) dao.ScenesInsertItem {
 				return dao.ScenesInsertItem{
-					ID: ids[index], Title: item.Title, Color: strings.ToLower(item.Color),
-					Description: item.Description, Prompt: item.Prompt,
+					ID: ids[index], Title: item.Title, Description: item.Description, Prompt: item.Prompt,
 				}
 			}),
 			Now: time.Now(),
 		})
-		if errors.Is(err, dao.ErrScenesInsertFull) {
+		switch {
+		case errors.Is(err, dao.ErrScenesInsertFull):
 			err = errors.Join(err, ErrProjectFull)
+		case errors.Is(err, dao.ErrScenesInsertBeatNotFound):
+			err = errors.Join(err, ErrBeatNotFound)
 		}
 
 		if err != nil {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -33,15 +32,13 @@ type SceneUpdateRequest struct {
 
 	// Title names the scene in the composer.
 	Title string `validate:"required,notblank,max=200"`
-	// Color is the scene's color in the composer, as a #rrggbb hex code in either case.
-	Color string `validate:"required,len=7,hexcolor"`
-	// Description says what the scene is for, written for the author.
+	// Description refines the beat's description for the scene. Empty keeps the beat's.
 	Description string `validate:"max=20000"`
-	// Prompt holds extra instructions for the model when it writes about the scene.
+	// Prompt refines the beat's prompt for the scene. Empty keeps the beat's.
 	Prompt string `validate:"max=20000"`
 }
 
-// SceneUpdate replaces a scene's title, color, description and prompt.
+// SceneUpdate replaces a scene's title, description and prompt.
 type SceneUpdate struct {
 	daoOwner SceneUpdateDaoOwner
 	dao      SceneUpdateDao
@@ -78,7 +75,6 @@ func (service *SceneUpdate) Exec(ctx context.Context, request *SceneUpdateReques
 		ProjectID:   request.ProjectID,
 		ID:          request.ID,
 		Title:       request.Title,
-		Color:       strings.ToLower(request.Color),
 		Description: request.Description,
 		Prompt:      request.Prompt,
 		Now:         time.Now(),
