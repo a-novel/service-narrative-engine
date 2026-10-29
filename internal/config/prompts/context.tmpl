@@ -28,17 +28,26 @@ neighborhood, then the task. Handles name scenes (S1), layers (L1), targets (T1)
 </layers>
 <beats>
 {{- range .Beats}}
+{{.}}
+{{- end}}
+</beats>
+</frame>
+{{- end}}
+
+{{- /* beat: one beat of the frame, whole with its scenes, or as a recap version or its title alone. */ -}}
+{{- define "beat" -}}
+{{- if eq .Level "full" -}}
 <beat title="{{xml .Title}}">
 {{- with .Description}}
 <description>{{xml .}}</description>
 {{- end}}
-{{- range .Scenes}}
+{{- range .Lines}}
 <scene handle="{{.Handle}}"{{with .Title}} title="{{xml .}}"{{end}}{{with .Description}}>{{xml .}}</scene>{{else}}/>{{end}}
 {{- end}}
 </beat>
-{{- end}}
-</beats>
-</frame>
+{{- else -}}
+<beat title="{{xml .Title}}" level="{{.Level}}"{{with .Handles}} scenes="{{.}}"{{end}}{{with .Recap}}>{{xml .}}</beat>{{else}}/>{{end}}
+{{- end -}}
 {{- end}}
 
 {{- /* scene: one scene of the neighborhood, at its level. A target cell shows in the task. */ -}}
@@ -112,11 +121,25 @@ neighborhood, then the task. Handles name scenes (S1), layers (L1), targets (T1)
 </task>
 {{- end}}
 
-{{- /* task.consolidate: the cell to recap, in full. */ -}}
+{{- /* task.consolidate: the cell to recap in full, or the beat with its scenes' manuscript. */ -}}
 {{- define "task.consolidate" -}}
 <task>
 {{- with .Cell}}
 <target handle="T1" scene="{{.Scene}}" layer="{{.Layer}}">{{template "content" .Content}}</target>
+{{- end}}
+{{- with .Beat}}
+<target handle="T1" beat="{{xml .Title}}">
+{{- with .Description}}
+<description>{{xml .}}</description>
+{{- end}}
+{{- range .Scenes}}
+{{- if .Recap}}
+<scene handle="{{.Handle}}"><recap>{{xml .Recap}}</recap></scene>
+{{- else}}
+<scene handle="{{.Handle}}">{{template "content" .Content}}</scene>
+{{- end}}
+{{- end}}
+</target>
 {{- end}}
 <rules>{{template "rules"}}</rules>
 </task>
