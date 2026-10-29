@@ -1,9 +1,7 @@
 package dao_test
 
 import (
-	"cmp"
 	"context"
-	"slices"
 	"testing"
 
 	"github.com/google/uuid"
@@ -19,68 +17,78 @@ import (
 func TestPgScenesInsert(t *testing.T) {
 	t.Parallel()
 
+	// The first beat holds the first three scenes, the second beat the fourth, and the third beat none.
+	scenes := composerFixtures().scenes
+
 	newSceneID1 := uuid.MustParse("00000000-0000-0000-0000-000000000014")
 	newSceneID2 := uuid.MustParse("00000000-0000-0000-0000-000000000015")
+	newSceneID3 := uuid.MustParse("00000000-0000-0000-0000-000000000018")
+
+	// item returns a new scene for a beat, at position.
+	item := func(id, beat uuid.UUID, position int) dao.ScenesInsertItem {
+		return dao.ScenesInsertItem{ID: id, BeatID: beat, Position: position, Title: "Le débat"}
+	}
+	// scene returns the new scene the insert stores for an item.
+	scene := func(id, beat uuid.UUID, position int) *dao.Scene {
+		return &dao.Scene{
+			ID: id, ProjectID: projectID, BeatID: beat, Position: position, Title: "Le débat", UpdatedAt: now,
+		}
+	}
 
 	testCases := []struct {
 		name string
 
-		request *dao.ScenesInsertRequest
+		items []dao.ScenesInsertItem
 
 		expect []*dao.Scene
-		// expectScenes is the first beat's order after the insert, when the case checks it.
+		// expectScenes is the project's scenes after the insert, in narrative order.
 		expectScenes []*dao.Scene
 		// full fills the first beat up to its last position before the insert.
 		full      bool
 		expectErr error
 	}{
 		{
-			name: "Success",
+			name: "Success/RunAtPosition",
 
-			request: &dao.ScenesInsertRequest{
-				ProjectID: projectID,
-				BeatID:    beatID1,
-				Position:  3,
-				Scenes: []dao.ScenesInsertItem{
-					{ID: newSceneID1, Title: "Le débat", Description: "Marie hésite.", Prompt: "Lent."},
-					{ID: newSceneID2, Title: "Le passage"},
-				},
-				Now: now,
-			},
+			items: []dao.ScenesInsertItem{item(newSceneID1, beatID1, 1), item(newSceneID2, beatID1, 1)},
 
-			expect: []*dao.Scene{
-				{
-					ID: newSceneID1, ProjectID: projectID, BeatID: beatID1, Position: 3, Title: "Le débat",
-					Description: "Marie hésite.", Prompt: "Lent.", UpdatedAt: now,
-				},
-				{ID: newSceneID2, ProjectID: projectID, BeatID: beatID1, Position: 4, Title: "Le passage", UpdatedAt: now},
+			expect: []*dao.Scene{scene(newSceneID1, beatID1, 1), scene(newSceneID2, beatID1, 2)},
+			expectScenes: []*dao.Scene{
+				scenes[0], scene(newSceneID1, beatID1, 1), scene(newSceneID2, beatID1, 2),
+				sceneAt(scenes[1], 3), sceneAt(scenes[2], 4), scenes[3],
 			},
 		},
 		{
-			name: "Success/PastTheEnd",
+			name: "Success/AcrossBeats",
 
-			request: &dao.ScenesInsertRequest{
-				ProjectID: projectID,
-				BeatID:    beatID1,
-				Position:  9,
-				Scenes:    []dao.ScenesInsertItem{{ID: newSceneID1, Title: "Le débat"}},
-				Now:       now,
+			items: []dao.ScenesInsertItem{
+				item(newSceneID1, beatID3, 0), item(newSceneID2, beatID2, 0), item(newSceneID3, beatID1, 9),
 			},
 
 			expect: []*dao.Scene{
-				{ID: newSceneID1, ProjectID: projectID, BeatID: beatID1, Position: 3, Title: "Le débat", UpdatedAt: now},
+				scene(newSceneID1, beatID3, 0), scene(newSceneID2, beatID2, 0), scene(newSceneID3, beatID1, 3),
+			},
+			expectScenes: []*dao.Scene{
+				scenes[0], scenes[1], scenes[2], scene(newSceneID3, beatID1, 3),
+				scene(newSceneID2, beatID2, 0), sceneAt(scenes[3], 1),
+				scene(newSceneID1, beatID3, 0),
+			},
+		},
+		{
+			name: "Success/PositionsOutOfOrder",
+
+			items: []dao.ScenesInsertItem{item(newSceneID1, beatID1, 2), item(newSceneID2, beatID1, 0)},
+
+			expect: []*dao.Scene{scene(newSceneID1, beatID1, 3), scene(newSceneID2, beatID1, 0)},
+			expectScenes: []*dao.Scene{
+				scene(newSceneID2, beatID1, 0), sceneAt(scenes[0], 1), sceneAt(scenes[1], 2),
+				scene(newSceneID1, beatID1, 3), sceneAt(scenes[2], 4), scenes[3],
 			},
 		},
 		{
 			name: "Error/BeatFull",
 
-			request: &dao.ScenesInsertRequest{
-				ProjectID: projectID,
-				BeatID:    beatID1,
-				Position:  0,
-				Scenes:    []dao.ScenesInsertItem{{ID: newSceneID1, Title: "Le débat"}},
-				Now:       now,
-			},
+			items: []dao.ScenesInsertItem{item(newSceneID1, beatID1, 0)},
 
 			full:      true,
 			expectErr: dao.ErrScenesInsertFull,
@@ -88,41 +96,10 @@ func TestPgScenesInsert(t *testing.T) {
 		{
 			name: "Error/BeatOfOtherProject",
 
-			request: &dao.ScenesInsertRequest{
-				ProjectID: projectID,
-				BeatID:    otherBeatID,
-				Position:  0,
-				Scenes:    []dao.ScenesInsertItem{{ID: newSceneID1, Title: "Le débat"}},
-				Now:       now,
-			},
+			items: []dao.ScenesInsertItem{item(newSceneID1, beatID2, 0), item(newSceneID2, otherBeatID, 0)},
 
-			expectErr: dao.ErrScenesInsertBeatNotFound,
-		},
-		{
-			name: "Success/Shift",
-
-			request: &dao.ScenesInsertRequest{
-				ProjectID: projectID,
-				BeatID:    beatID1,
-				Position:  1,
-				Scenes: []dao.ScenesInsertItem{
-					{ID: newSceneID1, Title: "Le débat"},
-					{ID: newSceneID2, Title: "Le passage"},
-				},
-				Now: now,
-			},
-
-			expect: []*dao.Scene{
-				{ID: newSceneID1, ProjectID: projectID, BeatID: beatID1, Position: 1, Title: "Le débat", UpdatedAt: now},
-				{ID: newSceneID2, ProjectID: projectID, BeatID: beatID1, Position: 2, Title: "Le passage", UpdatedAt: now},
-			},
-			expectScenes: []*dao.Scene{
-				composerFixtures().scenes[0],
-				{ID: newSceneID1, ProjectID: projectID, BeatID: beatID1, Position: 1, Title: "Le débat", UpdatedAt: now},
-				{ID: newSceneID2, ProjectID: projectID, BeatID: beatID1, Position: 2, Title: "Le passage", UpdatedAt: now},
-				sceneAt(composerFixtures().scenes[1], 3),
-				sceneAt(composerFixtures().scenes[2], 4),
-			},
+			expectScenes: scenes[:4],
+			expectErr:    dao.ErrScenesInsertBeatNotFound,
 		},
 	}
 
@@ -142,14 +119,15 @@ func TestPgScenesInsert(t *testing.T) {
 
 				insertFixtures(ctx, t, data)
 
-				result, err := daoScenesInsert.Exec(ctx, testCase.request)
+				result, err := daoScenesInsert.Exec(ctx, &dao.ScenesInsertRequest{
+					ProjectID: projectID, Scenes: testCase.items, Now: now,
+				})
 				require.ErrorIs(t, err, testCase.expectErr)
+				require.ElementsMatch(t, testCase.expect, result)
 
-				slices.SortFunc(result, func(a, b *dao.Scene) int { return cmp.Compare(a.Position, b.Position) })
-				require.Equal(t, testCase.expect, result)
-
+				// A failed batch inserts nothing and moves no scene.
 				if testCase.expectScenes != nil {
-					require.Equal(t, testCase.expectScenes, beatScenes(ctx, t, beatID1))
+					require.Equal(t, testCase.expectScenes, listScenes(ctx, t, projectID))
 				}
 			})
 		})

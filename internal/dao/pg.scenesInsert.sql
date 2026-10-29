@@ -1,26 +1,76 @@
--- A position past the last scene of the beat appends. The beat's scenes at or after the insert position
--- move down to make room. The positions unique constraint is deferred, so the shift and the insert run in
--- one statement.
+-- Each new scene goes before the scene of its beat at its position, or last past the end, and new scenes
+-- at one position keep the order of the request. A beat's scenes move down by the number of new scenes
+-- placed at or before them. The positions unique constraint is deferred, so the shift and the insert run
+-- in one statement. A beat the project does not hold breaks the beat foreign key, which fails the batch.
 WITH
-  start AS (
+  data AS (
     SELECT
-      LEAST(?2, count(*))::integer AS position
+      *
     FROM
-      scenes
-    WHERE
-      project_id = ?0
-      AND beat_id = ?1
+      unnest(
+        ARRAY[?1]::uuid[],
+        ARRAY[?2]::uuid[],
+        ARRAY[?3]::integer[],
+        ARRAY[?4]::text[],
+        ARRAY[?5]::text[],
+        ARRAY[?6]::text[]
+      ) WITH ORDINALITY AS data (
+        id,
+        beat_id,
+        position,
+        title,
+        description,
+        prompt,
+        ordinality
+      )
+  ),
+  held AS (
+    SELECT
+      targets.beat_id,
+      count(scenes.id)::integer AS count
+    FROM
+      (
+        SELECT DISTINCT
+          beat_id
+        FROM
+          data
+      ) AS targets
+      LEFT JOIN scenes ON scenes.project_id = ?0
+      AND scenes.beat_id = targets.beat_id
+    GROUP BY
+      targets.beat_id
+  ),
+  placed AS (
+    SELECT
+      data.*,
+      LEAST(data.position, held.count) AS slot
+    FROM
+      data
+      JOIN held ON held.beat_id = data.beat_id
   ),
   shifted AS (
     UPDATE scenes
     SET
-      position = scenes.position + cardinality(ARRAY[?3]::uuid[])
-    FROM
-      start
+      position = scenes.position + (
+        SELECT
+          count(*)
+        FROM
+          placed
+        WHERE
+          placed.beat_id = scenes.beat_id
+          AND placed.slot <= scenes.position
+      )::integer
     WHERE
       scenes.project_id = ?0
-      AND scenes.beat_id = ?1
-      AND scenes.position >= start.position
+      AND EXISTS (
+        SELECT
+          1
+        FROM
+          placed
+        WHERE
+          placed.beat_id = scenes.beat_id
+          AND placed.slot <= scenes.position
+      )
   )
 INSERT INTO
   scenes (
@@ -34,21 +84,23 @@ INSERT INTO
     updated_at
   )
 SELECT
-  data.id,
+  placed.id,
   ?0,
-  ?1,
-  start.position + (data.position - 1)::integer,
-  data.title,
-  data.description,
-  data.prompt,
+  placed.beat_id,
+  (
+    placed.slot + row_number() OVER (
+      PARTITION BY
+        placed.beat_id
+      ORDER BY
+        placed.slot,
+        placed.ordinality
+    ) - 1
+  )::integer,
+  placed.title,
+  placed.description,
+  placed.prompt,
   ?7
 FROM
-  unnest(
-    ARRAY[?3]::uuid[],
-    ARRAY[?4]::text[],
-    ARRAY[?5]::text[],
-    ARRAY[?6]::text[]
-  ) WITH ORDINALITY AS data (id, title, description, prompt, position),
-  start
+  placed
 RETURNING
   *;
