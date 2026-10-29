@@ -11,3 +11,4 @@ export * from "./layer";
 export * from "./manuscript";
 export * from "./project";
 export * from "./scene";
+export * from "./suggestion";
