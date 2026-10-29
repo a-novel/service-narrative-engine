@@ -25,6 +25,13 @@ info:
     Each write replaces what it targets, and the last write wins. Every record keeps the time it was
     last written.
 
+    ## Generations
+
+    A generation asks a model for suggestions on a project. The service builds each model call from the
+    project, submits it to the genai service as the signed-in user, and reads it back. genai owns every
+    generation: its state, its output and its retries. A generation that outgrows one call runs as several,
+    and the client resends the request as calls settle, until each has run.
+
   version: v0.0.0
   license:
     name: AGPL-3.0
@@ -48,6 +55,8 @@ tags:
     description: What one layer says about one scene.
   - name: manuscript
     description: The text of a manuscript layer, exported for renderers.
+  - name: generation
+    description: Model calls that suggest text for a project, run through genai.
 
 paths:
   /v1/ping:
@@ -1121,6 +1130,102 @@ paths:
         default:
           $ref: "#/components/responses/internalError"
 
+  /v1/generation:
+    post:
+      operationId: generationSubmit
+      summary: Submit a generation.
+      description: |
+        Plans a suggest generation on a project of the caller and submits each of its model calls to genai,
+        as the caller, then returns every call with its context. A call genai admits returns its genai
+        generation; a call genai refuses for a cap, such as its concurrency or a token window, waits, and
+        so do the calls after it. A caller with the uncapped permission runs on genai's admin tier.
+
+        Resending the same request while the project holds still admits the calls that wait: genai replays
+        the calls it admitted and those that succeeded, at no cost for 6 hours, and runs those that failed or
+        were cancelled again. Read each call through generationGet, and map its output through the handles
+        of its context. When genai admits no call, the route answers 429 naming the cap.
+      tags: [generation]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/generationSubmitRequest"
+      responses:
+        "202":
+          $ref: "#/components/responses/generation"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/contextTooLarge"
+        "429":
+          $ref: "#/components/responses/generationQuota"
+        "503":
+          $ref: "#/components/responses/generationUnavailable"
+        default:
+          $ref: "#/components/responses/internalError"
+
+    get:
+      operationId: generationGet
+      summary: Read a call of a generation.
+      description: |
+        Reads one model call of a generation through genai, as the caller. Once it succeeded, the response
+        carries the model's output, which passed the output schema of its kind. A refused, truncated or
+        malformed output reads as failed, with a reason. genai keeps a settled generation 6 hours.
+      tags: [generation]
+      parameters:
+        - $ref: "#/components/parameters/generationID"
+      responses:
+        "200":
+          $ref: "#/components/responses/generationResult"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/generationUnavailable"
+        default:
+          $ref: "#/components/responses/internalError"
+
+    delete:
+      operationId: generationCancel
+      summary: Cancel a call of a generation.
+      description: |
+        Stops one model call of a generation through genai, as the caller, so it stops costing. A call that
+        settled first comes back as it stands, its output included, so a retried cancel succeeds.
+      tags: [generation]
+      parameters:
+        - $ref: "#/components/parameters/generationID"
+      responses:
+        "200":
+          $ref: "#/components/responses/generationResult"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/generationUnavailable"
+        default:
+          $ref: "#/components/responses/internalError"
+
 components:
   responses:
     pong:
@@ -1303,6 +1408,20 @@ components:
                     - { title: Les retrouvailles, description: Marie attend Paul. }
                     - { title: Épilogue, description: "" }
 
+    generation:
+      description: The calls of the generation, each with its genai generation or the cap it waits on.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/generation"
+
+    generationResult:
+      description: The genai generation that runs the call.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/generationResult"
+
     badRequest:
       description: |
         The request could not be parsed, or failed validation. A field that breaks its rule answers a
@@ -1328,7 +1447,8 @@ components:
 
     notFound:
       description: |
-        The caller owns no such project, or the project holds no such beat, scene or layer.
+        The caller owns no such project, the project holds no such beat, scene or layer, or genai holds no
+        such generation for the caller.
 
     projectFull:
       description: |
@@ -1347,6 +1467,40 @@ components:
           description: Seconds to wait before retrying.
           schema:
             type: integer
+
+    contextTooLarge:
+      description: |
+        The generation outgrows every call its kind allows: the parts that always enter pass its long limit,
+        or a single text or block would rewrite past the output cap. A narrower range, fewer targets or
+        excluded layers fit.
+
+    generationQuota:
+      description: |
+        The caller sent too many requests to this route, or genai admitted none of the generation's calls.
+        A rate limit sets `Retry-After`. A quota refusal answers a problem whose `cap` tag names the cap,
+        such as genai's concurrency or a token window: resend once a call settles or the window frees.
+      headers:
+        Retry-After:
+          description: Seconds to wait before retrying, on a rate limit.
+          schema:
+            type: integer
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/generationQuotaProblem"
+
+    generationUnavailable:
+      description: |
+        genai cannot take the call, or is not configured, and the route answers the status text. During a
+        planned downtime of this service, the body is a problem tagged `downtime` instead.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/plannedDowntimeProblem"
+        text/plain:
+          schema:
+            type: string
+            examples: [Service Unavailable]
 
     internalError:
       description: Something unexpected happened.
@@ -2203,6 +2357,376 @@ components:
         content:
           $ref: "#/components/schemas/cellContent"
 
+    generationID:
+      type: string
+      description: The unique identifier of a genai generation, which runs one model call.
+      format: uuid
+      examples: ["01920000-0000-7000-8000-0000000000c1"]
+
+    generationRange:
+      type: object
+      description: A span of block positions, from start up to end excluded. A span whose ends meet inserts before start.
+      required: [start, end]
+      additionalProperties: false
+      properties:
+        start:
+          type: integer
+          description: The position of the first block of the span, from 0.
+          minimum: 0
+          examples: [0]
+        end:
+          type: integer
+          description: The position after the last block of the span.
+          minimum: 0
+          examples: [4]
+
+    generationTarget:
+      type: object
+      description: One thing a suggest generation writes, a field of a scene or a cell, and how.
+      required: [sceneID, mode]
+      additionalProperties: false
+      properties:
+        sceneID:
+          $ref: "#/components/schemas/sceneID"
+        layerID:
+          $ref: "#/components/schemas/layerID"
+          description: The layer of the cell to write. Absent for a scene field.
+        field:
+          type: string
+          description: The scene field to write. Absent for a cell.
+          enum: [title, description]
+          examples: [title]
+        mode:
+          type: string
+          description: |
+            How the generation writes the target: write creates it anew without showing the content it replaces,
+            and revise starts from that content.
+          enum: [write, revise]
+          examples: [revise]
+        range:
+          $ref: "#/components/schemas/generationRange"
+          description: The blocks of a manuscript target the generation may change. Absent, the whole cell.
+        kept:
+          type: array
+          description: The positions of the blocks in the range that stay unchanged, each once.
+          maxItems: 10000
+          uniqueItems: true
+          items:
+            type: integer
+            minimum: 0
+          examples: [[1]]
+
+    sceneOverride:
+      type: object
+      description: The unsaved fields of a scene, which the generation reads in place of the stored ones.
+      required: [id, title]
+      additionalProperties: false
+      properties:
+        id:
+          $ref: "#/components/schemas/sceneID"
+        title:
+          type: string
+          description: The scene's title.
+          minLength: 1
+          maxLength: 200
+          examples: [Le quai]
+        description:
+          type: string
+          description: What the scene is for, written for the author.
+          maxLength: 20000
+          examples: [Marie retrouve Paul à l'aube.]
+        prompt:
+          type: string
+          description: Extra instructions for the model when it writes about the scene.
+          maxLength: 20000
+          examples: [Paul parle peu.]
+
+    cellOverride:
+      type: object
+      description: The unsaved content of a cell, which the generation reads in place of the stored one.
+      required: [sceneID, layerID, content]
+      additionalProperties: false
+      properties:
+        sceneID:
+          $ref: "#/components/schemas/sceneID"
+        layerID:
+          $ref: "#/components/schemas/layerID"
+        content:
+          $ref: "#/components/schemas/cellContent"
+
+    generationOverrides:
+      type: object
+      description: Content the author has not saved. The generation reads it, and stores none of it.
+      additionalProperties: false
+      properties:
+        scenes:
+          type: array
+          description: Unsaved scene fields, each scene once, at most 500.
+          maxItems: 500
+          items:
+            $ref: "#/components/schemas/sceneOverride"
+        cells:
+          type: array
+          description: Unsaved cell contents, each cell once, at most 100.
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/cellOverride"
+
+    generationSubmitRequest:
+      type: object
+      description: A suggest generation on a project of the caller.
+      required: [projectID, targets]
+      additionalProperties: false
+      properties:
+        projectID:
+          $ref: "#/components/schemas/projectID"
+        targets:
+          type: array
+          description: What the generation writes, from 1 to 20, each once.
+          minItems: 1
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/generationTarget"
+        instruction:
+          type: string
+          description: What the author asks of the generation, in any language.
+          maxLength: 4000
+          examples: [Rends la scène plus tendue, sans ajouter de dialogue.]
+        exclude:
+          type: array
+          description: The layers the generation does not read, each once. A target still shows its own cell.
+          maxItems: 1000
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/layerID"
+        overrides:
+          $ref: "#/components/schemas/generationOverrides"
+        variant:
+          type: integer
+          description: Asks for another result of the same calls. Omitted or 0, a resent request replays them.
+          minimum: 0
+          maximum: 4294967295
+          examples: [1]
+
+    generationResult:
+      type: object
+      description: One genai generation, which runs one model call.
+      required: [id, status]
+      additionalProperties: false
+      properties:
+        id:
+          $ref: "#/components/schemas/generationID"
+        status:
+          type: string
+          description: Where the generation stands.
+          enum: [pending, running, succeeded, failed, cancelled]
+          examples: [succeeded]
+        error:
+          type: string
+          description: Why a failed generation failed, for an operator. Absent unless it failed.
+          examples: ["incomplete output: max_output_tokens"]
+        output:
+          description: The model's output once the generation succeeded, which passed the output schema of its kind.
+          anyOf:
+            - $ref: "./internal/models/schemas/output.suggest.schema.json"
+            - $ref: "./internal/models/schemas/output.consolidate.schema.json"
+            - $ref: "./internal/models/schemas/output.check.schema.json"
+
+    contextBlock:
+      type: object
+      description: A block a target shows the model under a handle.
+      required: [handle, position]
+      additionalProperties: false
+      properties:
+        handle:
+          type: string
+          description: The handle the model names the block by.
+          pattern: "^B[0-9]+$"
+          examples: [B1]
+        position:
+          type: integer
+          description: The block's position in the target's cell, from 0.
+          minimum: 0
+          examples: [0]
+
+    contextTarget:
+      type: object
+      description: |
+        One target of a call, with the handles the model names it and its blocks by. A suggestion maps back to
+        the target through its handle, and an edit to a block position through the block's handle.
+      required: [handle, sceneID, layerID, mode, override, updatedAt]
+      additionalProperties: false
+      properties:
+        handle:
+          type: string
+          description: The handle the model names the target by. T1 names a text target, M1 a manuscript target.
+          pattern: "^[TM][0-9]+$"
+          examples: [M1]
+        sceneID:
+          $ref: "#/components/schemas/sceneID"
+        layerID:
+          description: The layer of the target's cell, or null for a scene field.
+          oneOf:
+            - $ref: "#/components/schemas/layerID"
+            - type: "null"
+        field:
+          type: string
+          description: The target's scene field. Absent for a cell.
+          enum: [title, description]
+          examples: [title]
+        mode:
+          type: string
+          description: How the call writes the target.
+          enum: [write, revise]
+          examples: [revise]
+        range:
+          $ref: "#/components/schemas/generationRange"
+          description: The span of a manuscript target's blocks the call may change. Absent for a text target.
+        kept:
+          type: array
+          description: The positions of the blocks in the range that stay unchanged.
+          items:
+            type: integer
+            minimum: 0
+          examples: [[1]]
+        blocks:
+          type: array
+          description: The blocks the target shows inside its range, each with its handle.
+          items:
+            $ref: "#/components/schemas/contextBlock"
+        override:
+          type: boolean
+          description: Whether the target's current content came from the request's overrides.
+          examples: [false]
+        updatedAt:
+          type: [string, "null"]
+          description: When the target's stored content was written, or null for an override or a cell never written.
+          format: date-time
+          examples: ["2021-01-02T00:00:00Z"]
+
+    contextScene:
+      type: object
+      description: A scene a call shows, with the level of detail it enters at.
+      required: [handle, sceneID, level]
+      additionalProperties: false
+      properties:
+        handle:
+          type: string
+          description: The handle the model names the scene by.
+          pattern: "^S[0-9]+$"
+          examples: [S3]
+        sceneID:
+          $ref: "#/components/schemas/sceneID"
+        level:
+          type: string
+          description: How much of the scene the call shows, from its cells whole down to its notes alone.
+          enum: [full, condensed, compact, essentials, outline]
+          examples: [full]
+
+    contextLayer:
+      type: object
+      description: A layer a call shows.
+      required: [handle, layerID]
+      additionalProperties: false
+      properties:
+        handle:
+          type: string
+          description: The handle the model names the layer by.
+          pattern: "^L[0-9]+$"
+          examples: [L1]
+        layerID:
+          $ref: "#/components/schemas/layerID"
+
+    generationContext:
+      type: object
+      description: What one call reads, with the handles that map its output back.
+      required: [targets, scenes, layers, estimate]
+      additionalProperties: false
+      properties:
+        targets:
+          type: array
+          description: What the call writes, in the order of the request.
+          items:
+            $ref: "#/components/schemas/contextTarget"
+        scenes:
+          type: array
+          description: The scenes the call shows, in narrative order. A scene it leaves out is absent.
+          items:
+            $ref: "#/components/schemas/contextScene"
+        layers:
+          type: array
+          description: The layers the call shows, in order.
+          items:
+            $ref: "#/components/schemas/contextLayer"
+        estimate:
+          type: integer
+          description: The token estimate of the call's prompt, four characters to a token.
+          minimum: 0
+          examples: [24000]
+
+    generationCall:
+      type: object
+      description: One model call of a generation.
+      required: [generation, context]
+      additionalProperties: false
+      properties:
+        generation:
+          description: The genai generation that runs the call, or null while the call waits.
+          oneOf:
+            - $ref: "#/components/schemas/generationResult"
+            - type: "null"
+        waiting:
+          type: string
+          description: The cap genai refused the call for, while it waits. Absent once genai admitted the call.
+          examples: ['usage cap reached: purpose "studio.generation" concurrency: 2 generations already in flight']
+        context:
+          $ref: "#/components/schemas/generationContext"
+
+    generation:
+      type: object
+      description: A generation as its submit left it.
+      required: [kind, calls]
+      additionalProperties: false
+      properties:
+        kind:
+          type: string
+          description: The kind of the generation.
+          const: suggest
+        calls:
+          type: array
+          description: The model calls of the generation, in order.
+          items:
+            $ref: "#/components/schemas/generationCall"
+
+    generationQuotaProblem:
+      type: object
+      description: An RFC 9457 problem details body answering a generation genai admitted no call of.
+      required: [type, title, status, tags]
+      additionalProperties: true
+      properties:
+        type:
+          type: string
+          description: The problem type; about:blank makes the title the HTTP status text.
+          const: about:blank
+        title:
+          type: string
+          description: The HTTP status text.
+          examples: [Too Many Requests]
+        status:
+          type: integer
+          description: The HTTP status code.
+          const: 429
+        tags:
+          type: object
+          description: Public details about the refusal. Clients ignore tags they do not know.
+          required: [cap]
+          additionalProperties: true
+          properties:
+            cap:
+              type: string
+              description: genai's message naming the cap that refused the generation's first call.
+              examples: ['usage cap reached: purpose "studio.generation" concurrency: 2 generations already in flight']
+
     plannedDowntimeProblem:
       type: object
       description: |
@@ -2387,3 +2911,11 @@ components:
         minimum: 0
         default: 0
         examples: [100]
+
+    generationID:
+      name: id
+      in: query
+      description: The genai generation that runs the call.
+      required: true
+      schema:
+        $ref: "#/components/schemas/generationID"
