@@ -276,20 +276,49 @@ func requireContent(t *testing.T, kind, content string) {
 
 // goldenPrompt lays a prompt out as its golden file holds it.
 func goldenPrompt(prompt *core.Prompt) string {
-	return "=== developer\n" + prompt.Developer + "\n\n=== schema\n" + string(prompt.Schema) +
-		"\n\n=== user\n" + prompt.User + "\n"
+	call := fmt.Sprintf("model %s, reasoning %s, at most %d output tokens", prompt.Model, prompt.Reasoning,
+		prompt.MaxOutputTokens)
+
+	return "=== call\n" + call + "\n\n=== developer\n" + prompt.Developer + "\n\n=== schema\n" +
+		string(prompt.Schema) + "\n\n=== frame\n" + prompt.Frame + "\n\n=== neighborhood\n" + prompt.Neighborhood +
+		"\n\n=== task\n" + prompt.Task + "\n"
 }
+
+// sections joins what the prompt sends after its developer message.
+func sections(prompt *core.Prompt) string {
+	return prompt.Frame + "\n" + prompt.Neighborhood + "\n" + prompt.Task
+}
+
+// planService returns the planner of one generation kind with its settings.
+func planService(kind string, settings config.GenerationKind) *core.GenerationPlan {
+	return core.NewGenerationPlan(config.Generations{Kinds: map[string]config.GenerationKind{kind: settings}})
+}
+
+// longContextTokens is the input size past which OpenAI bills long context at twice the rate.
+const longContextTokens = 272000
 
 func TestGenerationPlan(t *testing.T) {
 	t.Parallel()
+
+	t.Run("Error/KindNotConfigured", func(t *testing.T) {
+		t.Parallel()
+
+		plan, err := core.NewGenerationPlan(config.Generations{}).Exec(t.Context(),
+			suggestRequest(planProject(1), cellTarget(0, 0, core.TargetModeRevise)))
+		require.Error(t, err)
+		require.Nil(t, plan)
+	})
 
 	for _, testCase := range generationPlanCases() {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			service := core.NewGenerationPlan(config.Generations{Budgets: map[string]int{testCase.request.Kind: 0}})
+			settings := config.GenerationKind{Model: "a-model", Reasoning: "low", MaxOutputTokens: 1000, Limit: 1 << 30}
+			if testCase.limit > 0 {
+				settings.Limit = testCase.limit
+			}
 
-			fixed, err := service.Exec(t.Context(), testCase.request)
+			fixed, err := planService(testCase.request.Kind, settings).Exec(t.Context(), testCase.request)
 			if testCase.expectErr != nil {
 				require.ErrorIs(t, err, testCase.expectErr)
 				require.Nil(t, fixed)
@@ -299,8 +328,8 @@ func TestGenerationPlan(t *testing.T) {
 
 			require.NoError(t, err)
 
-			budget := lo.Ternary(testCase.unbounded, 1<<30, fixed.Estimate+testCase.extra)
-			service = core.NewGenerationPlan(config.Generations{Budgets: map[string]int{testCase.request.Kind: budget}})
+			settings.Budget = lo.Ternary(testCase.unbounded, 1<<30, fixed.Estimate+testCase.extra)
+			service := planService(testCase.request.Kind, settings)
 
 			plan, err := service.Exec(t.Context(), testCase.request)
 			require.NoError(t, err)
@@ -317,11 +346,11 @@ func TestGenerationPlan(t *testing.T) {
 			}
 
 			for _, text := range testCase.expectContains {
-				require.Contains(t, plan.Prompt.User, text)
+				require.Contains(t, sections(plan.Prompt), text)
 			}
 
 			for _, text := range testCase.expectAbsent {
-				require.NotContains(t, plan.Prompt.User, text)
+				require.NotContains(t, sections(plan.Prompt), text)
 			}
 
 			if testCase.expect != nil {
@@ -333,15 +362,21 @@ func TestGenerationPlan(t *testing.T) {
 	for _, language := range core.ProjectLanguages {
 		fixture, snapshot := loadPromptProject(t, language)
 
-		service := core.NewGenerationPlan(config.Generations{Budgets: fixture.Budgets})
-
 		for _, kind := range core.GenerationKinds {
 			t.Run("Success/Golden/"+kind+"."+language, func(t *testing.T) {
 				t.Parallel()
 
-				require.Positive(t, config.GenerationsConfigDefault.Budgets[kind], "the default budget of the kind")
+				// The golden prompts run on the default settings of the kind, with a budget of their own.
+				settings, ok := config.GenerationsConfigDefault.Kinds[kind]
+				require.True(t, ok, "the kind has default settings")
+				require.NotEmpty(t, settings.Model)
+				require.Positive(t, settings.Budget)
+				require.GreaterOrEqual(t, settings.Limit, settings.Budget)
+				require.Less(t, settings.Limit, longContextTokens)
 
-				plan, err := service.Exec(t.Context(), fixture.promptRequest(kind, snapshot))
+				settings.Budget = fixture.Budgets[kind]
+
+				plan, err := planService(kind, settings).Exec(t.Context(), fixture.promptRequest(kind, snapshot))
 				require.NoError(t, err)
 
 				name := kind + "." + language + ".golden"

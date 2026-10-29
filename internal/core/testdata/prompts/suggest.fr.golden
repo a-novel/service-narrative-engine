@@ -1,3 +1,6 @@
+=== call
+model gpt-6.1-terra, reasoning low, at most 32000 output tokens
+
 === developer
 Vous aidez un auteur à écrire un roman. L'auteur désigne des cibles, et vous proposez une suggestion pour chacune : un nouveau texte pour le titre ou la description d'une scène, ou pour une cellule de notes, ou bien des modifications du manuscrit d'une scène.
 
@@ -16,7 +19,7 @@ Chaque cible a un mode :
 - write : écrivez la cible à neuf. Le contenu qu'elle remplace ne vous est pas montré.
 - revise : partez du contenu que montre la tâche, et changez ce que demande la consigne.
 
-Une cible de texte reçoit son nouveau texte en entier. Une cible de manuscrit reçoit des modifications. Seuls les blocs de <range> peuvent changer ; ceux de <before> et de <after> servent de contexte. Un bloc marqué kept="true" reste tel quel. Une modification remplace un bloc, en supprime un, ou insère de nouveaux blocs après un bloc, ou au début de la plage quand son bloc vaut null. En mode write, la plage ne montre que ses blocs conservés, et tous ses autres blocs sont retirés : insérez donc tout ce que vous écrivez.
+Une cible de texte reçoit son nouveau texte en entier. Une cible de manuscrit reçoit des modifications. Seuls les blocs de <range> peuvent changer ; ceux de <before> et de <after> servent de contexte : ce sont les plus proches de la plage, et omitted compte les blocs plus éloignés laissés de côté. Un bloc marqué kept="true" reste tel quel. Une modification remplace un bloc, en supprime un, ou insère de nouveaux blocs après un bloc, ou au début de la plage quand son bloc vaut null. En mode write, la plage ne montre que ses blocs conservés, et tous ses autres blocs sont retirés : insérez donc tout ce que vous écrivez.
 
 Accompagnez chaque suggestion d'une note d'une ligne qui dit à l'auteur ce qu'elle change.
 
@@ -25,7 +28,7 @@ Restez fidèle à <frame> et au voisinage : gardez les noms, les faits, la chron
 === schema
 {"$defs":{"block":{"anyOf":[{"$ref":"#/$defs/block-narration"},{"$ref":"#/$defs/block-dialogue"}],"description":"One unit of a scene's manuscript text, in reading order: a narration or a line of dialogue."},"block-dialogue":{"additionalProperties":false,"description":"One character's spoken line: the words spoken, with tone cues where the delivery changes.","properties":{"kind":{"enum":["dialogue"],"type":"string"},"parts":{"description":"The line in speaking order.","items":{"$ref":"#/$defs/block-part"},"maxItems":500,"type":"array"},"speaker":{"description":"The character who speaks, by the name the story gives them.","type":"string"}},"required":["kind","speaker","parts"],"type":"object"},"block-narration":{"additionalProperties":false,"description":"Prose the narrator tells: action, description, a character's thoughts. It follows the manuscript's language, voice and tense.","properties":{"kind":{"enum":["narration"],"type":"string"},"text":{"description":"The prose, as plain text. Paragraphs are separated by a blank line.","type":"string"}},"required":["kind","text"],"type":"object"},"block-part":{"anyOf":[{"additionalProperties":false,"description":"Words the speaker says, without quotation marks.","properties":{"text":{"type":"string"}},"required":["text"],"type":"object"},{"additionalProperties":false,"description":"How the speaker says the words that follow, such as \"whispering\" or \"with a bitter laugh\".","properties":{"tone":{"type":"string"}},"required":["tone"],"type":"object"}]},"blockHandle":{"description":"The handle of a block inside the target's range, such as B3.","pattern":"^B[0-9]+$","type":"string"},"blocks":{"description":"New blocks, in reading order.","items":{"$ref":"#/$defs/block"},"maxItems":10000,"type":"array"},"delete":{"additionalProperties":false,"description":"Deletes one block.","properties":{"block":{"$ref":"#/$defs/blockHandle"},"op":{"enum":["delete"],"type":"string"}},"required":["op","block"],"type":"object"},"edits":{"additionalProperties":false,"description":"The changes to a manuscript target. Handles name blocks as the task shows them, before any edit.","properties":{"edits":{"items":{"anyOf":[{"$ref":"#/$defs/replace"},{"$ref":"#/$defs/insertAfter"},{"$ref":"#/$defs/delete"}]},"maxItems":10000,"type":"array"},"note":{"$ref":"#/$defs/note"},"target":{"$ref":"#/$defs/targetHandle"}},"required":["target","note","edits"],"type":"object"},"insertAfter":{"additionalProperties":false,"description":"Inserts new blocks after a block, or at the start of the range when block is null.","properties":{"block":{"anyOf":[{"$ref":"#/$defs/blockHandle"},{"type":"null"}]},"blocks":{"$ref":"#/$defs/blocks"},"op":{"enum":["insert_after"],"type":"string"}},"required":["op","block","blocks"],"type":"object"},"note":{"description":"One line for the author on what the suggestion changes, in the project's language.","type":"string"},"replace":{"additionalProperties":false,"description":"Replaces one block with new blocks.","properties":{"block":{"$ref":"#/$defs/blockHandle"},"blocks":{"$ref":"#/$defs/blocks"},"op":{"enum":["replace"],"type":"string"}},"required":["op","block","blocks"],"type":"object"},"targetHandle":{"description":"The handle of the target the suggestion is for, such as T1.","pattern":"^T[0-9]+$","type":"string"},"text":{"additionalProperties":false,"description":"The new text of a text target: a scene's title or description, or a notes cell.","properties":{"note":{"$ref":"#/$defs/note"},"target":{"$ref":"#/$defs/targetHandle"},"text":{"description":"The text, in full.","type":"string"}},"required":["target","note","text"],"type":"object"}},"additionalProperties":false,"description":"What the model returns for a suggest generation: one suggestion per target of the task.","properties":{"suggestions":{"description":"One suggestion per target, in any order.","items":{"anyOf":[{"$ref":"#/$defs/text"},{"$ref":"#/$defs/edits"}]},"maxItems":20,"type":"array"}},"required":["suggestions"],"type":"object"}
 
-=== user
+=== frame
 <frame>
 <project title="Les Heures claires" language="fr">
 <premise>Dans une ville de bord de mer, Marie attend le retour de Paul, parti sans un mot. Une lettre sans signature relance leur histoire.</premise>
@@ -44,6 +47,7 @@ Restez fidèle à <frame> et au voisinage : gardez les noms, les faits, la chron
 </scenes>
 </frame>
 
+=== neighborhood
 <neighborhood>
 <scene handle="S1" level="outline">
 <cell layer="L2">Marie, institutrice, trente ans. Elle attend Paul depuis deux ans.</cell>
@@ -72,6 +76,7 @@ Il raconta Brest, le chantier, le capitaine Morel qui l'avait pris sous son aile
 </scene>
 </neighborhood>
 
+=== task
 <task>
 <target handle="T1" scene="S3" layer="L1" mode="revise">
 <before>

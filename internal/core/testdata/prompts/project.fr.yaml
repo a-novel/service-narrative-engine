@@ -106,7 +106,7 @@ scenes:
         content:
           text: Marie seule sur le quai, une lettre à la main.
 budgets:
-  suggest: 2400
+  suggest: 2420
   consolidate: 1050
   check: 1350
 requests:

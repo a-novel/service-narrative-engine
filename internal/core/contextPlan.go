@@ -3,6 +3,7 @@ package core
 import (
 	"encoding/json"
 	"time"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 	"github.com/samber/lo"
@@ -34,8 +35,8 @@ type ContextPlan struct {
 	// Targets lists what the generation writes or recaps, in the order of the request.
 	Targets []*ContextTarget
 
-	// Budget is the token estimate the prompt stays within, from the configuration of the kind. Only a frame,
-	// a task and scenes of targets that alone outgrow it make the prompt larger.
+	// Budget is the token estimate the prompt fills up to, from the configuration of the kind. Only a frame,
+	// a task and scenes of targets that alone outgrow it make the prompt larger, up to the kind's limit.
 	Budget int
 	// Estimate is the token estimate of the prompt.
 	Estimate int
@@ -136,14 +137,33 @@ type ContextBlock struct {
 	Position int
 }
 
-// Prompt is what a model receives for one generation, laid out most stable first, so the start of the
-// prompt caches across a project's generations.
+// Prompt is what a model receives for one generation, with the settings of the call. Its sections are laid
+// out most stable first, so a cache breakpoint after the frame serves a project's next generations, and the
+// task, which changes with every request, comes last.
 type Prompt struct {
-	// Developer is the developer message of the generation's kind, in the project's language.
+	// Model is the OpenAI model the generation's kind runs on.
+	Model string
+	// Reasoning is the reasoning effort the model spends.
+	Reasoning string
+	// MaxOutputTokens caps what the call writes, reasoning included.
+	MaxOutputTokens int
+
+	// Developer is the developer message of the kind, in the project's language.
 	Developer string
 	// Schema is the output schema of the kind, in the subset of JSON Schema strict structured outputs
 	// accept.
 	Schema json.RawMessage
-	// User holds the frame, the neighborhood and the task, in XML elements.
-	User string
+	// Frame holds the project, its layers and every scene, in an XML element.
+	Frame string
+	// Neighborhood holds the scenes around the targets, each at its level.
+	Neighborhood string
+	// Task holds the targets, the instruction and a reminder of the rules.
+	Task string
+}
+
+// size counts the characters the model reads in the prompt.
+func (prompt *Prompt) size() int {
+	return utf8.RuneCountInString(prompt.Developer) + utf8.RuneCountInString(string(prompt.Schema)) +
+		utf8.RuneCountInString(prompt.Frame) + utf8.RuneCountInString(prompt.Neighborhood) +
+		utf8.RuneCountInString(prompt.Task)
 }

@@ -16,7 +16,7 @@ Chaque cible a un mode :
 - write : écrivez la cible à neuf. Le contenu qu'elle remplace ne vous est pas montré.
 - revise : partez du contenu que montre la tâche, et changez ce que demande la consigne.
 
-Une cible de texte reçoit son nouveau texte en entier. Une cible de manuscrit reçoit des modifications. Seuls les blocs de <range> peuvent changer ; ceux de <before> et de <after> servent de contexte. Un bloc marqué kept="true" reste tel quel. Une modification remplace un bloc, en supprime un, ou insère de nouveaux blocs après un bloc, ou au début de la plage quand son bloc vaut null. En mode write, la plage ne montre que ses blocs conservés, et tous ses autres blocs sont retirés : insérez donc tout ce que vous écrivez.
+Une cible de texte reçoit son nouveau texte en entier. Une cible de manuscrit reçoit des modifications. Seuls les blocs de <range> peuvent changer ; ceux de <before> et de <after> servent de contexte : ce sont les plus proches de la plage, et omitted compte les blocs plus éloignés laissés de côté. Un bloc marqué kept="true" reste tel quel. Une modification remplace un bloc, en supprime un, ou insère de nouveaux blocs après un bloc, ou au début de la plage quand son bloc vaut null. En mode write, la plage ne montre que ses blocs conservés, et tous ses autres blocs sont retirés : insérez donc tout ce que vous écrivez.
 
 Accompagnez chaque suggestion d'une note d'une ligne qui dit à l'auteur ce qu'elle change.
 

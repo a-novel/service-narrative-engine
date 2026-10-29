@@ -16,7 +16,7 @@ Each target has a mode:
 - write: create the target anew. You do not see the content it replaces.
 - revise: start from the content the task shows, and change what the instruction asks.
 
-A text target receives its new text in full. A manuscript target receives edits. Only the blocks inside <range> may change, and the blocks in <before> and <after> are context. A block marked kept="true" stays as it is. An edit replaces a block, deletes one, or inserts new blocks after one, or at the start of the range when its block is null. In write mode the range shows its kept blocks alone, and every other block it held is removed, so insert all you write.
+A text target receives its new text in full. A manuscript target receives edits. Only the blocks inside <range> may change, and the blocks in <before> and <after> are context: those nearest the range, with omitted counting the farther ones left out. A block marked kept="true" stays as it is. An edit replaces a block, deletes one, or inserts new blocks after one, or at the start of the range when its block is null. In write mode the range shows its kept blocks alone, and every other block it held is removed, so insert all you write.
 
 Give each suggestion a note of one line that tells the author what it changes.
 

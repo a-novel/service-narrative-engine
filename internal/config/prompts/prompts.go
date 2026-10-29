@@ -33,7 +33,8 @@ var templates = sync.OnceValues(loadTemplates)
 //
 //   - developer, the developer message;
 //   - rules, the reminder the task ends with;
-//   - frame, scene, task.<kind> and user, the sections of the user message.
+//   - frame, neighborhood and task.<kind>, the sections that follow the developer message;
+//   - scene and block, the parts the planner measures one at a time.
 func Lookup(kind, language string) (*template.Template, error) {
 	loaded, err := templates()
 	if err != nil {

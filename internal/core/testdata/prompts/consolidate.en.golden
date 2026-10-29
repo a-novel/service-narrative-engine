@@ -1,3 +1,6 @@
+=== call
+model gpt-6-luna, reasoning none, at most 2000 output tokens
+
 === developer
 You recap one cell of an author's novel. The recap stands in for the cell in later contexts that cannot hold it whole, so it keeps what the rest of the story relies on.
 
@@ -18,7 +21,7 @@ Write in English, the language of the project.
 === schema
 {"additionalProperties":false,"description":"What the model returns for a consolidate generation: the recap of one cell, which stands in for the cell in later contexts.","properties":{"names":{"description":"Every character, place and object the cell names, each once, as the cell writes it.","items":{"type":"string"},"maxItems":100,"type":"array"},"summary":{"description":"What happens in the cell and what it changes, in about 80 words, in the project's language.","type":"string"}},"required":["summary","names"],"type":"object"}
 
-=== user
+=== frame
 <frame>
 <project title="The Clear Hours" language="en">
 <premise>In a seaside town, Mary waits for Paul, who left without a word. An unsigned letter revives their story.</premise>
@@ -37,6 +40,7 @@ Write in English, the language of the project.
 </scenes>
 </frame>
 
+=== neighborhood
 <neighborhood>
 <scene handle="S1" level="outline">
 <cell layer="L2">Mary, a schoolteacher, thirty. She has waited for Paul for two years.</cell>
@@ -67,6 +71,7 @@ Write in English, the language of the project.
 </scene>
 </neighborhood>
 
+=== task
 <task>
 <target handle="T1" scene="S4" layer="L1">
 <narration>They walked to the lighthouse in silence. Paul stopped at the rusted gate.

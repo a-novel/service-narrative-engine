@@ -47,6 +47,12 @@ const (
 // SceneFields lists the fields of a scene a suggest generation may write.
 var SceneFields = []string{SceneFieldTitle, SceneFieldDescription}
 
+// ErrContextTooLarge is returned by [GenerationPlan] when the frame, the task and the scenes of the targets
+// alone outgrow the limit of the generation's kind. A narrower range or fewer targets fit.
+var ErrContextTooLarge = errors.New("context too large")
+
+var errKindNotConfigured = errors.New("generation kind not configured")
+
 // Range is a span of positions, from Start up to End excluded. A range whose ends meet is an insertion
 // point before Start.
 type Range struct {
@@ -131,9 +137,9 @@ type GenerationPlanRequest struct {
 	Overrides *GenerationOverrides `validate:"excluded_if=Kind consolidate"`
 }
 
-// GenerationPlan plans what one generation reads and renders its prompt, in the project's language. Each
-// scene enters at the richest level the budget of the kind allows, the targets' scenes always whole. The
-// same request always gives the same plan and the same prompt.
+// GenerationPlan plans what one generation reads and renders its prompt, in the project's language, with
+// the model settings of its kind. Each scene enters at the richest level the budget of the kind allows, the
+// targets' scenes always whole. The same request always gives the same plan and the same prompt.
 type GenerationPlan struct {
 	config config.Generations
 }
@@ -155,12 +161,17 @@ func (service *GenerationPlan) Exec(ctx context.Context, request *GenerationPlan
 
 	span.SetAttributes(attribute.String("project.id", request.Snapshot.Project.ID.String()))
 
+	kind, ok := service.config.Kinds[request.Kind]
+	if !ok {
+		return nil, otel.ReportError(span, fmt.Errorf("%w: %s", errKindNotConfigured, request.Kind))
+	}
+
 	draft, err := newContextDraft(request)
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("read project: %w", err))
 	}
 
-	plan, err := draft.render(service.config.Budgets[request.Kind])
+	plan, err := draft.render(kind)
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("render prompt: %w", err))
 	}

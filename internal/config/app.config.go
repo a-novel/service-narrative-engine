@@ -51,7 +51,7 @@ type App struct {
 	Rest httpf.ServerConfig `json:"rest" yaml:"rest"`
 	// Limits bounds what one request carries, below the REST server's own limits.
 	Limits Limits `json:"limits" yaml:"limits"`
-	// Generations configures the prompts of generations.
+	// Generations configures the model calls of generations.
 	Generations Generations `json:"generations" yaml:"generations"`
 
 	// Otel configures the OpenTelemetry exporter.

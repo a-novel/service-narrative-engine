@@ -9,17 +9,20 @@ import (
 
 	"github.com/samber/lo"
 
+	"github.com/a-novel/service-narrative-engine/internal/config"
 	"github.com/a-novel/service-narrative-engine/internal/config/prompts"
 	"github.com/a-novel/service-narrative-engine/internal/models/schemas"
 )
 
-// charsPerToken is how many characters [estimateTokens] counts as one token.
+// charsPerToken is how many characters [estimateTokens] counts as one token. The planner measures every
+// part of a prompt in characters, which add up exactly, and estimates tokens once.
 const charsPerToken = 4
 
-// sceneRender is a scene rendered at one level, with its token estimate.
+// sceneRender is a scene rendered at one level. Size counts its characters with the line it takes in the
+// neighborhood.
 type sceneRender struct {
 	text string
-	cost int
+	size int
 }
 
 // shownCell is a cell a scene shows at a level, whole or as its recap.
@@ -28,14 +31,14 @@ type shownCell struct {
 	recap bool
 }
 
+// contextSide is one side of a manuscript target's range, where the task shows context blocks.
+type contextSide struct {
+	target *draftTarget
+	before bool
+}
+
 // The prompt views are the data the templates of package prompts render. Handles stand for identifiers.
 type (
-	promptUser struct {
-		Frame  string
-		Scenes []string
-		Task   string
-	}
-
 	promptFrame struct {
 		Title    string
 		Premise  string
@@ -81,7 +84,8 @@ type (
 		Instruction string
 	}
 
-	// promptTarget is one target of a suggest generation, with the content its mode shows.
+	// promptTarget is one target of a suggest generation, with the content its mode shows. The context of a
+	// manuscript target holds the blocks nearest its range, and counts the ones it leaves out.
 	promptTarget struct {
 		Handle string
 		Scene  string
@@ -92,10 +96,14 @@ type (
 		HasText bool
 		Text    string
 
-		Manuscript bool
-		Before     []*contentBlock
-		Range      []*contentBlock
-		After      []*contentBlock
+		Manuscript    bool
+		HasBefore     bool
+		Before        []*contentBlock
+		BeforeOmitted int
+		Range         []*contentBlock
+		HasAfter      bool
+		After         []*contentBlock
+		AfterOmitted  int
 	}
 
 	promptRecapCell struct {
@@ -110,9 +118,12 @@ type (
 	}
 )
 
-// render gives each scene its level within budget, renders the prompt of the generation, and returns its
-// plan.
-func (draft *contextDraft) render(budget int) (*ContextPlan, error) {
+// render plans what the generation reads within the budget of its kind, and renders its prompt.
+//
+// The frame, the task and the scenes of the targets always enter, unless they alone outgrow the kind's
+// limit, which [ErrContextTooLarge] refuses. The blocks around each target's range come next, nearest first,
+// and the other scenes share what is left.
+func (draft *contextDraft) render(kind config.GenerationKind) (*ContextPlan, error) {
 	templates, err := prompts.Lookup(draft.request.Kind, draft.project.Language)
 	if err != nil {
 		return nil, fmt.Errorf("templates: %w", err)
@@ -128,60 +139,121 @@ func (draft *contextDraft) render(budget int) (*ContextPlan, error) {
 		return nil, fmt.Errorf("strict output schema: %w", err)
 	}
 
-	developer, err := execute(templates, "developer", nil)
-	if err != nil {
-		return nil, err
+	prompt := &Prompt{
+		Model: kind.Model, Reasoning: kind.Reasoning, MaxOutputTokens: kind.MaxOutputTokens, Schema: schema,
 	}
 
-	user, err := draft.renderUser(templates, budget-estimateTokens(developer)-estimateTokens(string(schema)))
+	err = draft.renderSections(templates, prompt, kind)
 	if err != nil {
 		return nil, err
 	}
 
 	plan := draft.plan()
-	plan.Budget = budget
-	plan.Prompt = &Prompt{Developer: developer, Schema: schema, User: user}
-	plan.Estimate = estimateTokens(developer) + estimateTokens(string(schema)) + estimateTokens(user)
+	plan.Budget = kind.Budget
+	plan.Prompt = prompt
+	plan.Estimate = estimateTokens(prompt.size())
 
 	return plan, nil
 }
 
-// renderUser renders the user message within budget. The frame, the task and the scenes of targets
-// always enter, and the other scenes share what they leave.
-func (draft *contextDraft) renderUser(templates *template.Template, budget int) (string, error) {
-	frame, err := execute(templates, "frame", draft.frameView())
+// renderSections renders the developer message and the three sections of the prompt within the kind's
+// budget.
+func (draft *contextDraft) renderSections(
+	templates *template.Template, prompt *Prompt, kind config.GenerationKind,
+) error {
+	var err error
+
+	prompt.Developer, err = execute(templates, "developer", nil)
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	task, err := execute(templates, "task."+draft.request.Kind, draft.taskView())
+	prompt.Frame, err = execute(templates, "frame", draft.frameView())
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	err = draft.renderScenes(templates)
+	err = draft.renderPinned(templates)
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	// The message without scenes is what every scene adds to, so the sum of the parts' estimates bounds the
-	// whole message's estimate.
-	bare, err := execute(templates, "user", &promptUser{Frame: frame, Task: task})
+	// The task shows no context yet, and the neighborhood only the scenes of the targets.
+	prompt.Task, err = execute(templates, "task."+draft.request.Kind, draft.taskView())
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	budget -= estimateTokens(bare)
+	prompt.Neighborhood, err = draft.neighborhood(templates)
+	if err != nil {
+		return err
+	}
 
+	if prompt.size() > kind.Limit*charsPerToken {
+		return fmt.Errorf(
+			"%w: %d tokens, over the limit of %d", ErrContextTooLarge, estimateTokens(prompt.size()), kind.Limit,
+		)
+	}
+
+	err = draft.showTargetContext(templates, kind.Budget*charsPerToken-prompt.size())
+	if err != nil {
+		return err
+	}
+
+	// The context only adds its blocks to the task, so the prompt stays within what it measured.
+	prompt.Task, err = execute(templates, "task."+draft.request.Kind, draft.taskView())
+	if err != nil {
+		return err
+	}
+
+	err = draft.allocate(templates, kind.Budget*charsPerToken-prompt.size())
+	if err != nil {
+		return err
+	}
+
+	prompt.Neighborhood, err = draft.neighborhood(templates)
+
+	return err
+}
+
+// renderPinned renders the scenes of the targets, which always enter whole.
+func (draft *contextDraft) renderPinned(templates *template.Template) error {
 	for _, scene := range draft.scenes {
-		if scene.pinned {
-			scene.level = ContextLevelFull
-			budget -= scene.renders[ContextLevelFull].cost
+		if !scene.pinned {
+			continue
 		}
+
+		_, err := draft.renderScene(templates, scene, ContextLevelFull)
+		if err != nil {
+			return err
+		}
+
+		scene.level = ContextLevelFull
 	}
 
-	allocate(draft.ranked, budget)
+	return nil
+}
 
+// renderScene renders a scene at a level once, and returns the same render after.
+func (draft *contextDraft) renderScene(
+	templates *template.Template, scene *draftScene, level string,
+) (*sceneRender, error) {
+	if render, ok := scene.renders[level]; ok {
+		return render, nil
+	}
+
+	text, err := execute(templates, "scene", scene.view(level))
+	if err != nil {
+		return nil, err
+	}
+
+	scene.renders[level] = &sceneRender{text: text, size: 1 + utf8.RuneCountInString(text)}
+
+	return scene.renders[level], nil
+}
+
+// neighborhood renders the scenes that enter the context, in narrative order.
+func (draft *contextDraft) neighborhood(templates *template.Template) (string, error) {
 	var scenes []string
 
 	for _, scene := range draft.scenes {
@@ -190,79 +262,157 @@ func (draft *contextDraft) renderUser(templates *template.Template, budget int) 
 		}
 	}
 
-	return execute(templates, "user", &promptUser{Frame: frame, Scenes: scenes, Task: task})
+	return execute(templates, "neighborhood", scenes)
 }
 
-// renderScenes renders each scene at every level it can enter at. A scene of a target enters whole, and
-// a scene enters as a recap only when its manuscript has a fresh one.
-func (draft *contextDraft) renderScenes(templates *template.Template) error {
-	for _, scene := range draft.scenes {
-		levels := []string{ContextLevelFull}
+// showTargetContext shows, on each side of the range of every manuscript target, the blocks nearest it while
+// they fit in budget, in characters. It takes one block per side of every target in turn, so the nearest
+// blocks of all targets come first. A side stops at the first block that does not fit, so its context stays
+// contiguous.
+func (draft *contextDraft) showTargetContext(templates *template.Template, budget int) error {
+	var sides []*contextSide
 
-		if !scene.pinned {
-			levels = append(levels, ContextLevelOutline)
-
-			if scene.hasRecap() {
-				levels = append(levels, ContextLevelRecap)
-			}
+	for _, target := range draft.targets {
+		if target.span != nil {
+			sides = append(sides, &contextSide{target: target, before: true}, &contextSide{target: target})
 		}
+	}
 
-		scene.renders = make(map[string]*sceneRender, len(levels))
+	for len(sides) > 0 {
+		var open []*contextSide
 
-		for _, level := range levels {
-			text, err := execute(templates, "scene", scene.view(level))
+		for _, side := range sides {
+			block := side.next()
+			if block == nil {
+				continue
+			}
+
+			text, err := execute(templates, "block", block)
 			if err != nil {
 				return err
 			}
 
-			// The user message writes each scene on a line of its own.
-			scene.renders[level] = &sceneRender{text: text, cost: estimateTokens("\n" + text)}
+			size := 1 + utf8.RuneCountInString(text)
+			if size > budget {
+				continue
+			}
+
+			budget -= size
+
+			open = append(open, side)
+
+			if side.before {
+				side.target.before++
+			} else {
+				side.target.after++
+			}
+		}
+
+		sides = open
+	}
+
+	return nil
+}
+
+// next returns the block the side shows next, outward from the range, or nil past the edge of the cell.
+func (side *contextSide) next() *contentBlock {
+	blocks, span := side.target.cell.content.Blocks, side.target.span
+
+	position := span.End + side.target.after
+	if side.before {
+		position = span.Start - side.target.before - 1
+	}
+
+	if position < 0 || position >= len(blocks) {
+		return nil
+	}
+
+	return blocks[position]
+}
+
+// allocate gives each ranked scene the richest level that fits in budget, in characters. Most relevant
+// first, every scene takes its outline while the budget allows; then, in the same order, each takes the
+// richest level that still fits. A scene too large for what remains is passed over, and a smaller one after
+// it may still fit, so a block is never cut.
+func (draft *contextDraft) allocate(templates *template.Template, budget int) error {
+	for _, scene := range draft.ranked {
+		outline, err := draft.renderScene(templates, scene, ContextLevelOutline)
+		if err != nil {
+			return err
+		}
+
+		if outline.size <= budget {
+			scene.level = ContextLevelOutline
+			budget -= outline.size
+		}
+	}
+
+	for _, scene := range draft.ranked {
+		if scene.level != ContextLevelOutline {
+			continue
+		}
+
+		var err error
+
+		budget, err = draft.upgrade(templates, scene, budget)
+		if err != nil {
+			return err
 		}
 	}
 
 	return nil
 }
 
-// allocate gives each ranked scene the richest level that fits in budget. Most relevant first, every
-// scene takes its outline while the budget allows; then, in the same order, each takes the richest level
-// that still fits. A scene too large for what remains is passed over, and a smaller one after it may still
-// fit, so a block is never cut.
-func allocate(ranked []*draftScene, budget int) {
-	for _, scene := range ranked {
-		cost := scene.renders[ContextLevelOutline].cost
-		if cost <= budget {
-			scene.level = ContextLevelOutline
-			budget -= cost
-		}
-	}
+// upgrade raises an outlined scene to the richest level that fits in budget, and returns the budget left.
+// A level renders only when the text it adds at least may fit, so a large project renders few scenes whole.
+func (draft *contextDraft) upgrade(templates *template.Template, scene *draftScene, budget int) (int, error) {
+	outline := scene.renders[ContextLevelOutline].size
 
-	for _, scene := range ranked {
-		if scene.level != ContextLevelOutline {
+	for _, level := range []string{ContextLevelFull, ContextLevelRecap} {
+		least, ok := scene.adds(level)
+		if !ok || least > budget {
 			continue
 		}
 
-		for _, level := range []string{ContextLevelFull, ContextLevelRecap} {
-			render, ok := scene.renders[level]
-			if !ok {
-				continue
-			}
+		render, err := draft.renderScene(templates, scene, level)
+		if err != nil {
+			return 0, err
+		}
 
-			extra := render.cost - scene.renders[ContextLevelOutline].cost
-			if extra <= budget {
-				scene.level = level
-				budget -= extra
+		if render.size-outline <= budget {
+			scene.level = level
 
-				break
-			}
+			return budget - (render.size - outline), nil
 		}
 	}
+
+	return budget, nil
 }
 
-// hasRecap reports whether the scene can enter as a recap: one of its manuscript cells has a fresh recap.
-func (scene *draftScene) hasRecap() bool {
-	return lo.ContainsBy(scene.cells, func(cell *draftCell) bool {
-		return cell.layer.layer.Kind == LayerKindManuscript && cell.recap != nil
-	})
+// adds returns the characters a level adds at least to the scene's outline: the text of its manuscript
+// cells, whole or as their fresh recaps. It reports false when the scene cannot enter at the level, as a
+// recap without a fresh one.
+func (scene *draftScene) adds(level string) (int, bool) {
+	var (
+		size   int
+		recaps bool
+	)
+
+	for _, cell := range scene.cells {
+		if cell.layer.layer.Kind != LayerKindManuscript {
+			continue
+		}
+
+		switch {
+		case level == ContextLevelFull:
+			size += cell.content.size()
+		case cell.recap != nil:
+			size += utf8.RuneCountInString(cell.recap.Summary)
+			recaps = true
+		}
+	}
+
+	return size, level == ContextLevelFull || recaps
 }
 
 // shows lists the cells the scene shows at a level. A full scene shows every cell, a target's own cell as
@@ -372,8 +522,8 @@ func (draft *contextDraft) taskView() *promptTask {
 }
 
 // view returns what the template renders for a suggest target. A text target shows its current text in
-// revise mode. A manuscript target shows the blocks around its range, and the blocks of its range its
-// mode shows.
+// revise mode. A manuscript target shows the blocks of its range its mode shows, and the context blocks
+// chosen around it.
 func (target *draftTarget) view() *promptTarget {
 	view := &promptTarget{Handle: target.handle, Scene: target.scene.handle, Field: target.field, Mode: target.mode}
 
@@ -388,7 +538,12 @@ func (target *draftTarget) view() *promptTarget {
 	default:
 		view.Layer = target.cell.layer.handle
 		view.Manuscript = true
-		view.Before, view.Range, view.After = target.shown()
+		view.Range = target.inside()
+
+		blocks, span := target.cell.content.Blocks, target.span
+		view.HasBefore, view.Before = span.Start > 0, blocks[span.Start-target.before:span.Start]
+		view.HasAfter, view.After = span.End < len(blocks), blocks[span.End:span.End+target.after]
+		view.BeforeOmitted, view.AfterOmitted = span.Start-target.before, len(blocks)-span.End-target.after
 	}
 
 	return view
@@ -463,7 +618,7 @@ func execute(templates *template.Template, name string, data any) (string, error
 	return builder.String(), nil
 }
 
-// estimateTokens estimates how many tokens a model reads in text, from its length in characters.
-func estimateTokens(text string) int {
-	return (utf8.RuneCountInString(text) + charsPerToken - 1) / charsPerToken
+// estimateTokens estimates how many tokens a model reads in a text of chars characters.
+func estimateTokens(chars int) int {
+	return (chars + charsPerToken - 1) / charsPerToken
 }

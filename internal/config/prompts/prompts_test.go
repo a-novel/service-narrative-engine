@@ -49,7 +49,9 @@ func TestLookup(t *testing.T) {
 				return
 			}
 
-			for _, name := range []string{"developer", "rules", "frame", "scene", "task." + testCase.kind, "user"} {
+			names := []string{"developer", "rules", "frame", "neighborhood", "task." + testCase.kind, "scene", "block"}
+
+			for _, name := range names {
 				require.NotNil(t, set.Lookup(name), name)
 			}
 		})

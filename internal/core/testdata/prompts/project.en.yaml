@@ -106,7 +106,7 @@ scenes:
         content:
           text: Mary alone on the quay, a letter in her hand.
 budgets:
-  suggest: 2310
+  suggest: 2330
   consolidate: 1050
   check: 1350
 requests:

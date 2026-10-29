@@ -11,8 +11,10 @@ import (
 	"strings"
 	"time"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 	"golang.org/x/text/unicode/norm"
 
 	"github.com/a-novel/service-narrative-engine/internal/models/schemas"
@@ -30,6 +32,21 @@ var elisions = []string{"c", "d", "j", "l", "m", "n", "s", "t", "qu", "jusqu", "
 type cellContent struct {
 	Text   string          `json:"text"`
 	Blocks []*contentBlock `json:"blocks"`
+}
+
+// size returns how many characters the content's text holds, before any markup.
+func (content *cellContent) size() int {
+	size := utf8.RuneCountInString(content.Text)
+
+	for _, block := range content.Blocks {
+		size += utf8.RuneCountInString(block.Text) + utf8.RuneCountInString(block.Speaker)
+
+		for _, part := range block.Parts {
+			size += utf8.RuneCountInString(part.Text) + utf8.RuneCountInString(part.Tone)
+		}
+	}
+
+	return size
 }
 
 // contentBlock is one block of a manuscript cell. Handle and Kept say how a target shows it.
@@ -125,6 +142,9 @@ type draftTarget struct {
 	kept []int
 	// blocks maps the handle of each block shown inside the range to the block's position.
 	blocks []*ContextBlock
+	// before and after count the blocks the task shows as context, nearest the range first.
+	before int
+	after  int
 }
 
 // contextDraft is a project as one generation reads it, while the planner builds the generation's
@@ -206,7 +226,9 @@ func readScenes(scenes []*Scene) ([]*draftScene, map[uuid.UUID]*draftScene) {
 	byID := make(map[uuid.UUID]*draftScene, len(ordered))
 
 	for index, scene := range ordered {
-		read[index] = &draftScene{scene: scene, handle: handle("S", index), level: ContextLevelOmitted}
+		read[index] = &draftScene{
+			scene: scene, handle: handle("S", index), level: ContextLevelOmitted, renders: map[string]*sceneRender{},
+		}
 		byID[scene.ID] = read[index]
 	}
 
@@ -461,20 +483,12 @@ func targetRange(cell *draftCell, request *GenerationTarget, blocks *int) (*Rang
 	return span, handles, nil
 }
 
-// shown returns the blocks of a manuscript target the model sees: those before its range, those inside it,
-// and those after it. In write mode the range shows its kept blocks alone.
-func (target *draftTarget) shown() ([]*contentBlock, []*contentBlock, []*contentBlock) {
-	content := target.cell.content.Blocks
-
-	var inside []*contentBlock
-
-	for _, block := range content[target.span.Start:target.span.End] {
-		if target.mode == TargetModeRevise || block.Kept {
-			inside = append(inside, block)
-		}
-	}
-
-	return content[:target.span.Start], inside, content[target.span.End:]
+// inside returns the blocks of a manuscript target's range the model sees: every block in revise mode, the
+// kept ones in write mode.
+func (target *draftTarget) inside() []*contentBlock {
+	return lo.Filter(target.cell.content.Blocks[target.span.Start:target.span.End], func(block *contentBlock, _ int) bool {
+		return target.mode == TargetModeRevise || block.Kept
+	})
 }
 
 // recapTarget reads the cell a consolidate generation recaps, as its only target.
@@ -556,9 +570,8 @@ func (cell *draftCell) empty() bool {
 func (cell *draftCell) addNames(names map[string]bool) {
 	blocks := cell.content.Blocks
 
-	if cell.target != nil && cell.target.span != nil {
-		before, inside, after := cell.target.shown()
-		blocks = slices.Concat(before, inside, after)
+	if target := cell.target; target != nil && target.span != nil {
+		blocks = slices.Concat(blocks[:target.span.Start], target.inside(), blocks[target.span.End:])
 	}
 
 	for _, block := range blocks {

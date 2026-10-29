@@ -23,6 +23,8 @@ type generationPlanCase struct {
 	// Unbounded gives the case all the budget it needs instead.
 	extra     int
 	unbounded bool
+	// limit caps the prompt below what the tests build, when set.
+	limit int
 
 	// expectLevels lists the level of each scene, in narrative order.
 	expectLevels []string
@@ -145,6 +147,11 @@ func with[T any](value T, change func(T)) T {
 
 	return value
 }
+
+// contextBlocks is manuscript content of nine blocks of about a hundred tokens each, numbered from 0.
+var contextBlocks = blocks(lo.Times(9, func(index int) string {
+	return narration("Block " + strconv.Itoa(index) + ". " + strings.Repeat("Waves. ", 56))
+})...)
 
 // fourBlocks is manuscript content of four short blocks, two of them dialogue.
 var fourBlocks = blocks(
@@ -275,6 +282,31 @@ func generationPlanCases() []*generationPlanCase {
 				`<target handle="T1" scene="S1" layer="L2" mode="revise">` + "\n<text>Notes 1. ",
 			},
 			expectAbsent: []string{"Notes 2", "Notes 3"},
+		},
+		{
+			// Four blocks of context fit, two on each side, before any other scene.
+			name: "Success/TargetContextNearestFirst",
+			request: suggestRequest(setManuscript(planProject(2), 0, contextBlocks), with(cellTarget(0, 0, revise),
+				func(target *core.GenerationTarget) {
+					target.Range = &core.Range{Start: 4, End: 5}
+				})),
+			extra:        450,
+			expectLevels: []string{full, omitted},
+			expectContains: []string{
+				`<before omitted="2">` + "\n<narration>Block 2. ",
+				"<narration>Block 3. ",
+				`<after omitted="2">` + "\n<narration>Block 5. ",
+				"<narration>Block 6. ",
+			},
+			expectAbsent: []string{"Block 1. ", "Block 7. "},
+		},
+		{
+			name: "Success/TargetContextOmitted",
+			request: suggestRequest(setManuscript(planProject(1), 0, contextBlocks), with(cellTarget(0, 0, revise),
+				func(target *core.GenerationTarget) {
+					target.Range = &core.Range{Start: 4, End: 5}
+				})),
+			expectContains: []string{`<before omitted="4">` + "\n</before>", `<after omitted="4">` + "\n</after>"},
 		},
 		{
 			name: "Success/Overrides",
@@ -452,6 +484,12 @@ func generationPlanCases() []*generationPlanCase {
 				cellTarget(0, 0, revise)),
 			unbounded:      true,
 			expectContains: []string{`<narration handle="B1">&lt;b&gt; &amp; &quot;c&quot;</narration>`},
+		},
+		{
+			name:      "Error/ContextTooLarge",
+			request:   suggestRequest(planProject(1), cellTarget(0, 0, revise)),
+			limit:     100,
+			expectErr: core.ErrContextTooLarge,
 		},
 		{
 			name:      "Error/NoTarget",

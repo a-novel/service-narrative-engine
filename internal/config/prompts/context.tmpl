@@ -1,18 +1,16 @@
 {{- /*
-The sections of a generation's user message, most stable first: the frame, the neighborhood, then the
-task. Handles name scenes (S1), layers (L1), targets (T1) and the blocks of targets (B1).
+The sections a generation sends after its developer message, most stable first: the frame, the
+neighborhood, then the task. Handles name scenes (S1), layers (L1), targets (T1) and the blocks of targets
+(B1).
 */ -}}
 
-{{- define "user" -}}
-{{.Frame}}
-
+{{- /* neighborhood: the rendered scenes, one per line. */ -}}
+{{- define "neighborhood" -}}
 <neighborhood>
-{{- range .Scenes}}
+{{- range .}}
 {{.}}
 {{- end}}
 </neighborhood>
-
-{{.Task}}
 {{- end}}
 
 {{- /* frame: the project, its layers and every scene. */ -}}
@@ -88,12 +86,12 @@ task. Handles name scenes (S1), layers (L1), targets (T1) and the blocks of targ
 <text>{{xml .Text}}</text>
 </target>
 {{- else if .Manuscript}}>
-{{- with .Before}}
-<before>{{template "blocks" .}}</before>
+{{- if .HasBefore}}
+<before{{with .BeforeOmitted}} omitted="{{.}}"{{end}}>{{template "blocks" .Before}}</before>
 {{- end}}
 <range>{{template "blocks" .Range}}</range>
-{{- with .After}}
-<after>{{template "blocks" .}}</after>
+{{- if .HasAfter}}
+<after{{with .AfterOmitted}} omitted="{{.}}"{{end}}>{{template "blocks" .After}}</after>
 {{- end}}
 </target>
 {{- else}}/>

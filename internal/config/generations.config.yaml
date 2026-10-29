@@ -1,8 +1,24 @@
-# Token estimates a prompt stays within, by generation kind. An estimate counts four characters per token.
-budgets:
-  # suggest writes targets and reads the scenes around them.
-  suggest: 32000
-  # consolidate recaps one cell, and reads little beyond it.
-  consolidate: 12000
-  # check reads a range of scenes, or the whole project.
-  check: 64000
+# Each generation kind's model, and the size of its prompts as token estimates (four characters to a token).
+# Limits stay under the 272K input tokens past which OpenAI bills long context at twice the rate.
+kinds:
+  # suggest writes the author's text, on a model made for natural writing.
+  suggest:
+    model: gpt-6.1-terra
+    reasoning: low
+    maxOutputTokens: 32000
+    budget: 32000
+    limit: 128000
+  # consolidate recaps one cell, the most frequent call, on the most efficient model.
+  consolidate:
+    model: gpt-6-luna
+    reasoning: none
+    maxOutputTokens: 2000
+    budget: 12000
+    limit: 200000
+  # check reasons across many scenes, on a model close to the flagship at a fraction of its price.
+  check:
+    model: gpt-6.1-sol
+    reasoning: medium
+    maxOutputTokens: 32000
+    budget: 64000
+    limit: 200000

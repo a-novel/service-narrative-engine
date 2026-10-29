@@ -1,3 +1,6 @@
+=== call
+model gpt-6-luna, reasoning none, at most 2000 output tokens
+
 === developer
 Vous résumez une cellule du roman d'un auteur. Ce résumé tient lieu de la cellule dans les contextes suivants, quand ils ne peuvent pas la contenir en entier : il garde donc ce dont la suite de l'histoire a besoin.
 
@@ -18,7 +21,7 @@ Listez ensuite les noms que la cellule emploie : ses personnages, ses lieux et s
 === schema
 {"additionalProperties":false,"description":"What the model returns for a consolidate generation: the recap of one cell, which stands in for the cell in later contexts.","properties":{"names":{"description":"Every character, place and object the cell names, each once, as the cell writes it.","items":{"type":"string"},"maxItems":100,"type":"array"},"summary":{"description":"What happens in the cell and what it changes, in about 80 words, in the project's language.","type":"string"}},"required":["summary","names"],"type":"object"}
 
-=== user
+=== frame
 <frame>
 <project title="Les Heures claires" language="fr">
 <premise>Dans une ville de bord de mer, Marie attend le retour de Paul, parti sans un mot. Une lettre sans signature relance leur histoire.</premise>
@@ -37,6 +40,7 @@ Listez ensuite les noms que la cellule emploie : ses personnages, ses lieux et s
 </scenes>
 </frame>
 
+=== neighborhood
 <neighborhood>
 <scene handle="S1" level="outline">
 <cell layer="L2">Marie, institutrice, trente ans. Elle attend Paul depuis deux ans.</cell>
@@ -61,6 +65,7 @@ Listez ensuite les noms que la cellule emploie : ses personnages, ses lieux et s
 </scene>
 </neighborhood>
 
+=== task
 <task>
 <target handle="T1" scene="S4" layer="L1">
 <narration>Ils marchèrent jusqu'au phare sans parler. Paul s'arrêta devant la grille rouillée.
