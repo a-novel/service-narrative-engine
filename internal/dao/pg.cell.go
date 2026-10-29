@@ -22,4 +22,9 @@ type Cell struct {
 	Content json.RawMessage `bun:"content,type:jsonb"`
 
 	UpdatedAt time.Time `bun:"updated_at"`
+
+	// Recap is the cell's latest recap. It is nil until one is written.
+	Recap *Recap `bun:"recap,type:jsonb,nullzero"`
+	// RecapCellUpdatedAt is the cell's UpdatedAt the recap read. It is nil without a recap.
+	RecapCellUpdatedAt *time.Time `bun:"recap_cell_updated_at,nullzero"`
 }

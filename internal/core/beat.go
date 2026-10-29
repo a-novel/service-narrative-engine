@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
@@ -28,6 +29,14 @@ type Beat struct {
 	Prompt string
 
 	UpdatedAt time.Time
+
+	// Recap is the beat's latest recap, nil until one is written. It is fresh while it read the beat, its
+	// scenes and their manuscript cells as they are.
+	Recap *Recap
+	// RecapBeatUpdatedAt is the beat's UpdatedAt the recap read. It is zero without a recap.
+	RecapBeatUpdatedAt time.Time
+	// RecapSources lists, for each scene of the beat in order, the manuscript cell the recap read.
+	RecapSources []*BeatRecapSource
 }
 
 func newBeat(entity *dao.Beat) *Beat {
@@ -40,5 +49,20 @@ func newBeat(entity *dao.Beat) *Beat {
 		Description: entity.Description,
 		Prompt:      entity.Prompt,
 		UpdatedAt:   entity.UpdatedAt,
+
+		Recap:              newRecap(entity.Recap),
+		RecapBeatUpdatedAt: lo.FromPtr(entity.RecapBeatUpdatedAt),
+		RecapSources:       newRecapSources(entity.RecapSources),
 	}
+}
+
+// newRecapSources returns nil for a beat without a recap.
+func newRecapSources(entities []*dao.BeatRecapSource) []*BeatRecapSource {
+	if entities == nil {
+		return nil
+	}
+
+	return lo.Map(entities, func(source *dao.BeatRecapSource, _ int) *BeatRecapSource {
+		return &BeatRecapSource{SceneID: source.SceneID, CellUpdatedAt: source.CellUpdatedAt}
+	})
 }

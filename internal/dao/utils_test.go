@@ -206,6 +206,8 @@ func requireCellsEqual(t *testing.T, expect, actual []*dao.Cell) {
 		require.Equal(t, expect[i].LayerID, actual[i].LayerID)
 		require.Equal(t, expect[i].UpdatedAt, actual[i].UpdatedAt)
 		require.JSONEq(t, string(expect[i].Content), string(actual[i].Content))
+		require.Equal(t, expect[i].Recap, actual[i].Recap)
+		require.Equal(t, expect[i].RecapCellUpdatedAt, actual[i].RecapCellUpdatedAt)
 	}
 }
 

@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
 // ProjectSnapshot is a project with every beat, scene, layer, cell and recap it holds, read at one instant.
@@ -37,6 +39,17 @@ type Recap struct {
 
 	// Names lists the characters, places and objects the source names.
 	Names []string
+}
+
+// newRecap returns nil for a source without a recap.
+func newRecap(entity *dao.Recap) *Recap {
+	if entity == nil {
+		return nil
+	}
+
+	return &Recap{
+		Condensed: entity.Condensed, Compact: entity.Compact, Essentials: entity.Essentials, Names: entity.Names,
+	}
 }
 
 // version returns the recap at a level: [ContextLevelCondensed], [ContextLevelCompact] or

@@ -169,6 +169,8 @@ type draftTarget struct {
 	scene *draftScene
 	// beat is the beat a consolidation recaps, nil for any other target.
 	beat *draftBeat
+	// sources lists the manuscript cell the consolidation of a beat reads in each of its scenes.
+	sources []*BeatRecapSource
 	// cell is the target's cell, nil for a scene field or a beat.
 	cell  *draftCell
 	field string
@@ -723,11 +725,23 @@ func (draft *contextDraft) recapBeatTarget() ([]*draftTarget, error) {
 	for _, scene := range beat.scenes {
 		scene.pinned, scene.focus = true, true
 
+		source, stamped := &BeatRecapSource{SceneID: scene.scene.ID}, false
+
 		for _, layer := range draft.layers {
-			if layer.layer.Kind == LayerKindManuscript {
-				draft.cell(scene, layer).target, layer.target = target, true
+			if layer.layer.Kind != LayerKindManuscript {
+				continue
+			}
+
+			cell := draft.cell(scene, layer)
+			cell.target, layer.target = target, true
+
+			// The recap's freshness reads the scene's first manuscript cell, as readBeatRecaps does.
+			if !stamped {
+				source.CellUpdatedAt, stamped = cell.updatedAt, true
 			}
 		}
+
+		target.sources = append(target.sources, source)
 	}
 
 	return []*draftTarget{target}, nil
