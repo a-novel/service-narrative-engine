@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Suggest output",
+  "description": "What the model returns for a suggest generation: one suggestion per target of the task.",
+  "type": "object",
+  "required": ["suggestions"],
+  "additionalProperties": false,
+  "properties": {
+    "suggestions": {
+      "type": "array",
+      "description": "One suggestion per target, in any order.",
+      "maxItems": 20,
+      "items": { "anyOf": [{ "$ref": "#/$defs/text" }, { "$ref": "#/$defs/edits" }] }
+    }
+  },
+  "$defs": {
+    "targetHandle": {
+      "type": "string",
+      "description": "The handle of the target the suggestion is for, such as T1.",
+      "pattern": "^T[0-9]+$"
+    },
+    "note": {
+      "type": "string",
+      "description": "One line for the author on what the suggestion changes, in the project's language.",
+      "maxLength": 300
+    },
+    "blockHandle": {
+      "type": "string",
+      "description": "The handle of a block inside the target's range, such as B3.",
+      "pattern": "^B[0-9]+$"
+    },
+    "blocks": {
+      "type": "array",
+      "description": "New blocks, in reading order.",
+      "maxItems": 10000,
+      "items": { "$ref": "block.schema.json" }
+    },
+    "text": {
+      "type": "object",
+      "description": "The new text of a text target: a scene's title or description, or a notes cell.",
+      "required": ["target", "note", "text"],
+      "additionalProperties": false,
+      "properties": {
+        "target": { "$ref": "#/$defs/targetHandle" },
+        "note": { "$ref": "#/$defs/note" },
+        "text": { "type": "string", "description": "The text, in full.", "maxLength": 200000 }
+      }
+    },
+    "edits": {
+      "type": "object",
+      "description": "The changes to a manuscript target. Handles name blocks as the task shows them, before any edit.",
+      "required": ["target", "note", "edits"],
+      "additionalProperties": false,
+      "properties": {
+        "target": { "$ref": "#/$defs/targetHandle" },
+        "note": { "$ref": "#/$defs/note" },
+        "edits": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {
+            "anyOf": [{ "$ref": "#/$defs/replace" }, { "$ref": "#/$defs/insertAfter" }, { "$ref": "#/$defs/delete" }]
+          }
+        }
+      }
+    },
+    "replace": {
+      "type": "object",
+      "description": "Replaces one block with new blocks.",
+      "required": ["op", "block", "blocks"],
+      "additionalProperties": false,
+      "properties": {
+        "op": { "type": "string", "const": "replace" },
+        "block": { "$ref": "#/$defs/blockHandle" },
+        "blocks": { "$ref": "#/$defs/blocks" }
+      }
+    },
+    "insertAfter": {
+      "type": "object",
+      "description": "Inserts new blocks after a block, or at the start of the range when block is null.",
+      "required": ["op", "block", "blocks"],
+      "additionalProperties": false,
+      "properties": {
+        "op": { "type": "string", "const": "insert_after" },
+        "block": { "anyOf": [{ "$ref": "#/$defs/blockHandle" }, { "type": "null" }] },
+        "blocks": { "$ref": "#/$defs/blocks" }
+      }
+    },
+    "delete": {
+      "type": "object",
+      "description": "Deletes one block.",
+      "required": ["op", "block"],
+      "additionalProperties": false,
+      "properties": {
+        "op": { "type": "string", "const": "delete" },
+        "block": { "$ref": "#/$defs/blockHandle" }
+      }
+    }
+  }
+}

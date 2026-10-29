@@ -1,0 +1,83 @@
+=== call
+model gpt-6-luna, reasoning none, at most 2000 output tokens
+
+=== developer
+You recap one cell of an author's novel. The recap stands in for the cell in later contexts that cannot hold it whole, so it keeps what the rest of the story relies on.
+
+The author's message describes the project in three sections:
+
+- <frame> holds the project: its title and premise, its layers, and its beats with their scenes, in narrative order. A beat is one turn of the story's structure, split into scenes.
+- <neighborhood> holds the scenes around the cell, each at a level of detail: full, recap or outline.
+- <task> holds the cell to recap as target T1.
+
+Handles name what the context shows: S1 for a scene, L1 for a layer. A manuscript cell holds blocks in reading order: narration holds prose, and dialogue holds a character's line, as the words spoken and the tones they are spoken in.
+
+Write a summary of about 80 words: what happens in the cell, who acts, and what changes for the story. Write plain sentences in the present tense. Recap the cell alone; the other scenes only help you tell who is who.
+
+Then list the names the cell uses: its characters, places and objects, each once, as the cell writes them.
+
+Write in English, the language of the project.
+
+=== schema
+{"additionalProperties":false,"description":"What the model returns for a consolidate generation: the recap of one cell, which stands in for the cell in later contexts.","properties":{"names":{"description":"Every character, place and object the cell names, each once, as the cell writes it.","items":{"type":"string"},"maxItems":100,"type":"array"},"summary":{"description":"What happens in the cell and what it changes, in about 80 words, in the project's language.","type":"string"}},"required":["summary","names"],"type":"object"}
+
+=== frame
+<frame>
+<project title="The Clear Hours" language="en">
+<premise>In a seaside town, Mary waits for Paul, who left without a word. An unsigned letter revives their story.</premise>
+</project>
+<layers>
+<layer handle="L1" kind="manuscript" name="Manuscript">The text of the novel.</layer>
+<layer handle="L2" kind="notes" name="Characters">Who appears in the scene, and what we learn about each.</layer>
+<layer handle="L3" kind="notes" name="Plot">What the scene moves forward.</layer>
+</layers>
+<beats>
+<beat title="The Wait">
+<description>Mary waits for a sign from Paul.</description>
+<scene handle="S1" title="Opening">Mary waits in the rain.</scene>
+<scene handle="S2" title="The Letter">An unsigned letter arrives.</scene>
+</beat>
+<beat title="The Reunion">
+<description>Mary and Paul meet again.</description>
+<scene handle="S3" title="The Quay">Mary meets Paul at dawn.</scene>
+<scene handle="S4" title="Return">Paul tells of his two years away.</scene>
+</beat>
+<beat title="A Year On">
+<description>What remains of the story.</description>
+<scene handle="S5" title="Epilogue">A year later.</scene>
+</beat>
+</beats>
+</frame>
+
+=== neighborhood
+<neighborhood>
+<scene handle="S1" level="outline">
+<cell layer="L2">Mary, a schoolteacher, thirty. She has waited for Paul for two years.</cell>
+<cell layer="L3">Sets up Paul's absence.</cell>
+</scene>
+<scene handle="S2" level="outline">
+<cell layer="L2">The postman, in a hurry.</cell>
+</scene>
+<scene handle="S3" level="outline">
+<cell layer="L2">Paul, back from Brest. Mary.</cell>
+</scene>
+<scene handle="S4" level="full">
+<beat-prompt>Keep the tone restrained, with no outpouring.</beat-prompt>
+<cell layer="L1" target="T1"/>
+<cell layer="L2">Paul; Captain Morel, his former employer.</cell>
+</scene>
+<scene handle="S5" level="full">
+<cell layer="L2">Mary alone on the quay, a letter in her hand.</cell>
+</scene>
+</neighborhood>
+
+=== task
+<task>
+<target handle="T1" scene="S4" layer="L1">
+<narration>They walked to the lighthouse in silence. Paul stopped at the rusted gate.
+
+He told her about Brest, the shipyard, Captain Morel who took him under his wing, then the debt.</narration>
+<dialogue speaker="Paul"><text>I couldn't write to you.</text><tone>after a silence</tone><text>Not before I had paid it all back.</text></dialogue>
+</target>
+<rules>Recap T1 in about 80 words, then list the names it uses. Write in English.</rules>
+</task>

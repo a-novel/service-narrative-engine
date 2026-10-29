@@ -1,0 +1,148 @@
+# An English project the golden prompts render. Beats, their scenes and layers are listed in order,
+# and cells name their layer by position. Requests name scenes by their narrative order. A stale recap read
+# an older version of its cell.
+project:
+  title: The Clear Hours
+  premise: In a seaside town, Mary waits for Paul, who left without a word. An unsigned letter revives their story.
+  language: en
+layers:
+  - kind: manuscript
+    name: Manuscript
+    description: The text of the novel.
+  - kind: notes
+    name: Characters
+    description: Who appears in the scene, and what we learn about each.
+  - kind: notes
+    name: Plot
+    description: What the scene moves forward.
+beats:
+  - title: The Wait
+    description: Mary waits for a sign from Paul.
+    scenes:
+      - title: Opening
+        description: Mary waits in the rain.
+        cells:
+          - layer: 0
+            content:
+              blocks:
+                - kind: narration
+                  text: Rain beat against the café windows. Mary kept her eyes on the door.
+                - kind: dialogue
+                  speaker: Mary
+                  parts:
+                    - tone: under her breath
+                    - text: He won't come.
+          - layer: 1
+            content:
+              text: Mary, a schoolteacher, thirty. She has waited for Paul for two years.
+          - layer: 2
+            content:
+              text: Sets up Paul's absence.
+      - title: The Letter
+        description: An unsigned letter arrives.
+        cells:
+          - layer: 0
+            content:
+              blocks:
+                - kind: narration
+                  text: The postman left an envelope with no stamp. Mary knew the handwriting before she opened it.
+                - kind: dialogue
+                  speaker: Mary
+                  parts:
+                    - text: Tomorrow, at dawn, on the quay.
+            recap:
+              summary: An unsigned letter reaches Mary. She knows Paul's handwriting, and he asks to meet her on the quay at dawn.
+              names: [Mary, Paul]
+          - layer: 1
+            content:
+              text: The postman, in a hurry.
+  - title: The Reunion
+    description: Mary and Paul meet again.
+    prompt: Keep the tone restrained, with no outpouring.
+    scenes:
+      - title: The Quay
+        description: Mary meets Paul at dawn.
+        prompt: Paul says little; Mary leads the exchange.
+        cells:
+          - layer: 0
+            content:
+              blocks:
+                - kind: narration
+                  text: Dawn turned the harbor gray.
+                - kind: dialogue
+                  speaker: Paul
+                  parts:
+                    - text: You got my letter.
+                - kind: narration
+                  text: Mary did not answer at once.
+                - kind: dialogue
+                  speaker: Mary
+                  parts:
+                    - tone: curtly
+                    - text: Two years, Paul.
+          - layer: 1
+            content:
+              text: Paul, back from Brest. Mary.
+      - title: Return
+        description: Paul tells of his two years away.
+        cells:
+          - layer: 0
+            content:
+              blocks:
+                - kind: narration
+                  text: |-
+                    They walked to the lighthouse in silence. Paul stopped at the rusted gate.
+
+                    He told her about Brest, the shipyard, Captain Morel who took him under his wing, then the debt.
+                - kind: dialogue
+                  speaker: Paul
+                  parts:
+                    - text: I couldn't write to you.
+                    - tone: after a silence
+                    - text: Not before I had paid it all back.
+            recap:
+              summary: Paul says he worked two years in Brest for Captain Morel.
+              names: [Paul, Morel]
+              stale: true
+          - layer: 1
+            content:
+              text: Paul; Captain Morel, his former employer.
+  - title: A Year On
+    description: What remains of the story.
+    scenes:
+      - title: Epilogue
+        description: A year later.
+        cells:
+          - layer: 1
+            content:
+              text: Mary alone on the quay, a letter in her hand.
+budgets:
+  suggest: 2470
+  consolidate: 1050
+  check: 1350
+requests:
+  suggest:
+    targets:
+      - scene: 2
+        layer: 0
+        mode: revise
+        range: { start: 1, end: 3 }
+        kept: [2]
+      - scene: 3
+        field: title
+        mode: write
+      - scene: 4
+        layer: 2
+        mode: write
+    instruction: Make the scene tenser, without adding dialogue.
+    exclude: [2]
+    overrides:
+      scenes:
+        - scene: 0
+          title: Opening
+          description: Mary waits for Paul in the rain, at the harbor café.
+  consolidate:
+    cell: { scene: 3, layer: 0 }
+  check:
+    scenes: { start: 0, end: 3 }
+    instruction: Look at the timeline above all.

@@ -1,0 +1,29 @@
+{
+  "suggestions": [
+    {
+      "target": "T1",
+      "note": "Holds Paul's line back and adds the wind.",
+      "edits": [
+        {
+          "op": "replace",
+          "block": "B1",
+          "blocks": [
+            {
+              "kind": "dialogue",
+              "speaker": "Paul",
+              "parts": [{ "tone": "without looking at her" }, { "text": "You got my letter." }]
+            }
+          ]
+        },
+        {
+          "op": "insert_after",
+          "block": "B2",
+          "blocks": [{ "kind": "narration", "text": "The wind dropped all at once." }]
+        },
+        { "op": "insert_after", "block": null, "blocks": [{ "kind": "narration", "text": "A gull cried." }] }
+      ]
+    },
+    { "target": "T2", "note": "Names the scene after the lighthouse.", "text": "The Lighthouse" },
+    { "target": "T3", "note": "Closes on the waiting.", "text": "Mary waits again, and this time she knows why." }
+  ]
+}

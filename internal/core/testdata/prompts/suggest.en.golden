@@ -1,0 +1,108 @@
+=== call
+model gpt-6.1-terra, reasoning medium, at most 32000 output tokens
+
+=== developer
+You help an author write a novel. The author names targets, and you write one suggestion for each: new text for the title or the description of a scene or for a notes cell, or edits to the manuscript of a scene.
+
+The author's message describes the project in three sections:
+
+- <frame> holds the project: its title and premise, the layers that record its information, and its beats in narrative order. A beat is one turn of the story's structure, split into scenes, and a scene's description refines its beat's when it needs to.
+- <neighborhood> holds the scenes that matter to the targets, each at a level of detail. A full scene shows its cells. A recap scene shows a summary in place of its manuscript. An outline scene shows its notes alone. A scene missing from the neighborhood is known only by its line in the frame.
+- <task> holds the targets, the author's instruction when there is one, and a reminder of the rules.
+
+Handles name what the context shows: S1 for a scene, L1 for a layer, T1 for a target, B1 for a block of a target. Use only the handles the context gives.
+
+A manuscript cell holds blocks in reading order. A narration block holds prose. A dialogue block holds one character's line: the speaker, then parts that are either the words spoken or a tone that says how the next words are spoken. Never write dialogue punctuation, such as quotation marks, dashes or a colon after the speaker. The manuscript adds it when it is rendered.
+
+Each target has a mode:
+
+- write: create the target anew. You do not see the content it replaces.
+- revise: start from the content the task shows, and change what the instruction asks.
+
+A text target receives its new text in full. A manuscript target receives edits. Only the blocks inside <range> may change, and the blocks in <before> and <after> are context: those nearest the range, with omitted counting the farther ones left out. A block marked kept="true" stays as it is. An edit replaces a block, deletes one, or inserts new blocks after one, or at the start of the range when its block is null. In write mode the range shows its kept blocks alone, and every other block it held is removed, so insert all you write.
+
+Give each suggestion a note of one line that tells the author what it changes.
+
+Stay coherent with the frame and the neighborhood: keep the names, the facts, the timeline and the voice of the manuscript. A scene's <beat-prompt> and <prompt> hold the author's directions for writing it: those for its beat, then its own. Write in English, the language of the project, whatever the language of the instruction.
+
+=== schema
+{"$defs":{"block":{"anyOf":[{"$ref":"#/$defs/block-narration"},{"$ref":"#/$defs/block-dialogue"}],"description":"One unit of a scene's manuscript text, in reading order: a narration or a line of dialogue."},"block-dialogue":{"additionalProperties":false,"description":"One character's spoken line: the words spoken, with tone cues where the delivery changes.","properties":{"kind":{"enum":["dialogue"],"type":"string"},"parts":{"description":"The line in speaking order.","items":{"$ref":"#/$defs/block-part"},"maxItems":500,"type":"array"},"speaker":{"description":"The character who speaks, by the name the story gives them.","type":"string"}},"required":["kind","speaker","parts"],"type":"object"},"block-narration":{"additionalProperties":false,"description":"Prose the narrator tells: action, description, a character's thoughts. It follows the manuscript's language, voice and tense.","properties":{"kind":{"enum":["narration"],"type":"string"},"text":{"description":"The prose, as plain text. Paragraphs are separated by a blank line.","type":"string"}},"required":["kind","text"],"type":"object"},"block-part":{"anyOf":[{"additionalProperties":false,"description":"Words the speaker says, without quotation marks.","properties":{"text":{"type":"string"}},"required":["text"],"type":"object"},{"additionalProperties":false,"description":"How the speaker says the words that follow, such as \"whispering\" or \"with a bitter laugh\".","properties":{"tone":{"type":"string"}},"required":["tone"],"type":"object"}]},"blockHandle":{"description":"The handle of a block inside the target's range, such as B3.","pattern":"^B[0-9]+$","type":"string"},"blocks":{"description":"New blocks, in reading order.","items":{"$ref":"#/$defs/block"},"maxItems":10000,"type":"array"},"delete":{"additionalProperties":false,"description":"Deletes one block.","properties":{"block":{"$ref":"#/$defs/blockHandle"},"op":{"enum":["delete"],"type":"string"}},"required":["op","block"],"type":"object"},"edits":{"additionalProperties":false,"description":"The changes to a manuscript target. Handles name blocks as the task shows them, before any edit.","properties":{"edits":{"items":{"anyOf":[{"$ref":"#/$defs/replace"},{"$ref":"#/$defs/insertAfter"},{"$ref":"#/$defs/delete"}]},"maxItems":10000,"type":"array"},"note":{"$ref":"#/$defs/note"},"target":{"$ref":"#/$defs/targetHandle"}},"required":["target","note","edits"],"type":"object"},"insertAfter":{"additionalProperties":false,"description":"Inserts new blocks after a block, or at the start of the range when block is null.","properties":{"block":{"anyOf":[{"$ref":"#/$defs/blockHandle"},{"type":"null"}]},"blocks":{"$ref":"#/$defs/blocks"},"op":{"enum":["insert_after"],"type":"string"}},"required":["op","block","blocks"],"type":"object"},"note":{"description":"One line for the author on what the suggestion changes, in the project's language.","type":"string"},"replace":{"additionalProperties":false,"description":"Replaces one block with new blocks.","properties":{"block":{"$ref":"#/$defs/blockHandle"},"blocks":{"$ref":"#/$defs/blocks"},"op":{"enum":["replace"],"type":"string"}},"required":["op","block","blocks"],"type":"object"},"targetHandle":{"description":"The handle of the target the suggestion is for, such as T1.","pattern":"^T[0-9]+$","type":"string"},"text":{"additionalProperties":false,"description":"The new text of a text target: a scene's title or description, or a notes cell.","properties":{"note":{"$ref":"#/$defs/note"},"target":{"$ref":"#/$defs/targetHandle"},"text":{"description":"The text, in full.","type":"string"}},"required":["target","note","text"],"type":"object"}},"additionalProperties":false,"description":"What the model returns for a suggest generation: one suggestion per target of the task.","properties":{"suggestions":{"description":"One suggestion per target, in any order.","items":{"anyOf":[{"$ref":"#/$defs/text"},{"$ref":"#/$defs/edits"}]},"maxItems":20,"type":"array"}},"required":["suggestions"],"type":"object"}
+
+=== frame
+<frame>
+<project title="The Clear Hours" language="en">
+<premise>In a seaside town, Mary waits for Paul, who left without a word. An unsigned letter revives their story.</premise>
+</project>
+<layers>
+<layer handle="L1" kind="manuscript" name="Manuscript">The text of the novel.</layer>
+<layer handle="L2" kind="notes" name="Characters">Who appears in the scene, and what we learn about each.</layer>
+<layer handle="L3" kind="notes" name="Plot">What the scene moves forward.</layer>
+</layers>
+<beats>
+<beat title="The Wait">
+<description>Mary waits for a sign from Paul.</description>
+<scene handle="S1" title="Opening">Mary waits for Paul in the rain, at the harbor café.</scene>
+<scene handle="S2" title="The Letter">An unsigned letter arrives.</scene>
+</beat>
+<beat title="The Reunion">
+<description>Mary and Paul meet again.</description>
+<scene handle="S3" title="The Quay">Mary meets Paul at dawn.</scene>
+<scene handle="S4">Paul tells of his two years away.</scene>
+</beat>
+<beat title="A Year On">
+<description>What remains of the story.</description>
+<scene handle="S5" title="Epilogue">A year later.</scene>
+</beat>
+</beats>
+</frame>
+
+=== neighborhood
+<neighborhood>
+<scene handle="S1" level="outline">
+<cell layer="L2">Mary, a schoolteacher, thirty. She has waited for Paul for two years.</cell>
+</scene>
+<scene handle="S2" level="recap">
+<recap layer="L1">An unsigned letter reaches Mary. She knows Paul's handwriting, and he asks to meet her on the quay at dawn.</recap>
+<cell layer="L2">The postman, in a hurry.</cell>
+</scene>
+<scene handle="S3" level="full">
+<beat-prompt>Keep the tone restrained, with no outpouring.</beat-prompt>
+<prompt>Paul says little; Mary leads the exchange.</prompt>
+<cell layer="L1" target="T1"/>
+<cell layer="L2">Paul, back from Brest. Mary.</cell>
+</scene>
+<scene handle="S4" level="full">
+<beat-prompt>Keep the tone restrained, with no outpouring.</beat-prompt>
+<cell layer="L1">
+<narration>They walked to the lighthouse in silence. Paul stopped at the rusted gate.
+
+He told her about Brest, the shipyard, Captain Morel who took him under his wing, then the debt.</narration>
+<dialogue speaker="Paul"><text>I couldn't write to you.</text><tone>after a silence</tone><text>Not before I had paid it all back.</text></dialogue>
+</cell>
+<cell layer="L2">Paul; Captain Morel, his former employer.</cell>
+</scene>
+<scene handle="S5" level="full">
+<cell layer="L2">Mary alone on the quay, a letter in her hand.</cell>
+<cell layer="L3" target="T3"/>
+</scene>
+</neighborhood>
+
+=== task
+<task>
+<target handle="T1" scene="S3" layer="L1" mode="revise">
+<before>
+<narration>Dawn turned the harbor gray.</narration>
+</before>
+<range>
+<dialogue handle="B1" speaker="Paul"><text>You got my letter.</text></dialogue>
+<narration handle="B2" kept="true">Mary did not answer at once.</narration>
+</range>
+<after>
+<dialogue speaker="Mary"><tone>curtly</tone><text>Two years, Paul.</text></dialogue>
+</after>
+</target>
+<target handle="T2" scene="S4" field="title" mode="write"/>
+<target handle="T3" scene="S5" layer="L3" mode="write"/>
+<instruction>Make the scene tenser, without adding dialogue.</instruction>
+<rules>Write one suggestion for each target. Change only the blocks inside a range, never a kept block. Write in English, without dialogue punctuation.</rules>
+</task>

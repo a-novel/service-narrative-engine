@@ -10,7 +10,7 @@
       "required": ["kind", "text"],
       "additionalProperties": false,
       "properties": {
-        "kind": { "const": "narration" },
+        "kind": { "type": "string", "const": "narration" },
         "text": {
           "type": "string",
           "description": "The prose, as plain text. Paragraphs are separated by a blank line.",
@@ -24,7 +24,7 @@
       "required": ["kind", "speaker", "parts"],
       "additionalProperties": false,
       "properties": {
-        "kind": { "const": "dialogue" },
+        "kind": { "type": "string", "const": "dialogue" },
         "speaker": {
           "type": "string",
           "description": "The character who speaks, by the name the story gives them.",

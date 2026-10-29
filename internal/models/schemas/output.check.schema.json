@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Check output",
+  "description": "What the model returns for a check generation: the possible coherence issues it finds, each backed by quotes.",
+  "type": "object",
+  "required": ["findings"],
+  "additionalProperties": false,
+  "properties": {
+    "findings": {
+      "type": "array",
+      "description": "The possible issues, most serious first. Empty when the scenes hold together.",
+      "maxItems": 50,
+      "items": { "$ref": "#/$defs/finding" }
+    }
+  },
+  "$defs": {
+    "finding": {
+      "type": "object",
+      "required": ["category", "message", "evidence"],
+      "additionalProperties": false,
+      "properties": {
+        "category": {
+          "type": "string",
+          "description": "The kind of issue.",
+          "enum": ["timeline-and-plot", "characterization", "world-building", "facts-and-details", "style"]
+        },
+        "message": {
+          "type": "string",
+          "description": "What does not hold together, in one or two sentences, in the project's language.",
+          "maxLength": 1000
+        },
+        "evidence": {
+          "type": "array",
+          "description": "The passages that show the issue, at least one.",
+          "minItems": 1,
+          "maxItems": 10,
+          "items": { "$ref": "#/$defs/quote" }
+        }
+      }
+    },
+    "quote": {
+      "type": "object",
+      "required": ["scene", "quote"],
+      "additionalProperties": false,
+      "properties": {
+        "scene": {
+          "type": "string",
+          "description": "The handle of the scene the quote comes from, such as S4.",
+          "pattern": "^S[0-9]+$"
+        },
+        "quote": {
+          "type": "string",
+          "description": "A passage copied word for word from the scene's text as the context shows it.",
+          "maxLength": 1000
+        }
+      }
+    }
+  }
+}

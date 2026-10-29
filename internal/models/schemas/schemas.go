@@ -25,6 +25,8 @@ const baseURI = "file:///schemas/"
 var (
 	// ErrUnknownKind is returned by [Content] for a layer kind that has no content schema.
 	ErrUnknownKind = errors.New("unknown layer kind")
+	// ErrUnknownGenerationKind is returned by [Output] for a generation kind that has no output schema.
+	ErrUnknownGenerationKind = errors.New("unknown generation kind")
 	// ErrInvalidDocument is returned by [Schema.Validate] for a document that is not JSON, or that
 	// breaks the schema.
 	ErrInvalidDocument = errors.New("invalid document")
@@ -33,18 +35,25 @@ var (
 // Schema is one embedded JSON Schema. It compiles on its first use.
 type Schema struct {
 	resolve func() (*jsonschema.Resolved, error)
+	strict  func() (json.RawMessage, error)
 }
 
 // newSchema returns the schema in the embedded file name, compiled on its first use.
 func newSchema(name string) *Schema {
-	return &Schema{resolve: sync.OnceValues(func() (*jsonschema.Resolved, error) {
-		return resolve(name)
-	})}
+	return &Schema{
+		resolve: sync.OnceValues(func() (*jsonschema.Resolved, error) { return resolve(name) }),
+		strict:  sync.OnceValues(func() (json.RawMessage, error) { return bundleStrict(name) }),
+	}
 }
 
-// contentSchemas maps each layer kind to the schema of its cells. The kind is the file name between
-// content. and .schema.json.
-var contentSchemas = loadContentSchemas()
+var (
+	// contentSchemas maps each layer kind to the schema of its cells. The kind is the file name between
+	// content. and .schema.json.
+	contentSchemas = loadSchemas("content.")
+	// outputSchemas maps each generation kind to the schema of the model's output. The kind is the file
+	// name between output. and .schema.json.
+	outputSchemas = loadSchemas("output.")
+)
 
 // Manuscript is the schema of an exported manuscript, format v1. Its scenes hold the blocks of the
 // manuscript content schema.
@@ -55,6 +64,17 @@ func Content(kind string) (*Schema, error) {
 	schema, ok := contentSchemas[kind]
 	if !ok {
 		return nil, fmt.Errorf("%w: %q", ErrUnknownKind, kind)
+	}
+
+	return schema, nil
+}
+
+// Output returns the schema a model's output follows for a generation kind. It holds every limit, and
+// [Schema.Strict] gives the form the model is asked to follow.
+func Output(kind string) (*Schema, error) {
+	schema, ok := outputSchemas[kind]
+	if !ok {
+		return nil, fmt.Errorf("%w: %q", ErrUnknownGenerationKind, kind)
 	}
 
 	return schema, nil
@@ -82,16 +102,24 @@ func (schema *Schema) Validate(document json.RawMessage) error {
 	return nil
 }
 
-// loadContentSchemas finds every content schema among the embedded files, keyed by layer kind.
-func loadContentSchemas() map[string]*Schema {
-	names, err := fs.Glob(files, "content.*.schema.json")
+// Strict returns the schema as one JSON document in the subset of JSON Schema that OpenAI's strict
+// structured outputs accept. The files it references become definitions of the document, and the limits
+// that subset cannot express are left to [Schema.Validate].
+func (schema *Schema) Strict() (json.RawMessage, error) {
+	return schema.strict()
+}
+
+// loadSchemas finds every embedded schema whose file name starts with prefix, keyed by the rest of the
+// name before .schema.json.
+func loadSchemas(prefix string) map[string]*Schema {
+	names, err := fs.Glob(files, prefix+"*.schema.json")
 	if err != nil {
 		panic(err)
 	}
 
 	loaded := make(map[string]*Schema, len(names))
 	for _, name := range names {
-		kind := strings.TrimSuffix(strings.TrimPrefix(name, "content."), ".schema.json")
+		kind := strings.TrimSuffix(strings.TrimPrefix(name, prefix), ".schema.json")
 		loaded[kind] = newSchema(name)
 	}
 

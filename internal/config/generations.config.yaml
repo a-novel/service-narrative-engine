@@ -1,0 +1,26 @@
+# Each generation kind's model, and the size of its prompts as token estimates (four characters to a token).
+# Limits stay under the 272K input tokens past which OpenAI bills long context at twice the rate. Reasoning
+# tokens count toward maxOutputTokens, and an output cut short fails.
+kinds:
+  # suggest writes the author's text, on a model made for natural writing.
+  suggest:
+    model: gpt-6.1-terra
+    reasoning: medium
+    maxOutputTokens: 32000
+    budget: 32000
+    limit: 128000
+  # consolidate recaps one cell, on the most efficient model. Its small budget lets a project that opts into
+  # AI late recap every cell within the per-user token windows of service-genai.
+  consolidate:
+    model: gpt-6-luna
+    reasoning: none
+    maxOutputTokens: 2000
+    budget: 6000
+    limit: 200000
+  # check reasons across many scenes, on a model close to the flagship at a fraction of its price.
+  check:
+    model: gpt-6.1-sol
+    reasoning: high
+    maxOutputTokens: 64000
+    budget: 64000
+    limit: 200000

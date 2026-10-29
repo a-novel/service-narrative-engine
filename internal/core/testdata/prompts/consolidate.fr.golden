@@ -1,0 +1,79 @@
+=== call
+model gpt-6-luna, reasoning none, at most 2000 output tokens
+
+=== developer
+Vous résumez une cellule du roman d'un auteur. Ce résumé tient lieu de la cellule dans les contextes suivants, quand ils ne peuvent pas la contenir en entier : il garde donc ce dont la suite de l'histoire a besoin.
+
+Le message de l'auteur présente le projet en trois sections :
+
+- <frame> décrit le projet : son titre et sa prémisse, ses couches, et ses beats avec leurs scènes, dans l'ordre du récit. Un beat est un tournant de la structure de l'histoire, découpé en scènes.
+- <neighborhood> rassemble les scènes autour de la cellule, chacune à un niveau de détail : full, recap ou outline.
+- <task> contient la cellule à résumer, sous l'identifiant T1.
+
+Des identifiants désignent ce que le contexte montre : S1 pour une scène, L1 pour une couche. Une cellule de manuscrit contient des blocs dans l'ordre de lecture : un bloc narration contient de la prose, un bloc dialogue la réplique d'un personnage, avec ses paroles et le ton sur lequel il les prononce.
+
+Écrivez un résumé d'environ 80 mots : ce qui se passe dans la cellule, qui agit, et ce qui change pour l'histoire. Employez des phrases simples, au présent. Ne résumez que la cellule ; les autres scènes vous aident seulement à savoir qui est qui.
+
+Listez ensuite les noms que la cellule emploie : ses personnages, ses lieux et ses objets, chacun une seule fois, tels que la cellule les écrit.
+
+Écrivez en français, la langue du projet.
+
+=== schema
+{"additionalProperties":false,"description":"What the model returns for a consolidate generation: the recap of one cell, which stands in for the cell in later contexts.","properties":{"names":{"description":"Every character, place and object the cell names, each once, as the cell writes it.","items":{"type":"string"},"maxItems":100,"type":"array"},"summary":{"description":"What happens in the cell and what it changes, in about 80 words, in the project's language.","type":"string"}},"required":["summary","names"],"type":"object"}
+
+=== frame
+<frame>
+<project title="Les Heures claires" language="fr">
+<premise>Dans une ville de bord de mer, Marie attend le retour de Paul, parti sans un mot. Une lettre sans signature relance leur histoire.</premise>
+</project>
+<layers>
+<layer handle="L1" kind="manuscript" name="Manuscrit">Le texte du roman.</layer>
+<layer handle="L2" kind="notes" name="Personnages">Qui apparaît dans la scène, et ce qu'on apprend de chacun.</layer>
+<layer handle="L3" kind="notes" name="Intrigue">Ce que la scène fait avancer.</layer>
+</layers>
+<beats>
+<beat title="L'attente">
+<description>Marie attend un signe de Paul.</description>
+<scene handle="S1" title="Ouverture">Marie attend sous la pluie.</scene>
+<scene handle="S2" title="La lettre">Une lettre sans signature arrive.</scene>
+</beat>
+<beat title="Les retrouvailles">
+<description>Marie et Paul se revoient.</description>
+<scene handle="S3" title="Le quai">Marie retrouve Paul à l'aube.</scene>
+<scene handle="S4" title="Retour">Paul raconte ses deux années.</scene>
+</beat>
+<beat title="Un an plus tard">
+<description>Ce qui reste de l'histoire.</description>
+<scene handle="S5" title="Épilogue">Un an plus tard.</scene>
+</beat>
+</beats>
+</frame>
+
+=== neighborhood
+<neighborhood>
+<scene handle="S2" level="outline">
+<cell layer="L2">Le facteur, pressé.</cell>
+</scene>
+<scene handle="S3" level="outline">
+<cell layer="L2">Paul, revenu de Brest. Marie.</cell>
+</scene>
+<scene handle="S4" level="full">
+<beat-prompt>Garder un ton retenu, sans effusion.</beat-prompt>
+<cell layer="L1" target="T1"/>
+<cell layer="L2">Paul ; le capitaine Morel, son ancien patron.</cell>
+</scene>
+<scene handle="S5" level="full">
+<cell layer="L2">Marie seule sur le quai, une lettre à la main.</cell>
+</scene>
+</neighborhood>
+
+=== task
+<task>
+<target handle="T1" scene="S4" layer="L1">
+<narration>Ils marchèrent jusqu'au phare sans parler. Paul s'arrêta devant la grille rouillée.
+
+Il raconta Brest, le chantier, le capitaine Morel qui l'avait pris sous son aile, puis la dette.</narration>
+<dialogue speaker="Paul"><text>Je ne pouvais pas t'écrire.</text><tone>après un silence</tone><text>Pas avant d'avoir tout remboursé.</text></dialogue>
+</target>
+<rules>Résumez T1 en environ 80 mots, puis listez les noms que la cellule emploie. Écrivez en français.</rules>
+</task>
