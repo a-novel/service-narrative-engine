@@ -80,8 +80,8 @@ async function deleteScenes(): Promise<void> {
 /** Fills the first beat up to the 10 scenes it may hold. */
 async function fillBeat(): Promise<void> {
   const count = (await storedScenes()).filter((scene) => scene.beatID === first.id).length;
-  const scenes = Array.from({ length: 10 - count }, () => ({ title: "Filler" }));
-  await scenesCreate(api, accessToken, { projectID: project.id, beatID: first.id, position: 10, scenes });
+  const scenes = Array.from({ length: 10 - count }, () => ({ beatID: first.id, position: 10, title: "Filler" }));
+  await scenesCreate(api, accessToken, { projectID: project.id, scenes });
 }
 
 afterEach(deleteScenes);
@@ -122,8 +122,10 @@ describe("scenesCreate", () => {
     await createScene("Last");
     const [one, two] = await scenesCreate(api, accessToken, {
       projectID: project.id,
-      beatID: first.id,
-      scenes: [{ title: "First" }, { title: "Second", description: "Marie attend.", prompt: "Lent." }],
+      scenes: [
+        { beatID: first.id, title: "First" },
+        { beatID: first.id, title: "Second", description: "Marie attend.", prompt: "Lent." },
+      ],
     });
 
     expect(one).toMatchObject({ beatID: first.id, position: 0, title: "First", description: "" });
@@ -137,37 +139,71 @@ describe("scenesCreate", () => {
 
     await scenesCreate(api, accessToken, {
       projectID: project.id,
-      beatID: first.id,
-      position: 1,
-      scenes: [{ title: "Two" }, { title: "Three" }],
+      scenes: [
+        { beatID: first.id, position: 1, title: "Two" },
+        { beatID: first.id, position: 1, title: "Three" },
+      ],
     });
 
     await expect(sceneTitles()).resolves.toEqual(["First", "Two", "Three", "Last"]);
   });
 
+  it("adds scenes to several beats in one request, in the order of the request", async () => {
+    await createScene("Kept");
+
+    const created = await scenesCreate(api, accessToken, {
+      projectID: project.id,
+      scenes: [
+        { beatID: second.id, title: "Elsewhere" },
+        { beatID: first.id, title: "Before" },
+        { beatID: first.id, position: 9, title: "After" },
+      ],
+    });
+
+    expect(created.map((scene) => [scene.title, scene.beatID, scene.position])).toEqual([
+      ["Elsewhere", second.id, 0],
+      ["Before", first.id, 0],
+      ["After", first.id, 2],
+    ]);
+    await expect(sceneTitles()).resolves.toEqual(["Before", "Kept", "After", "Elsewhere"]);
+  });
+
+  it("returns 404 for a beat of another project, and adds none of the scenes", async () => {
+    const scenes = [
+      { beatID: first.id, title: "Kept out" },
+      { beatID: otherBeat.id, title: "Foreign" },
+    ];
+
+    await expectStatus(scenesCreate(api, accessToken, { projectID: project.id, scenes }), 404);
+    await expect(storedScenes()).resolves.toEqual([]);
+  });
+
   it("returns 404 for an absent project", async () => {
-    const request = { projectID: ABSENT_ID, beatID: first.id, scenes: [{ title: "Scene" }] };
+    const request = { projectID: ABSENT_ID, scenes: [{ beatID: first.id, title: "Scene" }] };
     await expectStatus(scenesCreate(api, accessToken, request), 404);
   });
 
   it("returns 422 when the batch would pass 10 scenes in the beat", async () => {
     await fillBeat();
 
-    const request = { projectID: project.id, beatID: first.id, scenes: [{ title: "Extra" }] };
+    const request = { projectID: project.id, scenes: [{ beatID: first.id, title: "Extra" }] };
     await expectStatus(scenesCreate(api, accessToken, request), 422);
   });
 
   it("returns 400 for an empty list or more than 100 scenes", async () => {
-    const scenes = Array.from({ length: 101 }, () => ({ title: "Scene" }));
+    const scenes = Array.from({ length: 101 }, () => ({ beatID: first.id, title: "Scene" }));
 
-    await expectStatus(scenesCreate(api, accessToken, { projectID: project.id, beatID: first.id, scenes: [] }), 400);
-    await expectStatus(scenesCreate(api, accessToken, { projectID: project.id, beatID: first.id, scenes }), 400);
+    await expectStatus(scenesCreate(api, accessToken, { projectID: project.id, scenes: [] }), 400);
+    await expectStatus(scenesCreate(api, accessToken, { projectID: project.id, scenes }), 400);
   });
 
   it("adds none of the scenes when one is invalid", async () => {
-    const scenes = [{ title: "Valid" }, { title: " " }];
+    const scenes = [
+      { beatID: first.id, title: "Valid" },
+      { beatID: first.id, title: " " },
+    ];
 
-    await expectStatus(scenesCreate(api, accessToken, { projectID: project.id, beatID: first.id, scenes }), 400);
+    await expectStatus(scenesCreate(api, accessToken, { projectID: project.id, scenes }), 400);
     await expect(storedScenes()).resolves.toEqual([]);
   });
 });
@@ -201,8 +237,10 @@ describe("scenesUpdate", () => {
   it("replaces the fields of several scenes, in the order of the request", async () => {
     const [one, two] = await scenesCreate(api, accessToken, {
       projectID: project.id,
-      beatID: first.id,
-      scenes: [{ title: "One" }, { title: "Two" }],
+      scenes: [
+        { beatID: first.id, title: "One" },
+        { beatID: first.id, position: 1, title: "Two" },
+      ],
     });
 
     const updated = await scenesUpdate(api, accessToken, {
@@ -305,8 +343,7 @@ describe("sceneMove", () => {
   it("keeps positions contiguous under concurrent moves", async () => {
     const scenes = await scenesCreate(api, accessToken, {
       projectID: project.id,
-      beatID: first.id,
-      scenes: Array.from({ length: 6 }, () => ({ title: "Scene" })),
+      scenes: Array.from({ length: 6 }, () => ({ beatID: first.id, position: 6, title: "Scene" })),
     });
 
     await Promise.all(
@@ -368,8 +405,7 @@ describe("scenesDelete", () => {
   it("deletes scenes and closes the gaps", async () => {
     const scenes = await scenesCreate(api, accessToken, {
       projectID: project.id,
-      beatID: first.id,
-      scenes: ["One", "Two", "Three", "Four"].map((title) => ({ title })),
+      scenes: ["One", "Two", "Three", "Four"].map((title) => ({ beatID: first.id, position: 4, title })),
     });
 
     const deleted = await scenesDelete(api, accessToken, { projectID: project.id, ids: [scenes[0].id, scenes[2].id] });
@@ -399,8 +435,10 @@ describe("sceneList", () => {
     await createScene("Three", 0, second);
     await scenesCreate(api, accessToken, {
       projectID: project.id,
-      beatID: first.id,
-      scenes: [{ title: "One" }, { title: "Two" }],
+      scenes: [
+        { beatID: first.id, title: "One" },
+        { beatID: first.id, position: 1, title: "Two" },
+      ],
     });
 
     const page = await sceneList(api, accessToken, { projectID: project.id, limit: 2 });

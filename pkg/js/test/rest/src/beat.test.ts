@@ -304,8 +304,7 @@ describe("beatDelete", () => {
     const beat = await createBeat("Doomed");
     const [scene] = await scenesCreate(api, accessToken, {
       projectID: project.id,
-      beatID: beat.id,
-      scenes: [{ title: "La fenêtre" }],
+      scenes: [{ beatID: beat.id, title: "La fenêtre" }],
     });
     const content = { blocks: [{ kind: "narration" as const, text: "Marie attend." }] };
     await cellWrite(api, accessToken, {

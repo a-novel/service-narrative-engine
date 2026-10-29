@@ -41,20 +41,15 @@ beforeAll(async () => {
   project = await projectCreate(api, accessToken, { title: expected.title, language: Language.Fr });
   other = await projectCreate(api, accessToken, { title: "Other", language: Language.En });
 
-  // The golden document's beats, then each beat's scenes, in narrative order.
+  // The golden document's beats, then its scenes in one batch across the beats.
   const beats = await beatsCreate(api, accessToken, {
     projectID: project.id,
     beats: expected.appendices.beats.map((beat) => ({ ...beat, color: COLOR })),
   });
-  scenes = [];
-  for (const [index, beat] of beats.entries()) {
-    const titles = expected.scenes.filter((scene) => scene.beat === index).map((scene) => ({ title: scene.title }));
-    if (titles.length) {
-      scenes.push(
-        ...(await scenesCreate(api, accessToken, { projectID: project.id, beatID: beat.id, scenes: titles }))
-      );
-    }
-  }
+  scenes = await scenesCreate(api, accessToken, {
+    projectID: project.id,
+    scenes: expected.scenes.map((scene, position) => ({ beatID: beats[scene.beat].id, position, title: scene.title })),
+  });
 
   // The empty scene gets no cell, and the notes cell stays out of the manuscript.
   notes = await layerCreate(api, accessToken, {

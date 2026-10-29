@@ -639,9 +639,10 @@ paths:
       operationId: scenesCreate
       summary: Create scenes.
       description: |
-        Adds scenes to a beat at `position`, in order, and moves the beat's scenes from there on down. A
-        position past the beat's last scene appends them. A beat holds at most 10 scenes. The scenes are all
-        added, or none are.
+        Adds up to 100 scenes to beats of the project, and returns them in the order of the request. Each scene
+        goes before the scene of its beat at its `position`, or last past the end, and the scenes after it
+        move down. New scenes at one position keep the order of the request. A beat holds at most 10 scenes.
+        The scenes are all added, or none are: a beat the project does not hold answers 404.
       tags: [scene]
       requestBody:
         required: true
@@ -1231,7 +1232,7 @@ components:
               $ref: "#/components/schemas/beat"
 
     scenes:
-      description: Scenes, in narrative order.
+      description: Scenes, in the order the operation states.
       content:
         application/json:
           schema:
@@ -1770,10 +1771,18 @@ components:
 
     sceneCreateItem:
       type: object
-      description: A scene to add.
-      required: [title]
+      description: A scene to add, and where.
+      required: [beatID, title]
       additionalProperties: false
       properties:
+        beatID:
+          $ref: "#/components/schemas/beatID"
+        position:
+          type: integer
+          description: The scene's place in its beat, from 0. It goes before the beat's scene at this position, or last past the end. New scenes at one position keep the order of the request.
+          minimum: 0
+          default: 0
+          examples: [1]
         title:
           type: string
           description: The title of the scene. Not blank.
@@ -1829,23 +1838,15 @@ components:
 
     scenesCreateRequest:
       type: object
-      description: The scenes to add, and where.
-      required: [projectID, beatID, scenes]
+      description: The scenes to add, each with its beat and its place in it.
+      required: [projectID, scenes]
       additionalProperties: false
       properties:
         projectID:
           $ref: "#/components/schemas/projectID"
-        beatID:
-          $ref: "#/components/schemas/beatID"
-        position:
-          type: integer
-          description: The place of the first new scene in the beat, from 0, and the others follow it. A position past the beat's last scene appends them.
-          minimum: 0
-          default: 0
-          examples: [2]
         scenes:
           type: array
-          description: The scenes to add, in order. A beat holds at most 10.
+          description: The scenes to add, at most 100, in any beats of the project.
           minItems: 1
           maxItems: 100
           items:
@@ -1883,13 +1884,9 @@ components:
         projectID:
           $ref: "#/components/schemas/projectID"
         beatID:
-          $ref: "#/components/schemas/beatID"
+          $ref: "#/components/schemas/sceneCreateItem/properties/beatID"
         position:
-          type: integer
-          description: The scene's place in the beat, from 0. A position past the beat's last scene appends it.
-          minimum: 0
-          default: 0
-          examples: [2]
+          $ref: "#/components/schemas/sceneCreateItem/properties/position"
         title:
           $ref: "#/components/schemas/sceneCreateItem/properties/title"
         description:

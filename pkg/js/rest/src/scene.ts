@@ -49,14 +49,15 @@ export const SceneCreateRequestSchema = SceneFieldsSchema.extend({
 export type SceneCreateRequest = z.infer<typeof SceneCreateRequestSchema>;
 
 /**
- * Scenes to add to a beat at `position`, in order, first when omitted. A position past the beat's last
- * scene appends them.
+ * Up to 100 scenes to add to beats of the project. Each goes before the scene of its beat at its `position`,
+ * first when omitted, or last past the end. New scenes at one position keep the order of the request.
  */
 export const ScenesCreateRequestSchema = z.object({
   projectID: z.uuid(),
-  beatID: z.uuid(),
-  position: z.int().min(0).optional(),
-  scenes: z.array(SceneFieldsSchema).min(1).max(100),
+  scenes: z
+    .array(SceneFieldsSchema.extend({ beatID: z.uuid(), position: z.int().min(0).optional() }))
+    .min(1)
+    .max(100),
 });
 
 /** The value {@link ScenesCreateRequestSchema} validates. */
@@ -152,9 +153,9 @@ export async function sceneCreate(
 }
 
 /**
- * Adds scenes to a beat and returns them in order; the beat's scenes from there on move down. They are
- * all added, or none are. Throws on HTTP 404 when the caller owns no such project or beat, and 422 when
- * the beat would hold more than 10 scenes.
+ * Adds scenes to beats of the project and returns them in the order of the request; the scenes after them
+ * in their beats move down. They are all added, or none are. Throws on HTTP 404 when the caller owns no such
+ * project or one of the beats, and 422 when a beat would hold more than 10 scenes.
  */
 export async function scenesCreate(
   api: NarrativeEngineApi,
