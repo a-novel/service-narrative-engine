@@ -1,5 +1,5 @@
 === call
-model gpt-6.1-terra, reasoning low, at most 32000 output tokens
+model gpt-6.1-terra, reasoning medium, at most 32000 output tokens
 
 === developer
 You help an author write a novel. The author names targets, and you write one suggestion for each: new text for the title or the description of a scene or for a notes cell, or edits to the manuscript of a scene.

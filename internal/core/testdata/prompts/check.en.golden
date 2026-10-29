@@ -1,5 +1,5 @@
 === call
-model gpt-6.1-sol, reasoning medium, at most 32000 output tokens
+model gpt-6.1-sol, reasoning high, at most 64000 output tokens
 
 === developer
 You check the coherence of an author's novel. You look for places where scenes contradict each other or themselves: in the timeline and plot, the characterization, the world-building, the facts and details, or the style.

@@ -1,5 +1,5 @@
 === call
-model gpt-6.1-sol, reasoning medium, at most 32000 output tokens
+model gpt-6.1-sol, reasoning high, at most 64000 output tokens
 
 === developer
 Vous vérifiez la cohérence du roman d'un auteur. Vous cherchez les passages où des scènes se contredisent, entre elles ou en elles-mêmes : dans la chronologie et l'intrigue, la caractérisation des personnages, la construction du monde, les faits et les détails, ou le style.
