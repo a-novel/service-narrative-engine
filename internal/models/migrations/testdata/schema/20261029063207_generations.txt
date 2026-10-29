@@ -1,4 +1,4 @@
-migration-history	sha256:e21b523cbfe8f80e97d8d41a83543277cad5bd89c4b01ccc20be8c4e54ab767c
+migration-history	sha256:9e5153cf712a66db614b205b7bafbbc4eef340aa9441b610059541973e69e031
 column	beats.color	text NOT NULL
 column	beats.description	text NOT NULL DEFAULT ''::text
 column	beats.id	uuid NOT NULL DEFAULT uuidv7()
@@ -16,7 +16,7 @@ column	generation_calls.context	jsonb NOT NULL
 column	generation_calls.error	text
 column	generation_calls.genai_id	uuid
 column	generation_calls.generation_id	uuid NOT NULL
-column	generation_calls.payload	bytea
+column	generation_calls.payload	text
 column	generation_calls.position	integer NOT NULL
 column	generation_calls.result	jsonb
 column	generation_calls.settled_at	timestamp with time zone

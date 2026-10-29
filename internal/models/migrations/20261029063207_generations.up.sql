@@ -35,9 +35,10 @@ CREATE TABLE generation_calls (
   /* What the call reads: the level and the revision of each part of its context, and the handles that
   map its output back. */
   context jsonb NOT NULL,
-  /* The body genai sends the provider, byte for byte. It stays until the call succeeds, so a call that
-  waits, fails or is cancelled resubmits it as genai expects to replay it. */
-  payload bytea,
+  /* The JSON body genai sends the provider, as text so its members keep their order. It stays until
+  the call succeeds, so a call that waits, fails or is cancelled resubmits it as genai expects to
+  replay it. */
+  payload text,
   /* The genai generation that runs the call, once genai admits it. A call cancelled while it waited
   has none. */
   genai_id uuid,
