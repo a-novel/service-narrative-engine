@@ -62,6 +62,10 @@ services:
         condition: service_healthy
     environment:
       POSTGRES_DSN: postgres://postgres:postgres@postgres-narrative-engine:5432/postgres?sslmode=disable
+      # The Go config reads SERVICE_JSON_KEYS_HOST/PORT; the daemon fills them from the gRPC target it
+      # runs from the JSON Keys repository.
+      SERVICE_JSON_KEYS_HOST: "${SERVICE_JSON_KEYS_GRPC_HOST}"
+      SERVICE_JSON_KEYS_PORT: "${SERVICE_JSON_KEYS_GRPC_PORT}"
     networks:
       - api
 

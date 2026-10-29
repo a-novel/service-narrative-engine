@@ -18,7 +18,7 @@ The backend of the Narrative Engine, a workstation for writing narratives.
 
 ## What it does
 
-The service serves one public REST API (`cmd/rest`), for any HTTP client.
+The service stores the Scenes Composer of each user's projects: scenes, layers, and the cells where they cross. It serves one public REST API (`cmd/rest`), for any HTTP client, and checks each caller's access token with [JSON Keys](https://github.com/a-novel/service-json-keys).
 
 ## Deploying
 
@@ -32,7 +32,7 @@ Deploy the images with any container orchestrator. The composition below shows w
 | `service-narrative-engine/jobs/migrations` | One-shot schema migration job; runs to completion before the server starts. |
 | `service-narrative-engine/database`        | PostgreSQL with pgBackRest, or bring your own Postgres.                     |
 
-Pin every image to the same release tag. A production deployment runs `database`, then `migrations` to completion, then any number of `rest` replicas. Provide `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DATABASE` through the orchestrator; store the password as a secret.
+Pin every image to the same release tag. A production deployment runs `database`, then `migrations` to completion, then any number of `rest` replicas. The server reaches a JSON Keys gRPC server, deployed from that service's own images. Provide `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DATABASE` through the orchestrator; store the password as a secret.
 
 <!-- TODO(project-docs): replace v0.0.0 with the new service's release tag -->
 
@@ -82,6 +82,8 @@ services:
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
       POSTGRES_DATABASE: "${POSTGRES_DATABASE}"
       POSTGRES_TLS_ENABLED: "false"
+      SERVICE_JSON_KEYS_HOST: service-json-keys
+      SERVICE_JSON_KEYS_PORT: "8080"
     networks: [api]
 
 networks:
@@ -99,15 +101,17 @@ The database image packages PostgreSQL and pgBackRest on Wolfi. The container bu
 
 Every variable is read from the process environment. `SERVICE_NARRATIVE_ENGINE_ENV_PREFIX` prepends a prefix to every name, so the service can share an environment without collisions.
 
-| Name                   | Description                                                                                                                   | Images |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------ |
-| `POSTGRES_HOST`        | PostgreSQL hostname or IP address. Selects the discrete connection fields. **Required for new deployments.**                  | all    |
-| `POSTGRES_PORT`        | PostgreSQL port. Defaults to `5432`.                                                                                          | all    |
-| `POSTGRES_USER`        | PostgreSQL login role. **Required when `POSTGRES_HOST` is set.**                                                              | all    |
-| `POSTGRES_PASSWORD`    | PostgreSQL login password. **Required when `POSTGRES_HOST` is set; inject it as a secret.**                                   | all    |
-| `POSTGRES_DATABASE`    | PostgreSQL database name. **Required when `POSTGRES_HOST` is set.**                                                           | all    |
-| `POSTGRES_TLS_ENABLED` | Encrypt the PostgreSQL connection. Defaults to `true`; disable only when another trusted boundary protects the database link. | all    |
-| `POSTGRES_DSN`         | Connection-URL fallback, read only when `POSTGRES_HOST` is empty.                                                             | all    |
+| Name                     | Description                                                                                                                   | Images                    |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| `POSTGRES_HOST`          | PostgreSQL hostname or IP address. Selects the discrete connection fields. **Required for new deployments.**                  | all                       |
+| `POSTGRES_PORT`          | PostgreSQL port. Defaults to `5432`.                                                                                          | all                       |
+| `POSTGRES_USER`          | PostgreSQL login role. **Required when `POSTGRES_HOST` is set.**                                                              | all                       |
+| `POSTGRES_PASSWORD`      | PostgreSQL login password. **Required when `POSTGRES_HOST` is set; inject it as a secret.**                                   | all                       |
+| `POSTGRES_DATABASE`      | PostgreSQL database name. **Required when `POSTGRES_HOST` is set.**                                                           | all                       |
+| `POSTGRES_TLS_ENABLED`   | Encrypt the PostgreSQL connection. Defaults to `true`; disable only when another trusted boundary protects the database link. | all                       |
+| `POSTGRES_DSN`           | Connection-URL fallback, read only when `POSTGRES_HOST` is empty.                                                             | all                       |
+| `SERVICE_JSON_KEYS_HOST` | Hostname of the JSON Keys gRPC server, which verifies access tokens. Defaults to `localhost`.                                 | `rest`, `standalone-rest` |
+| `SERVICE_JSON_KEYS_PORT` | Port of the JSON Keys gRPC server. Defaults to `8080`.                                                                        | `rest`, `standalone-rest` |
 
 <details>
 <summary>Optional configuration (server tuning, OpenTelemetry, Sentry)</summary>
@@ -116,7 +120,8 @@ REST tuning (images `rest`, `standalone-rest`):
 
 | Name                          | Description                                                                                                                  | Default                          |
 | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
-| `REST_MAX_REQUEST_SIZE`       | Maximum request body size, in bytes.                                                                                         | `16384` (16KiB)                  |
+| `REST_MAX_REQUEST_SIZE`       | Maximum request body size, in bytes, on every route. The default fits a batch of up to 100 items.                            | `52428800` (50MiB)               |
+| `REST_MAX_ITEM_REQUEST_SIZE`  | Maximum request body size, in bytes, on a route that writes one item. The default fits a whole cell.                         | `4194304` (4MiB)                 |
 | `REST_CLIENT_IP_HEADER`       | Header a trusted proxy sets to the visitor IP. Set it only when every request comes through that proxy.                      | TCP peer                         |
 | `REST_LIVENESS_PATH`          | Ping path, which still answers during a planned downtime and skips the rate limit.                                           | `/v1/ping`                       |
 | `REST_RATE_LIMITS_ENABLED`    | Rate-limit each visitor on every route but the ping. Turn off only in test stacks.                                           | `true`                           |
@@ -154,6 +159,7 @@ Logs and tracing — OpenTelemetry exports to standard output, or over OTLP/HTTP
 | `OTEL_EXPORTER_OTLP_ENDPOINT`    | Base URL of the OTLP/HTTP backend. When set, traces and logs export there, and the servers write no request log. |                            |
 | `OTEL_EXPORTER_OTLP_HEADERS`     | Headers each export sends, such as the backend's key. Inject it as a secret.                                     |                            |
 | `OTEL_EXPORTER_OTLP_COMPRESSION` | `gzip` compresses each export.                                                                                   |                            |
+| `GCLOUD_PROJECT_ID`              | Google Cloud project ID. When set, the JSON Keys connection authenticates with Google ID tokens.                 |                            |
 | `OTEL_SERVICE_NAME`              | Service name every span and log record carries.                                                                  |                            |
 | `APP_NAME`                       | Application name attached to traces and logs.                                                                    | `service-narrative-engine` |
 
@@ -195,7 +201,7 @@ await api.ping();
 
 ## Running locally
 
-The **standalone** images bundle a server with the migrations, which they apply on every boot. Use them for a throwaway instance without the dev toolchain, never for a deployment with several replicas.
+The **standalone** images bundle a server with the migrations, which they apply on every boot. Use them for a throwaway instance without the dev toolchain, never for a deployment with several replicas. Run a JSON Keys server beside it, as its own README shows.
 
 ```yaml
 services:
@@ -222,6 +228,7 @@ services:
       postgres-narrative-engine: { condition: service_healthy }
     environment:
       POSTGRES_DSN: "postgres://postgres:postgres@postgres-narrative-engine:5432/postgres?sslmode=disable"
+      SERVICE_JSON_KEYS_HOST: service-json-keys
     networks: [api]
 
 networks:

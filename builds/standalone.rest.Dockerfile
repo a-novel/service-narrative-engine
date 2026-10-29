@@ -15,6 +15,7 @@ COPY ./cmd/migrations ./cmd/migrations
 COPY ./internal/handlers ./internal/handlers
 COPY ./internal/dao ./internal/dao
 COPY ./internal/core ./internal/core
+COPY ./internal/models/schemas ./internal/models/schemas
 COPY ./internal/models/migrations ./internal/models/migrations
 COPY ./internal/config ./internal/config
 

@@ -71,7 +71,7 @@ components:
             $ref: "#/components/schemas/healthReport"
           examples:
             healthy:
-              value: { "client:postgres": { "status": "up" } }
+              value: { "client:postgres": { "status": "up" }, "api:jsonKeys": { "status": "up" } }
 
     healthUnavailable:
       description: |
@@ -86,7 +86,7 @@ components:
             $ref: "#/components/schemas/healthReport"
           examples:
             degraded:
-              value: { "client:postgres": { "status": "down" } }
+              value: { "client:postgres": { "status": "up" }, "api:jsonKeys": { "status": "down" } }
 
     tooManyRequests:
       description: |
@@ -127,11 +127,13 @@ components:
     healthReport:
       type: object
       description: The status of each dependency. Every dependency must be up for HTTP 200.
-      required: ["client:postgres"]
+      required: ["client:postgres", "api:jsonKeys"]
       additionalProperties:
         $ref: "#/components/schemas/healthStatus"
       properties:
         "client:postgres":
+          $ref: "#/components/schemas/healthStatus"
+        "api:jsonKeys":
           $ref: "#/components/schemas/healthStatus"
     healthStatus:
       type: object
