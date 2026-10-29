@@ -13,7 +13,7 @@ neighborhood, then the task. Handles name scenes (S1), layers (L1), targets (T1)
 </neighborhood>
 {{- end}}
 
-{{- /* frame: the project, its layers and every scene. */ -}}
+{{- /* frame: the project, its layers, and every beat with its scenes in narrative order. */ -}}
 {{- define "frame" -}}
 <frame>
 <project title="{{xml .Title}}" language="{{.Language}}">
@@ -26,17 +26,27 @@ neighborhood, then the task. Handles name scenes (S1), layers (L1), targets (T1)
 <layer handle="{{.Handle}}" kind="{{.Kind}}" name="{{xml .Name}}">{{xml .Description}}</layer>
 {{- end}}
 </layers>
-<scenes>
-{{- range .Scenes}}
-<scene handle="{{.Handle}}"{{with .Title}} title="{{xml .}}"{{end}}>{{xml .Description}}</scene>
+<beats>
+{{- range .Beats}}
+<beat title="{{xml .Title}}">
+{{- with .Description}}
+<description>{{xml .}}</description>
 {{- end}}
-</scenes>
+{{- range .Scenes}}
+<scene handle="{{.Handle}}"{{with .Title}} title="{{xml .}}"{{end}}{{with .Description}}>{{xml .}}</scene>{{else}}/>{{end}}
+{{- end}}
+</beat>
+{{- end}}
+</beats>
 </frame>
 {{- end}}
 
 {{- /* scene: one scene of the neighborhood, at its level. A target cell shows in the task. */ -}}
 {{- define "scene" -}}
 <scene handle="{{.Handle}}" level="{{.Level}}">
+{{- with .BeatPrompt}}
+<beat-prompt>{{xml .}}</beat-prompt>
+{{- end}}
 {{- with .Prompt}}
 <prompt>{{xml .}}</prompt>
 {{- end}}

@@ -1,5 +1,6 @@
-# A French project the golden prompts render. Scenes and layers are listed in order, and cells name their
-# layer by position. A stale recap read an older version of its cell.
+# A French project the golden prompts render. Beats, their scenes and layers are listed in order,
+# and cells name their layer by position. Requests name scenes by their narrative order. A stale recap read
+# an older version of its cell.
 project:
   title: Les Heures claires
   premise: Dans une ville de bord de mer, Marie attend le retour de Paul, parti sans un mot. Une lettre sans signature relance leur histoire.
@@ -14,101 +15,111 @@ layers:
   - kind: notes
     name: Intrigue
     description: Ce que la scène fait avancer.
-scenes:
-  - title: Ouverture
-    description: Marie attend sous la pluie.
-    cells:
-      - layer: 0
-        content:
-          blocks:
-            - kind: narration
-              text: La pluie battait les vitres du café. Marie gardait les yeux sur la porte.
-            - kind: dialogue
-              speaker: Marie
-              parts:
-                - tone: à voix basse
-                - text: Il ne viendra pas.
-      - layer: 1
-        content:
-          text: Marie, institutrice, trente ans. Elle attend Paul depuis deux ans.
-      - layer: 2
-        content:
-          text: Installe l'absence de Paul.
-  - title: La lettre
-    description: Une lettre sans signature arrive.
-    cells:
-      - layer: 0
-        content:
-          blocks:
-            - kind: narration
-              text: Le facteur déposa une enveloppe sans timbre. Marie reconnut l'écriture avant même de l'ouvrir.
-            - kind: dialogue
-              speaker: Marie
-              parts:
-                - text: Demain, à l'aube, sur le quai.
-        recap:
-          summary: Une lettre sans signature arrive chez Marie. Elle y reconnaît l'écriture de Paul, qui lui donne rendez-vous sur le quai à l'aube.
-          names: [Marie, Paul]
-      - layer: 1
-        content:
-          text: Le facteur, pressé.
-  - title: Le quai
-    description: Marie retrouve Paul à l'aube.
+beats:
+  - title: "L'attente"
+    description: Marie attend un signe de Paul.
+    scenes:
+      - title: Ouverture
+        description: Marie attend sous la pluie.
+        cells:
+          - layer: 0
+            content:
+              blocks:
+                - kind: narration
+                  text: La pluie battait les vitres du café. Marie gardait les yeux sur la porte.
+                - kind: dialogue
+                  speaker: Marie
+                  parts:
+                    - tone: à voix basse
+                    - text: Il ne viendra pas.
+          - layer: 1
+            content:
+              text: Marie, institutrice, trente ans. Elle attend Paul depuis deux ans.
+          - layer: 2
+            content:
+              text: Installe l'absence de Paul.
+      - title: La lettre
+        description: Une lettre sans signature arrive.
+        cells:
+          - layer: 0
+            content:
+              blocks:
+                - kind: narration
+                  text: Le facteur déposa une enveloppe sans timbre. Marie reconnut l'écriture avant même de l'ouvrir.
+                - kind: dialogue
+                  speaker: Marie
+                  parts:
+                    - text: Demain, à l'aube, sur le quai.
+            recap:
+              summary: Une lettre sans signature arrive chez Marie. Elle y reconnaît l'écriture de Paul, qui lui donne rendez-vous sur le quai à l'aube.
+              names: [Marie, Paul]
+          - layer: 1
+            content:
+              text: Le facteur, pressé.
+  - title: Les retrouvailles
+    description: Marie et Paul se revoient.
     prompt: Garder un ton retenu, sans effusion.
-    cells:
-      - layer: 0
-        content:
-          blocks:
-            - kind: narration
-              text: L'aube grisait le port.
-            - kind: dialogue
-              speaker: Paul
-              parts:
-                - text: Tu as reçu ma lettre.
-            - kind: narration
-              text: Marie ne répondit pas tout de suite.
-            - kind: dialogue
-              speaker: Marie
-              parts:
-                - tone: sèchement
-                - text: Deux ans, Paul.
-      - layer: 1
-        content:
-          text: Paul, revenu de Brest. Marie.
-  - title: Retour
-    description: Paul raconte ses deux années.
-    cells:
-      - layer: 0
-        content:
-          blocks:
-            - kind: narration
-              text: |-
-                Ils marchèrent jusqu'au phare sans parler. Paul s'arrêta devant la grille rouillée.
+    scenes:
+      - title: Le quai
+        description: Marie retrouve Paul à l'aube.
+        prompt: Paul parle peu, Marie mène l'échange.
+        cells:
+          - layer: 0
+            content:
+              blocks:
+                - kind: narration
+                  text: L'aube grisait le port.
+                - kind: dialogue
+                  speaker: Paul
+                  parts:
+                    - text: Tu as reçu ma lettre.
+                - kind: narration
+                  text: Marie ne répondit pas tout de suite.
+                - kind: dialogue
+                  speaker: Marie
+                  parts:
+                    - tone: sèchement
+                    - text: Deux ans, Paul.
+          - layer: 1
+            content:
+              text: Paul, revenu de Brest. Marie.
+      - title: Retour
+        description: Paul raconte ses deux années.
+        cells:
+          - layer: 0
+            content:
+              blocks:
+                - kind: narration
+                  text: |-
+                    Ils marchèrent jusqu'au phare sans parler. Paul s'arrêta devant la grille rouillée.
 
-                Il raconta Brest, le chantier, le capitaine Morel qui l'avait pris sous son aile, puis la dette.
-            - kind: dialogue
-              speaker: Paul
-              parts:
-                - text: Je ne pouvais pas t'écrire.
-                - tone: après un silence
-                - text: Pas avant d'avoir tout remboursé.
-        recap:
-          summary: Paul raconte qu'il a travaillé deux ans à Brest pour le capitaine Morel.
-          names: [Paul, Morel]
-          stale: true
-      - layer: 1
-        content:
-          text: Paul ; le capitaine Morel, son ancien patron.
-  - title: Épilogue
-    description: Un an plus tard.
-    cells:
-      - layer: 1
-        content:
-          text: Marie seule sur le quai, une lettre à la main.
+                    Il raconta Brest, le chantier, le capitaine Morel qui l'avait pris sous son aile, puis la dette.
+                - kind: dialogue
+                  speaker: Paul
+                  parts:
+                    - text: Je ne pouvais pas t'écrire.
+                    - tone: après un silence
+                    - text: Pas avant d'avoir tout remboursé.
+            recap:
+              summary: Paul raconte qu'il a travaillé deux ans à Brest pour le capitaine Morel.
+              names: [Paul, Morel]
+              stale: true
+          - layer: 1
+            content:
+              text: Paul ; le capitaine Morel, son ancien patron.
+  - title: Un an plus tard
+    description: "Ce qui reste de l'histoire."
+    scenes:
+      - title: Épilogue
+        description: Un an plus tard.
+        cells:
+          - layer: 1
+            content:
+              text: Marie seule sur le quai, une lettre à la main.
 budgets:
-  suggest: 2420
+  suggest: 2570
   consolidate: 1050
-  check: 1350
+  check: 1400
 requests:
   suggest:
     targets:

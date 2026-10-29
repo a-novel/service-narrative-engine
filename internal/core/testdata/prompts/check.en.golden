@@ -6,7 +6,7 @@ You check the coherence of an author's novel. You look for places where scenes c
 
 The author's message describes the project in three sections:
 
-- <frame> holds the project: its title and premise, its layers, and every scene in narrative order.
+- <frame> holds the project: its title and premise, its layers, and its beats with their scenes, in narrative order. A beat is one turn of the story's structure, split into scenes.
 - <neighborhood> holds the scenes, each at a level of detail. A full scene shows its cells. A recap scene shows a summary in place of its manuscript. An outline scene shows its notes alone.
 - <task> names the scenes to check, and holds the author's instruction when there is one.
 
@@ -31,22 +31,27 @@ Write the messages in English, the language of the project.
 <layer handle="L2" kind="notes" name="Characters">Who appears in the scene, and what we learn about each.</layer>
 <layer handle="L3" kind="notes" name="Plot">What the scene moves forward.</layer>
 </layers>
-<scenes>
+<beats>
+<beat title="The Wait">
+<description>Mary waits for a sign from Paul.</description>
 <scene handle="S1" title="Opening">Mary waits in the rain.</scene>
 <scene handle="S2" title="The Letter">An unsigned letter arrives.</scene>
+</beat>
+<beat title="The Reunion">
+<description>Mary and Paul meet again.</description>
 <scene handle="S3" title="The Quay">Mary meets Paul at dawn.</scene>
 <scene handle="S4" title="Return">Paul tells of his two years away.</scene>
+</beat>
+<beat title="A Year On">
+<description>What remains of the story.</description>
 <scene handle="S5" title="Epilogue">A year later.</scene>
-</scenes>
+</beat>
+</beats>
 </frame>
 
 === neighborhood
 <neighborhood>
-<scene handle="S1" level="full">
-<cell layer="L1">
-<narration>Rain beat against the café windows. Mary kept her eyes on the door.</narration>
-<dialogue speaker="Mary"><tone>under her breath</tone><text>He won't come.</text></dialogue>
-</cell>
+<scene handle="S1" level="outline">
 <cell layer="L2">Mary, a schoolteacher, thirty. She has waited for Paul for two years.</cell>
 <cell layer="L3">Sets up Paul's absence.</cell>
 </scene>

@@ -6,7 +6,7 @@ Vous vérifiez la cohérence du roman d'un auteur. Vous cherchez les passages o�
 
 Le message de l'auteur présente le projet en trois sections :
 
-- <frame> décrit le projet : son titre et sa prémisse, ses couches, et toutes les scènes dans l'ordre du récit.
+- <frame> décrit le projet : son titre et sa prémisse, ses couches, et ses beats avec leurs scènes, dans l'ordre du récit. Un beat est un tournant de la structure de l'histoire, découpé en scènes.
 - <neighborhood> rassemble les scènes, chacune à un niveau de détail. Une scène full montre ses cellules. Une scène recap montre un résumé à la place de son manuscrit. Une scène outline ne montre que ses notes.
 - <task> désigne les scènes à vérifier, et porte la consigne de l'auteur quand il y en a une.
 
@@ -31,13 +31,22 @@ Ne signalez que ce que le texte permet d'affirmer : un mystère que l'histoire e
 <layer handle="L2" kind="notes" name="Personnages">Qui apparaît dans la scène, et ce qu'on apprend de chacun.</layer>
 <layer handle="L3" kind="notes" name="Intrigue">Ce que la scène fait avancer.</layer>
 </layers>
-<scenes>
+<beats>
+<beat title="L'attente">
+<description>Marie attend un signe de Paul.</description>
 <scene handle="S1" title="Ouverture">Marie attend sous la pluie.</scene>
 <scene handle="S2" title="La lettre">Une lettre sans signature arrive.</scene>
+</beat>
+<beat title="Les retrouvailles">
+<description>Marie et Paul se revoient.</description>
 <scene handle="S3" title="Le quai">Marie retrouve Paul à l'aube.</scene>
 <scene handle="S4" title="Retour">Paul raconte ses deux années.</scene>
+</beat>
+<beat title="Un an plus tard">
+<description>Ce qui reste de l'histoire.</description>
 <scene handle="S5" title="Épilogue">Un an plus tard.</scene>
-</scenes>
+</beat>
+</beats>
 </frame>
 
 === neighborhood

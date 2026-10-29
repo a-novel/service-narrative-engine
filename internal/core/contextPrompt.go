@@ -44,7 +44,14 @@ type (
 		Premise  string
 		Language string
 		Layers   []*promptLayer
-		Scenes   []*promptFrameScene
+		Beats    []*promptFrameBeat
+	}
+
+	// promptFrameBeat is a beat of the frame, with the lines of its scenes.
+	promptFrameBeat struct {
+		Title       string
+		Description string
+		Scenes      []*promptFrameScene
 	}
 
 	promptLayer struct {
@@ -61,11 +68,14 @@ type (
 		Description string
 	}
 
+	// promptScene is a scene of the neighborhood. The scene of a target shows the prompts of its beat and its
+	// own.
 	promptScene struct {
-		Handle string
-		Level  string
-		Prompt string
-		Cells  []*promptCell
+		Handle     string
+		Level      string
+		BeatPrompt string
+		Prompt     string
+		Cells      []*promptCell
 	}
 
 	// promptCell is one cell of a neighborhood scene: its content, its recap, or the handle of the target
@@ -435,11 +445,11 @@ func (scene *draftScene) shows(level string) []*shownCell {
 }
 
 // view returns what the template renders for the scene at a level. The scene of a target shows the
-// author's prompt for it.
+// author's prompts for its beat and for itself.
 func (scene *draftScene) view(level string) *promptScene {
 	view := &promptScene{Handle: scene.handle, Level: level}
 	if scene.pinned {
-		view.Prompt = scene.scene.Prompt
+		view.BeatPrompt, view.Prompt = scene.beat.beat.Prompt, scene.scene.Prompt
 	}
 
 	for _, shown := range scene.shows(level) {
@@ -461,7 +471,7 @@ func (scene *draftScene) view(level string) *promptScene {
 }
 
 // frameView returns what the template renders for the frame: the project, the layers the context shows,
-// and every scene. A scene field the generation writes anew is hidden.
+// and every beat with its scenes. A scene field the generation writes anew is hidden.
 func (draft *contextDraft) frameView() *promptFrame {
 	view := &promptFrame{Title: draft.project.Title, Premise: draft.project.Premise, Language: draft.project.Language}
 
@@ -477,11 +487,17 @@ func (draft *contextDraft) frameView() *promptFrame {
 
 	lines := make(map[*draftScene]*promptFrameScene, len(draft.scenes))
 
-	for _, scene := range draft.scenes {
-		lines[scene] = &promptFrameScene{
-			Handle: scene.handle, Title: scene.scene.Title, Description: scene.scene.Description,
+	for _, beat := range draft.beats {
+		line := &promptFrameBeat{Title: beat.beat.Title, Description: beat.beat.Description}
+
+		for _, scene := range beat.scenes {
+			lines[scene] = &promptFrameScene{
+				Handle: scene.handle, Title: scene.scene.Title, Description: scene.scene.Description,
+			}
+			line.Scenes = append(line.Scenes, lines[scene])
 		}
-		view.Scenes = append(view.Scenes, lines[scene])
+
+		view.Beats = append(view.Beats, line)
 	}
 
 	for _, target := range draft.targets {

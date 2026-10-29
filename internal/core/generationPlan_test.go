@@ -40,20 +40,12 @@ type promptProject struct {
 		Name        string `yaml:"name"`
 		Description string `yaml:"description"`
 	} `yaml:"layers"`
-	Scenes []struct {
-		Title       string `yaml:"title"`
-		Description string `yaml:"description"`
-		Prompt      string `yaml:"prompt"`
-		Cells       []struct {
-			Layer   int `yaml:"layer"`
-			Content any `yaml:"content"`
-			Recap   *struct {
-				Summary string   `yaml:"summary"`
-				Names   []string `yaml:"names"`
-				Stale   bool     `yaml:"stale"`
-			} `yaml:"recap"`
-		} `yaml:"cells"`
-	} `yaml:"scenes"`
+	Beats []struct {
+		Title       string         `yaml:"title"`
+		Description string         `yaml:"description"`
+		Prompt      string         `yaml:"prompt"`
+		Scenes      []*promptScene `yaml:"scenes"`
+	} `yaml:"beats"`
 	Budgets  map[string]int `yaml:"budgets"`
 	Requests struct {
 		Suggest struct {
@@ -88,7 +80,29 @@ type promptProject struct {
 	} `yaml:"requests"`
 }
 
-// fixtureSceneID and fixtureLayerID give the scene and the layer at a position of a fixture their ID.
+// promptScene is a scene of a [promptProject], with its cells.
+type promptScene struct {
+	Title       string `yaml:"title"`
+	Description string `yaml:"description"`
+	Prompt      string `yaml:"prompt"`
+	Cells       []struct {
+		Layer   int `yaml:"layer"`
+		Content any `yaml:"content"`
+		Recap   *struct {
+			Summary string   `yaml:"summary"`
+			Names   []string `yaml:"names"`
+			Stale   bool     `yaml:"stale"`
+		} `yaml:"recap"`
+	} `yaml:"cells"`
+}
+
+// fixtureBeatID gives the beat at a position of a fixture its ID.
+func fixtureBeatID(position int) uuid.UUID {
+	return uuid.MustParse(fmt.Sprintf("00000000-0000-0000-0000-00000003%04d", position))
+}
+
+// fixtureSceneID and fixtureLayerID give the scene at a narrative position and the layer at a position of a
+// fixture their ID.
 func fixtureSceneID(position int) uuid.UUID {
 	return uuid.MustParse(fmt.Sprintf("00000000-0000-0000-0000-00000001%04d", position))
 }
@@ -119,36 +133,58 @@ func loadPromptProject(t *testing.T, language string) (*promptProject, *core.Pro
 		})
 	}
 
-	for position, scene := range fixture.Scenes {
-		snapshot.Scenes = append(snapshot.Scenes, &core.Scene{
-			ID: fixtureSceneID(position), ProjectID: projectID, Position: position, Title: scene.Title,
-			Color: sceneColor, Description: scene.Description, Prompt: scene.Prompt, UpdatedAt: updatedAt,
+	var position int
+
+	for beatPosition, beat := range fixture.Beats {
+		snapshot.Beats = append(snapshot.Beats, &core.Beat{
+			ID: fixtureBeatID(beatPosition), ProjectID: projectID, Position: beatPosition, Title: beat.Title,
+			Color: beatColor, Description: beat.Description, Prompt: beat.Prompt, UpdatedAt: updatedAt,
 		})
 
-		for _, cell := range scene.Cells {
-			content, err := json.Marshal(cell.Content)
-			require.NoError(t, err)
-
-			snapshot.Cells = append(snapshot.Cells, &core.Cell{
-				ProjectID: projectID, SceneID: fixtureSceneID(position), LayerID: fixtureLayerID(cell.Layer),
-				Content: content, UpdatedAt: updatedAt,
-			})
-
-			if cell.Recap != nil {
-				read := updatedAt
-				if cell.Recap.Stale {
-					read = updatedAt.Add(-time.Hour)
-				}
-
-				snapshot.Recaps = append(snapshot.Recaps, &core.CellRecap{
-					SceneID: fixtureSceneID(position), LayerID: fixtureLayerID(cell.Layer),
-					Summary: cell.Recap.Summary, Names: cell.Recap.Names, CellUpdatedAt: read,
-				})
-			}
+		for scenePosition, scene := range beat.Scenes {
+			addPromptScene(t, snapshot, scene, fixtureBeatID(beatPosition), scenePosition, position)
+			position++
 		}
 	}
 
 	return fixture, snapshot
+}
+
+// addPromptScene adds a fixture scene, at a position in its beat, to the snapshot, with its cells and recaps.
+// Narrative is the scene's position in narrative order, which names it.
+func addPromptScene(
+	t *testing.T, snapshot *core.ProjectSnapshot, scene *promptScene, beatID uuid.UUID, position, narrative int,
+) {
+	t.Helper()
+
+	sceneID := fixtureSceneID(narrative)
+
+	snapshot.Scenes = append(snapshot.Scenes, &core.Scene{
+		ID: sceneID, ProjectID: projectID, BeatID: beatID, Position: position, Title: scene.Title,
+		Description: scene.Description, Prompt: scene.Prompt, UpdatedAt: updatedAt,
+	})
+
+	for _, cell := range scene.Cells {
+		content, err := json.Marshal(cell.Content)
+		require.NoError(t, err)
+
+		snapshot.Cells = append(snapshot.Cells, &core.Cell{
+			ProjectID: projectID, SceneID: sceneID, LayerID: fixtureLayerID(cell.Layer), Content: content,
+			UpdatedAt: updatedAt,
+		})
+
+		if cell.Recap != nil {
+			read := updatedAt
+			if cell.Recap.Stale {
+				read = updatedAt.Add(-time.Hour)
+			}
+
+			snapshot.Recaps = append(snapshot.Recaps, &core.CellRecap{
+				SceneID: sceneID, LayerID: fixtureLayerID(cell.Layer), Summary: cell.Recap.Summary,
+				Names: cell.Recap.Names, CellUpdatedAt: read,
+			})
+		}
+	}
 }
 
 // promptRequest returns the request of a generation kind the fixture holds.

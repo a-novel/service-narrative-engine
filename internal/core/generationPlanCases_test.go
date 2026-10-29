@@ -50,8 +50,8 @@ const (
 	manuscriptCost = 1100
 )
 
-// planProject returns an English project of count scenes. Each scene has a manuscript cell of one long
-// narration block, and a notes cell.
+// planProject returns an English project of count scenes, each in a beat of its own. Each scene has a
+// manuscript cell of one long narration block, and a notes cell.
 func planProject(count int) *core.ProjectSnapshot {
 	snapshot := &core.ProjectSnapshot{
 		Project: &core.Project{ID: projectID, OwnerID: ownerID, Title: "Tides", Language: "en"},
@@ -62,15 +62,31 @@ func planProject(count int) *core.ProjectSnapshot {
 	}
 
 	for position := range count {
+		snapshot.Beats = append(snapshot.Beats, &core.Beat{
+			ID: fixtureBeatID(position), ProjectID: projectID, Position: position,
+			Title: "Beat " + strconv.Itoa(position+1), Color: beatColor, UpdatedAt: updatedAt,
+		})
 		snapshot.Scenes = append(snapshot.Scenes, &core.Scene{
-			ID: fixtureSceneID(position), ProjectID: projectID, Position: position,
-			Title: "Scene " + strconv.Itoa(position+1), Color: sceneColor, UpdatedAt: updatedAt,
+			ID: fixtureSceneID(position), ProjectID: projectID, BeatID: fixtureBeatID(position),
+			Title: "Scene " + strconv.Itoa(position+1), UpdatedAt: updatedAt,
 		})
 		snapshot.Cells = append(snapshot.Cells,
 			planCell(position, 0, blocks(narration(longText))),
 			planCell(position, 1, mustJSON(map[string]string{"text": "Notes " + strconv.Itoa(position+1) + ". " + longNotes})),
 		)
 	}
+
+	return snapshot
+}
+
+// inOneBeat moves the scenes of the snapshot into its first beat, keeping their order, and removes the
+// other beats.
+func inOneBeat(snapshot *core.ProjectSnapshot) *core.ProjectSnapshot {
+	for position, scene := range snapshot.Scenes {
+		scene.BeatID, scene.Position = fixtureBeatID(0), position
+	}
+
+	snapshot.Beats = snapshot.Beats[:1]
 
 	return snapshot
 }
@@ -400,7 +416,7 @@ func generationPlanCases() []*generationPlanCase {
 			request: suggestRequest(setManuscript(planProject(2), 0, blocks(narration("Dawn."))),
 				fieldTarget(1, core.SceneFieldTitle, write)),
 			unbounded:      true,
-			expectContains: []string{`<scene handle="S2"></scene>`},
+			expectContains: []string{`<scene handle="S2"/>`},
 			expectAbsent:   []string{"Scene 2"},
 		},
 		{
@@ -490,6 +506,49 @@ func generationPlanCases() []*generationPlanCase {
 			request:   suggestRequest(planProject(1), cellTarget(0, 0, revise)),
 			limit:     100,
 			expectErr: core.ErrContextTooLarge,
+		},
+		{
+			// Beats come in slice order 1, 0, and the first beat holds two scenes listed out of order.
+			name: "Success/NarrativeOrder",
+			request: suggestRequest(with(inOneBeat(planProject(3)), func(snapshot *core.ProjectSnapshot) {
+				snapshot.Beats = []*core.Beat{
+					{ID: fixtureBeatID(1), ProjectID: projectID, Position: 1, Title: "Second", Color: beatColor},
+					{ID: fixtureBeatID(0), ProjectID: projectID, Position: 0, Title: "First", Color: beatColor},
+				}
+				snapshot.Scenes[0].BeatID, snapshot.Scenes[0].Position = fixtureBeatID(1), 0
+				snapshot.Scenes[1].Position, snapshot.Scenes[2].Position = 1, 0
+			}), cellTarget(0, 0, revise)),
+			unbounded: true,
+			expectContains: []string{
+				`<beat title="First">` + "\n" + `<scene handle="S1" title="Scene 3"/>` + "\n" +
+					`<scene handle="S2" title="Scene 2"/>` + "\n</beat>",
+				`<beat title="Second">` + "\n" + `<scene handle="S3" title="Scene 1"/>`,
+			},
+			expect: func(t *testing.T, plan *core.ContextPlan) {
+				t.Helper()
+				require.Equal(t, []uuid.UUID{fixtureSceneID(2), fixtureSceneID(1), fixtureSceneID(0)},
+					lo.Map(plan.Scenes, func(scene *core.ContextScene, _ int) uuid.UUID { return scene.SceneID }))
+			},
+		},
+		{
+			name: "Success/BeatPrompts",
+			request: suggestRequest(with(planProject(2), func(snapshot *core.ProjectSnapshot) {
+				snapshot.Beats[0].Description, snapshot.Beats[0].Prompt = "Ana returns.", "Keep it quiet."
+				snapshot.Scenes[0].Prompt = "Ana speaks first."
+			}), cellTarget(0, 0, revise)),
+			unbounded: true,
+			expectContains: []string{
+				`<beat title="Beat 1">` + "\n<description>Ana returns.</description>",
+				`<scene handle="S1" level="full">` + "\n<beat-prompt>Keep it quiet.</beat-prompt>\n" +
+					"<prompt>Ana speaks first.</prompt>",
+			},
+		},
+		{
+			name: "Error/SceneBeatNotFound",
+			request: suggestRequest(with(planProject(2), func(snapshot *core.ProjectSnapshot) {
+				snapshot.Beats = snapshot.Beats[:1]
+			}), cellTarget(0, 0, revise)),
+			expectErr: core.ErrBeatNotFound,
 		},
 		{
 			name:      "Error/NoTarget",

@@ -6,7 +6,7 @@ You recap one cell of an author's novel. The recap stands in for the cell in lat
 
 The author's message describes the project in three sections:
 
-- <frame> holds the project: its title and premise, its layers, and every scene in narrative order.
+- <frame> holds the project: its title and premise, its layers, and its beats with their scenes, in narrative order. A beat is one turn of the story's structure, split into scenes.
 - <neighborhood> holds the scenes around the cell, each at a level of detail: full, recap or outline.
 - <task> holds the cell to recap as target T1.
 
@@ -31,13 +31,22 @@ Write in English, the language of the project.
 <layer handle="L2" kind="notes" name="Characters">Who appears in the scene, and what we learn about each.</layer>
 <layer handle="L3" kind="notes" name="Plot">What the scene moves forward.</layer>
 </layers>
-<scenes>
+<beats>
+<beat title="The Wait">
+<description>Mary waits for a sign from Paul.</description>
 <scene handle="S1" title="Opening">Mary waits in the rain.</scene>
 <scene handle="S2" title="The Letter">An unsigned letter arrives.</scene>
+</beat>
+<beat title="The Reunion">
+<description>Mary and Paul meet again.</description>
 <scene handle="S3" title="The Quay">Mary meets Paul at dawn.</scene>
 <scene handle="S4" title="Return">Paul tells of his two years away.</scene>
+</beat>
+<beat title="A Year On">
+<description>What remains of the story.</description>
 <scene handle="S5" title="Epilogue">A year later.</scene>
-</scenes>
+</beat>
+</beats>
 </frame>
 
 === neighborhood
@@ -46,23 +55,14 @@ Write in English, the language of the project.
 <cell layer="L2">Mary, a schoolteacher, thirty. She has waited for Paul for two years.</cell>
 <cell layer="L3">Sets up Paul's absence.</cell>
 </scene>
-<scene handle="S2" level="full">
-<cell layer="L1">
-<narration>The postman left an envelope with no stamp. Mary knew the handwriting before she opened it.</narration>
-<dialogue speaker="Mary"><text>Tomorrow, at dawn, on the quay.</text></dialogue>
-</cell>
+<scene handle="S2" level="outline">
 <cell layer="L2">The postman, in a hurry.</cell>
 </scene>
-<scene handle="S3" level="full">
-<cell layer="L1">
-<narration>Dawn turned the harbor gray.</narration>
-<dialogue speaker="Paul"><text>You got my letter.</text></dialogue>
-<narration>Mary did not answer at once.</narration>
-<dialogue speaker="Mary"><tone>curtly</tone><text>Two years, Paul.</text></dialogue>
-</cell>
+<scene handle="S3" level="outline">
 <cell layer="L2">Paul, back from Brest. Mary.</cell>
 </scene>
 <scene handle="S4" level="full">
+<beat-prompt>Keep the tone restrained, with no outpouring.</beat-prompt>
 <cell layer="L1" target="T1"/>
 <cell layer="L2">Paul; Captain Morel, his former employer.</cell>
 </scene>

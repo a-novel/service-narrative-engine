@@ -6,7 +6,7 @@ Vous résumez une cellule du roman d'un auteur. Ce résumé tient lieu de la cel
 
 Le message de l'auteur présente le projet en trois sections :
 
-- <frame> décrit le projet : son titre et sa prémisse, ses couches, et toutes les scènes dans l'ordre du récit.
+- <frame> décrit le projet : son titre et sa prémisse, ses couches, et ses beats avec leurs scènes, dans l'ordre du récit. Un beat est un tournant de la structure de l'histoire, découpé en scènes.
 - <neighborhood> rassemble les scènes autour de la cellule, chacune à un niveau de détail : full, recap ou outline.
 - <task> contient la cellule à résumer, sous l'identifiant T1.
 
@@ -31,32 +31,34 @@ Listez ensuite les noms que la cellule emploie : ses personnages, ses lieux et s
 <layer handle="L2" kind="notes" name="Personnages">Qui apparaît dans la scène, et ce qu'on apprend de chacun.</layer>
 <layer handle="L3" kind="notes" name="Intrigue">Ce que la scène fait avancer.</layer>
 </layers>
-<scenes>
+<beats>
+<beat title="L'attente">
+<description>Marie attend un signe de Paul.</description>
 <scene handle="S1" title="Ouverture">Marie attend sous la pluie.</scene>
 <scene handle="S2" title="La lettre">Une lettre sans signature arrive.</scene>
+</beat>
+<beat title="Les retrouvailles">
+<description>Marie et Paul se revoient.</description>
 <scene handle="S3" title="Le quai">Marie retrouve Paul à l'aube.</scene>
 <scene handle="S4" title="Retour">Paul raconte ses deux années.</scene>
+</beat>
+<beat title="Un an plus tard">
+<description>Ce qui reste de l'histoire.</description>
 <scene handle="S5" title="Épilogue">Un an plus tard.</scene>
-</scenes>
+</beat>
+</beats>
 </frame>
 
 === neighborhood
 <neighborhood>
-<scene handle="S1" level="outline">
-<cell layer="L2">Marie, institutrice, trente ans. Elle attend Paul depuis deux ans.</cell>
-<cell layer="L3">Installe l'absence de Paul.</cell>
-</scene>
-<scene handle="S2" level="full">
-<cell layer="L1">
-<narration>Le facteur déposa une enveloppe sans timbre. Marie reconnut l'écriture avant même de l'ouvrir.</narration>
-<dialogue speaker="Marie"><text>Demain, à l'aube, sur le quai.</text></dialogue>
-</cell>
+<scene handle="S2" level="outline">
 <cell layer="L2">Le facteur, pressé.</cell>
 </scene>
 <scene handle="S3" level="outline">
 <cell layer="L2">Paul, revenu de Brest. Marie.</cell>
 </scene>
 <scene handle="S4" level="full">
+<beat-prompt>Garder un ton retenu, sans effusion.</beat-prompt>
 <cell layer="L1" target="T1"/>
 <cell layer="L2">Paul ; le capitaine Morel, son ancien patron.</cell>
 </scene>

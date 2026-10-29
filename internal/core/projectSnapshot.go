@@ -6,11 +6,13 @@ import (
 	"github.com/google/uuid"
 )
 
-// ProjectSnapshot is a project with every scene, layer, cell and recap it holds, read at one instant. A
-// generation reads its context from it.
+// ProjectSnapshot is a project with every beat, scene, layer, cell and recap it holds, read at one instant.
+// A generation reads its context from it.
 type ProjectSnapshot struct {
 	Project *Project `validate:"required"`
 
+	// Beats lists every beat of the project.
+	Beats []*Beat
 	// Scenes lists every scene of the project.
 	Scenes []*Scene
 	// Layers lists every layer of the project.

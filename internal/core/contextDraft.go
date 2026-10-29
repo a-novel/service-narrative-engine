@@ -104,9 +104,16 @@ type draftCell struct {
 	updatedAt time.Time
 }
 
+// draftBeat is a beat as a generation reads it, with its scenes in order.
+type draftBeat struct {
+	beat   *Beat
+	scenes []*draftScene
+}
+
 // draftScene is a scene as a generation reads it, with the request's override applied.
 type draftScene struct {
 	scene  *Scene
+	beat   *draftBeat
 	handle string
 
 	// cells lists the cells the scene shows, by layer order: those of the layers the request reads, and
@@ -154,7 +161,8 @@ type contextDraft struct {
 	request *GenerationPlanRequest
 	project *Project
 
-	// scenes lists every scene in narrative order, and layers every layer in order.
+	// beats lists every beat in order, scenes every scene in narrative order, and layers every layer in order.
+	beats  []*draftBeat
 	scenes []*draftScene
 	layers []*draftLayer
 	// targets lists the targets in the order of the request. A consolidate generation's cell is its only
@@ -173,9 +181,16 @@ type contextDraft struct {
 func newContextDraft(request *GenerationPlanRequest) (*contextDraft, error) {
 	draft := &contextDraft{request: request, project: request.Snapshot.Project}
 	draft.layers, draft.layerByID = readLayers(request.Snapshot.Layers)
-	draft.scenes, draft.sceneByID = readScenes(request.Snapshot.Scenes)
+	draft.beats = readBeats(request.Snapshot.Beats)
 
-	err := draft.applyOverrides()
+	var err error
+
+	draft.scenes, draft.sceneByID, err = readScenes(request.Snapshot.Scenes, draft.beats)
+	if err != nil {
+		return nil, err
+	}
+
+	err = draft.applyOverrides()
 	if err != nil {
 		return nil, err
 	}
@@ -217,22 +232,46 @@ func readLayers(layers []*Layer) ([]*draftLayer, map[uuid.UUID]*draftLayer) {
 	return read, byID
 }
 
-// readScenes reads the scenes in narrative order, each with its handle, and indexes them by ID.
-func readScenes(scenes []*Scene) ([]*draftScene, map[uuid.UUID]*draftScene) {
+// readBeats reads the beats in order.
+func readBeats(beats []*Beat) []*draftBeat {
+	ordered := slices.Clone(beats)
+	slices.SortStableFunc(ordered, func(a, b *Beat) int { return cmp.Compare(a.Position, b.Position) })
+
+	return lo.Map(ordered, func(beat *Beat, _ int) *draftBeat { return &draftBeat{beat: beat} })
+}
+
+// readScenes reads the scenes in narrative order: by the position of their beat, then by their own position
+// in it. Each scene joins its beat, takes its handle in that order, and is indexed by ID.
+func readScenes(scenes []*Scene, beats []*draftBeat) ([]*draftScene, map[uuid.UUID]*draftScene, error) {
+	beatByID := lo.KeyBy(beats, func(beat *draftBeat) uuid.UUID { return beat.beat.ID })
+
 	ordered := slices.Clone(scenes)
 	slices.SortStableFunc(ordered, func(a, b *Scene) int { return cmp.Compare(a.Position, b.Position) })
 
-	read := make([]*draftScene, len(ordered))
-	byID := make(map[uuid.UUID]*draftScene, len(ordered))
-
-	for index, scene := range ordered {
-		read[index] = &draftScene{
-			scene: scene, handle: handle("S", index), level: ContextLevelOmitted, renders: map[string]*sceneRender{},
+	for _, scene := range ordered {
+		beat, ok := beatByID[scene.BeatID]
+		if !ok {
+			return nil, nil, fmt.Errorf("%w: beat of scene %s", ErrBeatNotFound, scene.ID)
 		}
-		byID[scene.ID] = read[index]
+
+		beat.scenes = append(beat.scenes, &draftScene{
+			scene: scene, beat: beat, level: ContextLevelOmitted, renders: map[string]*sceneRender{},
+		})
 	}
 
-	return read, byID
+	read := make([]*draftScene, 0, len(scenes))
+	for _, beat := range beats {
+		read = append(read, beat.scenes...)
+	}
+
+	byID := make(map[uuid.UUID]*draftScene, len(read))
+
+	for index, scene := range read {
+		scene.handle = handle("S", index)
+		byID[scene.scene.ID] = scene
+	}
+
+	return read, byID, nil
 }
 
 // applyOverrides replaces the fields of the scenes the request overrides.
