@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"maps"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/google/jsonschema-go/jsonschema"
@@ -27,6 +28,13 @@ var (
 	consolidateCases []byte
 	//go:embed testdata/output.check.cases.json
 	checkCases []byte
+)
+
+var (
+	//go:embed block.schema.json
+	blockSchemaFile []byte
+	//go:embed output.suggest.schema.json
+	suggestSchemaFile []byte
 )
 
 // schemaCase is one document a schema accepts or refuses. Strict says whether the strict form of an
@@ -237,6 +245,31 @@ func TestOutput(t *testing.T) {
 
 		_, err := schemas.Output("rewrite")
 		require.ErrorIs(t, err, schemas.ErrUnknownGenerationKind)
+	})
+
+	// The model writes the blocks a manuscript cell stores, without the generated mark. The suggest output
+	// prefixes their definitions with block-, as the strict form names the definitions of a referenced file,
+	// so the strict form stays the same.
+	t.Run("SuggestBlocks", func(t *testing.T) {
+		t.Parallel()
+
+		var block, suggest struct {
+			Defs map[string]map[string]any `json:"$defs"`
+		}
+
+		prefixed := strings.ReplaceAll(string(blockSchemaFile), `"#/$defs/`, `"#/$defs/block-`)
+		require.NoError(t, json.Unmarshal([]byte(prefixed), &block))
+		require.NoError(t, json.Unmarshal(suggestSchemaFile, &suggest))
+
+		delete(block.Defs, "generated")
+
+		for name, def := range block.Defs {
+			if properties, ok := def["properties"].(map[string]any); ok {
+				delete(properties, "generated")
+			}
+
+			require.Equal(t, def, suggest.Defs["block-"+name], name)
+		}
 	})
 
 	for kind, data := range suites {

@@ -1,11 +1,19 @@
-import { type Block, BlockSchema, type ManuscriptContent } from "./content";
+import { type Block, DialogueBlockSchema, type ManuscriptContent, NarrationBlockSchema } from "./content";
 import { type ContextTarget, type GenerationContext, type GenerationRange, TargetMode } from "./generation";
 
 import { z } from "zod";
 
 const NoteSchema = z.string().max(300);
 const BlockHandleSchema = z.string().regex(/^B[0-9]+$/);
-const NewBlocksSchema = z.array(BlockSchema).max(10000);
+// The model writes blocks without the generated mark.
+const NewBlocksSchema = z
+  .array(
+    z.discriminatedUnion("kind", [
+      NarrationBlockSchema.omit({ generated: true }),
+      DialogueBlockSchema.omit({ generated: true }),
+    ])
+  )
+  .max(10000);
 
 /**
  * An edit the model makes to a manuscript target, naming blocks by the handles its call showed: it replaces

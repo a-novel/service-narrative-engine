@@ -235,5 +235,34 @@
       ],
       "text": []
     }
+  },
+  {
+    "name": "Error/GeneratedBlock",
+    "strict": false,
+    "valid": false,
+    "document": {
+      "manuscript": [
+        {
+          "target": "M1",
+          "note": "Shortens the opening.",
+          "edits": [
+            {
+              "op": "replace",
+              "block": "B1",
+              "blocks": [
+                {
+                  "kind": "narration",
+                  "text": "La pluie battait les vitres.",
+                  "generated": {
+                    "model": "gpt-6.1-terra"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "text": []
+    }
   }
 ]

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Block",
-  "description": "One unit of a scene's manuscript text, in reading order: a narration or a line of dialogue.",
+  "description": "One unit of a scene's manuscript text, in reading order: a narration or a line of dialogue. A block without the generated mark is the writer's.",
   "oneOf": [{ "$ref": "#/$defs/narration" }, { "$ref": "#/$defs/dialogue" }],
   "$defs": {
     "narration": {
@@ -15,7 +15,8 @@
           "type": "string",
           "description": "The prose, as plain text. Paragraphs are separated by a blank line.",
           "maxLength": 100000
-        }
+        },
+        "generated": { "$ref": "#/$defs/generated" }
       }
     },
     "dialogue": {
@@ -35,7 +36,8 @@
           "description": "The line in speaking order.",
           "maxItems": 500,
           "items": { "$ref": "#/$defs/part" }
-        }
+        },
+        "generated": { "$ref": "#/$defs/generated" }
       }
     },
     "part": {
@@ -55,6 +57,20 @@
           "properties": { "tone": { "type": "string", "maxLength": 500 } }
         }
       ]
+    },
+    "generated": {
+      "type": "object",
+      "description": "Marks a block a suggestion wrote. The client sets the mark when it applies the suggestion, and keeps it through the writer's edits, splits and merges. The mark is the client's declaration, not proof of where the text came from: the server checks only its shape.",
+      "required": ["model"],
+      "additionalProperties": false,
+      "properties": {
+        "model": {
+          "type": "string",
+          "description": "The model that wrote the block, as the provider names it.",
+          "minLength": 1,
+          "maxLength": 200
+        }
+      }
     }
   }
 }

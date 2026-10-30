@@ -14,7 +14,10 @@
           "blocks": [
             {
               "kind": "narration",
-              "text": "La pluie battait les vitres."
+              "text": "La pluie battait les vitres.",
+              "generated": {
+                "model": "gpt-6.1-terra"
+              }
             },
             {
               "kind": "dialogue",
