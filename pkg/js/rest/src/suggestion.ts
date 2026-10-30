@@ -78,11 +78,11 @@ export type Suggestions = { manuscript: ManuscriptSuggestion[]; text: TextSugges
 /**
  * Maps the output of a suggest call back to the targets of its context, and the blocks it names to their
  * positions. `model` names the model that wrote the output, as the call's result gives it, and each replace and
- * insert carries it to `suggestionApply`. It drops a suggestion for a target the call did not write, and an edit on a block the call did
- * not show inside the target's range, on a kept block, or on a block an earlier edit replaced or deleted. In
- * write mode, the range holds the blocks the model kept and those it wrote, so every other block of the range
- * gets a delete. A suggestion names the content it applies to by its target's `updatedAt`, or `override` for
- * content the request sent.
+ * insert carries it to `suggestionApply`. It drops a suggestion for a target the call did not write, and an edit
+ * on a block the call did not show inside the target's range, on a kept block, or on a block an earlier edit
+ * replaced or deleted. In write mode, the range holds the blocks the model kept and those it wrote, so every other
+ * block of the range gets a delete. A suggestion names the content it applies to by its target's `updatedAt`, or
+ * `override` for content the request sent.
  */
 export function suggestionsMap(context: GenerationContext, output: SuggestOutput, model: string): Suggestions {
   const targets = new Map(context.targets.map((target) => [target.handle, target]));
