@@ -18,9 +18,9 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/models/schemas"
 )
 
-// manuscriptGolden is the export of a French project with narration, dialogue with tones, an empty scene,
-// a beat holding two scenes and a beat holding none. The JS client's tests expect the same document from a
-// running service.
+// manuscriptGolden is the export of a French project with narration, dialogue with tones, a block a
+// suggestion wrote, an empty scene, a beat holding two scenes and a beat holding none. The JS client's
+// tests expect the same document from a running service.
 //
 //go:embed testdata/manuscript.golden.json
 var manuscriptGolden []byte
@@ -57,9 +57,10 @@ func TestRestManuscriptExport(t *testing.T) {
 				`[{"kind":"dialogue","speaker":"Paul","parts":[{"text":"Je suis là, maintenant."}]}]`,
 			)},
 			{Beat: 1, Title: "Interlude", Blocks: json.RawMessage(`[]`)},
-			{Beat: 2, Title: "Le matin", Blocks: json.RawMessage(
-				`[{"kind":"narration","text":"Au matin, la pluie avait cessé.\n\nPaul était parti."}]`,
-			)},
+			{Beat: 2, Title: "Le matin", Blocks: json.RawMessage(`[{
+				"kind":"narration","text":"Au matin, la pluie avait cessé.\n\nPaul était parti.",
+				"generated":{"model":"gpt-6.1-terra"}
+			}]`)},
 		},
 	}
 

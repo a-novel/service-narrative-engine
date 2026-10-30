@@ -89,7 +89,7 @@ describe("ManuscriptSchema", () => {
 });
 
 describe("manuscriptExport", () => {
-  it("exports a French project with narration, dialogue with tones, an empty scene, and beats", async () => {
+  it("exports a French project with narration, dialogue with tones, a generated block, an empty scene, and beats", async () => {
     const manuscript = await manuscriptExport(api, accessToken, {
       projectID: project.id,
       layerID: project.layers[0].id,

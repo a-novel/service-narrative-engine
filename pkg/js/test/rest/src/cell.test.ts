@@ -136,6 +136,12 @@ describe("cellWrite", () => {
     await expectStatus(cellWrite(api, accessToken, request), 400);
   });
 
+  it("returns 400 for a block whose generated mark names no model", async () => {
+    const content = { blocks: [{ kind: "narration" as const, text: "Il pleuvait.", generated: { model: "" } }] };
+    const request = { projectID: project.id, sceneID: scenes[0].id, layerID: project.layers[0].id, content };
+    await expectStatus(cellWrite(api, accessToken, request), 400);
+  });
+
   it("returns 404 for a scene of another project", async () => {
     const request = { projectID: project.id, sceneID: otherScenes[0].id, layerID: notes.id, content: { text: "M" } };
     await expectStatus(cellWrite(api, accessToken, request), 404);

@@ -46,7 +46,8 @@
       "blocks": [
         {
           "kind": "narration",
-          "text": "Au matin, la pluie avait cessé.\n\nPaul était parti."
+          "text": "Au matin, la pluie avait cessé.\n\nPaul était parti.",
+          "generated": { "model": "gpt-6.1-terra" }
         }
       ]
     }
