@@ -43,6 +43,7 @@ func TestRestGenerationGet(t *testing.T) {
 
 			serviceMock: &serviceMock[*core.GenerationResult]{resp: &core.GenerationResult{
 				ID: genaiID, Status: core.GenerationStatusSucceeded, Output: json.RawMessage(suggestOutput),
+				Model: suggestModel,
 			}},
 
 			expectStatus:   http.StatusOK,

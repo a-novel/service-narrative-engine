@@ -268,9 +268,12 @@ func TestRestGenerationSubmit(t *testing.T) {
 	}
 }
 
+// suggestModel names the model that wrote [suggestOutput].
+const suggestModel = "gpt-6.1-terra-2026-09-30"
+
 // jsonResult is the JSON of a succeeded genai generation of [suggestOutput].
 var jsonResult = map[string]any{
-	"id": genaiID.String(), "status": "succeeded", "output": mustDecode(suggestOutput),
+	"id": genaiID.String(), "status": "succeeded", "output": mustDecode(suggestOutput), "model": suggestModel,
 }
 
 // mustDecode decodes JSON, for an expected response body.
