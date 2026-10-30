@@ -190,12 +190,14 @@ export type GenerationSubmitRequest = z.infer<typeof GenerationSubmitRequestSche
 /**
  * One genai generation, which runs one model call. A failed generation says why, and a succeeded one carries
  * the output, which passed the output schema of its kind: parse a suggest output with `SuggestOutputSchema`.
+ * A succeeded one also names the model that wrote the output, which `suggestionsMap` takes.
  */
 export const GenerationResultSchema = z.object({
   id: z.uuid(),
   status: GenerationStatusSchema,
   error: z.string().optional(),
   output: z.record(z.string(), z.unknown()).optional(),
+  model: z.string().optional(),
 });
 
 /** The value {@link GenerationResultSchema} validates. */

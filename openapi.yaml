@@ -2730,6 +2730,12 @@ components:
             - $ref: "./internal/models/schemas/output.suggest.schema.json"
             - $ref: "./internal/models/schemas/output.consolidate.schema.json"
             - $ref: "./internal/models/schemas/output.check.schema.json"
+        model:
+          type: string
+          description: |
+            The model that wrote the output, as the provider names it. Absent unless the generation succeeded. A
+            client marks the blocks it applies from a suggestion with it, in their `generated` mark.
+          examples: [gpt-6.1-terra-2026-09-30]
 
     contextBlock:
       type: object

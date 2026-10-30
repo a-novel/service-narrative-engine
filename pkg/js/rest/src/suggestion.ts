@@ -5,7 +5,7 @@ import { z } from "zod";
 
 const NoteSchema = z.string().max(300);
 const BlockHandleSchema = z.string().regex(/^B[0-9]+$/);
-// The model writes blocks without the generated mark.
+// The model writes blocks without the generated mark, which suggestionApply sets.
 const NewBlocksSchema = z
   .array(
     z.discriminatedUnion("kind", [
@@ -58,11 +58,12 @@ export type SuggestOutput = z.infer<typeof SuggestOutputSchema>;
 
 /**
  * An edit to a manuscript cell, at a block position of the content the call read. An insert goes before
- * the block at its position, or after the last block when its position is the cell's length.
+ * the block at its position, or after the last block when its position is the cell's length. A replace or an
+ * insert names the model of the call that wrote its blocks.
  */
 export type BlockEdit =
-  | { op: "replace"; position: number; blocks: Block[] }
-  | { op: "insert"; position: number; blocks: Block[] }
+  | { op: "replace"; position: number; blocks: Block[]; model: string }
+  | { op: "insert"; position: number; blocks: Block[]; model: string }
   | { op: "delete"; position: number };
 
 /** The new text of a text target, a scene's title or description or a notes cell, with a note for the author. */
@@ -76,19 +77,20 @@ export type Suggestions = { manuscript: ManuscriptSuggestion[]; text: TextSugges
 
 /**
  * Maps the output of a suggest call back to the targets of its context, and the blocks it names to their
- * positions. It drops a suggestion for a target the call did not write, and an edit on a block the call did
- * not show inside the target's range, on a kept block, or on a block an earlier edit replaced or deleted. In
- * write mode, the range holds the blocks the model kept and those it wrote, so every other block of the range
- * gets a delete. A suggestion names the content it applies to by its target's `updatedAt`, or `override` for
- * content the request sent.
+ * positions. `model` names the model that wrote the output, as the call's result gives it, and each replace and
+ * insert carries it to `suggestionApply`. It drops a suggestion for a target the call did not write, and an edit
+ * on a block the call did not show inside the target's range, on a kept block, or on a block an earlier edit
+ * replaced or deleted. In write mode, the range holds the blocks the model kept and those it wrote, so every other
+ * block of the range gets a delete. A suggestion names the content it applies to by its target's `updatedAt`, or
+ * `override` for content the request sent.
  */
-export function suggestionsMap(context: GenerationContext, output: SuggestOutput): Suggestions {
+export function suggestionsMap(context: GenerationContext, output: SuggestOutput, model: string): Suggestions {
   const targets = new Map(context.targets.map((target) => [target.handle, target]));
 
   return {
     manuscript: output.manuscript.flatMap(({ target: handle, note, edits }) => {
       const target = targets.get(handle);
-      return target?.range ? [{ target, note, edits: blockEdits(target, target.range, edits) }] : [];
+      return target?.range ? [{ target, note, edits: blockEdits(target, target.range, edits, model) }] : [];
     }),
     text: output.text.flatMap(({ target: handle, note, text }) => {
       const target = targets.get(handle);
@@ -98,7 +100,7 @@ export function suggestionsMap(context: GenerationContext, output: SuggestOutput
 }
 
 /** Maps the edits of a manuscript target to the positions of the blocks they name. */
-function blockEdits(target: ContextTarget, range: GenerationRange, edits: SuggestEdit[]): BlockEdit[] {
+function blockEdits(target: ContextTarget, range: GenerationRange, edits: SuggestEdit[], model: string): BlockEdit[] {
   const positions = new Map(target.blocks?.map((block) => [block.handle, block.position]));
   const kept = new Set(target.kept);
   const taken = new Set<number>();
@@ -107,7 +109,7 @@ function blockEdits(target: ContextTarget, range: GenerationRange, edits: Sugges
   for (const edit of edits) {
     if (edit.op === "insert_after") {
       const after = edit.block === null ? range.start - 1 : positions.get(edit.block);
-      if (after !== undefined) mapped.push({ op: "insert", position: after + 1, blocks: edit.blocks });
+      if (after !== undefined) mapped.push({ op: "insert", position: after + 1, blocks: edit.blocks, model });
       continue;
     }
 
@@ -115,7 +117,9 @@ function blockEdits(target: ContextTarget, range: GenerationRange, edits: Sugges
     if (position === undefined || kept.has(position) || taken.has(position)) continue;
 
     taken.add(position);
-    mapped.push(edit.op === "replace" ? { op: "replace", position, blocks: edit.blocks } : { op: "delete", position });
+    mapped.push(
+      edit.op === "replace" ? { op: "replace", position, blocks: edit.blocks, model } : { op: "delete", position }
+    );
   }
 
   if (target.mode === TargetMode.Write) {
@@ -131,7 +135,8 @@ function blockEdits(target: ContextTarget, range: GenerationRange, edits: Sugges
  * Applies edits to the content of a manuscript cell, and returns the new content to write. Pass some of a
  * suggestion's edits to apply only those. Positions count in the whole cell, so the edits of every call that
  * wrote a cell apply together. Inserts at one position keep their order, and an edit past the end of the
- * content, as after the cell shrank, is dropped.
+ * content, as after the cell shrank, is dropped. Every block it inserts or replaces carries the generated mark,
+ * with the model of its edit.
  */
 export function suggestionApply(content: ManuscriptContent, edits: BlockEdit[]): ManuscriptContent {
   const inserted = new Map<number, Block[]>();
@@ -139,12 +144,12 @@ export function suggestionApply(content: ManuscriptContent, edits: BlockEdit[]):
 
   for (const edit of edits) {
     if (edit.op !== "insert") {
-      changed.set(edit.position, edit.op === "replace" ? edit.blocks : []);
+      changed.set(edit.position, edit.op === "replace" ? markedBlocks(edit) : []);
       continue;
     }
 
     const blocks = inserted.get(edit.position) ?? [];
-    blocks.push(...edit.blocks);
+    blocks.push(...markedBlocks(edit));
     inserted.set(edit.position, blocks);
   }
 
@@ -155,4 +160,9 @@ export function suggestionApply(content: ManuscriptContent, edits: BlockEdit[]):
   }
 
   return { blocks };
+}
+
+/** Returns the blocks of a replace or an insert, each marked with the model of the call that wrote it. */
+function markedBlocks({ blocks, model }: Extract<BlockEdit, { model: string }>): Block[] {
+  return blocks.map((block) => ({ ...block, generated: { model } }));
 }

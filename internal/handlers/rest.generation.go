@@ -39,6 +39,8 @@ type RestGenerationResult struct {
 	Error string `json:"error,omitempty"`
 	// Output is the model's output, which passed the output schema of its kind, once it succeeded.
 	Output json.RawMessage `json:"output,omitempty"`
+	// Model names the model that wrote the output, as the provider names it, once it succeeded.
+	Model string `json:"model,omitempty"`
 }
 
 // RestGenerationContext is what one call reads: its targets with their handles, and the scenes and
@@ -134,7 +136,9 @@ func loadGenerationResult(result *core.GenerationResult) *RestGenerationResult {
 		return nil
 	}
 
-	return &RestGenerationResult{ID: result.ID, Status: result.Status, Error: result.Error, Output: result.Output}
+	return &RestGenerationResult{
+		ID: result.ID, Status: result.Status, Error: result.Error, Output: result.Output, Model: result.Model,
+	}
 }
 
 // loadGenerationContext keeps the scenes the call shows, and leaves out those it omits.
