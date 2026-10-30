@@ -86,6 +86,9 @@ var (
 	ServiceJsonKeysHost = config.LoadEnv(getEnv("SERVICE_JSON_KEYS_HOST"), ServiceJsonKeysHostDefault, config.StringParser)
 	// ServiceJsonKeysPort is the gRPC port of the JSON Keys service.
 	ServiceJsonKeysPort = config.LoadEnv(getEnv("SERVICE_JSON_KEYS_PORT"), ServiceJsonKeysPortDefault, config.IntParser)
+	// ServiceJsonKeysTokenPath is the file the kubelet projects this service's token for JSON Keys into.
+	// When set, the JSON Keys connection sends that token with every call.
+	ServiceJsonKeysTokenPath = getEnv("SERVICE_JSON_KEYS_TOKEN_PATH")
 
 	// ServiceGenaiHost is the hostname of the genai service, without scheme or port. Empty leaves genai
 	// unconfigured, and the generation routes answer 503.
@@ -111,8 +114,18 @@ var (
 		getEnv("REST_MAX_ITEM_REQUEST_SIZE"), RestMaxItemRequestSizeDefault, config.Int64Parser,
 	)
 
-	// GcloudProjectID is the Google Cloud project the service runs in. When set, the JSON Keys
-	// connection authenticates with Google ID tokens.
+	// ServiceTokenIssuer is the issuer of the service tokens the REST server accepts, as a token's "iss"
+	// claim names it. When empty, the server takes every request without a service token.
+	ServiceTokenIssuer = getEnv("SERVICE_TOKEN_ISSUER")
+	// ServiceTokenAudience is the audience the REST server answers to. Each caller requests its token
+	// for it.
+	ServiceTokenAudience = getEnv("SERVICE_TOKEN_AUDIENCE")
+	// ServiceTokenCallers are the service accounts allowed to call, as a comma-separated list of
+	// system:serviceaccount:<namespace>:<name>.
+	ServiceTokenCallers = config.LoadEnv(getEnv("SERVICE_TOKEN_CALLERS"), nil, config.SliceParser(config.StringParser))
+
+	// GcloudProjectID is the Google Cloud project the service runs in. When set, the JSON Keys and
+	// genai connections without a token path authenticate with Google ID tokens.
 	GcloudProjectID = getEnv("GCLOUD_PROJECT_ID")
 
 	// OTLPEndpoint is the standard OTEL_EXPORTER_OTLP_ENDPOINT. When set, traces and logs export

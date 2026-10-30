@@ -226,6 +226,9 @@ func main() {
 	// =================================================================================================================
 
 	router := httpf.NewRouter(cfg.Rest, cfg.Otel, cfg.RestLogger, cfg.App.DowntimeStart)
+	withServiceToken := handlers.RestServiceToken(
+		cfg.ServiceToken, httpf.NewPoolClient(httpf.PoolOptions{}), cfg.Logger, cfg.Rest.Liveness,
+	)
 
 	router.Route("/v1", func(api chi.Router) {
 		// The router's body limit fits a batch; a route that writes one item caps its body lower.
@@ -288,7 +291,7 @@ func main() {
 
 	log.Println("Starting REST server on :" + strconv.Itoa(cfg.Rest.Port))
 
-	lo.Must0(httpf.ListenAndServe(ctx, cfg.Rest, router))
+	lo.Must0(httpf.ListenAndServe(ctx, cfg.Rest, withServiceToken(router)))
 }
 
 func closeDatabase(database io.Closer) {

@@ -11,6 +11,7 @@ import (
 	loggingpresets "github.com/a-novel-kit/golib/logging/presets"
 	"github.com/a-novel-kit/golib/otel"
 	otelpresets "github.com/a-novel-kit/golib/otel/presets"
+	"github.com/a-novel-kit/golib/servicetoken"
 
 	"github.com/a-novel/service-narrative-engine/internal/config/env"
 )
@@ -49,19 +50,20 @@ var AppPresetDefault = App{
 		DowntimeStart: env.DowntimeStart,
 	},
 	Dependencies: Dependencies{
-		ServiceJsonKeysHost: env.ServiceJsonKeysHost,
-		ServiceJsonKeysPort: env.ServiceJsonKeysPort,
-		ServiceJsonKeysCredentials: lo.Ternary[grpcf.CredentialsProvider](
-			env.GcloudProjectID == "",
-			&grpcf.LocalCredentialsProvider{},
-			&grpcf.GcloudCredentialsProvider{Host: env.ServiceJsonKeysHost},
-		),
-		ServiceGenaiHost:        env.ServiceGenaiHost,
-		ServiceGenaiPort:        env.ServiceGenaiPort,
-		ServiceGenaiCredentials: newGenaiCredentials(),
+		ServiceJsonKeysHost:        env.ServiceJsonKeysHost,
+		ServiceJsonKeysPort:        env.ServiceJsonKeysPort,
+		ServiceJsonKeysCredentials: newCredentials(env.ServiceJsonKeysTokenPath, env.ServiceJsonKeysHost),
+		ServiceGenaiHost:           env.ServiceGenaiHost,
+		ServiceGenaiPort:           env.ServiceGenaiPort,
+		ServiceGenaiCredentials:    newCredentials(env.ServiceGenaiTokenPath, env.ServiceGenaiHost),
 	},
 	Permissions: PermissionsConfigDefault,
 	Rest:        env.Rest,
+	ServiceToken: servicetoken.Config{
+		Issuer:   env.ServiceTokenIssuer,
+		Audience: env.ServiceTokenAudience,
+		Callers:  env.ServiceTokenCallers,
+	},
 	Limits:      Limits{ItemMaxRequestSize: env.RestMaxItemRequestSize},
 	Generations: GenerationsConfigDefault,
 
@@ -74,15 +76,15 @@ var AppPresetDefault = App{
 	Postgres: PostgresPresetDefault,
 }
 
-// newGenaiCredentials authenticates the genai connection with the service token at
-// SERVICE_GENAI_TOKEN_PATH. Without one, it sends a Google ID token when the service runs on Google Cloud,
-// and nothing otherwise.
-func newGenaiCredentials() grpcf.CredentialsProvider {
+// newCredentials authenticates the connection to the service at host with the service token at
+// tokenPath. Each callee has its own audience, so each gets its own token. Without one, it sends a
+// Google ID token when the service runs on Google Cloud, and nothing otherwise.
+func newCredentials(tokenPath, host string) grpcf.CredentialsProvider {
 	switch {
-	case env.ServiceGenaiTokenPath != "":
-		return &grpcf.ServiceTokenCredentialsProvider{ServiceTokenPath: env.ServiceGenaiTokenPath}
+	case tokenPath != "":
+		return &grpcf.ServiceTokenCredentialsProvider{ServiceTokenPath: tokenPath}
 	case env.GcloudProjectID != "":
-		return &grpcf.GcloudCredentialsProvider{Host: env.ServiceGenaiHost}
+		return &grpcf.GcloudCredentialsProvider{Host: host}
 	default:
 		return &grpcf.LocalCredentialsProvider{}
 	}

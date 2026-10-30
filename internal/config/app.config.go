@@ -11,6 +11,7 @@ import (
 	"github.com/a-novel-kit/golib/otel"
 	"github.com/a-novel-kit/golib/postgres"
 	"github.com/a-novel-kit/golib/sentryf"
+	"github.com/a-novel-kit/golib/servicetoken"
 )
 
 // Main holds the top-level application settings.
@@ -57,6 +58,9 @@ type App struct {
 	Permissions serviceauthentication.Permissions `json:"permissions" yaml:"permissions"`
 	// Rest configures the REST server.
 	Rest httpf.ServerConfig `json:"rest" yaml:"rest"`
+	// ServiceToken names the service tokens the REST server accepts. Without an issuer, it takes every
+	// request without one.
+	ServiceToken servicetoken.Config `json:"serviceToken" yaml:"serviceToken"`
 	// Limits bounds what one request carries, below the REST server's own limits.
 	Limits Limits `json:"limits" yaml:"limits"`
 	// Generations configures the model calls of generations.

@@ -1,6 +1,6 @@
 // Command app installs the Sentry reporter of the default preset, as the servers do, then prints its
-// REST read timeout. TestAppPresetDefault runs it once per environment, since the preset resolves at
-// package initialization.
+// REST read timeout and the credentials of its JSON Keys and genai connections. TestAppPresetDefault
+// runs it once per environment, since the preset resolves at package initialization.
 package main
 
 import (
@@ -14,6 +14,11 @@ import (
 )
 
 func main() {
-	lo.Must0(sentryf.Init(config.AppPresetDefault.Sentry))
-	fmt.Println(config.AppPresetDefault.Rest.Timeouts.Read)
+	cfg := config.AppPresetDefault
+
+	lo.Must0(sentryf.Init(cfg.Sentry))
+	fmt.Printf(
+		"%v %#v %#v\n",
+		cfg.Rest.Timeouts.Read, cfg.Dependencies.ServiceJsonKeysCredentials, cfg.Dependencies.ServiceGenaiCredentials,
+	)
 }
