@@ -44,7 +44,63 @@
       "type": "array",
       "description": "New blocks, in reading order.",
       "maxItems": 10000,
-      "items": { "$ref": "block.schema.json" }
+      "items": { "$ref": "#/$defs/block" }
+    },
+    "block": {
+      "description": "One unit of a scene's manuscript text, in reading order: a narration or a line of dialogue.",
+      "oneOf": [{ "$ref": "#/$defs/block-narration" }, { "$ref": "#/$defs/block-dialogue" }]
+    },
+    "block-narration": {
+      "type": "object",
+      "description": "Prose the narrator tells: action, description, a character's thoughts. It follows the manuscript's language, voice and tense.",
+      "required": ["kind", "text"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "const": "narration" },
+        "text": {
+          "type": "string",
+          "description": "The prose, as plain text. Paragraphs are separated by a blank line.",
+          "maxLength": 100000
+        }
+      }
+    },
+    "block-dialogue": {
+      "type": "object",
+      "description": "One character's spoken line: the words spoken, with tone cues where the delivery changes.",
+      "required": ["kind", "speaker", "parts"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "const": "dialogue" },
+        "speaker": {
+          "type": "string",
+          "description": "The character who speaks, by the name the story gives them.",
+          "maxLength": 200
+        },
+        "parts": {
+          "type": "array",
+          "description": "The line in speaking order.",
+          "maxItems": 500,
+          "items": { "$ref": "#/$defs/block-part" }
+        }
+      }
+    },
+    "block-part": {
+      "oneOf": [
+        {
+          "type": "object",
+          "description": "Words the speaker says, without quotation marks.",
+          "required": ["text"],
+          "additionalProperties": false,
+          "properties": { "text": { "type": "string", "maxLength": 20000 } }
+        },
+        {
+          "type": "object",
+          "description": "How the speaker says the words that follow, such as \"whispering\" or \"with a bitter laugh\".",
+          "required": ["tone"],
+          "additionalProperties": false,
+          "properties": { "tone": { "type": "string", "maxLength": 500 } }
+        }
+      ]
     },
     "text": {
       "type": "object",

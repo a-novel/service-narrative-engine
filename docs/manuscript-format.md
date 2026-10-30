@@ -30,6 +30,14 @@ A scene's blocks come in reading order. [`block.schema.json`](../internal/models
 
 Blocks carry no ID. An appendix names a block by the position of its scene and its own position in that scene, both from 0.
 
+## Generated blocks
+
+A block a suggestion wrote carries `generated`, whose `model` names the model that wrote it, as the provider names it. A block without `generated` is the writer's. Only blocks carry the mark: titles and descriptions carry none.
+
+The client sets the mark when it applies a suggestion. The mark stays when the writer edits the block, splits it, or merges it with another, since disclosure rules count AI text the writer edited as AI text.
+
+The mark is the client's declaration, not proof of where the text came from. The server checks only its shape, and a writer can retype any text.
+
 ## Reader rules
 
 - A reader checks `format` and `formatVersion` first, and refuses a document it does not know. A change that a reader of version 1 cannot read raises the version.
@@ -49,7 +57,11 @@ Blocks carry no ID. An appendix names a block by the position of its scene and i
       "beat": 0,
       "title": "La fenêtre",
       "blocks": [
-        { "kind": "narration", "text": "La pluie battait les vitres." },
+        {
+          "kind": "narration",
+          "text": "La pluie battait les vitres.",
+          "generated": { "model": "gpt-6.1-terra" }
+        },
         {
           "kind": "dialogue",
           "speaker": "Marie",

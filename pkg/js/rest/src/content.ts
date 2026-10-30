@@ -1,9 +1,20 @@
 import { z } from "zod";
 
+/**
+ * Marks a block a suggestion wrote, with the model that wrote it. A block without the mark is the writer's. An editor
+ * keeps the mark through the writer's edits, splits and merges. The mark is the client's declaration, not proof of
+ * where the text came from: the server checks only its shape.
+ */
+export const GeneratedMarkSchema = z.strictObject({ model: z.string().min(1).max(200) });
+
+/** The value {@link GeneratedMarkSchema} validates. */
+export type GeneratedMark = z.infer<typeof GeneratedMarkSchema>;
+
 /** Plain manuscript prose: action, description or exposition. */
 export const NarrationBlockSchema = z.strictObject({
   kind: z.literal("narration"),
   text: z.string().max(100000),
+  generated: GeneratedMarkSchema.optional(),
 });
 
 /** The value {@link NarrationBlockSchema} validates. */
@@ -23,6 +34,7 @@ export const DialogueBlockSchema = z.strictObject({
   kind: z.literal("dialogue"),
   speaker: z.string().max(200),
   parts: z.array(DialoguePartSchema).max(500),
+  generated: GeneratedMarkSchema.optional(),
 });
 
 /** The value {@link DialogueBlockSchema} validates. */
