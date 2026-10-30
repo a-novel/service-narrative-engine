@@ -27,10 +27,13 @@ info:
 
     ## Generations
 
-    A generation asks a model for suggestions on a project. The service builds each model call from the
-    project, submits it to the genai service as the signed-in user, and reads it back. genai owns every
-    generation: its state, its output and its retries. A generation that outgrows one call runs as several,
-    and the client resends the request as calls settle, until each has run.
+    A generation asks a model about a project: to suggest text, to recap a cell or a beat, or to check
+    the scenes' coherence. The service builds each model call from the project, submits it to the genai
+    service as the signed-in user, and reads it back. genai owns every generation: its state, its output
+    and its retries. A generation that outgrows one call runs as several, and the client resends the
+    request as calls settle, until each has run. The client keeps what a call returns: it applies
+    suggestions through cell writes, stores recaps through the recap writes, and verifies a check's
+    findings against the scenes it holds.
 
   version: v0.0.0
   license:
@@ -56,7 +59,7 @@ tags:
   - name: manuscript
     description: The text of a manuscript layer, exported for renderers.
   - name: generation
-    description: Model calls that suggest text for a project, run through genai.
+    description: Model calls that suggest text for a project, recap its cells and beats, or check its coherence, run through genai.
 
 paths:
   /v1/ping:
@@ -353,6 +356,43 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/plannedDowntime"
+        default:
+          $ref: "#/components/responses/internalError"
+
+  /v1/beat/recap:
+    put:
+      operationId: beatRecapWrite
+      summary: Write the recap of a beat.
+      description: |
+        Stores the recap a consolidation wrote for a beat of the caller's project, stamped with the beat's
+        updatedAt and the sources the consolidation's context reported. Writing the recap leaves the beat's
+        updatedAt unchanged, and the recap is fresh while the beat, its scenes and their manuscript cells
+        hold the versions it read. A recap that read the beat at a version older than the stored recap's, or
+        newer than the beat's own, writes nothing and answers 409.
+      tags: [beat]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/beatRecapWriteRequest"
+      responses:
+        "204":
+          $ref: "#/components/responses/recapWritten"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "409":
+          $ref: "#/components/responses/recapConflict"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -1030,6 +1070,43 @@ paths:
         default:
           $ref: "#/components/responses/internalError"
 
+  /v1/cell/recap:
+    put:
+      operationId: cellRecapWrite
+      summary: Write the recap of a cell.
+      description: |
+        Stores the recap a consolidation wrote for a cell of the caller's project, stamped with the cell's
+        updatedAt the consolidation's context reported. Writing the recap leaves the cell's updatedAt
+        unchanged, and the recap is fresh while the two match. A recap that read the cell at a version older
+        than the stored recap's, or newer than the cell's own, writes nothing and answers 409. The recap
+        follows the consolidate output schema, and the body weighs at most 4 MiB.
+      tags: [cell]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/cellRecapWriteRequest"
+      responses:
+        "204":
+          $ref: "#/components/responses/recapWritten"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "409":
+          $ref: "#/components/responses/recapConflict"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/plannedDowntime"
+        default:
+          $ref: "#/components/responses/internalError"
+
   /v1/cells:
     get:
       operationId: cellList
@@ -1135,7 +1212,7 @@ paths:
       operationId: generationSubmit
       summary: Submit a generation.
       description: |
-        Plans a suggest generation on a project of the caller and submits each of its model calls to genai,
+        Plans a generation of a kind on a project of the caller and submits each of its model calls to genai,
         as the caller, then returns every call with its context. A call genai admits returns its genai
         generation; a call genai refuses for a cap, such as its concurrency or a token window, waits, and
         so do the calls after it. A caller with the uncapped permission runs on genai's admin tier.
@@ -1447,8 +1524,8 @@ components:
 
     notFound:
       description: |
-        The caller owns no such project, the project holds no such beat, scene or layer, or genai holds no
-        such generation for the caller.
+        The caller owns no such project, the project holds no such beat, scene, layer or cell, or genai holds
+        no such generation for the caller.
 
     projectFull:
       description: |
@@ -1473,6 +1550,14 @@ components:
         The generation outgrows every call its kind allows: the parts that always enter pass its long limit,
         or a single text or block would rewrite past the output cap. A narrower range, fewer targets or
         excluded layers fit.
+
+    recapWritten:
+      description: The recap is stored.
+
+    recapConflict:
+      description: |
+        The recap read its source at a version older than the stored recap's, or newer than the source's own,
+        and nothing was written.
 
     generationQuota:
       description: |
@@ -1683,6 +1768,21 @@ components:
           description: When the beat was last written.
           format: date-time
           examples: ["2021-01-02T00:00:00Z"]
+        recap:
+          $ref: "#/components/schemas/recap"
+        recapBeatUpdatedAt:
+          type: string
+          description: The beat's updatedAt the recap read. Absent without a recap.
+          format: date-time
+          examples: ["2021-01-02T00:00:00Z"]
+        recapSources:
+          type: array
+          description: |
+            For each scene of the beat in order, the manuscript cell the recap read. The recap is fresh while
+            the beat, its scenes and those cells hold the versions it read. Absent without a recap.
+          maxItems: 10
+          items:
+            $ref: "#/components/schemas/beatRecapSource"
 
     scene:
       type: object
@@ -1779,6 +1879,33 @@ components:
         updatedAt:
           type: string
           description: When the cell was last written.
+          format: date-time
+          examples: ["2021-01-02T00:00:00Z"]
+        recap:
+          $ref: "#/components/schemas/recap"
+        recapCellUpdatedAt:
+          type: string
+          description: The cell's updatedAt the recap read. The recap is fresh while it equals updatedAt.
+          format: date-time
+          examples: ["2021-01-02T00:00:00Z"]
+
+    recap:
+      description: |
+        The latest recap of a cell or a beat, as a consolidation wrote it, at three levels of detail. Absent
+        until a recap is written.
+      $ref: "./internal/models/schemas/output.consolidate.schema.json"
+
+    beatRecapSource:
+      type: object
+      description: One scene a beat's recap read, with the updatedAt of its manuscript cell.
+      required: [sceneID, cellUpdatedAt]
+      additionalProperties: false
+      properties:
+        sceneID:
+          $ref: "#/components/schemas/sceneID"
+        cellUpdatedAt:
+          type: [string, "null"]
+          description: The updatedAt of the scene's manuscript cell the recap read, or null for a scene without one.
           format: date-time
           examples: ["2021-01-02T00:00:00Z"]
 
@@ -2357,6 +2484,52 @@ components:
         content:
           $ref: "#/components/schemas/cellContent"
 
+    cellRecapWriteRequest:
+      type: object
+      description: The recap a consolidation wrote for a cell, with the version of the cell it read.
+      required: [projectID, sceneID, layerID, recap, cellUpdatedAt]
+      additionalProperties: false
+      properties:
+        projectID:
+          $ref: "#/components/schemas/projectID"
+        sceneID:
+          $ref: "#/components/schemas/sceneID"
+        layerID:
+          $ref: "#/components/schemas/layerID"
+        recap:
+          description: The output of the consolidation.
+          $ref: "./internal/models/schemas/output.consolidate.schema.json"
+        cellUpdatedAt:
+          type: string
+          description: The cell's updatedAt the consolidation read, exactly as its context's target reported it.
+          format: date-time
+          examples: ["2021-01-02T00:00:00.123456Z"]
+
+    beatRecapWriteRequest:
+      type: object
+      description: The recap a consolidation wrote for a beat, with the versions of the beat and its scenes it read.
+      required: [projectID, beatID, recap, beatUpdatedAt, sources]
+      additionalProperties: false
+      properties:
+        projectID:
+          $ref: "#/components/schemas/projectID"
+        beatID:
+          $ref: "#/components/schemas/beatID"
+        recap:
+          description: The output of the consolidation.
+          $ref: "./internal/models/schemas/output.consolidate.schema.json"
+        beatUpdatedAt:
+          type: string
+          description: The beat's updatedAt the consolidation read, exactly as its context's target reported it.
+          format: date-time
+          examples: ["2021-01-02T00:00:00.123456Z"]
+        sources:
+          type: array
+          description: The sources of the context's target, unchanged.
+          maxItems: 10
+          items:
+            $ref: "#/components/schemas/beatRecapSource"
+
     generationID:
       type: string
       description: The unique identifier of a genai generation, which runs one model call.
@@ -2472,17 +2645,43 @@ components:
           items:
             $ref: "#/components/schemas/cellOverride"
 
+    generationCell:
+      type: object
+      description: The cell a consolidate generation recaps.
+      required: [sceneID, layerID]
+      additionalProperties: false
+      properties:
+        sceneID:
+          $ref: "#/components/schemas/sceneID"
+        layerID:
+          $ref: "#/components/schemas/layerID"
+
     generationSubmitRequest:
       type: object
-      description: A suggest generation on a project of the caller.
-      required: [projectID, targets]
+      description: |
+        A generation on a project of the caller. A suggest generation takes targets. A consolidate generation
+        takes a cell or a beat, reads stored content only, and takes no instruction, exclusion or override. A
+        check generation takes an optional range of scenes.
+      required: [projectID, kind]
       additionalProperties: false
       properties:
         projectID:
           $ref: "#/components/schemas/projectID"
+        kind:
+          type: string
+          description: The kind of the generation.
+          enum: [suggest, consolidate, check]
+          examples: [suggest]
+        cell:
+          $ref: "#/components/schemas/generationCell"
+        beatID:
+          $ref: "#/components/schemas/beatID"
+        scenes:
+          $ref: "#/components/schemas/generationRange"
+          description: The scene positions a check generation checks, in narrative order. Absent, every scene.
         targets:
           type: array
-          description: What the generation writes, from 1 to 20, each once.
+          description: What a suggest generation writes, from 1 to 20, each once.
           minItems: 1
           maxItems: 20
           items:
@@ -2553,8 +2752,9 @@ components:
       type: object
       description: |
         One target of a call, with the handles the model names it and its blocks by. A suggestion maps back to
-        the target through its handle, and an edit to a block position through the block's handle.
-      required: [handle, sceneID, layerID, mode, override, updatedAt]
+        the target through its handle, and an edit to a block position through the block's handle. A
+        consolidation's target is the cell or the beat it recaps, and a check has none.
+      required: [handle, sceneID, layerID, beatID, override, updatedAt]
       additionalProperties: false
       properties:
         handle:
@@ -2563,20 +2763,28 @@ components:
           pattern: "^[TM][0-9]+$"
           examples: [M1]
         sceneID:
-          $ref: "#/components/schemas/sceneID"
+          description: The scene of the target, or null for a beat.
+          oneOf:
+            - $ref: "#/components/schemas/sceneID"
+            - type: "null"
         layerID:
-          description: The layer of the target's cell, or null for a scene field.
+          description: The layer of the target's cell, or null for a scene field or a beat.
           oneOf:
             - $ref: "#/components/schemas/layerID"
             - type: "null"
+        beatID:
+          description: The beat a consolidation recaps, or null for any other target.
+          oneOf:
+            - $ref: "#/components/schemas/beatID"
+            - type: "null"
         field:
           type: string
-          description: The target's scene field. Absent for a cell.
+          description: The target's scene field. Absent for a cell or a beat.
           enum: [title, description]
           examples: [title]
         mode:
           type: string
-          description: How the call writes the target.
+          description: How a suggest call writes the target. Absent for a recap.
           enum: [write, revise]
           examples: [revise]
         range:
@@ -2600,9 +2808,19 @@ components:
           examples: [false]
         updatedAt:
           type: [string, "null"]
-          description: When the target's stored content was written, or null for an override or a cell never written.
+          description: |
+            When the target's stored content was written, or null for an override or a cell never written. A
+            recap write sends it back exactly, to the microsecond, as the version the recap read.
           format: date-time
-          examples: ["2021-01-02T00:00:00Z"]
+          examples: ["2021-01-02T00:00:00.123456Z"]
+        sources:
+          type: array
+          description: |
+            For each scene of the beat a consolidation recaps in order, the manuscript cell it reads. A beat
+            recap write sends them back unchanged. Absent for any other target.
+          maxItems: 10
+          items:
+            $ref: "#/components/schemas/beatRecapSource"
 
     contextScene:
       type: object
@@ -2691,7 +2909,8 @@ components:
         kind:
           type: string
           description: The kind of the generation.
-          const: suggest
+          enum: [suggest, consolidate, check]
+          examples: [suggest]
         calls:
           type: array
           description: The model calls of the generation, in order.

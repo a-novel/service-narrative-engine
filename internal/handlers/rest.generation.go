@@ -59,14 +59,17 @@ type RestGenerationContext struct {
 type RestContextTarget struct {
 	Handle string `json:"handle"`
 
-	SceneID uuid.UUID `json:"sceneID"`
-	// LayerID names the target's cell. It is null for a scene field.
+	// SceneID names the target's scene. It is null for a beat.
+	SceneID *uuid.UUID `json:"sceneID"`
+	// LayerID names the target's cell. It is null for a scene field or a beat.
 	LayerID *uuid.UUID `json:"layerID"`
-	// Field names the target's scene field. It is empty for a cell.
+	// BeatID names the beat a consolidation recaps. It is null for any other target.
+	BeatID *uuid.UUID `json:"beatID"`
+	// Field names the target's scene field. It is empty for a cell or a beat.
 	Field string `json:"field,omitempty"`
 
-	// Mode is how the call writes the target: write or revise.
-	Mode string `json:"mode"`
+	// Mode is how a suggest call writes the target: write or revise. It is empty for a recap.
+	Mode string `json:"mode,omitempty"`
 	// Range is the span of a manuscript target's blocks the call may change.
 	Range *RestRange `json:"range,omitempty"`
 	// Kept lists the positions of the blocks in the range that stay unchanged.
@@ -77,8 +80,11 @@ type RestContextTarget struct {
 	// Override marks a target whose current content came from the request.
 	Override bool `json:"override"`
 	// UpdatedAt is when the target's stored content was written. It is null for an override, and for a
-	// cell never written.
+	// cell never written. A recap write sends it back as the version the recap read.
 	UpdatedAt *time.Time `json:"updatedAt"`
+	// Sources lists, for each scene of the beat a consolidation recaps in order, the manuscript cell it
+	// reads. A beat recap write sends them back.
+	Sources []*BeatRecapSource `json:"sources,omitempty"`
 }
 
 // RestContextBlock is a block a target shows the model under a handle.
@@ -150,17 +156,23 @@ func loadGenerationContext(call *core.ContextCall) *RestGenerationContext {
 	}
 }
 
+// optionalID returns nil for an empty ID.
+func optionalID(id uuid.UUID) *uuid.UUID {
+	if id == uuid.Nil {
+		return nil
+	}
+
+	return &id
+}
+
 func loadContextTarget(target *core.ContextTarget) *RestContextTarget {
 	loaded := &RestContextTarget{
-		Handle: target.Handle, SceneID: target.SceneID, Field: target.Field, Mode: target.Mode,
-		Kept: target.Kept, Override: target.Override,
+		Handle: target.Handle, SceneID: optionalID(target.SceneID), LayerID: optionalID(target.LayerID),
+		BeatID: optionalID(target.BeatID), Field: target.Field, Mode: target.Mode,
+		Kept: target.Kept, Override: target.Override, Sources: loadBeatRecapSources(target.Sources),
 		Blocks: lo.Map(target.Blocks, func(block *core.ContextBlock, _ int) *RestContextBlock {
 			return &RestContextBlock{Handle: block.Handle, Position: block.Position}
 		}),
-	}
-
-	if target.LayerID != uuid.Nil {
-		loaded.LayerID = &target.LayerID
 	}
 
 	if target.Range != nil {

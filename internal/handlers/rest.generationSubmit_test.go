@@ -44,6 +44,7 @@ func TestRestGenerationSubmit(t *testing.T) {
 
 		return newRequest(t, http.MethodPost, "/v1/generation", map[string]any{
 			"projectID":   projectID,
+			"kind":        "suggest",
 			"targets":     []any{map[string]any{"sceneID": sceneID, "field": "title", "mode": "revise"}},
 			"instruction": "Plus court.",
 			"variant":     1,
@@ -70,7 +71,7 @@ func TestRestGenerationSubmit(t *testing.T) {
 
 	jsonContext := map[string]any{
 		"targets": []any{map[string]any{
-			"handle": "M1", "sceneID": sceneID.String(), "layerID": layerID.String(), "mode": "revise",
+			"handle": "M1", "sceneID": sceneID.String(), "layerID": layerID.String(), "beatID": nil, "mode": "revise",
 			"range": map[string]any{"start": 0.0, "end": 2.0}, "kept": []any{1.0},
 			"blocks": []any{
 				map[string]any{"handle": "B1", "position": 0.0}, map[string]any{"handle": "B2", "position": 1.0},
@@ -247,6 +248,7 @@ func TestRestGenerationSubmit(t *testing.T) {
 						OwnerID:   ownerID,
 						ProjectID: projectID,
 						Admin:     testCase.admin,
+						Kind:      core.GenerationKindSuggest,
 						Targets: []*core.GenerationTarget{
 							{SceneID: sceneID, Field: core.SceneFieldTitle, Mode: core.TargetModeRevise},
 						},

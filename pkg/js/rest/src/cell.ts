@@ -1,5 +1,6 @@
 import type { NarrativeEngineApi } from "./api";
 import { ManuscriptContentSchema, NotesContentSchema } from "./content";
+import { RecapSchema } from "./recap";
 
 import { HTTP_HEADERS } from "@a-novel-kit/nodelib-browser/http";
 
@@ -8,7 +9,8 @@ import { z } from "zod";
 /**
  * What one layer says about one scene. The content follows the schema of the layer's kind: parse it
  * with {@link ManuscriptContentSchema} or {@link NotesContentSchema} once the kind is known. A kind
- * this client does not know keeps its content as a plain object.
+ * this client does not know keeps its content as a plain object. A cell recapped once holds its latest
+ * recap, and the `updatedAt` it read in `recapCellUpdatedAt`: the recap is fresh while the two match.
  */
 export const CellSchema = z.object({
   projectID: z.uuid(),
@@ -16,6 +18,11 @@ export const CellSchema = z.object({
   layerID: z.uuid(),
   content: z.record(z.string(), z.unknown()),
   updatedAt: z.iso.datetime().transform((value) => new Date(value)),
+  recap: RecapSchema.optional(),
+  recapCellUpdatedAt: z.iso
+    .datetime()
+    .transform((value) => new Date(value))
+    .optional(),
 });
 
 /** The value {@link CellSchema} validates. */

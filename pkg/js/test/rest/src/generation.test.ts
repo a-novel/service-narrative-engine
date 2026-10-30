@@ -6,6 +6,7 @@ import { isHttpError, isHttpStatusError } from "@a-novel-kit/nodelib-browser/htt
 import { expectStatus } from "@a-novel-kit/nodelib-test/http";
 import {
   type Generation,
+  GenerationKind,
   GenerationStatus,
   type GenerationSubmitRequest,
   Language,
@@ -67,6 +68,7 @@ const written = await cellWrite(api, accessToken, {
 function titleRequest(instruction: string, variant?: number): GenerationSubmitRequest {
   return {
     projectID: project.id,
+    kind: GenerationKind.Suggest,
     targets: [{ sceneID: scene.id, field: SceneField.Title, mode: TargetMode.Write }],
     instruction,
     variant,
@@ -96,6 +98,7 @@ describe("generationSubmit", () => {
   it("submits each call with the handles that map its output back", async () => {
     const generation = await submit(accessToken, {
       projectID: project.id,
+      kind: GenerationKind.Suggest,
       targets: [
         {
           sceneID: scene.id,
@@ -127,19 +130,24 @@ describe("generationSubmit", () => {
           { handle: expect.stringMatching(/^B[0-9]+$/), position: 1 },
           { handle: expect.stringMatching(/^B[0-9]+$/), position: 2 },
         ],
+        beatID: null,
         override: false,
-        updatedAt: written.updatedAt,
+        updatedAt: expect.any(String),
       },
       {
         handle: expect.stringMatching(/^T[0-9]+$/),
         sceneID: scene.id,
         layerID: null,
+        beatID: null,
         field: SceneField.Title,
         mode: TargetMode.Write,
         override: false,
-        updatedAt: scene.updatedAt,
+        updatedAt: expect.any(String),
       },
     ]);
+    // The stamps keep the server's microseconds, which a Date would drop.
+    expect(new Date(call.context.targets[0].updatedAt!)).toEqual(written.updatedAt);
+    expect(new Date(call.context.targets[1].updatedAt!)).toEqual(scene.updatedAt);
     expect(call.context.scenes.map(({ sceneID }) => sceneID)).toEqual([scene.id]);
     expect(call.context.layers.map(({ layerID }) => layerID)).toContain(manuscriptLayerID);
     expect(call.context.estimate).toBeGreaterThan(0);
@@ -162,6 +170,7 @@ describe("generationSubmit", () => {
   it("reads overrides in place of the stored content", async () => {
     const generation = await submit(accessToken, {
       projectID: project.id,
+      kind: GenerationKind.Suggest,
       targets: [{ sceneID: scene.id, layerID: manuscriptLayerID, mode: TargetMode.Revise }],
       instruction: "Override",
       overrides: {
@@ -182,6 +191,70 @@ describe("generationSubmit", () => {
     expect(target.blocks?.map(({ position }) => position)).toEqual([0]);
   });
 
+  it("submits a consolidation with the cell it recaps as its target", async () => {
+    const generation = await submit(accessToken, {
+      projectID: project.id,
+      kind: GenerationKind.Consolidate,
+      cell: { sceneID: scene.id, layerID: manuscriptLayerID },
+    });
+
+    expect(generation.kind).toBe(GenerationKind.Consolidate);
+    expect(generation.calls[0].context.targets).toEqual([
+      {
+        handle: expect.stringMatching(/^T[0-9]+$/),
+        sceneID: scene.id,
+        layerID: manuscriptLayerID,
+        beatID: null,
+        override: false,
+        updatedAt: expect.any(String),
+      },
+    ]);
+  });
+
+  it("submits a consolidation of a beat with the manuscript cells it reads", async () => {
+    const generation = await submit(accessToken, {
+      projectID: project.id,
+      kind: GenerationKind.Consolidate,
+      beatID: scene.beatID,
+    });
+
+    const [target] = generation.calls[0].context.targets;
+    expect(target).toEqual({
+      handle: expect.stringMatching(/^T[0-9]+$/),
+      sceneID: null,
+      layerID: null,
+      beatID: scene.beatID,
+      override: false,
+      updatedAt: expect.any(String),
+      sources: [{ sceneID: scene.id, cellUpdatedAt: expect.any(String) }],
+    });
+    expect(new Date(target.sources![0].cellUpdatedAt!)).toEqual(written.updatedAt);
+  });
+
+  it("submits a check of a range of scenes", async () => {
+    const generation = await submit(accessToken, {
+      projectID: project.id,
+      kind: GenerationKind.Check,
+      scenes: { start: 0, end: 1 },
+      instruction: "Les heures.",
+    });
+
+    expect(generation.kind).toBe(GenerationKind.Check);
+    expect(generation.calls[0].context.targets).toEqual([]);
+    expect(generation.calls[0].context.scenes.map(({ sceneID }) => sceneID)).toEqual([scene.id]);
+  });
+
+  it("returns 400 for a consolidation with an instruction", async () => {
+    const request = {
+      projectID: project.id,
+      kind: GenerationKind.Consolidate,
+      cell: { sceneID: scene.id, layerID: manuscriptLayerID },
+      instruction: "Plus court.",
+    };
+
+    await expectStatus(generationSubmit(api, accessToken, request as GenerationSubmitRequest), 400);
+  });
+
   it("runs an admin's calls past the default tier's concurrency", async () => {
     for (const variant of [0, 1, 2]) {
       onlyCallID(await submit(accessToken, titleRequest("Uncapped", variant)));
@@ -193,6 +266,7 @@ describe("generationSubmit", () => {
     onTestFinished(() => projectDelete(api, userToken, own).then(() => undefined));
     const request = (variant: number): GenerationSubmitRequest => ({
       projectID: own.id,
+      kind: GenerationKind.Suggest,
       targets: [{ sceneID: ownScene.id, field: SceneField.Title, mode: TargetMode.Write }],
       variant,
     });
@@ -210,6 +284,7 @@ describe("generationSubmit", () => {
     await expectStatus(
       generationSubmit(api, accessToken, {
         projectID: project.id,
+        kind: GenerationKind.Suggest,
         targets: [
           { sceneID: scene.id, layerID: manuscriptLayerID, mode: TargetMode.Revise, range: { start: 0, end: 4 } },
         ],

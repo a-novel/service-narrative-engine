@@ -22,6 +22,12 @@ type Cell struct {
 	Content json.RawMessage `json:"content"`
 
 	UpdatedAt time.Time `json:"updatedAt"`
+
+	// Recap is the cell's latest recap. It is absent until one is written.
+	Recap *Recap `json:"recap,omitempty"`
+	// RecapCellUpdatedAt is the cell's updatedAt the recap read. The recap is fresh while it equals
+	// updatedAt.
+	RecapCellUpdatedAt *time.Time `json:"recapCellUpdatedAt,omitempty"`
 }
 
 func loadCell(cell *core.Cell) Cell {
@@ -31,6 +37,9 @@ func loadCell(cell *core.Cell) Cell {
 		LayerID:   cell.LayerID,
 		Content:   cell.Content,
 		UpdatedAt: cell.UpdatedAt,
+
+		Recap:              loadRecap(cell.Recap),
+		RecapCellUpdatedAt: optionalTime(cell.RecapCellUpdatedAt),
 	}
 }
 
