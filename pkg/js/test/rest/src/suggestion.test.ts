@@ -16,10 +16,16 @@ import {
 
 const SCENE_ID = "01920000-0000-7000-8000-000000000001";
 const LAYER_ID = "01920000-0000-7000-8000-000000000002";
+const MODEL = "gpt-6.1-terra-2026-09-30";
 
 /** Returns a narration block of the given text. */
 function narration(text: string): Block {
   return { kind: "narration", text };
+}
+
+/** Returns a narration block of the given text, marked as written by a model. */
+function generated(text: string, model = MODEL): Block {
+  return { ...narration(text), generated: { model } };
 }
 
 /** Returns a revised manuscript target over the range [1, 4) of its cell, showing blocks B1 to B3. */
@@ -83,7 +89,7 @@ describe("suggestionsMap", () => {
       text: [{ target: "T2", note: "Names the scene.", text: "Le quai" }],
     };
 
-    expect(suggestionsMap(context(titleTarget), output)).toEqual({
+    expect(suggestionsMap(context(titleTarget), output, MODEL)).toEqual({
       manuscript: [],
       text: [{ target: titleTarget, note: "Names the scene.", text: "Le quai" }],
     });
@@ -97,14 +103,14 @@ describe("suggestionsMap", () => {
       { op: "delete", block: "B3" },
     ]);
 
-    expect(suggestionsMap(context(target), output)).toEqual({
+    expect(suggestionsMap(context(target), output, MODEL)).toEqual({
       manuscript: [
         {
           target,
           note: "Tightens the scene.",
           edits: [
-            { op: "replace", position: 1, blocks: [narration("first")] },
-            { op: "insert", position: 3, blocks: [narration("inserted")] },
+            { op: "replace", position: 1, blocks: [narration("first")], model: MODEL },
+            { op: "insert", position: 3, blocks: [narration("inserted")], model: MODEL },
             { op: "delete", position: 3 },
           ],
         },
@@ -116,8 +122,8 @@ describe("suggestionsMap", () => {
   it("inserts at the start of the range for a null block", () => {
     const output = editsOutput([{ op: "insert_after", block: null, blocks: [narration("opening")] }]);
 
-    expect(suggestionsMap(context(manuscriptTarget()), output).manuscript[0].edits).toEqual([
-      { op: "insert", position: 1, blocks: [narration("opening")] },
+    expect(suggestionsMap(context(manuscriptTarget()), output, MODEL).manuscript[0].edits).toEqual([
+      { op: "insert", position: 1, blocks: [narration("opening")], model: MODEL },
     ]);
   });
 
@@ -125,8 +131,8 @@ describe("suggestionsMap", () => {
     const target = manuscriptTarget({ range: { start: 2, end: 2 }, blocks: [] });
     const output = editsOutput([{ op: "insert_after", block: null, blocks: [narration("bridge")] }]);
 
-    expect(suggestionsMap(context(target), output).manuscript[0].edits).toEqual([
-      { op: "insert", position: 2, blocks: [narration("bridge")] },
+    expect(suggestionsMap(context(target), output, MODEL).manuscript[0].edits).toEqual([
+      { op: "insert", position: 2, blocks: [narration("bridge")], model: MODEL },
     ]);
   });
 
@@ -138,8 +144,8 @@ describe("suggestionsMap", () => {
       { op: "insert_after", block: "B2", blocks: [narration("after")] },
     ]);
 
-    expect(suggestionsMap(context(target), output).manuscript[0].edits).toEqual([
-      { op: "insert", position: 3, blocks: [narration("after")] },
+    expect(suggestionsMap(context(target), output, MODEL).manuscript[0].edits).toEqual([
+      { op: "insert", position: 3, blocks: [narration("after")], model: MODEL },
     ]);
   });
 
@@ -151,7 +157,7 @@ describe("suggestionsMap", () => {
       { op: "insert_after", block: "B9", blocks: [narration("nowhere")] },
     ]);
 
-    expect(suggestionsMap(context(manuscriptTarget()), output).manuscript[0].edits).toEqual([]);
+    expect(suggestionsMap(context(manuscriptTarget()), output, MODEL).manuscript[0].edits).toEqual([]);
   });
 
   it("drops a later edit on a block an earlier edit took", () => {
@@ -160,7 +166,7 @@ describe("suggestionsMap", () => {
       { op: "replace", block: "B1", blocks: [narration("again")] },
     ]);
 
-    expect(suggestionsMap(context(manuscriptTarget()), output).manuscript[0].edits).toEqual([
+    expect(suggestionsMap(context(manuscriptTarget()), output, MODEL).manuscript[0].edits).toEqual([
       { op: "delete", position: 1 },
     ]);
   });
@@ -171,7 +177,10 @@ describe("suggestionsMap", () => {
       text: [{ target: "T7", note: "Elsewhere.", text: "Ailleurs" }],
     };
 
-    expect(suggestionsMap(context(manuscriptTarget(), titleTarget), output)).toEqual({ manuscript: [], text: [] });
+    expect(suggestionsMap(context(manuscriptTarget(), titleTarget), output, MODEL)).toEqual({
+      manuscript: [],
+      text: [],
+    });
   });
 
   it("deletes the other blocks of the range in write mode", () => {
@@ -182,9 +191,9 @@ describe("suggestionsMap", () => {
       { op: "insert_after", block: "B2", blocks: [narration("after")] },
     ]);
 
-    expect(suggestionsMap(context(target), output).manuscript[0].edits).toEqual([
-      { op: "insert", position: 1, blocks: [narration("before")] },
-      { op: "insert", position: 3, blocks: [narration("after")] },
+    expect(suggestionsMap(context(target), output, MODEL).manuscript[0].edits).toEqual([
+      { op: "insert", position: 1, blocks: [narration("before")], model: MODEL },
+      { op: "insert", position: 3, blocks: [narration("after")], model: MODEL },
       { op: "delete", position: 1 },
       { op: "delete", position: 3 },
     ]);
@@ -194,44 +203,55 @@ describe("suggestionsMap", () => {
 describe("suggestionApply", () => {
   const content = { blocks: [narration("a"), narration("b"), narration("c"), narration("d")] };
 
-  it("applies edits at the positions of the content they were made on", () => {
+  it("applies edits at the positions of the content they were made on, and marks the blocks they write", () => {
     const applied = suggestionApply(content, [
-      { op: "replace", position: 1, blocks: [narration("B"), narration("B'")] },
-      { op: "insert", position: 3, blocks: [narration("inserted")] },
+      { op: "replace", position: 1, blocks: [narration("B"), narration("B'")], model: MODEL },
+      { op: "insert", position: 3, blocks: [narration("inserted")], model: MODEL },
       { op: "delete", position: 3 },
-      { op: "insert", position: 4, blocks: [narration("end")] },
+      { op: "insert", position: 4, blocks: [narration("end")], model: MODEL },
     ]);
 
     expect(applied).toEqual({
       blocks: [
         narration("a"),
-        narration("B"),
-        narration("B'"),
+        generated("B"),
+        generated("B'"),
         narration("c"),
-        narration("inserted"),
-        narration("end"),
+        generated("inserted"),
+        generated("end"),
       ],
+    });
+  });
+
+  it("marks each block with the model of its own edit, and keeps the marks of the blocks it leaves", () => {
+    const applied = suggestionApply({ blocks: [generated("a", "gpt-6-luna"), narration("b")] }, [
+      { op: "replace", position: 1, blocks: [narration("B")], model: MODEL },
+      { op: "insert", position: 2, blocks: [narration("end")], model: "gpt-6.1-sol" },
+    ]);
+
+    expect(applied).toEqual({
+      blocks: [generated("a", "gpt-6-luna"), generated("B"), generated("end", "gpt-6.1-sol")],
     });
   });
 
   it("keeps the order of inserts at one position", () => {
     const applied = suggestionApply(content, [
-      { op: "insert", position: 0, blocks: [narration("first")] },
-      { op: "insert", position: 0, blocks: [narration("second")] },
+      { op: "insert", position: 0, blocks: [narration("first")], model: MODEL },
+      { op: "insert", position: 0, blocks: [narration("second")], model: MODEL },
     ]);
 
-    expect(applied.blocks.slice(0, 3)).toEqual([narration("first"), narration("second"), narration("a")]);
+    expect(applied.blocks.slice(0, 3)).toEqual([generated("first"), generated("second"), narration("a")]);
   });
 
   it("drops edits past the end of the content", () => {
     const applied = suggestionApply({ blocks: [narration("a")] }, [
-      { op: "replace", position: 1, blocks: [narration("gone")] },
+      { op: "replace", position: 1, blocks: [narration("gone")], model: MODEL },
       { op: "delete", position: 2 },
-      { op: "insert", position: 2, blocks: [narration("gone")] },
-      { op: "insert", position: 1, blocks: [narration("end")] },
+      { op: "insert", position: 2, blocks: [narration("gone")], model: MODEL },
+      { op: "insert", position: 1, blocks: [narration("end")], model: MODEL },
     ]);
 
-    expect(applied).toEqual({ blocks: [narration("a"), narration("end")] });
+    expect(applied).toEqual({ blocks: [narration("a"), generated("end")] });
   });
 
   it("returns the content unchanged without edits", () => {
