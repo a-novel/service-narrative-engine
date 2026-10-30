@@ -128,10 +128,14 @@ func cancelledGeneration() *servicegenai.Generation {
 	return generation
 }
 
-// openaiResponse returns a completed OpenAI Responses object, under the output format named after a kind,
-// whose message holds content.
+// openaiModel names the model of the completed OpenAI responses.
+const openaiModel = "gpt-6.1-terra-2026-09-30"
+
+// openaiResponse returns a completed OpenAI Responses object of [openaiModel], under the output format named
+// after a kind, whose message holds content.
 func openaiResponse(kind string, content ...map[string]string) string {
 	return mustJSON(map[string]any{
+		"model":  openaiModel,
 		"status": "completed",
 		"text":   map[string]any{"format": map[string]string{"type": "json_schema", "name": kind}},
 		"output": []any{
