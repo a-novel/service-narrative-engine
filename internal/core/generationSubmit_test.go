@@ -134,6 +134,7 @@ func TestGenerationSubmit(t *testing.T) {
 			expect: &core.Generation{Kind: core.GenerationKindSuggest, Calls: []*core.GenerationCall{{
 				Result: &core.GenerationResult{
 					ID: genaiID, Status: core.GenerationStatusSucceeded, Output: json.RawMessage(suggestOutput),
+					Model: openaiModel,
 				},
 				Context: submitCall("task 1"),
 			}}},

@@ -110,6 +110,9 @@ type GenerationResult struct {
 	// Output is the model's output, which passed the full output schema of its kind. It is empty unless
 	// the generation succeeded.
 	Output json.RawMessage
+	// Model names the model that wrote the output, as the provider names it. A client marks the blocks it
+	// applies from the output with it. It is empty unless the generation succeeded.
+	Model string
 }
 
 // errGenaiStatus is returned when genai reports a status the service does not know.
@@ -157,7 +160,7 @@ func newGenerationResult(generation *servicegenai.Generation) (*GenerationResult
 		return &GenerationResult{ID: id, Status: GenerationStatusFailed, Error: reason}, nil
 	}
 
-	result.Output = output
+	result.Output, result.Model = output.text, output.model
 
 	return result, nil
 }
@@ -167,6 +170,7 @@ func newGenerationResult(generation *servicegenai.Generation) (*GenerationResult
 //
 //nolint:tagliatelle // OpenAI's own field names.
 type openaiResponse struct {
+	Model             string `json:"model"`
 	Status            string `json:"status"`
 	IncompleteDetails *struct {
 		Reason string `json:"reason"`
@@ -186,9 +190,15 @@ type openaiResponse struct {
 	} `json:"text"`
 }
 
+// providerOutput is the valid output of a provider's response, with the model that wrote it.
+type providerOutput struct {
+	text  json.RawMessage
+	model string
+}
+
 // readOutput returns the output a provider's response holds once it passed the full output schema of its
 // kind. It returns instead the reason the response holds no valid output: cut short, refused or malformed.
-func readOutput(raw []byte) (json.RawMessage, string) {
+func readOutput(raw []byte) (*providerOutput, string) {
 	response := &openaiResponse{}
 
 	err := json.Unmarshal(raw, response)
@@ -227,5 +237,5 @@ func readOutput(raw []byte) (json.RawMessage, string) {
 		return nil, "malformed output: " + err.Error()
 	}
 
-	return json.RawMessage(text), ""
+	return &providerOutput{text: json.RawMessage(text), model: response.Model}, ""
 }

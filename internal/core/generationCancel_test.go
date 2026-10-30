@@ -55,6 +55,7 @@ func TestGenerationCancel(t *testing.T) {
 
 			expect: &core.GenerationResult{
 				ID: genaiID, Status: core.GenerationStatusSucceeded, Output: json.RawMessage(suggestOutput),
+				Model: openaiModel,
 			},
 		},
 		{
