@@ -118,25 +118,26 @@ Every variable is read from the process environment. `SERVICE_NARRATIVE_ENGINE_E
 
 REST tuning (images `rest`, `standalone-rest`):
 
-| Name                          | Description                                                                                                                  | Default                          |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
-| `REST_MAX_REQUEST_SIZE`       | Maximum request body size, in bytes, on every route. The default fits a batch of up to 100 items.                            | `52428800` (50MiB)               |
-| `REST_MAX_ITEM_REQUEST_SIZE`  | Maximum request body size, in bytes, on a route that writes one item. The default fits a whole cell.                         | `4194304` (4MiB)                 |
-| `REST_CLIENT_IP_HEADER`       | Header a trusted proxy sets to the visitor IP. Set it only when every request comes through that proxy.                      | TCP peer                         |
-| `REST_LIVENESS_PATH`          | Ping path, which still answers during a planned downtime and skips the rate limit.                                           | `/v1/ping`                       |
-| `REST_RATE_LIMITS_ENABLED`    | Rate-limit each visitor on every route but the ping. Turn off only in test stacks.                                           | `true`                           |
-| `REST_RATE_LIMIT`             | Requests each visitor sends to each route, as `<requests>/<window>`.                                                         | `5/1s`                           |
-| `REST_TIMEOUT_READ`           | Read timeout.                                                                                                                | `15s`                            |
-| `REST_TIMEOUT_READ_HEADER`    | Header read timeout.                                                                                                         | `3s`                             |
-| `REST_TIMEOUT_WRITE`          | Write timeout.                                                                                                               | `30s`                            |
-| `REST_TIMEOUT_IDLE`           | Idle keep-alive timeout.                                                                                                     | `60s`                            |
-| `REST_TIMEOUT_REQUEST`        | Per-request timeout.                                                                                                         | `60s`                            |
-| `REST_TIMEOUT_SHUTDOWN`       | Graceful shutdown budget. With the 4 seconds of telemetry flushes after it, it fits Cloud Run's 10 seconds before `SIGKILL`. | `6s`                             |
-| `REST_CORS_ALLOWED_ORIGINS`   | CORS allowed origins.                                                                                                        | `*`                              |
-| `REST_CORS_ALLOWED_HEADERS`   | CORS allowed headers.                                                                                                        | `*`                              |
-| `REST_CORS_ALLOWED_METHODS`   | CORS allowed methods, comma-separated.                                                                                       | `HEAD,GET,POST,PUT,PATCH,DELETE` |
-| `REST_CORS_ALLOW_CREDENTIALS` | CORS allow-credentials flag.                                                                                                 | `false`                          |
-| `REST_CORS_MAX_AGE`           | CORS max-age, in seconds.                                                                                                    | `3600`                           |
+| Name                          | Description                                                                                                                                  | Default                          |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| `REST_MAX_REQUEST_SIZE`       | Maximum request body size, in bytes, on every route. The default fits a batch of up to 100 items.                                            | `52428800` (50MiB)               |
+| `REST_MAX_ITEM_REQUEST_SIZE`  | Maximum request body size, in bytes, on a route that writes one item. The default fits a whole cell.                                         | `4194304` (4MiB)                 |
+| `REST_CLIENT_IP_HEADER`       | Header a trusted proxy sets to the visitor IP. Set it only when every request comes through that proxy.                                      | TCP peer                         |
+| `REST_LIVENESS_PATH`          | Ping path, which still answers during a planned downtime and skips the rate limit.                                                           | `/v1/ping`                       |
+| `REST_RATE_LIMITS_ENABLED`    | Rate-limit each visitor on every route but the ping. Turn off only in test stacks.                                                           | `true`                           |
+| `REST_RATE_LIMIT`             | Requests each visitor sends to each route, as `<requests>/<window>`.                                                                         | `5/1s`                           |
+| `REST_TIMEOUT_READ`           | Read timeout.                                                                                                                                | `15s`                            |
+| `REST_TIMEOUT_READ_HEADER`    | Header read timeout.                                                                                                                         | `3s`                             |
+| `REST_TIMEOUT_WRITE`          | Write timeout. A streamed response lifts it.                                                                                                 | `90s`                            |
+| `REST_TIMEOUT_IDLE`           | Idle keep-alive timeout.                                                                                                                     | `60s`                            |
+| `REST_TIMEOUT_REQUEST`        | Per-request timeout. It fits a generation submit, which waits on genai for two calls of up to 35 seconds each. A streamed response lifts it. | `90s`                            |
+| `REST_MAX_STREAM_DURATION`    | How long a streamed response lasts. The client resumes a longer stream from the last event it received.                                      | `5m`                             |
+| `REST_TIMEOUT_SHUTDOWN`       | Graceful shutdown budget. With the 4 seconds of telemetry flushes after it, it fits Cloud Run's 10 seconds before `SIGKILL`.                 | `6s`                             |
+| `REST_CORS_ALLOWED_ORIGINS`   | CORS allowed origins.                                                                                                                        | `*`                              |
+| `REST_CORS_ALLOWED_HEADERS`   | CORS allowed headers.                                                                                                                        | `*`                              |
+| `REST_CORS_ALLOWED_METHODS`   | CORS allowed methods, comma-separated.                                                                                                       | `HEAD,GET,POST,PUT,PATCH,DELETE` |
+| `REST_CORS_ALLOW_CREDENTIALS` | CORS allow-credentials flag.                                                                                                                 | `false`                          |
+| `REST_CORS_MAX_AGE`           | CORS max-age, in seconds.                                                                                                                    | `3600`                           |
 
 Service tokens (images `rest`, `standalone-rest`). Without `SERVICE_TOKEN_ISSUER`, the server takes every request. With it, the server refuses a request unless its `X-Service-Authorization` header carries a token from an allowed caller. The check runs before the server reads `REST_CLIENT_IP_HEADER` or counts a rate limit, so only an allowed caller names the visitor IP. The ping stays open for probes. Each service the server calls has its own audience, so each connection sends its own token:
 

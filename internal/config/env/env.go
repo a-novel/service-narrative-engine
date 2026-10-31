@@ -47,8 +47,11 @@ const (
 	ServiceGenaiPortDefault = 8080
 
 	// RestTimeoutDefault bounds a request and the write of its response. A generation submit plans its
-	// calls, then waits on genai for two of them at most, at 25 seconds each.
-	RestTimeoutDefault = 75 * time.Second
+	// calls, then waits on genai for two of them at most, at 35 seconds each.
+	RestTimeoutDefault = 90 * time.Second
+	// RestMaxStreamDurationDefault bounds a streamed response to the 5 minutes OpenAI streams a call
+	// for. A client resumes a longer stream from the last event it received.
+	RestMaxStreamDurationDefault = 5 * time.Minute
 
 	// RestMaxRequestSizeDefault lets a batch through: up to 100 items, among them cells whose content
 	// the core caps at 2 MiB each. The router applies it to every route.
@@ -112,6 +115,10 @@ var (
 	// RestMaxItemRequestSize caps the body of a route that writes one item, in bytes.
 	RestMaxItemRequestSize = config.LoadEnv(
 		getEnv("REST_MAX_ITEM_REQUEST_SIZE"), RestMaxItemRequestSizeDefault, config.Int64Parser,
+	)
+	// RestMaxStreamDuration bounds a streamed response.
+	RestMaxStreamDuration = config.LoadEnv(
+		getEnv("REST_MAX_STREAM_DURATION"), RestMaxStreamDurationDefault, config.DurationParser,
 	)
 
 	// ServiceTokenIssuer is the issuer of the service tokens the REST server accepts, as a token's "iss"

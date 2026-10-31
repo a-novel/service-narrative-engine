@@ -46,6 +46,8 @@ type Dependencies struct {
 type Limits struct {
 	// ItemMaxRequestSize caps the body of a route that writes one item, in bytes.
 	ItemMaxRequestSize int64 `json:"itemMaxRequestSize" yaml:"itemMaxRequestSize"`
+	// MaxStreamDuration bounds a streamed response, past the server's request timeout.
+	MaxStreamDuration time.Duration `json:"maxStreamDuration" yaml:"maxStreamDuration"`
 }
 
 // App is the complete configuration the service reads at startup.

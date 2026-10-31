@@ -64,7 +64,10 @@ var AppPresetDefault = App{
 		Audience: env.ServiceTokenAudience,
 		Callers:  env.ServiceTokenCallers,
 	},
-	Limits:      Limits{ItemMaxRequestSize: env.RestMaxItemRequestSize},
+	Limits: Limits{
+		ItemMaxRequestSize: env.RestMaxItemRequestSize,
+		MaxStreamDuration:  env.RestMaxStreamDuration,
+	},
 	Generations: GenerationsConfigDefault,
 
 	Otel:   OtelPresetDefault,
