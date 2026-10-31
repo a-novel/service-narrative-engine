@@ -39,6 +39,11 @@ var (
 	// ErrRecapConflict is returned by a recap write that read its source at a version older than the
 	// stored recap's, or newer than the source's own.
 	ErrRecapConflict = errors.New("recap conflict")
+	// ErrGenerationNotStreamed is returned by [GenerationStream] for a call it cannot stream: one
+	// submitted without streaming, or one the provider no longer streams. A read returns the call.
+	ErrGenerationNotStreamed = errors.New("generation not streamed")
+	// ErrStreamEnded is returned when the caller resumes a stream after its last event.
+	ErrStreamEnded = errors.New("stream ended")
 )
 
 // projectOwnerDao checks that a user owns a project. Each service names its own interface, and every

@@ -98,7 +98,7 @@ func TestGenerationSubmit(t *testing.T) {
 
 			request: &core.GenerationSubmitRequest{
 				OwnerID: ownerID, ProjectID: projectID, Kind: core.GenerationKindSuggest, Targets: targets,
-				Admin: true, Variant: 2,
+				Admin: true, Variant: 2, Stream: true,
 			},
 
 			snapshotMock: &daoMock[*core.ProjectSnapshot]{resp: snapshot},
@@ -285,7 +285,7 @@ func TestGenerationSubmit(t *testing.T) {
 						return bytes.Equal(request.GetPayload(), []byte(submitPayload(task))) &&
 							request.GetOwnerId() == ownerID.String() && request.GetPurpose() == "studio.generation" &&
 							request.GetProvider() == "openai" && request.GetUserTier() == testCase.tier &&
-							request.GetVariant() == testCase.request.Variant
+							request.GetVariant() == testCase.request.Variant && request.GetStream() == testCase.request.Stream
 					})).
 					Return(&servicegenai.GenerationSubmitResponse{Generation: answer.resp}, answer.err).
 					Once()
