@@ -174,7 +174,11 @@ func main() {
 	serviceGenerationPlan := core.NewGenerationPlan(cfg.Generations)
 	serviceGenerationSubmit := core.NewGenerationSubmit(serviceProjectSnapshotRead, serviceGenerationPlan, genaiClient)
 	serviceGenerationGet := core.NewGenerationGet(genaiClient)
+	serviceGenerationStream := core.NewGenerationStream(genaiClient, serviceGenerationGet)
 	serviceGenerationCancel := core.NewGenerationCancel(genaiClient)
+	serviceProjectStream := core.NewProjectStream(
+		daoProjectOwned, daoProjectSelect, daoBeatList, daoSceneList, daoLayerList, daoCellList,
+	)
 
 	// =================================================================================================================
 	// HANDLERS
@@ -219,7 +223,9 @@ func main() {
 	handlerManuscriptExport := handlers.NewRestManuscriptExport(serviceManuscriptExport, cfg.Logger)
 	handlerGenerationSubmit := handlers.NewRestGenerationSubmit(serviceGenerationSubmit, cfg.Permissions, cfg.Logger)
 	handlerGenerationGet := handlers.NewRestGenerationGet(serviceGenerationGet, cfg.Logger)
+	handlerGenerationStream := handlers.NewRestGenerationStream(serviceGenerationStream, cfg.Logger)
 	handlerGenerationCancel := handlers.NewRestGenerationCancel(serviceGenerationCancel, cfg.Logger)
+	handlerProjectStream := handlers.NewRestProjectStream(serviceProjectStream, cfg.Logger)
 
 	// =================================================================================================================
 	// ROUTER
@@ -233,6 +239,9 @@ func main() {
 	router.Route("/v1", func(api chi.Router) {
 		// The router's body limit fits a batch; a route that writes one item caps its body lower.
 		item := api.With(middleware.RequestSize(cfg.Limits.ItemMaxRequestSize))
+		// A stream outlives the request timeout, and ends at shutdown: its client resumes on another
+		// instance.
+		stream := api.With(httpf.Streaming(cfg.Limits.MaxStreamDuration), httpf.EndOnShutdown(ctx))
 
 		api.Get("/ping", handlerPing.ServeHTTP)
 		api.Get("/healthcheck", handlerHealth.ServeHTTP)
@@ -240,6 +249,7 @@ func main() {
 		withAuth(item, config.PermissionProjectWrite).Post("/projects", handlerProjectCreate.ServeHTTP)
 		withAuth(api, config.PermissionProjectRead).Get("/projects", handlerProjectList.ServeHTTP)
 		withAuth(api, config.PermissionProjectRead).Get("/project", handlerProjectGet.ServeHTTP)
+		withAuth(stream, config.PermissionProjectRead).Get("/project/stream", handlerProjectStream.ServeHTTP)
 		withAuth(item, config.PermissionProjectWrite).Put("/project", handlerProjectUpdate.ServeHTTP)
 		withAuth(item, config.PermissionProjectWrite).Delete("/project", handlerProjectDelete.ServeHTTP)
 
@@ -282,6 +292,7 @@ func main() {
 		// A submit carries its overrides, so it takes a batch's body limit.
 		withAuth(api, config.PermissionProjectWrite).Post("/generation", handlerGenerationSubmit.ServeHTTP)
 		withAuth(api, config.PermissionProjectRead).Get("/generation", handlerGenerationGet.ServeHTTP)
+		withAuth(stream, config.PermissionProjectRead).Get("/generation/stream", handlerGenerationStream.ServeHTTP)
 		withAuth(api, config.PermissionProjectWrite).Delete("/generation", handlerGenerationCancel.ServeHTTP)
 	})
 

@@ -49,6 +49,8 @@ type RestGenerationSubmitRequest struct {
 
 	// Variant asks for another result of the same calls.
 	Variant uint32 `json:"variant"`
+	// Stream creates each call in streaming mode, for the stream-generation endpoint.
+	Stream bool `json:"stream"`
 }
 
 // RestGenerationCell names the cell a consolidate generation recaps.
@@ -153,6 +155,7 @@ func (handler *RestGenerationSubmit) ServeHTTP(w http.ResponseWriter, r *http.Re
 		Exclude:     request.Exclude,
 		Overrides:   saveGenerationOverrides(request.Overrides),
 		Variant:     request.Variant,
+		Stream:      request.Stream,
 	}
 
 	result, err := handler.service.Exec(ctx, serviceRequest)

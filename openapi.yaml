@@ -238,6 +238,48 @@ paths:
         default:
           $ref: "#/components/responses/internalError"
 
+  /v1/project/stream:
+    get:
+      operationId: projectStream
+      summary: Stream a whole project.
+      description: |
+        Streams a project of the caller whole, as server-sent events (the `text/event-stream` format of the
+        HTML standard), in one response: a `project` event, then a `beat`, `scene`, `layer` and `cell` event for
+        each of them, in the order and shape the list endpoints return them, then an `end` event. Each event's
+        data is JSON.
+
+        Each event's ID is its position: `project:1`, then its section and how many records of the section came
+        so far, such as `scenes:41`, then `end`. A stream that ends without its `end` event was cut: reconnect
+        with the last ID received in `Last-Event-ID`, and the stream resumes after it. A reconnect after the
+        `end` event answers 204, which tells an `EventSource` to stop reconnecting.
+
+        The stream reads a page of each list at a time, so a write between two pages may show, as it does across
+        the pages of a list. A stream lasts 5 minutes at most, and a comment line keeps an idle stream open every
+        15 seconds.
+      tags: [project]
+      parameters:
+        - $ref: "#/components/parameters/projectID"
+        - $ref: "#/components/parameters/lastEventID"
+      responses:
+        "200":
+          $ref: "#/components/responses/projectStream"
+        "204":
+          $ref: "#/components/responses/streamEnded"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/plannedDowntime"
+        default:
+          $ref: "#/components/responses/internalError"
+
   /v1/beat:
     post:
       operationId: beatCreate
@@ -1303,6 +1345,50 @@ paths:
         default:
           $ref: "#/components/responses/internalError"
 
+  /v1/generation/stream:
+    get:
+      operationId: generationStream
+      summary: Stream a call of a generation.
+      description: |
+        Streams one model call of a generation submitted with `stream`, as server-sent events (the
+        `text/event-stream` format of the HTML standard), through genai, as the caller. A `delta` event carries
+        each piece of text the model appends to its output, as `{"text": "..."}`. The output is the JSON the
+        call's kind defines, written as it comes. A `result` event ends the stream once the call settles: its
+        data is the call as `GET /v1/generation` returns it.
+
+        Each event's ID is its sequence number. A stream that ends without its `result` event was cut: reconnect
+        with the last ID received in `Last-Event-ID`, and the stream resumes after it. A reconnect after the
+        `result` event answers 204, which tells an `EventSource` to stop reconnecting.
+
+        The provider streams a call for 5 minutes after it starts. A call submitted without `stream`, or past
+        that window, answers 303 See Other to `GET /v1/generation`, which returns the call: poll it until it
+        settles. A comment line keeps an idle stream open every 15 seconds.
+      tags: [generation]
+      parameters:
+        - $ref: "#/components/parameters/generationID"
+        - $ref: "#/components/parameters/lastEventID"
+      responses:
+        "200":
+          $ref: "#/components/responses/generationStream"
+        "204":
+          $ref: "#/components/responses/streamEnded"
+        "303":
+          $ref: "#/components/responses/generationNotStreamed"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/generationUnavailable"
+        default:
+          $ref: "#/components/responses/internalError"
+
 components:
   responses:
     pong:
@@ -1544,6 +1630,81 @@ components:
           description: Seconds to wait before retrying.
           schema:
             type: integer
+
+    projectStream:
+      description: |
+        The project, as server-sent events: `project`, then `beat`, `scene`, `layer` and `cell` events, then
+        `end`.
+      content:
+        text/event-stream:
+          schema:
+            type: string
+          examples:
+            whole:
+              summary: A project with one beat, scene, layer and cell.
+              value: |
+                id: project:1
+                event: project
+                data: {"id":"00000000-0000-0000-0000-000000000001","title":"Les Heures claires","premise":"Marie attend.","language":"fr","createdAt":"2021-01-01T00:00:00Z","updatedAt":"2021-01-02T00:00:00Z"}
+
+                id: beats:1
+                event: beat
+                data: {"id":"00000000-0000-0000-0000-000000000031","projectID":"00000000-0000-0000-0000-000000000001","position":1,"title":"Ouverture","color":"#e0457b","description":"Marie attend.","prompt":"Lent.","updatedAt":"2021-01-02T00:00:00Z"}
+
+                id: scenes:1
+                event: scene
+                data: {"id":"00000000-0000-0000-0000-000000000011","projectID":"00000000-0000-0000-0000-000000000001","beatID":"00000000-0000-0000-0000-000000000031","position":1,"title":"La fenêtre","description":"Marie guette.","prompt":"Lent.","updatedAt":"2021-01-02T00:00:00Z"}
+
+                id: layers:1
+                event: layer
+                data: {"id":"00000000-0000-0000-0000-000000000021","projectID":"00000000-0000-0000-0000-000000000001","position":1,"kind":"notes","name":"Characters","description":"Who appears","updatedAt":"2021-01-02T00:00:00Z"}
+
+                id: cells:1
+                event: cell
+                data: {"projectID":"00000000-0000-0000-0000-000000000001","sceneID":"00000000-0000-0000-0000-000000000011","layerID":"00000000-0000-0000-0000-000000000021","content":{"text":"Marie"},"updatedAt":"2021-01-02T00:00:00Z"}
+
+                id: end
+                event: end
+                data: {}
+
+    generationStream:
+      description: |
+        The call, as server-sent events: `delta` events as the model writes, then `result`.
+      content:
+        text/event-stream:
+          schema:
+            type: string
+          examples:
+            succeeded:
+              summary: A suggestion written in three pieces.
+              value: |
+                id: 4
+                event: delta
+                data: {"text":"{\"manuscript\":[],\"text\":[{\"target\":\"T1\","}
+
+                id: 5
+                event: delta
+                data: {"text":"\"note\":\"Names the scene.\",\"text\":\"La lettre\"}]}"}
+
+                id: 9
+                event: result
+                data: {"id":"00000000-0000-0000-0000-0000000000c1","status":"succeeded","output":{"manuscript":[],"text":[{"target":"T1","note":"Names the scene.","text":"La lettre"}]},"model":"gpt-6.1-terra-2026-09-30"}
+
+    streamEnded:
+      description: |
+        The caller resumed after the last event of the stream: nothing is left to send. An `EventSource` stops
+        reconnecting.
+
+    generationNotStreamed:
+      description: |
+        The call cannot be streamed: it was submitted without `stream`, or the provider no longer streams it.
+        `Location` points to `GET /v1/generation`, which returns the call.
+      headers:
+        Location:
+          description: The read of the call.
+          schema:
+            type: string
+            examples: [/v1/generation?id=00000000-0000-0000-0000-0000000000c1]
 
     contextTooLarge:
       description: |
@@ -2706,6 +2867,13 @@ components:
           minimum: 0
           maximum: 4294967295
           examples: [1]
+        stream:
+          type: boolean
+          description: |
+            Creates each call in streaming mode, so `GET /v1/generation/stream` forwards its text as the model
+            writes it. A streamed call and an unstreamed one are two generations: a resent request replays only
+            calls with the same value.
+          default: false
 
     generationResult:
       type: object
@@ -3009,6 +3177,17 @@ components:
       description: An access token from the authentication service, for a signed-in user.
 
   parameters:
+    lastEventID:
+      name: Last-Event-ID
+      in: header
+      description: |
+        The ID of the last event received, which a client sends when it reconnects to a cut stream. The stream
+        resumes after it. An `EventSource` sends it on its own.
+      required: false
+      schema:
+        type: string
+        examples: ["42", "scenes:41"]
+
     projectID:
       name: id
       in: query

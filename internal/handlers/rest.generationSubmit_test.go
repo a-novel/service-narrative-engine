@@ -48,6 +48,7 @@ func TestRestGenerationSubmit(t *testing.T) {
 			"targets":     []any{map[string]any{"sceneID": sceneID, "field": "title", "mode": "revise"}},
 			"instruction": "Plus court.",
 			"variant":     1,
+			"stream":      true,
 		})
 	}
 
@@ -254,6 +255,7 @@ func TestRestGenerationSubmit(t *testing.T) {
 						},
 						Instruction: "Plus court.",
 						Variant:     1,
+						Stream:      true,
 					}).
 					Return(testCase.serviceMock.resp, testCase.serviceMock.err)
 			}
