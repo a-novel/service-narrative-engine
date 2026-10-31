@@ -2,6 +2,7 @@ import type { NarrativeEngineApi } from "./api";
 import { ManuscriptContentSchema, NotesContentSchema } from "./content";
 import { BeatRecapSourceSchema } from "./recap";
 import { SceneDescriptionSchema, ScenePromptSchema, SceneTitleSchema } from "./scene";
+import { wait } from "./stream";
 
 import { HTTP_HEADERS } from "@a-novel-kit/nodelib-browser/http";
 
@@ -149,6 +150,7 @@ export type GenerationCell = z.infer<typeof GenerationCellSchema>;
 const generationBase = {
   projectID: z.uuid(),
   variant: z.int().min(0).max(4294967295).optional(),
+  stream: z.boolean().optional(),
 };
 
 // What a generation that reads the author's work as it stands takes beside its kind's own fields.
@@ -161,7 +163,8 @@ const generationReading = {
 /**
  * A generation on a project of the caller, by its kind. A suggest generation writes its targets, each once. A
  * consolidate generation recaps a cell or a beat from stored content. A check generation reads a range of
- * scene positions, every scene when omitted. `variant` asks for another result of the same calls.
+ * scene positions, every scene when omitted. `variant` asks for another result of the same calls. `stream` creates
+ * each call in streaming mode, for {@link generationStream}.
  */
 export const GenerationSubmitRequestSchema = z.discriminatedUnion("kind", [
   z.object({
@@ -351,4 +354,63 @@ export async function generationCancel(
     method: "DELETE",
     headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
   });
+}
+
+/** The statuses of a call that has not settled yet. */
+const UNSETTLED = new Set<GenerationStatus>([GenerationStatus.Pending, GenerationStatus.Running]);
+
+/** The content of a `delta` event: text the model appended to its output. */
+const GenerationDeltaSchema = z.object({ text: z.string() });
+
+/** An event of {@link generationStream}: text the model wrote, or the settled call, which ends the stream. */
+export type GenerationStreamEvent = { type: "delta"; text: string } | { type: "result"; result: GenerationResult };
+
+/** Options of {@link generationStream}. */
+export type GenerationStreamOptions = {
+  /** Stops the stream, and the reads that follow it. */
+  signal?: AbortSignal;
+  /** The pause between two reads of a call that can no longer stream, in milliseconds. Defaults to 1000. */
+  pollInterval?: number;
+};
+
+/**
+ * Streams one call of a generation submitted with `stream`: a `delta` event for each piece of text the model appends
+ * to its output, which is the JSON the call's kind defines, then a `result` event with the settled call, as
+ * `generationGet` returns it. A cut stream resumes after the last event received. A call that cannot stream, such as
+ * one submitted without `stream` or past the provider's 5-minute window, is read until it settles, so the stream
+ * always ends with its result. Throws on HTTP 404 when the caller has no such generation, and 503 when genai is
+ * unavailable.
+ */
+export async function* generationStream(
+  api: NarrativeEngineApi,
+  accessToken: string,
+  request: GenerationGetRequest,
+  options: GenerationStreamOptions = {}
+): AsyncGenerator<GenerationStreamEvent> {
+  const params = new URLSearchParams({ id: request.id });
+  const events = api.stream(
+    `/v1/generation/stream?${params.toString()}`,
+    { method: "GET", headers: { Authorization: `Bearer ${accessToken}` }, signal: options.signal },
+    (event) => event.type === "result"
+  );
+
+  for await (const event of events) {
+    if (event.type === "delta") {
+      yield { type: "delta", text: GenerationDeltaSchema.parse(JSON.parse(event.data)).text };
+    } else if (event.type === "result") {
+      yield { type: "result", result: GenerationResultSchema.parse(JSON.parse(event.data)) };
+      return;
+    }
+  }
+
+  // The server has nothing left to stream: the call is read until it settles.
+  for (;;) {
+    const result = await generationGet(api, accessToken, request);
+    if (!UNSETTLED.has(result.status)) {
+      yield { type: "result", result };
+      return;
+    }
+
+    await wait(options.pollInterval ?? 1000, options.signal);
+  }
 }

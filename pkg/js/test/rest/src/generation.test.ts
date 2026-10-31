@@ -19,6 +19,7 @@ import {
   cellWrite,
   generationCancel,
   generationGet,
+  generationStream,
   generationSubmit,
   projectCreate,
   projectDelete,
@@ -29,6 +30,13 @@ const api = new NarrativeEngineApi(process.env.REST_URL!);
 
 const ABSENT_ID = "01920000-0000-7000-8000-000000000000";
 const COLOR = "#4a90d9";
+
+/** Reads a stream to its end. */
+async function collect<T>(stream: AsyncIterable<T>): Promise<T[]> {
+  const items: T[] = [];
+  for await (const item of stream) items.push(item);
+  return items;
+}
 
 // genai never reaches a provider in this stack, so every admitted call stays pending until cancelled.
 const accessToken = await superAdminAccessToken();
@@ -345,5 +353,23 @@ describe("generationCancel", () => {
 
   it("returns 404 for an absent call", async () => {
     await expectStatus(generationCancel(api, accessToken, { id: ABSENT_ID }), 404);
+  });
+});
+
+describe("generationStream", () => {
+  // genai holds a streamed submit up to 30 seconds while the provider has not begun the call.
+  it("ends with the result of a call it cannot stream", { timeout: 60_000 }, async () => {
+    const id = onlyCallID(await submit(accessToken, { ...titleRequest("Streamed"), stream: true }));
+    await generationCancel(api, accessToken, { id });
+
+    const events = await collect(generationStream(api, accessToken, { id }, { pollInterval: 100 }));
+
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ type: "result", result: { id } });
+    expect(events[0].type === "result" && events[0].result.status).toMatch(/^(cancelled|failed)$/);
+  });
+
+  it("returns 404 for an absent generation", async () => {
+    await expectStatus(collect(generationStream(api, accessToken, { id: ABSENT_ID })), 404);
   });
 });

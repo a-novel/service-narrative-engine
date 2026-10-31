@@ -9,17 +9,28 @@ import {
   NarrativeEngineApi,
   type ProjectComposer,
   type ProjectCreateRequest,
+  beatCreate,
+  cellWrite,
   projectCreate,
   projectDelete,
   projectGet,
   projectList,
+  projectStream,
   projectUpdate,
+  sceneCreate,
 } from "@a-novel/service-narrative-engine-rest";
 
 const api = new NarrativeEngineApi(process.env.REST_URL!);
 const accessToken = await superAdminAccessToken();
 
 const ABSENT_ID = "01920000-0000-7000-8000-000000000000";
+
+/** Reads a stream to its end. */
+async function collect<T>(stream: AsyncIterable<T>): Promise<T[]> {
+  const items: T[] = [];
+  for await (const item of stream) items.push(item);
+  return items;
+}
 
 /** Creates a project the test deletes when it finishes, whatever its outcome. */
 async function createProject(request: ProjectCreateRequest): Promise<ProjectComposer> {
@@ -157,5 +168,47 @@ describe("projectDelete", () => {
 
   it("returns 404 for an absent project", async () => {
     await expectStatus(projectDelete(api, accessToken, { id: ABSENT_ID }), 404);
+  });
+});
+
+describe("projectStream", () => {
+  it("streams the project, then its beats, scenes, layers and cells", async () => {
+    const project = await createProject({ title: "Les Heures claires", language: Language.Fr });
+    const beat = await beatCreate(api, accessToken, { projectID: project.id, title: "Le départ", color: "#4a90d9" });
+    const scene = await sceneCreate(api, accessToken, {
+      projectID: project.id,
+      beatID: beat.id,
+      position: 0,
+      title: "Le quai",
+    });
+    const layer = project.layers[0];
+    await cellWrite(api, accessToken, {
+      projectID: project.id,
+      sceneID: scene.id,
+      layerID: layer.id,
+      content: { blocks: [{ kind: "narration", text: "Le train entrait en gare." }] },
+    });
+
+    const records = await collect(projectStream(api, accessToken, { id: project.id }));
+
+    expect(records).toMatchObject([
+      { type: "project", project: { id: project.id, title: "Les Heures claires" } },
+      { type: "beat", beat: { id: beat.id } },
+      { type: "scene", scene: { id: scene.id } },
+      { type: "layer", layer: { id: layer.id } },
+      { type: "cell", cell: { sceneID: scene.id, layerID: layer.id } },
+    ]);
+  });
+
+  it("returns 400 for a malformed ID", async () => {
+    await expectStatus(collect(projectStream(api, accessToken, { id: "not-a-uuid" })), 400);
+  });
+
+  it("returns 401 without a session", async () => {
+    await expectStatus(collect(projectStream(api, "", { id: ABSENT_ID })), 401);
+  });
+
+  it("returns 404 for an absent project", async () => {
+    await expectStatus(collect(projectStream(api, accessToken, { id: ABSENT_ID })), 404);
   });
 });

@@ -1,5 +1,8 @@
 import type { NarrativeEngineApi } from "./api";
-import { LayerSchema } from "./layer";
+import { type Beat, BeatSchema } from "./beat";
+import { type Cell, CellSchema } from "./cell";
+import { type Layer, LayerSchema } from "./layer";
+import { type Scene, SceneSchema } from "./scene";
 
 import { HTTP_HEADERS } from "@a-novel-kit/nodelib-browser/http";
 
@@ -175,4 +178,60 @@ export async function projectDelete(
     method: "DELETE",
     headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
   });
+}
+
+/** A record of {@link projectStream}: the project, or one of its beats, scenes, layers or cells. */
+export type ProjectStreamRecord =
+  | { type: "project"; project: Project }
+  | { type: "beat"; beat: Beat }
+  | { type: "scene"; scene: Scene }
+  | { type: "layer"; layer: Layer }
+  | { type: "cell"; cell: Cell };
+
+/** Options of {@link projectStream}. */
+export type ProjectStreamOptions = {
+  /** Stops the stream. */
+  signal?: AbortSignal;
+};
+
+/**
+ * Streams a project of the caller whole, in one response: the project, then its beats and scenes in narrative order,
+ * its layers in order, and its cells by the narrative order of their scene, then the position of their layer, each
+ * as its list returns it. A cut stream resumes after the last record received. A write during the stream may show,
+ * as it does across the pages of a list. Throws on HTTP 404 when the caller owns no such project.
+ */
+export async function* projectStream(
+  api: NarrativeEngineApi,
+  accessToken: string,
+  request: ProjectGetRequest,
+  options: ProjectStreamOptions = {}
+): AsyncGenerator<ProjectStreamRecord> {
+  const params = new URLSearchParams({ id: request.id });
+  const events = api.stream(
+    `/v1/project/stream?${params.toString()}`,
+    { method: "GET", headers: { Authorization: `Bearer ${accessToken}` }, signal: options.signal },
+    (event) => event.type === "end"
+  );
+
+  for await (const event of events) {
+    const data: unknown = JSON.parse(event.data);
+
+    switch (event.type) {
+      case "project":
+        yield { type: "project", project: ProjectSchema.parse(data) };
+        break;
+      case "beat":
+        yield { type: "beat", beat: BeatSchema.parse(data) };
+        break;
+      case "scene":
+        yield { type: "scene", scene: SceneSchema.parse(data) };
+        break;
+      case "layer":
+        yield { type: "layer", layer: LayerSchema.parse(data) };
+        break;
+      case "cell":
+        yield { type: "cell", cell: CellSchema.parse(data) };
+        break;
+    }
+  }
 }
