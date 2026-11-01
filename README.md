@@ -114,7 +114,7 @@ Every variable is read from the process environment. `SERVICE_NARRATIVE_ENGINE_E
 | `SERVICE_JSON_KEYS_PORT` | Port of the JSON Keys gRPC server. Defaults to `8080`.                                                                        | `rest`, `standalone-rest` |
 
 <details>
-<summary>Optional configuration (server tuning, service tokens, OpenTelemetry, Sentry)</summary>
+<summary>Optional configuration (server tuning, service tokens, OpenTelemetry)</summary>
 
 REST tuning (images `rest`, `standalone-rest`):
 
@@ -133,7 +133,7 @@ REST tuning (images `rest`, `standalone-rest`):
 | `REST_TIMEOUT_REQUEST`        | Per-request timeout. It fits a generation submit, which waits on genai for two calls of up to 35 seconds each. A streamed response lifts it. | `90s`                            |
 | `REST_MAX_STREAM_DURATION`    | How long a streamed response lasts. The client resumes a longer stream from the last event it received.                                      | `5m`                             |
 | `REST_MAX_STREAMS_PER_CALLER` | Streams one caller holds open on an instance, across the stream routes. One more answers 429.                                                | `8`                              |
-| `REST_TIMEOUT_SHUTDOWN`       | Graceful shutdown budget. With the 4 seconds of telemetry flushes after it, it fits Cloud Run's 10 seconds before `SIGKILL`.                 | `6s`                             |
+| `REST_TIMEOUT_SHUTDOWN`       | Graceful shutdown budget. With the 2-second telemetry flush after it, it fits Kubernetes' 30 seconds before `SIGKILL`.                       | `6s`                             |
 | `REST_CORS_ALLOWED_ORIGINS`   | CORS allowed origins.                                                                                                                        | `*`                              |
 | `REST_CORS_ALLOWED_HEADERS`   | CORS allowed headers.                                                                                                                        | `*`                              |
 | `REST_CORS_ALLOWED_METHODS`   | CORS allowed methods, comma-separated.                                                                                                       | `HEAD,GET,POST,PUT,PATCH,DELETE` |
@@ -174,14 +174,6 @@ Logs and tracing — OpenTelemetry exports to standard output, or over OTLP/HTTP
 | `GCLOUD_PROJECT_ID`              | Google Cloud project ID. When set, a connection without a token path authenticates with Google ID tokens.        |                            |
 | `OTEL_SERVICE_NAME`              | Service name every span and log record carries.                                                                  |                            |
 | `APP_NAME`                       | Application name attached to traces and logs.                                                                    | `service-narrative-engine` |
-
-Fault reporting — Sentry receives each server fault, tagged with its release (server images). Without `SENTRY_DSN`, the servers report nothing:
-
-| Name                 | Description                                                                                                               | Default |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------- |
-| `SENTRY_DSN`         | Client key of the service's Sentry project. Inject it as a secret.                                                        |         |
-| `SENTRY_RELEASE`     | Deployed build, as `service-narrative-engine@<version>`: the name release CI gives it in Sentry. **Required with a DSN.** |         |
-| `SENTRY_ENVIRONMENT` | Deployment name, such as `production`. **Required with a DSN.**                                                           |         |
 
 </details>
 

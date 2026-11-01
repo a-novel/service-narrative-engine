@@ -18,7 +18,6 @@ func TestAppPresetDefault(t *testing.T) {
 		name string
 
 		restTimeoutRead string
-		sentryDSN       string
 		env             []string
 
 		expect    string
@@ -56,11 +55,6 @@ func TestAppPresetDefault(t *testing.T) {
 			restTimeoutRead: "invalid",
 			expectErr:       `time: invalid duration "invalid"`,
 		},
-		{
-			name:      "Error/SentryWithoutRelease",
-			sentryDSN: "https://public@sentry.invalid/1",
-			expectErr: "sentry release and environment are required with a DSN",
-		},
 	}
 
 	for _, testCase := range testCases {
@@ -68,17 +62,14 @@ func TestAppPresetDefault(t *testing.T) {
 			t.Parallel()
 
 			// The preset resolves at package initialization, so each case reads it in a process of its
-			// own. The unprefixed variables prove the prefix is applied. The reporter refuses a DSN
-			// without a release: a case that boots without TEST_SENTRY_DSN proves the reporter stays off.
+			// own. The unprefixed variable proves the prefix is applied.
 			command := exec.CommandContext(t.Context(), "go", "run", "./testdata/app")
 
 			command.Env = append(os.Environ(),
 				"GOWORK=off",
 				"SERVICE_NARRATIVE_ENGINE_ENV_PREFIX=TEST_",
 				"REST_TIMEOUT_READ=invalid",
-				"SENTRY_DSN=https://public@sentry.invalid/1",
 				"TEST_REST_TIMEOUT_READ="+testCase.restTimeoutRead,
-				"TEST_SENTRY_DSN="+testCase.sentryDSN,
 			)
 			command.Env = append(command.Env, testCase.env...)
 
