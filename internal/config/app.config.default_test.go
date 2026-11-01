@@ -38,8 +38,9 @@ func TestAppPresetDefault(t *testing.T) {
 				"TEST_SERVICE_JSON_KEYS_TOKEN_PATH=/tokens/json-keys",
 				"TEST_SERVICE_GENAI_TOKEN_PATH=/tokens/genai",
 			},
-			expect: `15s &grpcf.ServiceTokenCredentialsProvider{ServiceTokenPath:"/tokens/json-keys"}` +
-				` &grpcf.ServiceTokenCredentialsProvider{ServiceTokenPath:"/tokens/genai"}`,
+			expect: "15s" +
+				` &grpcf.ServiceTokenCredentialsProvider{ServiceTokenPath:"/tokens/json-keys", TLS:false}` +
+				` &grpcf.ServiceTokenCredentialsProvider{ServiceTokenPath:"/tokens/genai", TLS:false}`,
 		},
 		{
 			name:            "Error/InvalidRestTimeoutRead",
