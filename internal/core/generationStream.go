@@ -125,9 +125,12 @@ func (service *GenerationStream) Exec(
 func (service *GenerationStream) ended(
 	ctx context.Context, request *GenerationStreamRequest,
 ) (iter.Seq2[*GenerationEvent, error], error) {
+	ctx, span := otel.Tracer().Start(ctx, "core.GenerationStream(ended)")
+	defer span.End()
+
 	result, err := service.read.Exec(ctx, &GenerationGetRequest{OwnerID: request.OwnerID, ID: request.ID})
 	if err != nil {
-		return nil, fmt.Errorf("read generation: %w", err)
+		return nil, otel.ReportError(span, fmt.Errorf("read generation: %w", err))
 	}
 
 	switch {
