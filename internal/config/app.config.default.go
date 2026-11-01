@@ -48,10 +48,10 @@ var AppPresetDefault = App{
 	Dependencies: Dependencies{
 		ServiceJsonKeysHost:        env.ServiceJsonKeysHost,
 		ServiceJsonKeysPort:        env.ServiceJsonKeysPort,
-		ServiceJsonKeysCredentials: newCredentials(env.ServiceJsonKeysTokenPath, env.ServiceJsonKeysHost),
+		ServiceJsonKeysCredentials: newCredentials(env.ServiceJsonKeysTokenPath),
 		ServiceGenaiHost:           env.ServiceGenaiHost,
 		ServiceGenaiPort:           env.ServiceGenaiPort,
-		ServiceGenaiCredentials:    newCredentials(env.ServiceGenaiTokenPath, env.ServiceGenaiHost),
+		ServiceGenaiCredentials:    newCredentials(env.ServiceGenaiTokenPath),
 	},
 	Permissions: PermissionsConfigDefault,
 	Rest:        env.Rest,
@@ -75,18 +75,14 @@ var AppPresetDefault = App{
 	Postgres: PostgresPresetDefault,
 }
 
-// newCredentials authenticates the connection to the service at host with the service token at
-// tokenPath. Each callee has its own audience, so each gets its own token. Without one, it sends a
-// Google ID token when the service runs on Google Cloud, and nothing otherwise.
-func newCredentials(tokenPath, host string) grpcf.CredentialsProvider {
-	switch {
-	case tokenPath != "":
-		return &grpcf.ServiceTokenCredentialsProvider{ServiceTokenPath: tokenPath}
-	case env.GcloudProjectID != "":
-		return &grpcf.GcloudCredentialsProvider{Host: host}
-	default:
+// newCredentials authenticates a connection with the service token at tokenPath. Each callee has its
+// own audience, so each gets its own token. Without one, it sends nothing.
+func newCredentials(tokenPath string) grpcf.CredentialsProvider {
+	if tokenPath == "" {
 		return &grpcf.LocalCredentialsProvider{}
 	}
+
+	return &grpcf.ServiceTokenCredentialsProvider{ServiceTokenPath: tokenPath}
 }
 
 // newOtelPreset picks the exporter [OtelPresetDefault] describes.

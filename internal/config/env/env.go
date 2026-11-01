@@ -134,10 +134,6 @@ var (
 	// system:serviceaccount:<namespace>:<name>.
 	ServiceTokenCallers = config.LoadEnv(getEnv("SERVICE_TOKEN_CALLERS"), nil, config.SliceParser(config.StringParser))
 
-	// GcloudProjectID is the Google Cloud project the service runs in. When set, the JSON Keys and
-	// genai connections without a token path authenticate with Google ID tokens.
-	GcloudProjectID = getEnv("GCLOUD_PROJECT_ID")
-
 	// OTLPEndpoint is the standard OTEL_EXPORTER_OTLP_ENDPOINT. When set, traces and logs export
 	// over OTLP/HTTP, which the OTEL_EXPORTER_OTLP_* variables configure. When empty, they go to
 	// standard output. The OpenTelemetry SDK reads these variables without the prefix, so this one

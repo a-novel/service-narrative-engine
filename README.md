@@ -171,7 +171,6 @@ Logs and tracing — OpenTelemetry exports to standard output, or over OTLP/HTTP
 | `OTEL_EXPORTER_OTLP_ENDPOINT`    | Base URL of the OTLP/HTTP backend. When set, traces and logs export there, and the servers write no request log. |                            |
 | `OTEL_EXPORTER_OTLP_HEADERS`     | Headers each export sends, such as the backend's key. Inject it as a secret.                                     |                            |
 | `OTEL_EXPORTER_OTLP_COMPRESSION` | `gzip` compresses each export.                                                                                   |                            |
-| `GCLOUD_PROJECT_ID`              | Google Cloud project ID. When set, a connection without a token path authenticates with Google ID tokens.        |                            |
 | `OTEL_SERVICE_NAME`              | Service name every span and log record carries.                                                                  |                            |
 | `APP_NAME`                       | Application name attached to traces and logs.                                                                    | `service-narrative-engine` |
 
