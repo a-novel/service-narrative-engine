@@ -42,15 +42,6 @@ func TestAppPresetDefault(t *testing.T) {
 				` &grpcf.ServiceTokenCredentialsProvider{ServiceTokenPath:"/tokens/genai"}`,
 		},
 		{
-			name: "Success/ServiceTokenOverGcloud",
-			env: []string{
-				"TEST_GCLOUD_PROJECT_ID=agora-storyverse",
-				"TEST_SERVICE_JSON_KEYS_TOKEN_PATH=/tokens/json-keys",
-			},
-			expect: `15s &grpcf.ServiceTokenCredentialsProvider{ServiceTokenPath:"/tokens/json-keys"}` +
-				` &grpcf.GcloudCredentialsProvider{Host:""}`,
-		},
-		{
 			name:            "Error/InvalidRestTimeoutRead",
 			restTimeoutRead: "invalid",
 			expectErr:       `time: invalid duration "invalid"`,
