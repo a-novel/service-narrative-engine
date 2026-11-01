@@ -20,10 +20,6 @@ import (
 // shutdown.
 const OtelFlushTimeout = 2 * time.Second
 
-// SentryFlushTimeout bounds how long a server waits on exit to send its pending Sentry events, inside
-// the platform's shutdown grace period.
-const SentryFlushTimeout = 2 * time.Second
-
 // OtelPresetDefault is the OpenTelemetry exporter of the servers. It exports nothing unless OTEL is
 // set, then exports over OTLP/HTTP when OTEL_EXPORTER_OTLP_ENDPOINT is set, and to standard output
 // otherwise. The liveness probe produces no span.
@@ -72,7 +68,6 @@ var AppPresetDefault = App{
 	Generations: GenerationsConfigDefault,
 
 	Otel:   OtelPresetDefault,
-	Sentry: env.Sentry,
 	Logger: lo.Ternary[logging.Log](!exportsOTLP, LoggerDev, LoggerProd),
 	RestLogger: lo.Ternary[logging.HTTPConfig](
 		!exportsOTLP, &loggingpresets.HTTPLocal{BaseLogger: LoggerDev}, nil,
