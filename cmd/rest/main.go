@@ -240,8 +240,9 @@ func main() {
 		// The router's body limit fits a batch; a route that writes one item caps its body lower.
 		item := api.With(middleware.RequestSize(cfg.Limits.ItemMaxRequestSize))
 		// A stream outlives the request timeout, and ends at shutdown: its client resumes on another
-		// instance.
+		// instance. One cap counts a caller's open streams across both stream routes.
 		stream := api.With(httpf.Streaming(cfg.Limits.MaxStreamDuration), httpf.EndOnShutdown(ctx))
+		streamCap := httpf.LimitConcurrencyBy(cfg.Limits.MaxStreamsPerCaller, handlers.StreamCallerKey)
 
 		api.Get("/ping", handlerPing.ServeHTTP)
 		api.Get("/healthcheck", handlerHealth.ServeHTTP)
@@ -249,7 +250,7 @@ func main() {
 		withAuth(item, config.PermissionProjectWrite).Post("/projects", handlerProjectCreate.ServeHTTP)
 		withAuth(api, config.PermissionProjectRead).Get("/projects", handlerProjectList.ServeHTTP)
 		withAuth(api, config.PermissionProjectRead).Get("/project", handlerProjectGet.ServeHTTP)
-		withAuth(stream, config.PermissionProjectRead).Get("/project/stream", handlerProjectStream.ServeHTTP)
+		withAuth(stream, config.PermissionProjectRead).With(streamCap).Get("/project/stream", handlerProjectStream.ServeHTTP)
 		withAuth(item, config.PermissionProjectWrite).Put("/project", handlerProjectUpdate.ServeHTTP)
 		withAuth(item, config.PermissionProjectWrite).Delete("/project", handlerProjectDelete.ServeHTTP)
 
@@ -292,7 +293,8 @@ func main() {
 		// A submit carries its overrides, so it takes a batch's body limit.
 		withAuth(api, config.PermissionProjectWrite).Post("/generation", handlerGenerationSubmit.ServeHTTP)
 		withAuth(api, config.PermissionProjectRead).Get("/generation", handlerGenerationGet.ServeHTTP)
-		withAuth(stream, config.PermissionProjectRead).Get("/generation/stream", handlerGenerationStream.ServeHTTP)
+		withAuth(stream, config.PermissionProjectRead).With(streamCap).
+			Get("/generation/stream", handlerGenerationStream.ServeHTTP)
 		withAuth(api, config.PermissionProjectWrite).Delete("/generation", handlerGenerationCancel.ServeHTTP)
 	})
 

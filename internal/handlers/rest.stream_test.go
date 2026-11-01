@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/a-novel/service-narrative-engine/internal/handlers"
 )
 
 // streamEvent is a server-sent event as a test reads it, its data decoded from JSON.
@@ -72,4 +74,49 @@ func requireEvents(t *testing.T, response *http.Response, expect []streamEvent) 
 	}
 
 	require.Equal(t, expect, events)
+}
+
+func TestStreamCallerKey(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name string
+
+		request func(t *testing.T) *http.Request
+
+		expect string
+	}{
+		{
+			name: "Success/Owner",
+
+			request: func(t *testing.T) *http.Request {
+				t.Helper()
+
+				return newRequest(t, http.MethodGet, "/v1/project/stream", nil)
+			},
+
+			expect: ownerID.String(),
+		},
+		{
+			name: "Success/Anonymous",
+
+			request: func(t *testing.T) *http.Request {
+				t.Helper()
+
+				return asUser(newRequest(t, http.MethodGet, "/v1/project/stream", nil), nil)
+			},
+
+			expect: "anonymous",
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			key, err := handlers.StreamCallerKey(testCase.request(t))
+			require.NoError(t, err)
+			require.Equal(t, testCase.expect, key)
+		})
+	}
 }

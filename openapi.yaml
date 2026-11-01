@@ -255,7 +255,8 @@ paths:
 
         The stream reads a page of each list at a time, so a write between two pages may show, as it does across
         the pages of a list. A stream lasts 5 minutes at most, and a comment line keeps an idle stream open every
-        15 seconds.
+        15 seconds. A caller holds 8 streams open at most, across this route and `GET /v1/generation/stream`:
+        one more answers 429.
       tags: [project]
       parameters:
         - $ref: "#/components/parameters/projectID"
@@ -1362,7 +1363,8 @@ paths:
 
         The provider streams a call for 5 minutes after it starts. A call submitted without `stream`, or past
         that window, answers 303 See Other to `GET /v1/generation`, which returns the call: poll it until it
-        settles. A comment line keeps an idle stream open every 15 seconds.
+        settles. A comment line keeps an idle stream open every 15 seconds. A caller holds 8 streams open at most,
+        across this route and `GET /v1/project/stream`: one more answers 429.
       tags: [generation]
       parameters:
         - $ref: "#/components/parameters/generationID"

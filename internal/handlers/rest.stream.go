@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/a-novel-kit/golib/httpf"
@@ -23,4 +24,15 @@ func sendEvent(stream *httpf.EventStream, id, eventType string, data any) error 
 	}
 
 	return stream.Send(httpf.Event{ID: id, Type: eventType, Data: body})
+}
+
+// StreamCallerKey keys the cap on open streams by the caller, so one user cannot hold every
+// connection. Callers without a user share a key, and the stream routes refuse them anyway.
+func StreamCallerKey(r *http.Request) (string, error) {
+	ownerID, err := requestOwner(r)
+	if err != nil {
+		return "anonymous", nil //nolint:nilerr // The route refuses the caller itself.
+	}
+
+	return ownerID.String(), nil
 }
