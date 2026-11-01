@@ -3,7 +3,7 @@ module github.com/a-novel/service-narrative-engine
 go 1.27.3
 
 require (
-	github.com/a-novel-kit/golib v0.57.0
+	github.com/a-novel-kit/golib v0.58.0
 	github.com/a-novel/service-authentication/v2 v2.20.1
 	github.com/a-novel/service-genai v0.8.1
 	github.com/a-novel/service-json-keys/v2 v2.14.1
@@ -18,6 +18,7 @@ require (
 	github.com/uptrace/bun v1.3.0
 	github.com/uptrace/bun/driver/pgdriver v1.3.0
 	go.opentelemetry.io/otel v1.47.0
+	go.opentelemetry.io/otel/trace v1.47.0
 	golang.org/x/text v0.43.0
 	google.golang.org/grpc v1.85.0
 )
@@ -48,8 +49,8 @@ require (
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/google/s2a-go v0.1.11 // indirect
-	github.com/googleapis/enterprise-certificate-proxy v0.3.23 // indirect
-	github.com/googleapis/gax-go/v2 v2.26.2 // indirect
+	github.com/googleapis/enterprise-certificate-proxy v0.3.24 // indirect
+	github.com/googleapis/gax-go/v2 v2.27.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.4 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.31.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
@@ -80,7 +81,6 @@ require (
 	go.opentelemetry.io/otel/metric v1.47.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.47.0 // indirect
 	go.opentelemetry.io/otel/sdk/log v1.47.0 // indirect
-	go.opentelemetry.io/otel/trace v1.47.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.11.1 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/crypto v0.58.0 // indirect
@@ -88,8 +88,8 @@ require (
 	golang.org/x/oauth2 v0.37.0 // indirect
 	golang.org/x/sync v0.24.0 // indirect
 	golang.org/x/sys v0.49.0 // indirect
-	google.golang.org/api v0.309.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20260928230214-8a89bd6388cc // indirect
+	google.golang.org/api v0.310.0 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20261012220534-4341edf3f941 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20261026165753-2ffab32bce7e // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 	mellium.im/sasl v0.3.2 // indirect

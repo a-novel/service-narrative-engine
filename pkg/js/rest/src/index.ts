@@ -13,4 +13,5 @@ export * from "./manuscript";
 export * from "./project";
 export * from "./recap";
 export * from "./scene";
+export type { ServerSentEvent } from "./stream";
 export * from "./suggestion";

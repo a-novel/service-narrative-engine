@@ -38,8 +38,9 @@ func (err *GenerationQuotaError) Is(target error) bool {
 	return target == ErrGenerationQuota
 }
 
-// genaiTimeout bounds each call to genai, which answers a submit within 20 seconds and a read within 10.
-const genaiTimeout = 25 * time.Second
+// genaiTimeout bounds each call to genai. genai answers a streamed submit once the provider begins the
+// call, within 30 seconds, and a read of a streamed generation may submit its call again.
+const genaiTimeout = 35 * time.Second
 
 // genaiError joins a sentinel to an error genai returned: [ErrGenaiUnavailable] when genai could not take
 // the call, and the sentinel of a miss when it holds no such generation.
@@ -113,6 +114,11 @@ type GenerationResult struct {
 	// Model names the model that wrote the output, as the provider names it. A client marks the blocks it
 	// applies from the output with it. It is empty unless the generation succeeded.
 	Model string
+}
+
+// settled reports whether the generation has ended, whichever way.
+func (result *GenerationResult) settled() bool {
+	return result.Status != GenerationStatusPending && result.Status != GenerationStatusRunning
 }
 
 // errGenaiStatus is returned when genai reports a status the service does not know.

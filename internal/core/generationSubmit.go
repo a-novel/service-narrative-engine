@@ -63,6 +63,9 @@ type GenerationSubmitRequest struct {
 
 	// Variant asks genai for another result of the same calls.
 	Variant uint32
+	// Stream creates each call in streaming mode, so [GenerationStream] forwards its text as the model
+	// writes it. A streamed call and an unstreamed one are two genai generations.
+	Stream bool
 }
 
 // GenerationSubmit plans a generation and submits each of its calls to genai, as the caller. A call
@@ -165,6 +168,7 @@ func (service *GenerationSubmit) submit(
 		Payload:  payload,
 		UserTier: lo.Ternary(request.Admin, genaiTierAdmin, genaiTierDefault),
 		Variant:  request.Variant,
+		Stream:   request.Stream,
 	})
 	if status.Code(err) == codes.ResourceExhausted {
 		span.SetAttributes(attribute.Bool("generation.waiting", true))
