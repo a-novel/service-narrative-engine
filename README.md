@@ -132,6 +132,7 @@ REST tuning (images `rest`, `standalone-rest`):
 | `REST_TIMEOUT_IDLE`           | Idle keep-alive timeout.                                                                                                                     | `60s`                            |
 | `REST_TIMEOUT_REQUEST`        | Per-request timeout. It fits a generation submit, which waits on genai for two calls of up to 35 seconds each. A streamed response lifts it. | `90s`                            |
 | `REST_MAX_STREAM_DURATION`    | How long a streamed response lasts. The client resumes a longer stream from the last event it received.                                      | `5m`                             |
+| `REST_MAX_STREAMS_PER_CALLER` | Streams one caller holds open on an instance, across the stream routes. One more answers 429.                                                | `8`                              |
 | `REST_TIMEOUT_SHUTDOWN`       | Graceful shutdown budget. With the 4 seconds of telemetry flushes after it, it fits Cloud Run's 10 seconds before `SIGKILL`.                 | `6s`                             |
 | `REST_CORS_ALLOWED_ORIGINS`   | CORS allowed origins.                                                                                                                        | `*`                              |
 | `REST_CORS_ALLOWED_HEADERS`   | CORS allowed headers.                                                                                                                        | `*`                              |

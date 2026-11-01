@@ -52,6 +52,9 @@ const (
 	// RestMaxStreamDurationDefault bounds a streamed response to the 5 minutes OpenAI streams a call
 	// for. A client resumes a longer stream from the last event it received.
 	RestMaxStreamDurationDefault = 5 * time.Minute
+	// RestMaxStreamsPerCallerDefault fits genai's 2 calls per user, the overlap of a reconnect, a project
+	// load and a few tabs.
+	RestMaxStreamsPerCallerDefault = 8
 
 	// RestMaxRequestSizeDefault lets a batch through: up to 100 items, among them cells whose content
 	// the core caps at 2 MiB each. The router applies it to every route.
@@ -119,6 +122,10 @@ var (
 	// RestMaxStreamDuration bounds a streamed response.
 	RestMaxStreamDuration = config.LoadEnv(
 		getEnv("REST_MAX_STREAM_DURATION"), RestMaxStreamDurationDefault, config.DurationParser,
+	)
+	// RestMaxStreamsPerCaller caps the streams one caller holds open on an instance.
+	RestMaxStreamsPerCaller = config.LoadEnv(
+		getEnv("REST_MAX_STREAMS_PER_CALLER"), RestMaxStreamsPerCallerDefault, config.IntParser,
 	)
 
 	// ServiceTokenIssuer is the issuer of the service tokens the REST server accepts, as a token's "iss"
