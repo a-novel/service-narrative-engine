@@ -31,11 +31,11 @@ inputs:
     description: Authentication REST image reference used by the CI topology.
   genai_database_image:
     required: false
-    default: ghcr.io/a-novel/service-genai/database:v0.8.3@sha256:369e9a0be29523f014eae389a2a638454af6f24b0844286795bac3969c1667e3
+    default: ghcr.io/a-novel/service-genai/database:v0.8.4@sha256:369e9a0be29523f014eae389a2a638454af6f24b0844286795bac3969c1667e3
     description: genai database image reference used by the CI topology.
   genai_grpc_image:
     required: false
-    default: ghcr.io/a-novel/service-genai/standalone-grpc:v0.8.3@sha256:a6c0fd84ced8ff368016ff8cd8d9776b21771bcf8dfc09229e40df7fba140cf0
+    default: ghcr.io/a-novel/service-genai/standalone-grpc:v0.8.4@sha256:100dfa232c0fe0f366b7b3a275914417c7290bec3cd9ee8f0da70260f7931434
     description: genai gRPC image reference used by the CI topology.
   registry_login:
     required: false
