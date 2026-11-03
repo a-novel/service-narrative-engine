@@ -140,9 +140,10 @@ export const SceneListRequestSchema = z.object({
 export type SceneListRequest = z.infer<typeof SceneListRequestSchema>;
 
 /**
- * Adds one scene to a beat and returns it at its place; the beat's scenes from there on move down one
- * place. Throws on HTTP 404 when the caller owns no such project or beat, and 422 when the beat holds 10
- * scenes already. {@link scenesCreate} adds several at once.
+ * Adds one scene to a beat and returns it at its place; the beat's scenes from there on move down one place.
+ * Throws on HTTP 404 when the caller owns no such project or beat, 409 when the beat holds 10 scenes already,
+ * and 409 with `projectBytes` in the error's `tags.limit` when the project would pass its 16 MiB budget of
+ * stored bytes. {@link scenesCreate} adds several at once.
  */
 export async function sceneCreate(
   api: NarrativeEngineApi,
@@ -157,9 +158,10 @@ export async function sceneCreate(
 }
 
 /**
- * Adds scenes to beats of the project and returns them in the order of the request; the scenes after them
- * in their beats move down. They are all added, or none are. Throws on HTTP 404 when the caller owns no such
- * project or one of the beats, and 422 when a beat would hold more than 10 scenes.
+ * Adds scenes to beats of the project and returns them in the order of the request; the scenes after them in
+ * their beats move down. They are all added, or none are. Throws on HTTP 404 when the caller owns no such
+ * project or one of the beats, 409 when a beat would hold more than 10 scenes, and 409 with `projectBytes` in
+ * the error's `tags.limit` when the project would pass its 16 MiB budget of stored bytes.
  */
 export async function scenesCreate(
   api: NarrativeEngineApi,
@@ -174,8 +176,9 @@ export async function scenesCreate(
 }
 
 /**
- * Replaces the title, description and prompt of a scene. Throws on HTTP 404 when the caller
- * owns no such project, or the project holds no such scene.
+ * Replaces the title, description and prompt of a scene. Throws on HTTP 404 when the caller owns no such
+ * project, or the project holds no such scene, and 409 with `projectBytes` in the error's `tags.limit` when the
+ * project would pass its 16 MiB budget of stored bytes.
  */
 export async function sceneUpdate(
   api: NarrativeEngineApi,
@@ -190,9 +193,10 @@ export async function sceneUpdate(
 }
 
 /**
- * Replaces the fields of several scenes at once and returns them in the order of the request. They are
- * all updated, or none are. Throws on HTTP 404 when the caller owns no such project, or the project lacks
- * one of the scenes.
+ * Replaces the fields of several scenes at once and returns them in the order of the request. They are all
+ * updated, or none are. Throws on HTTP 404 when the caller owns no such project, or the project lacks one of the
+ * scenes, and 409 with `projectBytes` in the error's `tags.limit` when the project would pass its 16 MiB budget
+ * of stored bytes.
  */
 export async function scenesUpdate(
   api: NarrativeEngineApi,
@@ -207,9 +211,9 @@ export async function scenesUpdate(
 }
 
 /**
- * Moves a scene to a position in a beat, its own or another, and returns it there. The scene keeps its
- * ID and its cells. Throws on HTTP 404 when the caller owns no such project, or the project holds no such
- * scene or beat, and 422 when the target beat holds 10 scenes already.
+ * Moves a scene to a position in a beat, its own or another, and returns it there. The scene keeps its ID and
+ * its cells. Throws on HTTP 404 when the caller owns no such project, or the project holds no such scene or
+ * beat, and 409 when the target beat holds 10 scenes already.
  */
 export async function sceneMove(
   api: NarrativeEngineApi,
@@ -259,8 +263,8 @@ export async function scenesDelete(
 
 /**
  * Lists a page of a project's scenes, in narrative order: by beat, then by position in the beat, with their
- * total. Raise `offset` by the page size for the next page. Throws on HTTP 404 when the caller owns no such
- * project.
+ * total. A page stops early once it holds 4 MiB, so raise `offset` by the scenes received for the next page,
+ * while that stays below the total. Throws on HTTP 404 when the caller owns no such project.
  */
 export async function sceneList(
   api: NarrativeEngineApi,

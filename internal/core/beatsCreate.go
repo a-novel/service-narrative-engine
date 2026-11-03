@@ -29,6 +29,11 @@ type BeatsCreateDaoInsert interface {
 	Exec(ctx context.Context, request *dao.BeatsInsertRequest) ([]*dao.Beat, error)
 }
 
+// BeatsCreateDaoBytes reads how many bytes the project stores, the new beats included.
+type BeatsCreateDaoBytes interface {
+	Exec(ctx context.Context, request *dao.ProjectBytesRequest) (*dao.ProjectBytes, error)
+}
+
 // BeatsCreateItem is one beat of a [BeatsCreateRequest].
 type BeatsCreateItem struct {
 	// Title names the beat in the composer.
@@ -53,20 +58,22 @@ type BeatsCreateRequest struct {
 	Beats []BeatsCreateItem `validate:"required,min=1,max=100,dive"`
 }
 
-// BeatsCreate adds beats to a project at the position the caller names. The beats from that
-// position on move down to make room.
+// BeatsCreate adds beats to a project at the position the caller names. The beats from that position on
+// move down to make room. It writes nothing when the project would store more than [ProjectBytesMax] bytes.
 type BeatsCreate struct {
 	daoLock    BeatsCreateDaoLock
 	daoInsert  BeatsCreateDaoInsert
+	daoBytes   BeatsCreateDaoBytes
 	transactor transaction.Transactor
 }
 
 func NewBeatsCreate(
 	daoLock BeatsCreateDaoLock,
 	daoInsert BeatsCreateDaoInsert,
+	daoBytes BeatsCreateDaoBytes,
 	transactor transaction.Transactor,
 ) *BeatsCreate {
-	return &BeatsCreate{daoLock: daoLock, daoInsert: daoInsert, transactor: transactor}
+	return &BeatsCreate{daoLock: daoLock, daoInsert: daoInsert, daoBytes: daoBytes, transactor: transactor}
 }
 
 func (service *BeatsCreate) Exec(ctx context.Context, request *BeatsCreateRequest) ([]*Beat, error) {
@@ -125,6 +132,11 @@ func (service *BeatsCreate) Exec(ctx context.Context, request *BeatsCreateReques
 
 		if err != nil {
 			return fmt.Errorf("insert beats: %w", err)
+		}
+
+		err = keepProjectBudget(ctx, service.daoBytes, projectBudgetOpts{projectID: request.ProjectID})
+		if err != nil {
+			return fmt.Errorf("keep project budget: %w", err)
 		}
 
 		slices.SortFunc(inserted, func(a, b *dao.Beat) int { return cmp.Compare(a.Position, b.Position) })

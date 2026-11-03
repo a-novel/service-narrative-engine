@@ -50,16 +50,20 @@ func TestProjectStream(t *testing.T) {
 	// expectFrom expects the reads of every section from the scenes on, the scenes from offset.
 	expectFrom := func(mocks *projectStreamMocks, offset int) {
 		mocks.scenes.EXPECT().
-			Exec(mock.Anything, &dao.SceneListRequest{ProjectID: projectID, Limit: 100, Offset: offset}).
-			Return([]*dao.SceneListRow{{Scene: *daoScene(sceneID2, 1), Total: 2}}, nil)
+			Exec(mock.Anything, &dao.SceneListRequest{
+				ProjectID: projectID, Limit: 100, Offset: offset, MaxBytes: core.ListPageBytesMax,
+			}).
+			Return([]*dao.SceneListRow{{Scene: *daoScene(sceneID2, 1), Total: offset + 1}}, nil)
 		mocks.layers.EXPECT().
-			Exec(mock.Anything, &dao.LayerListRequest{ProjectID: projectID, Limit: 100}).
+			Exec(mock.Anything, &dao.LayerListRequest{ProjectID: projectID, Limit: 100, MaxBytes: core.ListPageBytesMax}).
 			Return([]*dao.LayerListRow{{Layer: *notesLayer(layerID1, 0), Total: 1}}, nil)
 		mocks.cells.EXPECT().
-			Exec(mock.Anything, &dao.CellListRequest{ProjectID: projectID, Limit: 100}).
+			Exec(mock.Anything, &dao.CellListRequest{ProjectID: projectID, Limit: 100, MaxBytes: core.ListPageBytesMax}).
 			Return(cellRows[:100], nil)
 		mocks.cells.EXPECT().
-			Exec(mock.Anything, &dao.CellListRequest{ProjectID: projectID, Limit: 100, Offset: 100}).
+			Exec(mock.Anything, &dao.CellListRequest{
+				ProjectID: projectID, Limit: 100, Offset: 100, MaxBytes: core.ListPageBytesMax,
+			}).
 			Return(cellRows[100:], nil)
 	}
 
@@ -85,25 +89,55 @@ func TestProjectStream(t *testing.T) {
 					Exec(mock.Anything, &dao.ProjectSelectRequest{ID: projectID}).
 					Return(daoProject(), nil)
 				mocks.beats.EXPECT().
-					Exec(mock.Anything, &dao.BeatListRequest{ProjectID: projectID, Limit: 100}).
+					Exec(mock.Anything, &dao.BeatListRequest{ProjectID: projectID, Limit: 100, MaxBytes: core.ListPageBytesMax}).
 					Return([]*dao.BeatListRow{{Beat: *daoBeat(beatID1, 0), Total: 1}}, nil)
 				mocks.scenes.EXPECT().
-					Exec(mock.Anything, &dao.SceneListRequest{ProjectID: projectID, Limit: 100}).
+					Exec(mock.Anything, &dao.SceneListRequest{ProjectID: projectID, Limit: 100, MaxBytes: core.ListPageBytesMax}).
 					Return([]*dao.SceneListRow{{Scene: *daoScene(sceneID1, 0), Total: 1}}, nil)
 				mocks.layers.EXPECT().
-					Exec(mock.Anything, &dao.LayerListRequest{ProjectID: projectID, Limit: 100}).
+					Exec(mock.Anything, &dao.LayerListRequest{ProjectID: projectID, Limit: 100, MaxBytes: core.ListPageBytesMax}).
 					Return([]*dao.LayerListRow{{Layer: *notesLayer(layerID1, 0), Total: 1}}, nil)
 				mocks.cells.EXPECT().
-					Exec(mock.Anything, &dao.CellListRequest{ProjectID: projectID, Limit: 100}).
+					Exec(mock.Anything, &dao.CellListRequest{ProjectID: projectID, Limit: 100, MaxBytes: core.ListPageBytesMax}).
 					Return(cellRows[:100], nil)
 				mocks.cells.EXPECT().
-					Exec(mock.Anything, &dao.CellListRequest{ProjectID: projectID, Limit: 100, Offset: 100}).
+					Exec(mock.Anything, &dao.CellListRequest{
+						ProjectID: projectID, Limit: 100, Offset: 100, MaxBytes: core.ListPageBytesMax,
+					}).
 					Return(cellRows[100:], nil)
 			},
 
 			expectRecords: append(
 				append([]string{"project:1", "beats:1", "scenes:1", "layers:1"}, cellNames...), "end:0",
 			),
+		},
+		{
+			// A page that stops short of its limit at its byte bound still asks for the next one, until the
+			// pages hold the total.
+			name: "Success/ByteBound",
+
+			request: &core.ProjectStreamRequest{
+				OwnerID: ownerID, ProjectID: projectID,
+				After: &core.ProjectStreamPosition{Section: core.ProjectStreamLayers, Count: 1},
+			},
+			setup: func(mocks *projectStreamMocks) {
+				expectOwner(mocks)
+				mocks.layers.EXPECT().
+					Exec(mock.Anything, &dao.LayerListRequest{
+						ProjectID: projectID, Limit: 100, Offset: 1, MaxBytes: core.ListPageBytesMax,
+					}).
+					Return(nil, nil)
+				mocks.cells.EXPECT().
+					Exec(mock.Anything, &dao.CellListRequest{ProjectID: projectID, Limit: 100, MaxBytes: core.ListPageBytesMax}).
+					Return(cellRows[:60], nil)
+				mocks.cells.EXPECT().
+					Exec(mock.Anything, &dao.CellListRequest{
+						ProjectID: projectID, Limit: 100, Offset: 60, MaxBytes: core.ListPageBytesMax,
+					}).
+					Return(cellRows[60:], nil)
+			},
+
+			expectRecords: append(cellNames, "end:0"),
 		},
 		{
 			name: "Success/ResumeInSection",
@@ -129,7 +163,7 @@ func TestProjectStream(t *testing.T) {
 			setup: func(mocks *projectStreamMocks) {
 				expectOwner(mocks)
 				mocks.beats.EXPECT().
-					Exec(mock.Anything, &dao.BeatListRequest{ProjectID: projectID, Limit: 100}).
+					Exec(mock.Anything, &dao.BeatListRequest{ProjectID: projectID, Limit: 100, MaxBytes: core.ListPageBytesMax}).
 					Return(nil, nil)
 				expectFrom(mocks, 0)
 			},
@@ -178,7 +212,9 @@ func TestProjectStream(t *testing.T) {
 			setup: func(mocks *projectStreamMocks) {
 				expectOwner(mocks)
 				mocks.layers.EXPECT().
-					Exec(mock.Anything, &dao.LayerListRequest{ProjectID: projectID, Limit: 100, Offset: 1}).
+					Exec(mock.Anything, &dao.LayerListRequest{
+						ProjectID: projectID, Limit: 100, Offset: 1, MaxBytes: core.ListPageBytesMax,
+					}).
 					Return(nil, errFoo)
 			},
 

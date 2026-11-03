@@ -95,6 +95,7 @@ func TestPgBeatsUpdate(t *testing.T) {
 
 				result, err := daoBeatsUpdate.Exec(ctx, testCase.request)
 				require.NoError(t, err)
+				requireStoredBytes(ctx, t)
 				require.ElementsMatch(t, testCase.expect, result)
 
 				// An ID the project does not hold leaves every beat unchanged, the valid ones included.

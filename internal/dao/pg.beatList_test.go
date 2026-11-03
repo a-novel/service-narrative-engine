@@ -31,21 +31,37 @@ func TestPgBeatList(t *testing.T) {
 		{
 			name: "Success",
 
-			request: &dao.BeatListRequest{ProjectID: projectID, Limit: 10},
+			request: &dao.BeatListRequest{ProjectID: projectID, Limit: 10, MaxBytes: pageBytes},
 
 			expect: []*dao.BeatListRow{row(beats[0]), row(beats[1]), row(beats[2])},
 		},
 		{
 			name: "Success/Page",
 
-			request: &dao.BeatListRequest{ProjectID: projectID, Limit: 1, Offset: 1},
+			request: &dao.BeatListRequest{ProjectID: projectID, Limit: 1, Offset: 1, MaxBytes: pageBytes},
 
 			expect: []*dao.BeatListRow{row(beats[1])},
 		},
 		{
 			name: "Success/PastEnd",
 
-			request: &dao.BeatListRequest{ProjectID: projectID, Limit: 10, Offset: 3},
+			request: &dao.BeatListRequest{ProjectID: projectID, Limit: 10, Offset: 3, MaxBytes: pageBytes},
+		},
+		{
+			name: "Success/BytesBound",
+
+			// The first two beats hold 18 bytes, and the third would bring the page to 33.
+			request: &dao.BeatListRequest{ProjectID: projectID, Limit: 10, MaxBytes: 18},
+
+			expect: []*dao.BeatListRow{row(beats[0]), row(beats[1])},
+		},
+		{
+			name: "Success/BytesBoundFirstRow",
+
+			// A page keeps its first beat, whatever its bytes.
+			request: &dao.BeatListRequest{ProjectID: projectID, Limit: 10, Offset: 1, MaxBytes: 1},
+
+			expect: []*dao.BeatListRow{row(beats[1])},
 		},
 	}
 

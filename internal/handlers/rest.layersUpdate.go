@@ -78,7 +78,7 @@ func (handler *RestLayersUpdate) ServeHTTP(w http.ResponseWriter, r *http.Reques
 
 	result, err := handler.service.Exec(ctx, serviceRequest)
 	if err != nil {
-		httpf.HandleError(ctx, handler.logger, w, span, composerErrors, err)
+		httpf.HandleError(ctx, handler.logger, w, span, composerErrors, tagLimit(err))
 
 		return
 	}

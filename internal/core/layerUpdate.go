@@ -10,18 +10,24 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/a-novel-kit/golib/otel"
+	"github.com/a-novel-kit/golib/transaction"
 
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// LayerUpdateDaoOwner checks that the user owns the project.
-type LayerUpdateDaoOwner interface {
-	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
+// LayerUpdateDaoLock locks the project its owner names, so the writes to its bytes run one at a time.
+type LayerUpdateDaoLock interface {
+	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
 }
 
 // LayerUpdateDao writes the layer's new fields.
 type LayerUpdateDao interface {
 	Exec(ctx context.Context, request *dao.LayerUpdateRequest) (*dao.Layer, error)
+}
+
+// LayerUpdateDaoBytes reads how many bytes the project stores, the write included.
+type LayerUpdateDaoBytes interface {
+	Exec(ctx context.Context, request *dao.ProjectBytesRequest) (*dao.ProjectBytes, error)
 }
 
 // LayerUpdateRequest carries a layer's new fields.
@@ -36,14 +42,22 @@ type LayerUpdateRequest struct {
 	Description string `validate:"max=20000"`
 }
 
-// LayerUpdate replaces a layer's name and description.
+// LayerUpdate replaces a layer's name and description. It writes nothing when the project would store more
+// than [ProjectBytesMax] bytes.
 type LayerUpdate struct {
-	daoOwner LayerUpdateDaoOwner
-	dao      LayerUpdateDao
+	daoLock    LayerUpdateDaoLock
+	dao        LayerUpdateDao
+	daoBytes   LayerUpdateDaoBytes
+	transactor transaction.Transactor
 }
 
-func NewLayerUpdate(daoOwner LayerUpdateDaoOwner, dao LayerUpdateDao) *LayerUpdate {
-	return &LayerUpdate{daoOwner: daoOwner, dao: dao}
+func NewLayerUpdate(
+	daoLock LayerUpdateDaoLock,
+	dao LayerUpdateDao,
+	daoBytes LayerUpdateDaoBytes,
+	transactor transaction.Transactor,
+) *LayerUpdate {
+	return &LayerUpdate{daoLock: daoLock, dao: dao, daoBytes: daoBytes, transactor: transactor}
 }
 
 func (service *LayerUpdate) Exec(ctx context.Context, request *LayerUpdateRequest) (*Layer, error) {
@@ -61,28 +75,44 @@ func (service *LayerUpdate) Exec(ctx context.Context, request *LayerUpdateReques
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	err = checkProjectOwnership(ctx, service.daoOwner, projectOwnershipOpts{
-		projectID: request.ProjectID,
-		ownerID:   request.OwnerID,
+	var layer *Layer
+
+	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
+		err := lockOwnedProject(ctx, service.daoLock, projectOwnershipOpts{
+			projectID: request.ProjectID,
+			ownerID:   request.OwnerID,
+		})
+		if err != nil {
+			return fmt.Errorf("lock project: %w", err)
+		}
+
+		entity, err := service.dao.Exec(ctx, &dao.LayerUpdateRequest{
+			ProjectID:   request.ProjectID,
+			ID:          request.ID,
+			Name:        request.Name,
+			Description: request.Description,
+			Now:         time.Now(),
+		})
+		if errors.Is(err, dao.ErrLayerUpdateNotFound) {
+			err = errors.Join(err, ErrLayerNotFound)
+		}
+
+		if err != nil {
+			return fmt.Errorf("update layer: %w", err)
+		}
+
+		err = keepProjectBudget(ctx, service.daoBytes, projectBudgetOpts{projectID: request.ProjectID})
+		if err != nil {
+			return fmt.Errorf("keep project budget: %w", err)
+		}
+
+		layer = newLayer(entity)
+
+		return nil
 	})
 	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("check owner: %w", err))
+		return nil, otel.ReportError(span, fmt.Errorf("run transaction: %w", err))
 	}
 
-	entity, err := service.dao.Exec(ctx, &dao.LayerUpdateRequest{
-		ProjectID:   request.ProjectID,
-		ID:          request.ID,
-		Name:        request.Name,
-		Description: request.Description,
-		Now:         time.Now(),
-	})
-	if errors.Is(err, dao.ErrLayerUpdateNotFound) {
-		err = errors.Join(err, ErrLayerNotFound)
-	}
-
-	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("update layer: %w", err))
-	}
-
-	return newLayer(entity), nil
+	return layer, nil
 }

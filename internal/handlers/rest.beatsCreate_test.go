@@ -86,13 +86,23 @@ func TestRestBeatsCreate(t *testing.T) {
 			expectStatus: http.StatusNotFound,
 		},
 		{
+			name: "Error/ProjectBudget",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[[]*core.Beat]{err: core.ErrProjectBudget},
+
+			expectStatus:   http.StatusConflict,
+			expectResponse: limitProblem("projectBytes"),
+		},
+		{
 			name: "Error/ProjectFull",
 
 			request: validRequest,
 
 			serviceMock: &serviceMock[[]*core.Beat]{err: core.ErrProjectFull},
 
-			expectStatus: http.StatusUnprocessableEntity,
+			expectStatus: http.StatusConflict,
 		},
 		{
 			name: "Error/InvalidRequest",

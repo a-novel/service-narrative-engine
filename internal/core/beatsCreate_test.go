@@ -38,6 +38,7 @@ func TestBeatsCreate(t *testing.T) {
 
 		lockMock   *daoMock[bool]
 		insertMock *daoMock[[]*dao.Beat]
+		bytesMock  *daoMock[*dao.ProjectBytes]
 		// insertBeats are the beats the insert receives, without their generated IDs.
 		insertBeats []dao.BeatsInsertItem
 		transactor  transaction.Transactor
@@ -52,6 +53,7 @@ func TestBeatsCreate(t *testing.T) {
 
 			lockMock:    &daoMock[bool]{resp: true},
 			insertMock:  &daoMock[[]*dao.Beat]{resp: []*dao.Beat{daoBeat(beatID3, 0)}},
+			bytesMock:   withinBudget,
 			insertBeats: []dao.BeatsInsertItem{insertBeat},
 
 			expect: []*core.Beat{coreBeat(beatID3, 0)},
@@ -63,6 +65,7 @@ func TestBeatsCreate(t *testing.T) {
 
 			lockMock:    &daoMock[bool]{resp: true},
 			insertMock:  &daoMock[[]*dao.Beat]{resp: []*dao.Beat{daoBeat(beatID3, 2)}},
+			bytesMock:   withinBudget,
 			insertBeats: []dao.BeatsInsertItem{insertBeat},
 
 			expect: []*core.Beat{coreBeat(beatID3, 2)},
@@ -77,6 +80,7 @@ func TestBeatsCreate(t *testing.T) {
 			lockMock: &daoMock[bool]{resp: true},
 			// The insert returns its rows in no particular order.
 			insertMock: &daoMock[[]*dao.Beat]{resp: []*dao.Beat{daoBeat(beatID2, 2), daoBeat(beatID1, 1)}},
+			bytesMock:  withinBudget,
 			insertBeats: []dao.BeatsInsertItem{
 				insertBeat,
 				{Title: "Le thème", Color: "#e0457b", Description: "Paul ment.", Prompt: "Lent."},
@@ -161,6 +165,30 @@ func TestBeatsCreate(t *testing.T) {
 
 			expectErr: errFoo,
 		},
+		{
+			name: "Error/ProjectBudget",
+
+			request: request(0, beat),
+
+			lockMock:    &daoMock[bool]{resp: true},
+			insertMock:  &daoMock[[]*dao.Beat]{resp: []*dao.Beat{daoBeat(beatID3, 0)}},
+			bytesMock:   overBudget,
+			insertBeats: []dao.BeatsInsertItem{insertBeat},
+
+			expectErr: core.ErrProjectBudget,
+		},
+		{
+			name: "Error/ProjectBytes",
+
+			request: request(0, beat),
+
+			lockMock:    &daoMock[bool]{resp: true},
+			insertMock:  &daoMock[[]*dao.Beat]{resp: []*dao.Beat{daoBeat(beatID3, 0)}},
+			bytesMock:   &daoMock[*dao.ProjectBytes]{err: errFoo},
+			insertBeats: []dao.BeatsInsertItem{insertBeat},
+
+			expectErr: errFoo,
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -169,6 +197,7 @@ func TestBeatsCreate(t *testing.T) {
 
 			mockLock := coremocks.NewMockBeatsCreateDaoLock(t)
 			mockInsert := coremocks.NewMockBeatsCreateDaoInsert(t)
+			mockBytes := coremocks.NewMockBeatsCreateDaoBytes(t)
 
 			if testCase.lockMock != nil {
 				mockLock.EXPECT().
@@ -192,12 +221,18 @@ func TestBeatsCreate(t *testing.T) {
 					Return(testCase.insertMock.resp, testCase.insertMock.err)
 			}
 
+			if testCase.bytesMock != nil {
+				mockBytes.EXPECT().
+					Exec(mock.Anything, &dao.ProjectBytesRequest{ID: projectID}).
+					Return(testCase.bytesMock.resp, testCase.bytesMock.err)
+			}
+
 			transactor := testCase.transactor
 			if transactor == nil {
 				transactor = transactiontest.NewTransactor()
 			}
 
-			service := core.NewBeatsCreate(mockLock, mockInsert, transactor)
+			service := core.NewBeatsCreate(mockLock, mockInsert, mockBytes, transactor)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
@@ -205,6 +240,7 @@ func TestBeatsCreate(t *testing.T) {
 
 			mockLock.AssertExpectations(t)
 			mockInsert.AssertExpectations(t)
+			mockBytes.AssertExpectations(t)
 		})
 	}
 }

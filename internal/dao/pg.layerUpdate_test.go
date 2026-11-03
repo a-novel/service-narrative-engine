@@ -65,6 +65,7 @@ func TestPgLayerUpdate(t *testing.T) {
 
 				result, err := daoLayerUpdate.Exec(ctx, testCase.request)
 				require.ErrorIs(t, err, testCase.expectErr)
+				requireStoredBytes(ctx, t)
 				require.Equal(t, testCase.expect, result)
 			})
 		})

@@ -57,11 +57,11 @@ func TestCellWrite(t *testing.T) {
 
 		request *core.CellWriteRequest
 
-		ownerMock  *daoMock[bool]
+		lockMock   *daoMock[bool]
 		kindMock   *daoMock[[]*dao.LayerKind]
-		lockMock   *daoMock[struct{}]
 		daoMock    *daoMock[*dao.CellUpsertRow]
 		lengthMock *daoMock[[]*dao.SceneLength]
+		bytesMock  *daoMock[*dao.ProjectBytes]
 		transactor transaction.Transactor
 
 		expect    *core.WrittenCell
@@ -72,11 +72,11 @@ func TestCellWrite(t *testing.T) {
 
 			request: request(layerID2, notes),
 
-			ownerMock:  &daoMock[bool]{resp: true},
+			lockMock:   &daoMock[bool]{resp: true},
 			kindMock:   &daoMock[[]*dao.LayerKind]{resp: notesKind},
-			lockMock:   &daoMock[struct{}]{},
 			daoMock:    &daoMock[*dao.CellUpsertRow]{resp: daoRow(layerID2)},
 			lengthMock: sceneLength(100),
+			bytesMock:  withinBudget,
 
 			expect: writtenCell(layerID2),
 		},
@@ -85,11 +85,11 @@ func TestCellWrite(t *testing.T) {
 
 			request: request(layerID1, manuscript),
 
-			ownerMock:  &daoMock[bool]{resp: true},
+			lockMock:   &daoMock[bool]{resp: true},
 			kindMock:   &daoMock[[]*dao.LayerKind]{resp: manuscriptKind},
-			lockMock:   &daoMock[struct{}]{},
 			daoMock:    &daoMock[*dao.CellUpsertRow]{resp: daoRow(layerID1)},
 			lengthMock: sceneLength(100),
+			bytesMock:  withinBudget,
 
 			expect: writtenCell(layerID1),
 		},
@@ -98,11 +98,11 @@ func TestCellWrite(t *testing.T) {
 
 			request: request(layerID2, notes),
 
-			ownerMock:  &daoMock[bool]{resp: true},
+			lockMock:   &daoMock[bool]{resp: true},
 			kindMock:   &daoMock[[]*dao.LayerKind]{resp: notesKind},
-			lockMock:   &daoMock[struct{}]{},
 			daoMock:    &daoMock[*dao.CellUpsertRow]{resp: daoRow(layerID2)},
 			lengthMock: sceneLength(core.SceneContentMax),
+			bytesMock:  withinBudget,
 
 			expect: writtenCell(layerID2),
 		},
@@ -125,16 +125,16 @@ func TestCellWrite(t *testing.T) {
 
 			request: request(layerID2, notes),
 
-			ownerMock: &daoMock[bool]{resp: false},
+			lockMock: &daoMock[bool]{resp: false},
 
 			expectErr: core.ErrProjectNotFound,
 		},
 		{
-			name: "Error/CheckOwner",
+			name: "Error/Lock",
 
 			request: request(layerID2, notes),
 
-			ownerMock: &daoMock[bool]{err: errFoo},
+			lockMock: &daoMock[bool]{err: errFoo},
 
 			expectErr: errFoo,
 		},
@@ -143,8 +143,8 @@ func TestCellWrite(t *testing.T) {
 
 			request: request(layerID2, notes),
 
-			ownerMock: &daoMock[bool]{resp: true},
-			kindMock:  &daoMock[[]*dao.LayerKind]{err: errFoo},
+			lockMock: &daoMock[bool]{resp: true},
+			kindMock: &daoMock[[]*dao.LayerKind]{err: errFoo},
 
 			expectErr: errFoo,
 		},
@@ -153,8 +153,8 @@ func TestCellWrite(t *testing.T) {
 
 			request: request(layerID2, notes),
 
-			ownerMock: &daoMock[bool]{resp: true},
-			kindMock:  &daoMock[[]*dao.LayerKind]{resp: []*dao.LayerKind{}},
+			lockMock: &daoMock[bool]{resp: true},
+			kindMock: &daoMock[[]*dao.LayerKind]{resp: []*dao.LayerKind{}},
 
 			expectErr: core.ErrLayerNotFound,
 		},
@@ -164,8 +164,8 @@ func TestCellWrite(t *testing.T) {
 
 			request: request(layerID1, notes),
 
-			ownerMock: &daoMock[bool]{resp: true},
-			kindMock:  &daoMock[[]*dao.LayerKind]{resp: manuscriptKind},
+			lockMock: &daoMock[bool]{resp: true},
+			kindMock: &daoMock[[]*dao.LayerKind]{resp: manuscriptKind},
 
 			expectErr: core.ErrInvalidRequest,
 		},
@@ -174,10 +174,9 @@ func TestCellWrite(t *testing.T) {
 
 			request: request(layerID2, notes),
 
-			ownerMock: &daoMock[bool]{resp: true},
-			kindMock:  &daoMock[[]*dao.LayerKind]{resp: notesKind},
-			lockMock:  &daoMock[struct{}]{},
-			daoMock:   &daoMock[*dao.CellUpsertRow]{err: dao.ErrCellUpsertSceneNotFound},
+			lockMock: &daoMock[bool]{resp: true},
+			kindMock: &daoMock[[]*dao.LayerKind]{resp: notesKind},
+			daoMock:  &daoMock[*dao.CellUpsertRow]{err: dao.ErrCellUpsertSceneNotFound},
 
 			expectErr: core.ErrSceneNotFound,
 		},
@@ -186,10 +185,9 @@ func TestCellWrite(t *testing.T) {
 
 			request: request(layerID2, notes),
 
-			ownerMock: &daoMock[bool]{resp: true},
-			kindMock:  &daoMock[[]*dao.LayerKind]{resp: notesKind},
-			lockMock:  &daoMock[struct{}]{},
-			daoMock:   &daoMock[*dao.CellUpsertRow]{err: dao.ErrCellUpsertLayerNotFound},
+			lockMock: &daoMock[bool]{resp: true},
+			kindMock: &daoMock[[]*dao.LayerKind]{resp: notesKind},
+			daoMock:  &daoMock[*dao.CellUpsertRow]{err: dao.ErrCellUpsertLayerNotFound},
 
 			expectErr: core.ErrLayerNotFound,
 		},
@@ -198,10 +196,9 @@ func TestCellWrite(t *testing.T) {
 
 			request: request(layerID2, notes),
 
-			ownerMock: &daoMock[bool]{resp: true},
-			kindMock:  &daoMock[[]*dao.LayerKind]{resp: notesKind},
-			lockMock:  &daoMock[struct{}]{},
-			daoMock:   &daoMock[*dao.CellUpsertRow]{err: errFoo},
+			lockMock: &daoMock[bool]{resp: true},
+			kindMock: &daoMock[[]*dao.LayerKind]{resp: notesKind},
+			daoMock:  &daoMock[*dao.CellUpsertRow]{err: errFoo},
 
 			expectErr: errFoo,
 		},
@@ -210,33 +207,20 @@ func TestCellWrite(t *testing.T) {
 
 			request: request(layerID2, notes),
 
-			ownerMock:  &daoMock[bool]{resp: true},
+			lockMock:   &daoMock[bool]{resp: true},
 			kindMock:   &daoMock[[]*dao.LayerKind]{resp: notesKind},
-			lockMock:   &daoMock[struct{}]{},
 			daoMock:    &daoMock[*dao.CellUpsertRow]{resp: daoRow(layerID2)},
 			lengthMock: sceneLength(core.SceneContentMax + 1),
 
 			expectErr: core.ErrProjectFull,
 		},
 		{
-			name: "Error/LockScene",
-
-			request: request(layerID2, notes),
-
-			ownerMock: &daoMock[bool]{resp: true},
-			kindMock:  &daoMock[[]*dao.LayerKind]{resp: notesKind},
-			lockMock:  &daoMock[struct{}]{err: errFoo},
-
-			expectErr: errFoo,
-		},
-		{
 			name: "Error/SceneLength",
 
 			request: request(layerID2, notes),
 
-			ownerMock:  &daoMock[bool]{resp: true},
+			lockMock:   &daoMock[bool]{resp: true},
 			kindMock:   &daoMock[[]*dao.LayerKind]{resp: notesKind},
-			lockMock:   &daoMock[struct{}]{},
 			daoMock:    &daoMock[*dao.CellUpsertRow]{resp: daoRow(layerID2)},
 			lengthMock: &daoMock[[]*dao.SceneLength]{err: errFoo},
 
@@ -247,10 +231,33 @@ func TestCellWrite(t *testing.T) {
 
 			request: request(layerID2, notes),
 
-			ownerMock: &daoMock[bool]{resp: true},
-			kindMock:  &daoMock[[]*dao.LayerKind]{resp: notesKind},
-
 			transactor: transactiontest.NewFailingTransactor(errFoo),
+
+			expectErr: errFoo,
+		},
+		{
+			name: "Error/ProjectBudget",
+
+			request: request(layerID2, notes),
+
+			lockMock:   &daoMock[bool]{resp: true},
+			kindMock:   &daoMock[[]*dao.LayerKind]{resp: notesKind},
+			daoMock:    &daoMock[*dao.CellUpsertRow]{resp: daoRow(layerID2)},
+			lengthMock: sceneLength(100),
+			bytesMock:  overBudget,
+
+			expectErr: core.ErrProjectBudget,
+		},
+		{
+			name: "Error/ProjectBytes",
+
+			request: request(layerID2, notes),
+
+			lockMock:   &daoMock[bool]{resp: true},
+			kindMock:   &daoMock[[]*dao.LayerKind]{resp: notesKind},
+			daoMock:    &daoMock[*dao.CellUpsertRow]{resp: daoRow(layerID2)},
+			lengthMock: sceneLength(100),
+			bytesMock:  &daoMock[*dao.ProjectBytes]{err: errFoo},
 
 			expectErr: errFoo,
 		},
@@ -260,16 +267,16 @@ func TestCellWrite(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockOwner := coremocks.NewMockCellWriteDaoOwner(t)
-			mockKind := coremocks.NewMockCellWriteDaoKind(t)
 			mockLock := coremocks.NewMockCellWriteDaoLock(t)
+			mockKind := coremocks.NewMockCellWriteDaoKind(t)
 			mockDao := coremocks.NewMockCellWriteDao(t)
 			mockLength := coremocks.NewMockCellWriteDaoLength(t)
+			mockBytes := coremocks.NewMockCellWriteDaoBytes(t)
 
-			if testCase.ownerMock != nil {
-				mockOwner.EXPECT().
-					Exec(mock.Anything, &dao.ProjectOwnedRequest{ID: projectID, OwnerID: ownerID}).
-					Return(testCase.ownerMock.resp, testCase.ownerMock.err)
+			if testCase.lockMock != nil {
+				mockLock.EXPECT().
+					Exec(mock.Anything, &dao.ProjectLockRequest{ID: projectID, OwnerID: ownerID}).
+					Return(testCase.lockMock.resp, testCase.lockMock.err)
 			}
 
 			if testCase.kindMock != nil {
@@ -279,12 +286,6 @@ func TestCellWrite(t *testing.T) {
 			}
 
 			sceneIDs := []uuid.UUID{sceneID1}
-
-			if testCase.lockMock != nil {
-				mockLock.EXPECT().
-					Exec(mock.Anything, &dao.SceneLockRequest{ProjectID: projectID, IDs: sceneIDs}).
-					Return(testCase.lockMock.err)
-			}
 
 			if testCase.daoMock != nil {
 				mockDao.EXPECT().
@@ -301,22 +302,28 @@ func TestCellWrite(t *testing.T) {
 					Return(testCase.lengthMock.resp, testCase.lengthMock.err)
 			}
 
+			if testCase.bytesMock != nil {
+				mockBytes.EXPECT().
+					Exec(mock.Anything, &dao.ProjectBytesRequest{ID: projectID}).
+					Return(testCase.bytesMock.resp, testCase.bytesMock.err)
+			}
+
 			transactor := testCase.transactor
 			if transactor == nil {
 				transactor = transactiontest.NewTransactor()
 			}
 
-			service := core.NewCellWrite(mockOwner, mockKind, mockLock, mockDao, mockLength, transactor)
+			service := core.NewCellWrite(mockLock, mockKind, mockDao, mockLength, mockBytes, transactor)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
 
-			mockOwner.AssertExpectations(t)
-			mockKind.AssertExpectations(t)
 			mockLock.AssertExpectations(t)
+			mockKind.AssertExpectations(t)
 			mockDao.AssertExpectations(t)
 			mockLength.AssertExpectations(t)
+			mockBytes.AssertExpectations(t)
 		})
 	}
 }

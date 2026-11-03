@@ -62,11 +62,11 @@ var AppPresetDefault = App{
 	},
 	ServiceIssuerOptional: env.ServiceIssuerOptional,
 	Limits: Limits{
-		ItemMaxRequestSize:  env.RestMaxItemRequestSize,
-		MaxStreamDuration:   env.RestMaxStreamDuration,
-		MaxStreamsPerCaller: env.RestMaxStreamsPerCaller,
-		GenerationRate:      env.RestRateLimitGeneration,
-		ExportMaxConcurrent: env.RestMaxConcurrentExports,
+		ItemMaxRequestSize:       env.RestMaxItemRequestSize,
+		MaxStreamDuration:        env.RestMaxStreamDuration,
+		MaxStreamsPerCaller:      env.RestMaxStreamsPerCaller,
+		GenerationRate:           env.RestRateLimitGeneration,
+		ProjectReadMaxConcurrent: env.MaxConcurrentProjectReads,
 	},
 	Generations: GenerationsConfigDefault,
 

@@ -117,6 +117,7 @@ func TestPgLayerInsert(t *testing.T) {
 
 				result, err := daoLayerInsert.Exec(ctx, testCase.request)
 				require.ErrorIs(t, err, testCase.expectErr)
+				requireStoredBytes(ctx, t)
 				require.Equal(t, testCase.expect, result)
 
 				if testCase.expectLayers != nil {

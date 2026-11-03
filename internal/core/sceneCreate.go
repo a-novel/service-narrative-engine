@@ -25,6 +25,11 @@ type SceneCreateDaoInsert interface {
 	Exec(ctx context.Context, request *dao.SceneInsertRequest) (*dao.Scene, error)
 }
 
+// SceneCreateDaoBytes reads how many bytes the project stores, the new scene included.
+type SceneCreateDaoBytes interface {
+	Exec(ctx context.Context, request *dao.ProjectBytesRequest) (*dao.ProjectBytes, error)
+}
+
 // SceneCreateRequest carries a new scene and its place in a beat.
 type SceneCreateRequest struct {
 	OwnerID   uuid.UUID `validate:"required"`
@@ -44,19 +49,22 @@ type SceneCreateRequest struct {
 }
 
 // SceneCreate adds one scene to a beat at the position the caller names. The beat's scenes from that
-// position on move down by one. [ScenesCreate] adds several at once.
+// position on move down by one. [ScenesCreate] adds several at once. It writes nothing when the project
+// would store more than [ProjectBytesMax] bytes.
 type SceneCreate struct {
 	daoLock    SceneCreateDaoLock
 	daoInsert  SceneCreateDaoInsert
+	daoBytes   SceneCreateDaoBytes
 	transactor transaction.Transactor
 }
 
 func NewSceneCreate(
 	daoLock SceneCreateDaoLock,
 	daoInsert SceneCreateDaoInsert,
+	daoBytes SceneCreateDaoBytes,
 	transactor transaction.Transactor,
 ) *SceneCreate {
-	return &SceneCreate{daoLock: daoLock, daoInsert: daoInsert, transactor: transactor}
+	return &SceneCreate{daoLock: daoLock, daoInsert: daoInsert, daoBytes: daoBytes, transactor: transactor}
 }
 
 func (service *SceneCreate) Exec(ctx context.Context, request *SceneCreateRequest) (*Scene, error) {
@@ -110,6 +118,11 @@ func (service *SceneCreate) Exec(ctx context.Context, request *SceneCreateReques
 
 		if err != nil {
 			return fmt.Errorf("insert scene: %w", err)
+		}
+
+		err = keepProjectBudget(ctx, service.daoBytes, projectBudgetOpts{projectID: request.ProjectID})
+		if err != nil {
+			return fmt.Errorf("keep project budget: %w", err)
 		}
 
 		scene = newScene(inserted)

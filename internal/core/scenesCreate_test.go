@@ -60,6 +60,7 @@ func TestScenesCreate(t *testing.T) {
 		// insert reports whether the service runs the insert, which fails with insertErr when set.
 		insert     bool
 		insertErr  error
+		bytesMock  *daoMock[*dao.ProjectBytes]
 		transactor transaction.Transactor
 
 		expect    []*core.Scene
@@ -70,8 +71,9 @@ func TestScenesCreate(t *testing.T) {
 
 			request: request(scene),
 
-			lockMock: &daoMock[bool]{resp: true},
-			insert:   true,
+			lockMock:  &daoMock[bool]{resp: true},
+			insert:    true,
+			bytesMock: withinBudget,
 
 			expect: []*core.Scene{stored(scene)},
 		},
@@ -80,8 +82,9 @@ func TestScenesCreate(t *testing.T) {
 
 			request: request(scene, other),
 
-			lockMock: &daoMock[bool]{resp: true},
-			insert:   true,
+			lockMock:  &daoMock[bool]{resp: true},
+			insert:    true,
+			bytesMock: withinBudget,
 
 			// The insert returns its rows in no particular order, and the service returns the request's.
 			expect: []*core.Scene{stored(scene), stored(other)},
@@ -189,6 +192,28 @@ func TestScenesCreate(t *testing.T) {
 
 			expectErr: errFoo,
 		},
+		{
+			name: "Error/ProjectBudget",
+
+			request: request(scene),
+
+			lockMock:  &daoMock[bool]{resp: true},
+			insert:    true,
+			bytesMock: overBudget,
+
+			expectErr: core.ErrProjectBudget,
+		},
+		{
+			name: "Error/ProjectBytes",
+
+			request: request(scene),
+
+			lockMock:  &daoMock[bool]{resp: true},
+			insert:    true,
+			bytesMock: &daoMock[*dao.ProjectBytes]{err: errFoo},
+
+			expectErr: errFoo,
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -197,6 +222,7 @@ func TestScenesCreate(t *testing.T) {
 
 			mockLock := coremocks.NewMockScenesCreateDaoLock(t)
 			mockInsert := coremocks.NewMockScenesCreateDaoInsert(t)
+			mockBytes := coremocks.NewMockScenesCreateDaoBytes(t)
 
 			if testCase.lockMock != nil {
 				mockLock.EXPECT().
@@ -242,12 +268,18 @@ func TestScenesCreate(t *testing.T) {
 					})
 			}
 
+			if testCase.bytesMock != nil {
+				mockBytes.EXPECT().
+					Exec(mock.Anything, &dao.ProjectBytesRequest{ID: projectID}).
+					Return(testCase.bytesMock.resp, testCase.bytesMock.err)
+			}
+
 			transactor := testCase.transactor
 			if transactor == nil {
 				transactor = transactiontest.NewTransactor()
 			}
 
-			service := core.NewScenesCreate(mockLock, mockInsert, transactor)
+			service := core.NewScenesCreate(mockLock, mockInsert, mockBytes, transactor)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
@@ -265,6 +297,7 @@ func TestScenesCreate(t *testing.T) {
 
 			mockLock.AssertExpectations(t)
 			mockInsert.AssertExpectations(t)
+			mockBytes.AssertExpectations(t)
 		})
 	}
 }

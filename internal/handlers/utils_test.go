@@ -148,3 +148,10 @@ func newProbeContext(t *testing.T, setup probeSetup) context.Context {
 
 	return ctx
 }
+
+// limitProblem is the body of a refusal for a storage limit, whose limit tag names the limit reached.
+func limitProblem(limit string) any {
+	return map[string]any{
+		"type": "about:blank", "title": "Conflict", "status": 409.0, "tags": map[string]any{"limit": limit},
+	}
+}

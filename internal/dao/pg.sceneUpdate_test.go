@@ -70,6 +70,7 @@ func TestPgSceneUpdate(t *testing.T) {
 
 				result, err := daoSceneUpdate.Exec(ctx, testCase.request)
 				require.ErrorIs(t, err, testCase.expectErr)
+				requireStoredBytes(ctx, t)
 				require.Equal(t, testCase.expect, result)
 			})
 		})

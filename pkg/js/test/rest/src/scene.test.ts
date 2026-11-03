@@ -110,10 +110,10 @@ describe("sceneCreate", () => {
     await expectStatus(createScene("Scene", 0, otherBeat), 404);
   });
 
-  it("returns 422 when the beat holds 10 scenes", async () => {
+  it("returns 409 when the beat holds 10 scenes", async () => {
     await fillBeat();
 
-    await expectStatus(createScene("Extra"), 422);
+    await expectStatus(createScene("Extra"), 409);
   });
 });
 
@@ -183,11 +183,11 @@ describe("scenesCreate", () => {
     await expectStatus(scenesCreate(api, accessToken, request), 404);
   });
 
-  it("returns 422 when the batch would pass 10 scenes in the beat", async () => {
+  it("returns 409 when the batch would pass 10 scenes in the beat", async () => {
     await fillBeat();
 
     const request = { projectID: project.id, scenes: [{ beatID: first.id, title: "Extra" }] };
-    await expectStatus(scenesCreate(api, accessToken, request), 422);
+    await expectStatus(scenesCreate(api, accessToken, request), 409);
   });
 
   it("returns 400 for an empty list or more than 100 scenes", async () => {
@@ -376,12 +376,12 @@ describe("sceneMove", () => {
     await expectStatus(sceneMove(api, accessToken, request), 404);
   });
 
-  it("returns 422 when the target beat holds 10 scenes", async () => {
+  it("returns 409 when the target beat holds 10 scenes", async () => {
     await fillBeat();
     const scene = await createScene("Extra", 0, second);
 
     const request = { projectID: project.id, id: scene.id, beatID: first.id, position: 0 };
-    await expectStatus(sceneMove(api, accessToken, request), 422);
+    await expectStatus(sceneMove(api, accessToken, request), 409);
   });
 });
 

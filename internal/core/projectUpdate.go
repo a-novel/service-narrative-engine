@@ -10,18 +10,24 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/a-novel-kit/golib/otel"
+	"github.com/a-novel-kit/golib/transaction"
 
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// ProjectUpdateDaoOwner checks that the user owns the project.
-type ProjectUpdateDaoOwner interface {
-	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
+// ProjectUpdateDaoLock locks the project its owner names, so the writes to its bytes run one at a time.
+type ProjectUpdateDaoLock interface {
+	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
 }
 
 // ProjectUpdateDao writes the project's new fields.
 type ProjectUpdateDao interface {
 	Exec(ctx context.Context, request *dao.ProjectUpdateRequest) (*dao.Project, error)
+}
+
+// ProjectUpdateDaoBytes reads how many bytes the project stores, the write included.
+type ProjectUpdateDaoBytes interface {
+	Exec(ctx context.Context, request *dao.ProjectBytesRequest) (*dao.ProjectBytes, error)
 }
 
 // ProjectUpdateRequest carries a project's new fields.
@@ -37,14 +43,22 @@ type ProjectUpdateRequest struct {
 	Language string `validate:"required,language"`
 }
 
-// ProjectUpdate replaces a project's own fields.
+// ProjectUpdate replaces a project's own fields. It writes nothing when the project would store more than
+// [ProjectBytesMax] bytes.
 type ProjectUpdate struct {
-	daoOwner ProjectUpdateDaoOwner
-	dao      ProjectUpdateDao
+	daoLock    ProjectUpdateDaoLock
+	dao        ProjectUpdateDao
+	daoBytes   ProjectUpdateDaoBytes
+	transactor transaction.Transactor
 }
 
-func NewProjectUpdate(daoOwner ProjectUpdateDaoOwner, dao ProjectUpdateDao) *ProjectUpdate {
-	return &ProjectUpdate{daoOwner: daoOwner, dao: dao}
+func NewProjectUpdate(
+	daoLock ProjectUpdateDaoLock,
+	dao ProjectUpdateDao,
+	daoBytes ProjectUpdateDaoBytes,
+	transactor transaction.Transactor,
+) *ProjectUpdate {
+	return &ProjectUpdate{daoLock: daoLock, dao: dao, daoBytes: daoBytes, transactor: transactor}
 }
 
 func (service *ProjectUpdate) Exec(ctx context.Context, request *ProjectUpdateRequest) (*Project, error) {
@@ -61,28 +75,44 @@ func (service *ProjectUpdate) Exec(ctx context.Context, request *ProjectUpdateRe
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	err = checkProjectOwnership(ctx, service.daoOwner, projectOwnershipOpts{
-		projectID: request.ID,
-		ownerID:   request.OwnerID,
+	var project *Project
+
+	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
+		err := lockOwnedProject(ctx, service.daoLock, projectOwnershipOpts{
+			projectID: request.ID,
+			ownerID:   request.OwnerID,
+		})
+		if err != nil {
+			return fmt.Errorf("lock project: %w", err)
+		}
+
+		entity, err := service.dao.Exec(ctx, &dao.ProjectUpdateRequest{
+			ID:       request.ID,
+			Title:    request.Title,
+			Premise:  request.Premise,
+			Language: request.Language,
+			Now:      time.Now(),
+		})
+		if errors.Is(err, dao.ErrProjectUpdateNotFound) {
+			err = errors.Join(err, ErrProjectNotFound)
+		}
+
+		if err != nil {
+			return fmt.Errorf("update project: %w", err)
+		}
+
+		err = keepProjectBudget(ctx, service.daoBytes, projectBudgetOpts{projectID: request.ID})
+		if err != nil {
+			return fmt.Errorf("keep project budget: %w", err)
+		}
+
+		project = newProject(entity)
+
+		return nil
 	})
 	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("check owner: %w", err))
+		return nil, otel.ReportError(span, fmt.Errorf("run transaction: %w", err))
 	}
 
-	entity, err := service.dao.Exec(ctx, &dao.ProjectUpdateRequest{
-		ID:       request.ID,
-		Title:    request.Title,
-		Premise:  request.Premise,
-		Language: request.Language,
-		Now:      time.Now(),
-	})
-	if errors.Is(err, dao.ErrProjectUpdateNotFound) {
-		err = errors.Join(err, ErrProjectNotFound)
-	}
-
-	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("update project: %w", err))
-	}
-
-	return newProject(entity), nil
+	return project, nil
 }

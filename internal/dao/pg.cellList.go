@@ -24,6 +24,9 @@ type CellListRequest struct {
 	Limit int
 	// Offset is how many cells come before the page, in the order the page follows.
 	Offset int
+	// MaxBytes bounds the bytes of the page: it stops before a row that would take it past the bound, and
+	// holds one row at least.
+	MaxBytes int64
 }
 
 // CellListRow is one cell of a page.
@@ -53,7 +56,9 @@ func (dao *PgCellList) Exec(ctx context.Context, request *CellListRequest) ([]*C
 
 	var entities []*CellListRow
 
-	err = db.NewRaw(cellListQuery, request.ProjectID, request.Limit, request.Offset).Scan(ctx, &entities)
+	err = db.NewRaw(
+		cellListQuery, request.ProjectID, request.Limit, request.Offset, request.MaxBytes,
+	).Scan(ctx, &entities)
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("execute query: %w", err))
 	}

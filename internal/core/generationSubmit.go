@@ -71,17 +71,23 @@ type GenerationSubmitRequest struct {
 // GenerationSubmit plans a generation and submits each of its calls to genai, as the caller. A call
 // genai refuses for a cap waits, and so do the calls after it. Resending the same request admits the
 // calls that wait: genai replays the calls it admitted and those that succeeded, and runs again those that
-// failed or were cancelled. A generation whose every call waits returns a [GenerationQuotaError].
+// failed or were cancelled. A generation whose every call waits returns a [GenerationQuotaError]. The read
+// of the project and the plan wait for a slot of the gate, which they share with every other read of a
+// whole project, and free it before the first call to genai.
 type GenerationSubmit struct {
 	snapshot GenerationSubmitServiceSnapshot
 	plan     GenerationSubmitServicePlan
 	genai    GenerationSubmitServiceGenai
+	gate     *ProjectReadGate
 }
 
 func NewGenerationSubmit(
-	snapshot GenerationSubmitServiceSnapshot, plan GenerationSubmitServicePlan, genai GenerationSubmitServiceGenai,
+	snapshot GenerationSubmitServiceSnapshot,
+	plan GenerationSubmitServicePlan,
+	genai GenerationSubmitServiceGenai,
+	gate *ProjectReadGate,
 ) *GenerationSubmit {
-	return &GenerationSubmit{snapshot: snapshot, plan: plan, genai: genai}
+	return &GenerationSubmit{snapshot: snapshot, plan: plan, genai: genai, gate: gate}
 }
 
 func (service *GenerationSubmit) Exec(ctx context.Context, request *GenerationSubmitRequest) (*Generation, error) {
@@ -99,19 +105,28 @@ func (service *GenerationSubmit) Exec(ctx context.Context, request *GenerationSu
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	snapshot, err := service.snapshot.Exec(ctx, &ProjectSnapshotReadRequest{
-		OwnerID: request.OwnerID, ProjectID: request.ProjectID,
-	})
-	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("read project: %w", err))
-	}
+	var plan *ContextPlan
 
-	plan, err := service.plan.Exec(ctx, &GenerationPlanRequest{
-		Snapshot: snapshot, Kind: request.Kind, Targets: request.Targets, Cell: request.Cell, BeatID: request.BeatID,
-		Scenes: request.Scenes, Instruction: request.Instruction, Exclude: request.Exclude, Overrides: request.Overrides,
+	err = service.gate.Run(ctx, func(ctx context.Context) error {
+		snapshot, err := service.snapshot.Exec(ctx, &ProjectSnapshotReadRequest{
+			OwnerID: request.OwnerID, ProjectID: request.ProjectID,
+		})
+		if err != nil {
+			return fmt.Errorf("read project: %w", err)
+		}
+
+		plan, err = service.plan.Exec(ctx, &GenerationPlanRequest{
+			Snapshot: snapshot, Kind: request.Kind, Targets: request.Targets, Cell: request.Cell, BeatID: request.BeatID,
+			Scenes: request.Scenes, Instruction: request.Instruction, Exclude: request.Exclude, Overrides: request.Overrides,
+		})
+		if err != nil {
+			return fmt.Errorf("plan generation: %w", err)
+		}
+
+		return nil
 	})
 	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("plan generation: %w", err))
+		return nil, otel.ReportError(span, err)
 	}
 
 	generation := &Generation{Kind: plan.Kind, Calls: make([]*GenerationCall, len(plan.Calls))}

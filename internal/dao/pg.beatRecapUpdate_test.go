@@ -141,6 +141,7 @@ func TestPgBeatRecapUpdate(t *testing.T) {
 
 				err := daoBeatRecapUpdate.Exec(ctx, testCase.request)
 				require.ErrorIs(t, err, testCase.expectErr)
+				requireStoredBytes(ctx, t)
 
 				expect := []*dao.Beat{testCase.expectBeat(data.beats[0]), data.beats[1], data.beats[2]}
 				require.Equal(t, expect, listBeats(ctx, t, projectID))

@@ -139,10 +139,10 @@ export const LayerListRequestSchema = z.object({
 export type LayerListRequest = z.infer<typeof LayerListRequestSchema>;
 
 /**
- * Adds one layer of any kind to a project and returns it at its place; the layers from there on move
- * down one place. Throws on HTTP 400 for a kind with no content schema, 404 when the caller owns no
- * such project, and 422 when the project holds 1000 layers already. {@link layersCreate} adds several
- * at once.
+ * Adds one layer of any kind to a project and returns it at its place; the layers from there on move down one
+ * place. Throws on HTTP 400 for a kind with no content schema, 404 when the caller owns no such project, 409
+ * when the project holds 1000 layers already, and 409 with `projectBytes` in the error's `tags.limit` when the
+ * project would pass its 16 MiB budget of stored bytes. {@link layersCreate} adds several at once.
  */
 export async function layerCreate(
   api: NarrativeEngineApi,
@@ -157,9 +157,10 @@ export async function layerCreate(
 }
 
 /**
- * Adds layers of any kind to a project and returns them in order; the layers from there on move down.
- * They are all added, or none are. Throws on HTTP 400 for a kind with no content schema, 404 when the
- * caller owns no such project, and 422 when the project would hold more than 1000 layers.
+ * Adds layers of any kind to a project and returns them in order; the layers from there on move down. They are
+ * all added, or none are. Throws on HTTP 400 for a kind with no content schema, 404 when the caller owns no such
+ * project, 409 when the project would hold more than 1000 layers, and 409 with `projectBytes` in the error's
+ * `tags.limit` when the project would pass its 16 MiB budget of stored bytes.
  */
 export async function layersCreate(
   api: NarrativeEngineApi,
@@ -174,8 +175,9 @@ export async function layersCreate(
 }
 
 /**
- * Replaces the name and description of a layer. Throws on HTTP 404 when the caller owns no such
- * project, or the project holds no such layer.
+ * Replaces the name and description of a layer. Throws on HTTP 404 when the caller owns no such project, or the
+ * project holds no such layer, and 409 with `projectBytes` in the error's `tags.limit` when the project would
+ * pass its 16 MiB budget of stored bytes.
  */
 export async function layerUpdate(
   api: NarrativeEngineApi,
@@ -190,9 +192,10 @@ export async function layerUpdate(
 }
 
 /**
- * Replaces the name and description of several layers at once and returns them in the order of the
- * request. They are all updated, or none are. Throws on HTTP 404 when the caller owns no such project,
- * or the project lacks one of the layers.
+ * Replaces the name and description of several layers at once and returns them in the order of the request. They
+ * are all updated, or none are. Throws on HTTP 404 when the caller owns no such project, or the project lacks
+ * one of the layers, and 409 with `projectBytes` in the error's `tags.limit` when the project would pass its
+ * 16 MiB budget of stored bytes.
  */
 export async function layersUpdate(
   api: NarrativeEngineApi,
@@ -223,9 +226,9 @@ export async function layerMove(
 }
 
 /**
- * Deletes one layer with its cells and returns it as it was; the layers after it move up one place.
- * Throws on HTTP 404 when the caller owns no such project, or the project holds no such layer, and 422
- * for the last layer of a required kind, such as the manuscript.
+ * Deletes one layer with its cells and returns it as it was; the layers after it move up one place. Throws on
+ * HTTP 404 when the caller owns no such project, or the project holds no such layer, and 409 for the last layer
+ * of a required kind, such as the manuscript.
  */
 export async function layerDelete(
   api: NarrativeEngineApi,
@@ -240,10 +243,10 @@ export async function layerDelete(
 }
 
 /**
- * Deletes layers with their cells and returns them as they were; the layers after them move up to
- * close the gaps. They are all deleted, or none are. Throws on HTTP 404 when the caller owns no such
- * project, or the project lacks one of the layers, and 422 when the delete would leave no layer of a
- * required kind, such as the manuscript.
+ * Deletes layers with their cells and returns them as they were; the layers after them move up to close the
+ * gaps. They are all deleted, or none are. Throws on HTTP 404 when the caller owns no such project, or the
+ * project lacks one of the layers, and 409 when the delete would leave no layer of a required kind, such as the
+ * manuscript.
  */
 export async function layersDelete(
   api: NarrativeEngineApi,
@@ -259,8 +262,9 @@ export async function layersDelete(
 }
 
 /**
- * Lists a page of a project's layers, in order, with their total. Raise `offset` by the page size for
- * the next page. Throws on HTTP 404 when the caller owns no such project.
+ * Lists a page of a project's layers, in order, with their total. A page stops early once it holds 4 MiB, so
+ * raise `offset` by the layers received for the next page, while that stays below the total. Throws on HTTP 404
+ * when the caller owns no such project.
  */
 export async function layerList(
   api: NarrativeEngineApi,

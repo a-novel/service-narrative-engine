@@ -16,8 +16,8 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// projectStreamPageSize is how many rows a [ProjectStream] reads per query. It bounds the memory a
-// stream holds, cells included.
+// projectStreamPageSize is how many rows a [ProjectStream] reads per query. With [ListPageBytesMax], it
+// bounds the memory a stream holds, cells included.
 const projectStreamPageSize = 100
 
 const (
@@ -208,40 +208,56 @@ func (service *ProjectStream) records(
 			return streamPages(ProjectStreamBeats, offset(ProjectStreamBeats), yield,
 				func(offset int) ([]*dao.BeatListRow, error) {
 					return service.daoBeats.Exec(ctx, &dao.BeatListRequest{
-						ProjectID: projectID, Limit: projectStreamPageSize, Offset: offset,
+						ProjectID: projectID, Limit: projectStreamPageSize, Offset: offset, MaxBytes: ListPageBytesMax,
 					})
 				},
-				func(row *dao.BeatListRow, record *ProjectRecord) { record.Beat = newBeat(&row.Beat) },
+				func(row *dao.BeatListRow, record *ProjectRecord) int {
+					record.Beat = newBeat(&row.Beat)
+
+					return row.Total
+				},
 			)
 		},
 		func() bool {
 			return streamPages(ProjectStreamScenes, offset(ProjectStreamScenes), yield,
 				func(offset int) ([]*dao.SceneListRow, error) {
 					return service.daoScenes.Exec(ctx, &dao.SceneListRequest{
-						ProjectID: projectID, Limit: projectStreamPageSize, Offset: offset,
+						ProjectID: projectID, Limit: projectStreamPageSize, Offset: offset, MaxBytes: ListPageBytesMax,
 					})
 				},
-				func(row *dao.SceneListRow, record *ProjectRecord) { record.Scene = newScene(&row.Scene) },
+				func(row *dao.SceneListRow, record *ProjectRecord) int {
+					record.Scene = newScene(&row.Scene)
+
+					return row.Total
+				},
 			)
 		},
 		func() bool {
 			return streamPages(ProjectStreamLayers, offset(ProjectStreamLayers), yield,
 				func(offset int) ([]*dao.LayerListRow, error) {
 					return service.daoLayers.Exec(ctx, &dao.LayerListRequest{
-						ProjectID: projectID, Limit: projectStreamPageSize, Offset: offset,
+						ProjectID: projectID, Limit: projectStreamPageSize, Offset: offset, MaxBytes: ListPageBytesMax,
 					})
 				},
-				func(row *dao.LayerListRow, record *ProjectRecord) { record.Layer = newLayer(&row.Layer) },
+				func(row *dao.LayerListRow, record *ProjectRecord) int {
+					record.Layer = newLayer(&row.Layer)
+
+					return row.Total
+				},
 			)
 		},
 		func() bool {
 			return streamPages(ProjectStreamCells, offset(ProjectStreamCells), yield,
 				func(offset int) ([]*dao.CellListRow, error) {
 					return service.daoCells.Exec(ctx, &dao.CellListRequest{
-						ProjectID: projectID, Limit: projectStreamPageSize, Offset: offset,
+						ProjectID: projectID, Limit: projectStreamPageSize, Offset: offset, MaxBytes: ListPageBytesMax,
 					})
 				},
-				func(row *dao.CellListRow, record *ProjectRecord) { record.Cell = newCell(&row.Cell) },
+				func(row *dao.CellListRow, record *ProjectRecord) int {
+					record.Cell = newCell(&row.Cell)
+
+					return row.Total
+				},
 			)
 		},
 	}
@@ -269,14 +285,14 @@ func reportErrors[Item any](span trace.Span, yield func(Item, error) bool) func(
 }
 
 // streamPages yields the records of a paged list from offset on, one page at a time. Read reads the page
-// at an offset, and fill sets the record's item from a row. It returns false once the caller stops or a
-// read fails.
+// at an offset, and fill sets the record's item from a row and returns the list's total. It returns false
+// once the caller stops or a read fails.
 func streamPages[Row any](
 	section string,
 	offset int,
 	yield func(*ProjectRecord, error) bool,
 	read func(offset int) ([]Row, error),
-	fill func(row Row, record *ProjectRecord),
+	fill func(row Row, record *ProjectRecord) int,
 ) bool {
 	for {
 		rows, err := read(offset)
@@ -286,18 +302,22 @@ func streamPages[Row any](
 			return false
 		}
 
+		var total int
+
 		for _, row := range rows {
 			offset++
 
 			record := &ProjectRecord{Position: ProjectStreamPosition{Section: section, Count: offset}}
-			fill(row, record)
+			total = fill(row, record)
 
 			if !yield(record, nil) {
 				return false
 			}
 		}
 
-		if len(rows) < projectStreamPageSize {
+		// A page past the end comes back empty, and a page that reaches the total ends the list. A page may
+		// stop short of the limit, at its byte bound.
+		if len(rows) == 0 || offset >= total {
 			return true
 		}
 	}

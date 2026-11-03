@@ -51,9 +51,10 @@ export const ManuscriptExportRequestSchema = z.object({
 export type ManuscriptExportRequest = z.infer<typeof ManuscriptExportRequestSchema>;
 
 /**
- * Exports the text one manuscript layer of a project holds: every scene in narrative order with its beat,
- * with no blocks where the layer holds no text, and every beat in the beats appendix. Throws on HTTP 404
- * when the caller owns no such project, or the project holds no manuscript layer with that ID.
+ * Exports the text one manuscript layer of a project holds: every scene in narrative order with its beat, with
+ * no blocks where the layer holds no text, and every beat in the beats appendix. Throws on HTTP 404 when the
+ * caller owns no such project, or the project holds no manuscript layer with that ID, and 409 with
+ * `projectBytes` in the error's `tags.limit` when the project stores more than its 16 MiB budget.
  */
 export async function manuscriptExport(
   api: NarrativeEngineApi,

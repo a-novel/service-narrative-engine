@@ -11,18 +11,24 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/a-novel-kit/golib/otel"
+	"github.com/a-novel-kit/golib/transaction"
 
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// LayersUpdateDaoOwner checks that the user owns the project.
-type LayersUpdateDaoOwner interface {
-	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
+// LayersUpdateDaoLock locks the project its owner names, so the writes to its bytes run one at a time.
+type LayersUpdateDaoLock interface {
+	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
 }
 
 // LayersUpdateDao writes the layers' new fields, all of them or none.
 type LayersUpdateDao interface {
 	Exec(ctx context.Context, request *dao.LayersUpdateRequest) ([]*dao.Layer, error)
+}
+
+// LayersUpdateDaoBytes reads how many bytes the project stores, the write included.
+type LayersUpdateDaoBytes interface {
+	Exec(ctx context.Context, request *dao.ProjectBytesRequest) (*dao.ProjectBytes, error)
 }
 
 // LayersUpdateItem is one layer of a [LayersUpdateRequest].
@@ -44,14 +50,22 @@ type LayersUpdateRequest struct {
 }
 
 // LayersUpdate replaces the fields of several layers at once, all of them or none, and returns them in the
-// order of the request. [LayerUpdate] updates one.
+// order of the request. [LayerUpdate] updates one. It writes nothing when the project would store more than
+// [ProjectBytesMax] bytes.
 type LayersUpdate struct {
-	daoOwner LayersUpdateDaoOwner
-	dao      LayersUpdateDao
+	daoLock    LayersUpdateDaoLock
+	dao        LayersUpdateDao
+	daoBytes   LayersUpdateDaoBytes
+	transactor transaction.Transactor
 }
 
-func NewLayersUpdate(daoOwner LayersUpdateDaoOwner, dao LayersUpdateDao) *LayersUpdate {
-	return &LayersUpdate{daoOwner: daoOwner, dao: dao}
+func NewLayersUpdate(
+	daoLock LayersUpdateDaoLock,
+	dao LayersUpdateDao,
+	daoBytes LayersUpdateDaoBytes,
+	transactor transaction.Transactor,
+) *LayersUpdate {
+	return &LayersUpdate{daoLock: daoLock, dao: dao, daoBytes: daoBytes, transactor: transactor}
 }
 
 func (service *LayersUpdate) Exec(ctx context.Context, request *LayersUpdateRequest) ([]*Layer, error) {
@@ -69,37 +83,52 @@ func (service *LayersUpdate) Exec(ctx context.Context, request *LayersUpdateRequ
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	err = checkProjectOwnership(ctx, service.daoOwner, projectOwnershipOpts{
-		projectID: request.ProjectID,
-		ownerID:   request.OwnerID,
-	})
-	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("check owner: %w", err))
-	}
-
 	updateItems := make([]dao.LayersUpdateItem, len(request.Layers))
 
 	for i, item := range request.Layers {
 		updateItems[i] = dao.LayersUpdateItem{ID: item.ID, Name: item.Name, Description: item.Description}
 	}
 
-	updated, err := service.dao.Exec(ctx, &dao.LayersUpdateRequest{
-		ProjectID: request.ProjectID,
-		Layers:    updateItems,
-		Now:       time.Now(),
+	var layers []*Layer
+
+	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
+		err := lockOwnedProject(ctx, service.daoLock, projectOwnershipOpts{
+			projectID: request.ProjectID,
+			ownerID:   request.OwnerID,
+		})
+		if err != nil {
+			return fmt.Errorf("lock project: %w", err)
+		}
+
+		updated, err := service.dao.Exec(ctx, &dao.LayersUpdateRequest{
+			ProjectID: request.ProjectID,
+			Layers:    updateItems,
+			Now:       time.Now(),
+		})
+		if err != nil {
+			return fmt.Errorf("update layers: %w", err)
+		}
+
+		// The update writes none of the layers when the project does not hold one of them.
+		if len(updated) != len(request.Layers) {
+			return fmt.Errorf(
+				"%w: %d of %d layers", ErrLayerNotFound, len(request.Layers)-len(updated), len(request.Layers),
+			)
+		}
+
+		err = keepProjectBudget(ctx, service.daoBytes, projectBudgetOpts{projectID: request.ProjectID})
+		if err != nil {
+			return fmt.Errorf("keep project budget: %w", err)
+		}
+
+		byID := lo.KeyBy(updated, func(entity *dao.Layer) uuid.UUID { return entity.ID })
+		layers = lo.Map(request.Layers, func(item LayersUpdateItem, _ int) *Layer { return newLayer(byID[item.ID]) })
+
+		return nil
 	})
 	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("update layers: %w", err))
+		return nil, otel.ReportError(span, fmt.Errorf("run transaction: %w", err))
 	}
 
-	// The update writes none of the layers when the project does not hold one of them.
-	if len(updated) != len(request.Layers) {
-		return nil, otel.ReportError(span, fmt.Errorf(
-			"%w: %d of %d layers", ErrLayerNotFound, len(request.Layers)-len(updated), len(request.Layers),
-		))
-	}
-
-	byID := lo.KeyBy(updated, func(entity *dao.Layer) uuid.UUID { return entity.ID })
-
-	return lo.Map(request.Layers, func(item LayersUpdateItem, _ int) *Layer { return newLayer(byID[item.ID]) }), nil
+	return layers, nil
 }

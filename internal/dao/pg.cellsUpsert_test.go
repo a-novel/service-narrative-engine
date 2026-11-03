@@ -163,6 +163,7 @@ func TestPgCellsUpsert(t *testing.T) {
 
 				result, err := daoCellsUpsert.Exec(ctx, testCase.request)
 				require.ErrorIs(t, err, testCase.expectErr)
+				requireStoredBytes(ctx, t)
 				requireCellsEqual(t, []*dao.Cell{otherCell}, listCells(ctx, t, otherProjectID))
 
 				// A failed batch writes none of its cells, the valid ones included.

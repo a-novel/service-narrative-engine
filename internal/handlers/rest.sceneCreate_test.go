@@ -84,6 +84,16 @@ func TestRestSceneCreate(t *testing.T) {
 			expectStatus: http.StatusNotFound,
 		},
 		{
+			name: "Error/ProjectBudget",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[*core.Scene]{err: core.ErrProjectBudget},
+
+			expectStatus:   http.StatusConflict,
+			expectResponse: limitProblem("projectBytes"),
+		},
+		{
 			name: "Error/BeatNotFound",
 
 			request: validRequest,
@@ -99,7 +109,7 @@ func TestRestSceneCreate(t *testing.T) {
 
 			serviceMock: &serviceMock[*core.Scene]{err: core.ErrProjectFull},
 
-			expectStatus: http.StatusUnprocessableEntity,
+			expectStatus: http.StatusConflict,
 		},
 		{
 			name: "Error/InvalidRequest",

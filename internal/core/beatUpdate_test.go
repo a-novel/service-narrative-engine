@@ -7,6 +7,9 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/a-novel-kit/golib/transaction"
+	"github.com/a-novel-kit/golib/transaction/transactiontest"
+
 	"github.com/a-novel/service-narrative-engine/internal/core"
 	coremocks "github.com/a-novel/service-narrative-engine/internal/core/mocks"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
@@ -26,8 +29,10 @@ func TestBeatUpdate(t *testing.T) {
 
 		request *core.BeatUpdateRequest
 
-		ownerMock  *daoMock[bool]
+		lockMock   *daoMock[bool]
 		updateMock *daoMock[*dao.Beat]
+		bytesMock  *daoMock[*dao.ProjectBytes]
+		transactor transaction.Transactor
 
 		expect    *core.Beat
 		expectErr error
@@ -37,8 +42,9 @@ func TestBeatUpdate(t *testing.T) {
 
 			request: request,
 
-			ownerMock:  &daoMock[bool]{resp: true},
+			lockMock:   &daoMock[bool]{resp: true},
 			updateMock: &daoMock[*dao.Beat]{resp: daoBeat(beatID2, 1)},
+			bytesMock:  withinBudget,
 
 			expect: coreBeat(beatID2, 1),
 		},
@@ -54,16 +60,16 @@ func TestBeatUpdate(t *testing.T) {
 
 			request: request,
 
-			ownerMock: &daoMock[bool]{resp: false},
+			lockMock: &daoMock[bool]{resp: false},
 
 			expectErr: core.ErrProjectNotFound,
 		},
 		{
-			name: "Error/CheckOwner",
+			name: "Error/Lock",
 
 			request: request,
 
-			ownerMock: &daoMock[bool]{err: errFoo},
+			lockMock: &daoMock[bool]{err: errFoo},
 
 			expectErr: errFoo,
 		},
@@ -72,7 +78,7 @@ func TestBeatUpdate(t *testing.T) {
 
 			request: request,
 
-			ownerMock:  &daoMock[bool]{resp: true},
+			lockMock:   &daoMock[bool]{resp: true},
 			updateMock: &daoMock[*dao.Beat]{err: dao.ErrBeatUpdateNotFound},
 
 			expectErr: core.ErrBeatNotFound,
@@ -82,8 +88,39 @@ func TestBeatUpdate(t *testing.T) {
 
 			request: request,
 
-			ownerMock:  &daoMock[bool]{resp: true},
+			lockMock:   &daoMock[bool]{resp: true},
 			updateMock: &daoMock[*dao.Beat]{err: errFoo},
+
+			expectErr: errFoo,
+		},
+		{
+			name: "Error/ProjectBudget",
+
+			request: request,
+
+			lockMock:   &daoMock[bool]{resp: true},
+			updateMock: &daoMock[*dao.Beat]{resp: daoBeat(beatID2, 1)},
+			bytesMock:  overBudget,
+
+			expectErr: core.ErrProjectBudget,
+		},
+		{
+			name: "Error/ProjectBytes",
+
+			request: request,
+
+			lockMock:   &daoMock[bool]{resp: true},
+			updateMock: &daoMock[*dao.Beat]{resp: daoBeat(beatID2, 1)},
+			bytesMock:  &daoMock[*dao.ProjectBytes]{err: errFoo},
+
+			expectErr: errFoo,
+		},
+		{
+			name: "Error/Transaction",
+
+			request: request,
+
+			transactor: transactiontest.NewFailingTransactor(errFoo),
 
 			expectErr: errFoo,
 		},
@@ -93,13 +130,14 @@ func TestBeatUpdate(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockOwner := coremocks.NewMockBeatUpdateDaoOwner(t)
+			mockLock := coremocks.NewMockBeatUpdateDaoLock(t)
 			mockUpdate := coremocks.NewMockBeatUpdateDao(t)
+			mockBytes := coremocks.NewMockBeatUpdateDaoBytes(t)
 
-			if testCase.ownerMock != nil {
-				mockOwner.EXPECT().
-					Exec(mock.Anything, &dao.ProjectOwnedRequest{ID: projectID, OwnerID: ownerID}).
-					Return(testCase.ownerMock.resp, testCase.ownerMock.err)
+			if testCase.lockMock != nil {
+				mockLock.EXPECT().
+					Exec(mock.Anything, &dao.ProjectLockRequest{ID: projectID, OwnerID: ownerID}).
+					Return(testCase.lockMock.resp, testCase.lockMock.err)
 			}
 
 			if testCase.updateMock != nil {
@@ -111,14 +149,26 @@ func TestBeatUpdate(t *testing.T) {
 					Return(testCase.updateMock.resp, testCase.updateMock.err)
 			}
 
-			service := core.NewBeatUpdate(mockOwner, mockUpdate)
+			if testCase.bytesMock != nil {
+				mockBytes.EXPECT().
+					Exec(mock.Anything, &dao.ProjectBytesRequest{ID: projectID}).
+					Return(testCase.bytesMock.resp, testCase.bytesMock.err)
+			}
+
+			transactor := testCase.transactor
+			if transactor == nil {
+				transactor = transactiontest.NewTransactor()
+			}
+
+			service := core.NewBeatUpdate(mockLock, mockUpdate, mockBytes, transactor)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
 
-			mockOwner.AssertExpectations(t)
+			mockLock.AssertExpectations(t)
 			mockUpdate.AssertExpectations(t)
+			mockBytes.AssertExpectations(t)
 		})
 	}
 }

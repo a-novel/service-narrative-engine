@@ -12,18 +12,24 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/a-novel-kit/golib/otel"
+	"github.com/a-novel-kit/golib/transaction"
 
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// BeatRecapWriteDaoOwner checks that the user owns the project.
-type BeatRecapWriteDaoOwner interface {
-	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
+// BeatRecapWriteDaoLock locks the project its owner names, so the writes to its bytes run one at a time.
+type BeatRecapWriteDaoLock interface {
+	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
 }
 
 // BeatRecapWriteDao writes the recap of a beat of the project.
 type BeatRecapWriteDao interface {
 	Exec(ctx context.Context, request *dao.BeatRecapUpdateRequest) error
+}
+
+// BeatRecapWriteDaoBytes reads how many bytes the project stores, the recap included.
+type BeatRecapWriteDaoBytes interface {
+	Exec(ctx context.Context, request *dao.ProjectBytesRequest) (*dao.ProjectBytes, error)
 }
 
 // BeatRecapWriteRequest carries the recap a consolidation wrote for a beat.
@@ -44,14 +50,21 @@ type BeatRecapWriteRequest struct {
 // BeatRecapWrite stores the recap a consolidation wrote for a beat of the user's project, stamped with the
 // versions of the beat and of its scenes' manuscript cells it read, and leaves the beat's UpdatedAt as it
 // is. It refuses a recap that read the beat at a version older than the stored recap's, or newer than the
-// beat's own.
+// beat's own, and one that would bring the project past [ProjectBytesMax] bytes.
 type BeatRecapWrite struct {
-	daoOwner BeatRecapWriteDaoOwner
-	dao      BeatRecapWriteDao
+	daoLock    BeatRecapWriteDaoLock
+	dao        BeatRecapWriteDao
+	daoBytes   BeatRecapWriteDaoBytes
+	transactor transaction.Transactor
 }
 
-func NewBeatRecapWrite(daoOwner BeatRecapWriteDaoOwner, dao BeatRecapWriteDao) *BeatRecapWrite {
-	return &BeatRecapWrite{daoOwner: daoOwner, dao: dao}
+func NewBeatRecapWrite(
+	daoLock BeatRecapWriteDaoLock,
+	dao BeatRecapWriteDao,
+	daoBytes BeatRecapWriteDaoBytes,
+	transactor transaction.Transactor,
+) *BeatRecapWrite {
+	return &BeatRecapWrite{daoLock: daoLock, dao: dao, daoBytes: daoBytes, transactor: transactor}
 }
 
 func (service *BeatRecapWrite) Exec(ctx context.Context, request *BeatRecapWriteRequest) error {
@@ -69,14 +82,6 @@ func (service *BeatRecapWrite) Exec(ctx context.Context, request *BeatRecapWrite
 		return otel.ReportError(span, err)
 	}
 
-	err = checkProjectOwnership(ctx, service.daoOwner, projectOwnershipOpts{
-		projectID: request.ProjectID,
-		ownerID:   request.OwnerID,
-	})
-	if err != nil {
-		return otel.ReportError(span, fmt.Errorf("check owner: %w", err))
-	}
-
 	sources, err := json.Marshal(lo.Map(request.Sources, func(source *BeatRecapSource, _ int) *dao.BeatRecapSource {
 		return &dao.BeatRecapSource{SceneID: source.SceneID, CellUpdatedAt: source.CellUpdatedAt}
 	}))
@@ -84,23 +89,43 @@ func (service *BeatRecapWrite) Exec(ctx context.Context, request *BeatRecapWrite
 		return otel.ReportError(span, fmt.Errorf("marshal sources: %w", err))
 	}
 
-	err = service.dao.Exec(ctx, &dao.BeatRecapUpdateRequest{
-		ProjectID:     request.ProjectID,
-		ID:            request.BeatID,
-		Recap:         request.Recap,
-		BeatUpdatedAt: request.BeatUpdatedAt,
-		Sources:       sources,
+	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
+		err := lockOwnedProject(ctx, service.daoLock, projectOwnershipOpts{
+			projectID: request.ProjectID,
+			ownerID:   request.OwnerID,
+		})
+		if err != nil {
+			return fmt.Errorf("lock project: %w", err)
+		}
+
+		err = service.dao.Exec(ctx, &dao.BeatRecapUpdateRequest{
+			ProjectID:     request.ProjectID,
+			ID:            request.BeatID,
+			Recap:         request.Recap,
+			BeatUpdatedAt: request.BeatUpdatedAt,
+			Sources:       sources,
+		})
+
+		switch {
+		case errors.Is(err, dao.ErrBeatRecapUpdateNotFound):
+			err = errors.Join(err, ErrBeatNotFound)
+		case errors.Is(err, dao.ErrBeatRecapUpdateConflict):
+			err = errors.Join(err, ErrRecapConflict)
+		}
+
+		if err != nil {
+			return fmt.Errorf("write recap: %w", err)
+		}
+
+		err = keepProjectBudget(ctx, service.daoBytes, projectBudgetOpts{projectID: request.ProjectID})
+		if err != nil {
+			return fmt.Errorf("keep project budget: %w", err)
+		}
+
+		return nil
 	})
-
-	switch {
-	case errors.Is(err, dao.ErrBeatRecapUpdateNotFound):
-		err = errors.Join(err, ErrBeatNotFound)
-	case errors.Is(err, dao.ErrBeatRecapUpdateConflict):
-		err = errors.Join(err, ErrRecapConflict)
-	}
-
 	if err != nil {
-		return otel.ReportError(span, fmt.Errorf("write recap: %w", err))
+		return otel.ReportError(span, fmt.Errorf("run transaction: %w", err))
 	}
 
 	return nil

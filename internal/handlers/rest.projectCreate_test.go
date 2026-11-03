@@ -87,6 +87,16 @@ func TestRestProjectCreate(t *testing.T) {
 			expectStatus: http.StatusBadRequest,
 		},
 		{
+			name: "Error/ProjectsFull",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[*core.ProjectComposer]{err: core.ErrProjectsFull},
+
+			expectStatus:   http.StatusConflict,
+			expectResponse: limitProblem("projects"),
+		},
+		{
 			name: "Error/Internal",
 
 			request: validRequest,

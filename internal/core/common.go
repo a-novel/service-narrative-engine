@@ -12,6 +12,19 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
+const (
+	// ProjectBytesMax caps the UTF-8 bytes a project stores, over its scenes, cells, recaps and every other
+	// large field. A 200k-word novel takes about 1.3 MB per manuscript layer, and a heavy project with
+	// notes, recaps and a few branches stays under 8 MB, so the cap leaves it room to double.
+	ProjectBytesMax = 16 << 20
+	// ListPageBytesMax bounds the bytes a page of a list holds. It fits the largest single cell, 2 MiB of
+	// content and 2 MiB of recap, so a page always holds one row.
+	ListPageBytesMax = 4 << 20
+	// ProjectsPerOwnerMax caps the projects a user owns. Each holds at most [ProjectBytesMax], so an account
+	// stores 1.6 GiB at most. A writer keeps a handful of novels, and 100 leaves room for drafts and copies.
+	ProjectsPerOwnerMax = 100
+)
+
 var (
 	// ErrProjectNotFound is returned when no project has the ID, or another user owns it.
 	ErrProjectNotFound = errors.New("project not found")
@@ -27,6 +40,12 @@ var (
 	// ErrRequiredLayer is returned by a delete that would leave a project without a layer of a required
 	// kind, such as the manuscript.
 	ErrRequiredLayer = errors.New("required layer")
+	// ErrProjectBudget is returned by a write that would bring a project past [ProjectBytesMax] stored bytes,
+	// and by a whole-project read of a project already past it.
+	ErrProjectBudget = errors.New("project budget reached")
+	// ErrProjectsFull is returned by [ProjectCreate] when the user already owns [ProjectsPerOwnerMax]
+	// projects.
+	ErrProjectsFull = errors.New("projects full")
 	// ErrGenerationNotFound is returned when genai holds no generation with the ID for the caller.
 	ErrGenerationNotFound = errors.New("generation not found")
 	// ErrGenerationQuota is returned by [GenerationSubmit], as a [GenerationQuotaError], when genai admits
@@ -100,6 +119,38 @@ func lockOwnedProject(ctx context.Context, daoLock projectLockDao, opts projectO
 	return nil
 }
 
+// projectBytesDao reads how many bytes a project stores. Each service names its own interface, and every
+// one satisfies this.
+type projectBytesDao interface {
+	Exec(ctx context.Context, request *dao.ProjectBytesRequest) (*dao.ProjectBytes, error)
+}
+
+// projectBudgetOpts names the project whose budget to keep.
+type projectBudgetOpts struct {
+	projectID uuid.UUID
+}
+
+// keepProjectBudget returns [ErrProjectBudget] when the project stores more than [ProjectBytesMax] bytes. A
+// write runs it after its write, in the same transaction, so the count holds that write and a refusal
+// rolls it back. A whole-project read runs it before it reads.
+func keepProjectBudget(ctx context.Context, daoBytes projectBytesDao, opts projectBudgetOpts) error {
+	ctx, span := otel.Tracer().Start(ctx, "core.keepProjectBudget")
+	defer span.End()
+
+	stored, err := daoBytes.Exec(ctx, &dao.ProjectBytesRequest{ID: opts.projectID})
+	if err != nil {
+		return otel.ReportError(span, err)
+	}
+
+	if stored.StoredBytes > ProjectBytesMax {
+		return otel.ReportError(span, fmt.Errorf(
+			"%w: %d bytes, over %d", ErrProjectBudget, stored.StoredBytes, ProjectBytesMax,
+		))
+	}
+
+	return nil
+}
+
 // sceneLengthDao reads how many characters the cells of scenes hold. Each service names its own interface,
 // and every one satisfies this.
 type sceneLengthDao interface {
@@ -107,7 +158,7 @@ type sceneLengthDao interface {
 }
 
 // checkSceneContent returns [ErrProjectFull] when one of the scenes holds more than [SceneContentMax]
-// characters. A cell write runs it after its write, in the transaction that locked the scenes, so the count
+// characters. A cell write runs it after its write, in the transaction that locked the project, so the count
 // holds that write and every earlier one.
 func checkSceneContent(ctx context.Context, daoLength sceneLengthDao, projectID uuid.UUID, sceneIDs []uuid.UUID) error {
 	ctx, span := otel.Tracer().Start(ctx, "core.checkSceneContent")

@@ -7,6 +7,9 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/a-novel-kit/golib/transaction"
+	"github.com/a-novel-kit/golib/transaction/transactiontest"
+
 	"github.com/a-novel/service-narrative-engine/internal/core"
 	coremocks "github.com/a-novel/service-narrative-engine/internal/core/mocks"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
@@ -24,8 +27,10 @@ func TestProjectUpdate(t *testing.T) {
 
 		request *core.ProjectUpdateRequest
 
-		ownerMock *daoMock[bool]
-		daoMock   *daoMock[*dao.Project]
+		lockMock   *daoMock[bool]
+		daoMock    *daoMock[*dao.Project]
+		bytesMock  *daoMock[*dao.ProjectBytes]
+		transactor transaction.Transactor
 
 		expect    *core.Project
 		expectErr error
@@ -35,8 +40,9 @@ func TestProjectUpdate(t *testing.T) {
 
 			request: request,
 
-			ownerMock: &daoMock[bool]{resp: true},
+			lockMock:  &daoMock[bool]{resp: true},
 			daoMock:   &daoMock[*dao.Project]{resp: daoProject()},
+			bytesMock: withinBudget,
 
 			expect: &core.Project{
 				ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr",
@@ -62,16 +68,16 @@ func TestProjectUpdate(t *testing.T) {
 
 			request: request,
 
-			ownerMock: &daoMock[bool]{resp: false},
+			lockMock: &daoMock[bool]{resp: false},
 
 			expectErr: core.ErrProjectNotFound,
 		},
 		{
-			name: "Error/CheckOwner",
+			name: "Error/Lock",
 
 			request: request,
 
-			ownerMock: &daoMock[bool]{err: errFoo},
+			lockMock: &daoMock[bool]{err: errFoo},
 
 			expectErr: errFoo,
 		},
@@ -80,8 +86,8 @@ func TestProjectUpdate(t *testing.T) {
 
 			request: request,
 
-			ownerMock: &daoMock[bool]{resp: true},
-			daoMock:   &daoMock[*dao.Project]{err: dao.ErrProjectUpdateNotFound},
+			lockMock: &daoMock[bool]{resp: true},
+			daoMock:  &daoMock[*dao.Project]{err: dao.ErrProjectUpdateNotFound},
 
 			expectErr: core.ErrProjectNotFound,
 		},
@@ -90,8 +96,39 @@ func TestProjectUpdate(t *testing.T) {
 
 			request: request,
 
-			ownerMock: &daoMock[bool]{resp: true},
-			daoMock:   &daoMock[*dao.Project]{err: errFoo},
+			lockMock: &daoMock[bool]{resp: true},
+			daoMock:  &daoMock[*dao.Project]{err: errFoo},
+
+			expectErr: errFoo,
+		},
+		{
+			name: "Error/ProjectBudget",
+
+			request: request,
+
+			lockMock:  &daoMock[bool]{resp: true},
+			daoMock:   &daoMock[*dao.Project]{resp: daoProject()},
+			bytesMock: overBudget,
+
+			expectErr: core.ErrProjectBudget,
+		},
+		{
+			name: "Error/ProjectBytes",
+
+			request: request,
+
+			lockMock:  &daoMock[bool]{resp: true},
+			daoMock:   &daoMock[*dao.Project]{resp: daoProject()},
+			bytesMock: &daoMock[*dao.ProjectBytes]{err: errFoo},
+
+			expectErr: errFoo,
+		},
+		{
+			name: "Error/Transaction",
+
+			request: request,
+
+			transactor: transactiontest.NewFailingTransactor(errFoo),
 
 			expectErr: errFoo,
 		},
@@ -101,13 +138,14 @@ func TestProjectUpdate(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockOwner := coremocks.NewMockProjectUpdateDaoOwner(t)
+			mockLock := coremocks.NewMockProjectUpdateDaoLock(t)
 			mockDao := coremocks.NewMockProjectUpdateDao(t)
+			mockBytes := coremocks.NewMockProjectUpdateDaoBytes(t)
 
-			if testCase.ownerMock != nil {
-				mockOwner.EXPECT().
-					Exec(mock.Anything, &dao.ProjectOwnedRequest{ID: projectID, OwnerID: ownerID}).
-					Return(testCase.ownerMock.resp, testCase.ownerMock.err)
+			if testCase.lockMock != nil {
+				mockLock.EXPECT().
+					Exec(mock.Anything, &dao.ProjectLockRequest{ID: projectID, OwnerID: ownerID}).
+					Return(testCase.lockMock.resp, testCase.lockMock.err)
 			}
 
 			if testCase.daoMock != nil {
@@ -118,14 +156,26 @@ func TestProjectUpdate(t *testing.T) {
 					Return(testCase.daoMock.resp, testCase.daoMock.err)
 			}
 
-			service := core.NewProjectUpdate(mockOwner, mockDao)
+			if testCase.bytesMock != nil {
+				mockBytes.EXPECT().
+					Exec(mock.Anything, &dao.ProjectBytesRequest{ID: projectID}).
+					Return(testCase.bytesMock.resp, testCase.bytesMock.err)
+			}
+
+			transactor := testCase.transactor
+			if transactor == nil {
+				transactor = transactiontest.NewTransactor()
+			}
+
+			service := core.NewProjectUpdate(mockLock, mockDao, mockBytes, transactor)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
 
-			mockOwner.AssertExpectations(t)
+			mockLock.AssertExpectations(t)
 			mockDao.AssertExpectations(t)
+			mockBytes.AssertExpectations(t)
 		})
 	}
 }

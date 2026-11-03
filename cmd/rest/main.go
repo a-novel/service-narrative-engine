@@ -85,6 +85,9 @@ func main() {
 	daoProjectSelect := dao.NewPgProjectSelect()
 	daoProjectOwned := dao.NewPgProjectOwned()
 	daoProjectLock := dao.NewPgProjectLock()
+	daoProjectBytes := dao.NewPgProjectBytes()
+	daoProjectCount := dao.NewPgProjectCount()
+	daoOwnerLock := dao.NewPgOwnerLock()
 	daoProjectList := dao.NewPgProjectList()
 	daoProjectUpdate := dao.NewPgProjectUpdate()
 	daoProjectDelete := dao.NewPgProjectDelete()
@@ -104,7 +107,6 @@ func main() {
 	daoSceneMove := dao.NewPgSceneMove()
 	daoSceneDelete := dao.NewPgSceneDelete()
 	daoScenesDelete := dao.NewPgScenesDelete()
-	daoSceneLock := dao.NewPgSceneLock()
 	daoSceneLength := dao.NewPgSceneLength()
 	daoLayerInsert := dao.NewPgLayerInsert()
 	daoLayersInsert := dao.NewPgLayersInsert()
@@ -122,57 +124,62 @@ func main() {
 	daoBeatRecapUpdate := dao.NewPgBeatRecapUpdate()
 	daoManuscriptSelect := dao.NewPgManuscriptSelect()
 	transactor := postgres.NewTransactor(nil)
+	projectReadGate := core.NewProjectReadGate(cfg.Limits.ProjectReadMaxConcurrent)
 
 	// =================================================================================================================
 	// SERVICES
 	// =================================================================================================================
 
-	serviceProjectCreate := core.NewProjectCreate(daoProjectInsert, daoLayersInsert, transactor)
+	serviceProjectCreate := core.NewProjectCreate(
+		daoOwnerLock, daoProjectCount, daoProjectInsert, daoLayersInsert, transactor,
+	)
 	serviceProjectGet := core.NewProjectGet(daoProjectOwned, daoProjectSelect)
 	serviceProjectList := core.NewProjectList(daoProjectList)
-	serviceProjectUpdate := core.NewProjectUpdate(daoProjectOwned, daoProjectUpdate)
+	serviceProjectUpdate := core.NewProjectUpdate(daoProjectLock, daoProjectUpdate, daoProjectBytes, transactor)
 	serviceProjectDelete := core.NewProjectDelete(daoProjectOwned, daoProjectDelete)
-	serviceBeatCreate := core.NewBeatCreate(daoProjectLock, daoBeatInsert, transactor)
-	serviceBeatsCreate := core.NewBeatsCreate(daoProjectLock, daoBeatsInsert, transactor)
+	serviceBeatCreate := core.NewBeatCreate(daoProjectLock, daoBeatInsert, daoProjectBytes, transactor)
+	serviceBeatsCreate := core.NewBeatsCreate(daoProjectLock, daoBeatsInsert, daoProjectBytes, transactor)
 	serviceBeatList := core.NewBeatList(daoProjectOwned, daoBeatList)
-	serviceBeatUpdate := core.NewBeatUpdate(daoProjectOwned, daoBeatUpdate)
-	serviceBeatsUpdate := core.NewBeatsUpdate(daoProjectOwned, daoBeatsUpdate)
+	serviceBeatUpdate := core.NewBeatUpdate(daoProjectLock, daoBeatUpdate, daoProjectBytes, transactor)
+	serviceBeatsUpdate := core.NewBeatsUpdate(daoProjectLock, daoBeatsUpdate, daoProjectBytes, transactor)
 	serviceBeatMove := core.NewBeatMove(daoProjectLock, daoBeatMove, transactor)
 	serviceBeatDelete := core.NewBeatDelete(daoProjectLock, daoBeatDelete, transactor)
 	serviceBeatsDelete := core.NewBeatsDelete(daoProjectLock, daoBeatsDelete, transactor)
-	serviceSceneCreate := core.NewSceneCreate(daoProjectLock, daoSceneInsert, transactor)
-	serviceScenesCreate := core.NewScenesCreate(daoProjectLock, daoScenesInsert, transactor)
+	serviceSceneCreate := core.NewSceneCreate(daoProjectLock, daoSceneInsert, daoProjectBytes, transactor)
+	serviceScenesCreate := core.NewScenesCreate(daoProjectLock, daoScenesInsert, daoProjectBytes, transactor)
 	serviceSceneList := core.NewSceneList(daoProjectOwned, daoSceneList)
-	serviceSceneUpdate := core.NewSceneUpdate(daoProjectOwned, daoSceneUpdate)
-	serviceScenesUpdate := core.NewScenesUpdate(daoProjectOwned, daoScenesUpdate)
+	serviceSceneUpdate := core.NewSceneUpdate(daoProjectLock, daoSceneUpdate, daoProjectBytes, transactor)
+	serviceScenesUpdate := core.NewScenesUpdate(daoProjectLock, daoScenesUpdate, daoProjectBytes, transactor)
 	serviceSceneMove := core.NewSceneMove(daoProjectLock, daoSceneMove, transactor)
 	serviceSceneDelete := core.NewSceneDelete(daoProjectLock, daoSceneDelete, transactor)
 	serviceScenesDelete := core.NewScenesDelete(daoProjectLock, daoScenesDelete, transactor)
-	serviceLayerCreate := core.NewLayerCreate(daoProjectLock, daoLayerInsert, transactor)
-	serviceLayersCreate := core.NewLayersCreate(daoProjectLock, daoLayersInsert, transactor)
+	serviceLayerCreate := core.NewLayerCreate(daoProjectLock, daoLayerInsert, daoProjectBytes, transactor)
+	serviceLayersCreate := core.NewLayersCreate(daoProjectLock, daoLayersInsert, daoProjectBytes, transactor)
 	serviceLayerList := core.NewLayerList(daoProjectOwned, daoLayerList)
-	serviceLayerUpdate := core.NewLayerUpdate(daoProjectOwned, daoLayerUpdate)
-	serviceLayersUpdate := core.NewLayersUpdate(daoProjectOwned, daoLayersUpdate)
+	serviceLayerUpdate := core.NewLayerUpdate(daoProjectLock, daoLayerUpdate, daoProjectBytes, transactor)
+	serviceLayersUpdate := core.NewLayersUpdate(daoProjectLock, daoLayersUpdate, daoProjectBytes, transactor)
 	serviceLayerMove := core.NewLayerMove(daoProjectLock, daoLayerMove, transactor)
 	serviceLayerDelete := core.NewLayerDelete(daoProjectLock, daoLayerKind, daoLayerDelete, transactor)
 	serviceLayersDelete := core.NewLayersDelete(daoProjectLock, daoLayerKind, daoLayersDelete, transactor)
 	serviceCellList := core.NewCellList(daoProjectOwned, daoCellList)
-	serviceCellRecapWrite := core.NewCellRecapWrite(daoProjectOwned, daoCellRecapUpdate)
-	serviceBeatRecapWrite := core.NewBeatRecapWrite(daoProjectOwned, daoBeatRecapUpdate)
+	serviceCellRecapWrite := core.NewCellRecapWrite(daoProjectLock, daoCellRecapUpdate, daoProjectBytes, transactor)
+	serviceBeatRecapWrite := core.NewBeatRecapWrite(daoProjectLock, daoBeatRecapUpdate, daoProjectBytes, transactor)
 	serviceCellWrite := core.NewCellWrite(
-		daoProjectOwned, daoLayerKind, daoSceneLock, daoCellUpsert, daoSceneLength, transactor,
+		daoProjectLock, daoLayerKind, daoCellUpsert, daoSceneLength, daoProjectBytes, transactor,
 	)
 	serviceCellsWrite := core.NewCellsWrite(
-		daoProjectOwned, daoLayerKind, daoSceneLock, daoCellsUpsert, daoSceneLength, transactor,
+		daoProjectLock, daoLayerKind, daoCellsUpsert, daoSceneLength, daoProjectBytes, transactor,
 	)
 	serviceManuscriptExport := core.NewManuscriptExport(
-		daoProjectOwned, daoLayerKind, daoProjectSelect, daoManuscriptSelect,
+		daoProjectOwned, daoLayerKind, daoProjectBytes, daoProjectSelect, daoManuscriptSelect, projectReadGate,
 	)
 	serviceProjectSnapshotRead := core.NewProjectSnapshotRead(
-		daoProjectOwned, daoProjectSelect, daoBeatList, daoSceneList, daoLayerList, daoCellList,
+		daoProjectOwned, daoProjectBytes, daoProjectSelect, daoBeatList, daoSceneList, daoLayerList, daoCellList,
 	)
 	serviceGenerationPlan := core.NewGenerationPlan(cfg.Generations)
-	serviceGenerationSubmit := core.NewGenerationSubmit(serviceProjectSnapshotRead, serviceGenerationPlan, genaiClient)
+	serviceGenerationSubmit := core.NewGenerationSubmit(
+		serviceProjectSnapshotRead, serviceGenerationPlan, genaiClient, projectReadGate,
+	)
 	serviceGenerationGet := core.NewGenerationGet(genaiClient)
 	serviceGenerationStream := core.NewGenerationStream(genaiClient, serviceGenerationGet)
 	serviceGenerationCancel := core.NewGenerationCancel(genaiClient)
@@ -289,7 +296,7 @@ func main() {
 		withAuth(item, config.PermissionProjectWrite).Put("/cell/recap", handlerCellRecapWrite.ServeHTTP)
 		withAuth(item, config.PermissionProjectWrite).Put("/beat/recap", handlerBeatRecapWrite.ServeHTTP)
 
-		withAuth(api, config.PermissionProjectRead).With(limit.Export).Get("/manuscript", handlerManuscriptExport.ServeHTTP)
+		withAuth(api, config.PermissionProjectRead).Get("/manuscript", handlerManuscriptExport.ServeHTTP)
 
 		// A submit carries its overrides, so it takes a batch's body limit.
 		withAuth(api, config.PermissionProjectWrite).With(limit.Generation).

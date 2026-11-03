@@ -42,7 +42,8 @@ func TestRestCellRecapWrite(t *testing.T) {
 
 		serviceMock *serviceMock[struct{}]
 
-		expectStatus int
+		expectStatus   int
+		expectResponse any
 	}{
 		{
 			name: "Success",
@@ -115,6 +116,16 @@ func TestRestCellRecapWrite(t *testing.T) {
 			expectStatus: http.StatusNotFound,
 		},
 		{
+			name: "Error/ProjectBudget",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[struct{}]{err: core.ErrProjectBudget},
+
+			expectStatus:   http.StatusConflict,
+			expectResponse: limitProblem("projectBytes"),
+		},
+		{
 			name: "Error/CellNotFound",
 
 			request: validRequest,
@@ -162,7 +173,7 @@ func TestRestCellRecapWrite(t *testing.T) {
 			w := httptest.NewRecorder()
 			handlers.NewRestCellRecapWrite(service, config.LoggerDev).ServeHTTP(w, testCase.request(t))
 
-			requireResponse(t, w.Result(), testCase.expectStatus, nil)
+			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
 			service.AssertExpectations(t)
 		})
 	}

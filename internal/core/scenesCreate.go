@@ -26,6 +26,11 @@ type ScenesCreateDaoInsert interface {
 	Exec(ctx context.Context, request *dao.ScenesInsertRequest) ([]*dao.Scene, error)
 }
 
+// ScenesCreateDaoBytes reads how many bytes the project stores, the new scenes included.
+type ScenesCreateDaoBytes interface {
+	Exec(ctx context.Context, request *dao.ProjectBytesRequest) (*dao.ProjectBytes, error)
+}
+
 // ScenesCreateItem is one scene of a [ScenesCreateRequest].
 type ScenesCreateItem struct {
 	// BeatID is the beat the scene joins.
@@ -52,21 +57,24 @@ type ScenesCreateRequest struct {
 	Scenes []ScenesCreateItem `validate:"required,min=1,max=100,dive"`
 }
 
-// ScenesCreate adds scenes to beats of a project, each at its position in its beat, and returns them in
-// the order of the request. The scenes after them in their beats move down to make room. A beat the project
-// does not hold answers [ErrBeatNotFound], and no scene is added.
+// ScenesCreate adds scenes to beats of a project, each at its position in its beat, and returns them in the
+// order of the request. The scenes after them in their beats move down to make room. A beat the project
+// does not hold answers [ErrBeatNotFound], and no scene is added. It writes nothing when the project would
+// store more than [ProjectBytesMax] bytes.
 type ScenesCreate struct {
 	daoLock    ScenesCreateDaoLock
 	daoInsert  ScenesCreateDaoInsert
+	daoBytes   ScenesCreateDaoBytes
 	transactor transaction.Transactor
 }
 
 func NewScenesCreate(
 	daoLock ScenesCreateDaoLock,
 	daoInsert ScenesCreateDaoInsert,
+	daoBytes ScenesCreateDaoBytes,
 	transactor transaction.Transactor,
 ) *ScenesCreate {
-	return &ScenesCreate{daoLock: daoLock, daoInsert: daoInsert, transactor: transactor}
+	return &ScenesCreate{daoLock: daoLock, daoInsert: daoInsert, daoBytes: daoBytes, transactor: transactor}
 }
 
 func (service *ScenesCreate) Exec(ctx context.Context, request *ScenesCreateRequest) ([]*Scene, error) {
@@ -127,6 +135,11 @@ func (service *ScenesCreate) Exec(ctx context.Context, request *ScenesCreateRequ
 
 		if err != nil {
 			return fmt.Errorf("insert scenes: %w", err)
+		}
+
+		err = keepProjectBudget(ctx, service.daoBytes, projectBudgetOpts{projectID: request.ProjectID})
+		if err != nil {
+			return fmt.Errorf("keep project budget: %w", err)
 		}
 
 		byID := lo.KeyBy(inserted, func(entity *dao.Scene) uuid.UUID { return entity.ID })

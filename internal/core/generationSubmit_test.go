@@ -2,12 +2,15 @@ package core_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -261,6 +264,7 @@ func TestGenerationSubmit(t *testing.T) {
 			mockSnapshot := coremocks.NewMockGenerationSubmitServiceSnapshot(t)
 			mockPlan := coremocks.NewMockGenerationSubmitServicePlan(t)
 			mockGenai := coremocks.NewMockGenerationSubmitServiceGenai(t)
+			gate := core.NewProjectReadGate(1)
 
 			if testCase.snapshotMock != nil {
 				mockSnapshot.EXPECT().
@@ -287,11 +291,18 @@ func TestGenerationSubmit(t *testing.T) {
 							request.GetProvider() == "openai" && request.GetUserTier() == testCase.tier &&
 							request.GetVariant() == testCase.request.Variant && request.GetStream() == testCase.request.Stream
 					})).
+					// The read and the plan free their slot of the gate before genai answers, which may take long.
+					Run(func(ctx context.Context, _ *servicegenai.GenerationSubmitRequest, _ ...grpc.CallOption) {
+						waitCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+						defer cancel()
+
+						require.NoError(t, gate.Run(waitCtx, func(context.Context) error { return nil }))
+					}).
 					Return(&servicegenai.GenerationSubmitResponse{Generation: answer.resp}, answer.err).
 					Once()
 			}
 
-			service := core.NewGenerationSubmit(mockSnapshot, mockPlan, mockGenai)
+			service := core.NewGenerationSubmit(mockSnapshot, mockPlan, mockGenai, gate)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)

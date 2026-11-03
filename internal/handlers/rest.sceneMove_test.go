@@ -106,7 +106,7 @@ func TestRestSceneMove(t *testing.T) {
 
 			serviceMock: &serviceMock[*core.Scene]{err: core.ErrProjectFull},
 
-			expectStatus: http.StatusUnprocessableEntity,
+			expectStatus: http.StatusConflict,
 		},
 		{
 			name: "Error/InvalidRequest",

@@ -24,6 +24,9 @@ type SceneListRequest struct {
 	Limit int
 	// Offset is how many scenes in narrative order come before the page.
 	Offset int
+	// MaxBytes bounds the bytes of the page: it stops before a row that would take it past the bound, and
+	// holds one row at least.
+	MaxBytes int64
 }
 
 // SceneListRow is one scene of a page.
@@ -53,7 +56,9 @@ func (dao *PgSceneList) Exec(ctx context.Context, request *SceneListRequest) ([]
 
 	var entities []*SceneListRow
 
-	err = db.NewRaw(sceneListQuery, request.ProjectID, request.Limit, request.Offset).Scan(ctx, &entities)
+	err = db.NewRaw(
+		sceneListQuery, request.ProjectID, request.Limit, request.Offset, request.MaxBytes,
+	).Scan(ctx, &entities)
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("execute query: %w", err))
 	}

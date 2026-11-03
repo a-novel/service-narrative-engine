@@ -81,13 +81,23 @@ func TestRestLayersCreate(t *testing.T) {
 			expectStatus: http.StatusNotFound,
 		},
 		{
+			name: "Error/ProjectBudget",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[[]*core.Layer]{err: core.ErrProjectBudget},
+
+			expectStatus:   http.StatusConflict,
+			expectResponse: limitProblem("projectBytes"),
+		},
+		{
 			name: "Error/ProjectFull",
 
 			request: validRequest,
 
 			serviceMock: &serviceMock[[]*core.Layer]{err: core.ErrProjectFull},
 
-			expectStatus: http.StatusUnprocessableEntity,
+			expectStatus: http.StatusConflict,
 		},
 		{
 			name: "Error/InvalidRequest",

@@ -36,6 +36,8 @@ func TestProjectCreate(t *testing.T) {
 		request    *core.ProjectCreateRequest
 		transactor transaction.Transactor
 
+		lockMock    *daoMock[struct{}]
+		countMock   *daoMock[*dao.ProjectCount]
 		projectMock *daoMock[*dao.Project]
 		layersMock  *daoMock[[]*dao.Layer]
 
@@ -47,6 +49,8 @@ func TestProjectCreate(t *testing.T) {
 
 			request: request("Les Heures claires", "fr"),
 
+			lockMock:    &daoMock[struct{}]{},
+			countMock:   &daoMock[*dao.ProjectCount]{resp: &dao.ProjectCount{Count: core.ProjectsPerOwnerMax - 1}},
 			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
 			layersMock:  &daoMock[[]*dao.Layer]{resp: []*dao.Layer{manuscript}},
 
@@ -78,10 +82,41 @@ func TestProjectCreate(t *testing.T) {
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
+			name: "Error/ProjectsFull",
+
+			request: request("Les Heures claires", "fr"),
+
+			lockMock:  &daoMock[struct{}]{},
+			countMock: &daoMock[*dao.ProjectCount]{resp: &dao.ProjectCount{Count: core.ProjectsPerOwnerMax}},
+
+			expectErr: core.ErrProjectsFull,
+		},
+		{
+			name: "Error/LockOwner",
+
+			request: request("Les Heures claires", "fr"),
+
+			lockMock: &daoMock[struct{}]{err: errFoo},
+
+			expectErr: errFoo,
+		},
+		{
+			name: "Error/CountProjects",
+
+			request: request("Les Heures claires", "fr"),
+
+			lockMock:  &daoMock[struct{}]{},
+			countMock: &daoMock[*dao.ProjectCount]{err: errFoo},
+
+			expectErr: errFoo,
+		},
+		{
 			name: "Error/InsertProject",
 
 			request: request("Les Heures claires", "fr"),
 
+			lockMock:    &daoMock[struct{}]{},
+			countMock:   &daoMock[*dao.ProjectCount]{resp: &dao.ProjectCount{Count: core.ProjectsPerOwnerMax - 1}},
 			projectMock: &daoMock[*dao.Project]{err: errFoo},
 
 			expectErr: errFoo,
@@ -91,6 +126,8 @@ func TestProjectCreate(t *testing.T) {
 
 			request: request("Les Heures claires", "fr"),
 
+			lockMock:    &daoMock[struct{}]{},
+			countMock:   &daoMock[*dao.ProjectCount]{resp: &dao.ProjectCount{Count: core.ProjectsPerOwnerMax - 1}},
 			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
 			layersMock:  &daoMock[[]*dao.Layer]{err: errFoo},
 
@@ -110,8 +147,22 @@ func TestProjectCreate(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
+			daoLockMock := coremocks.NewMockProjectCreateDaoLock(t)
+			daoCountMock := coremocks.NewMockProjectCreateDaoCount(t)
 			daoProjectMock := coremocks.NewMockProjectCreateDaoProject(t)
 			daoLayersMock := coremocks.NewMockProjectCreateDaoLayers(t)
+
+			if testCase.lockMock != nil {
+				daoLockMock.EXPECT().
+					Exec(mock.Anything, &dao.OwnerLockRequest{OwnerID: ownerID}).
+					Return(testCase.lockMock.err)
+			}
+
+			if testCase.countMock != nil {
+				daoCountMock.EXPECT().
+					Exec(mock.Anything, &dao.ProjectCountRequest{OwnerID: ownerID}).
+					Return(testCase.countMock.resp, testCase.countMock.err)
+			}
 
 			if testCase.projectMock != nil {
 				daoProjectMock.EXPECT().
@@ -144,12 +195,14 @@ func TestProjectCreate(t *testing.T) {
 				transactor = transactiontest.NewTransactor()
 			}
 
-			service := core.NewProjectCreate(daoProjectMock, daoLayersMock, transactor)
+			service := core.NewProjectCreate(daoLockMock, daoCountMock, daoProjectMock, daoLayersMock, transactor)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
 
+			daoLockMock.AssertExpectations(t)
+			daoCountMock.AssertExpectations(t)
 			daoProjectMock.AssertExpectations(t)
 			daoLayersMock.AssertExpectations(t)
 		})

@@ -95,6 +95,7 @@ func TestPgScenesUpdate(t *testing.T) {
 
 				result, err := daoScenesUpdate.Exec(ctx, testCase.request)
 				require.NoError(t, err)
+				requireStoredBytes(ctx, t)
 				require.ElementsMatch(t, testCase.expect, result)
 
 				// An ID the project does not hold leaves every scene unchanged, the valid ones included.

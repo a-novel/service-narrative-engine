@@ -120,6 +120,7 @@ func TestPgCellUpsert(t *testing.T) {
 
 				result, err := daoCellUpsert.Exec(ctx, testCase.request)
 				require.ErrorIs(t, err, testCase.expectErr)
+				requireStoredBytes(ctx, t)
 				require.Equal(t, testCase.expect, result)
 
 				// The write returns the cell's key alone, so the stored cells carry the content.

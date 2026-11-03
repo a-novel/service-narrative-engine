@@ -84,6 +84,16 @@ func TestRestBeatUpdate(t *testing.T) {
 			expectStatus: http.StatusNotFound,
 		},
 		{
+			name: "Error/ProjectBudget",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[*core.Beat]{err: core.ErrProjectBudget},
+
+			expectStatus:   http.StatusConflict,
+			expectResponse: limitProblem("projectBytes"),
+		},
+		{
 			name: "Error/BeatNotFound",
 
 			request: validRequest,

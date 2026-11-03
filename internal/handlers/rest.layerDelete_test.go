@@ -92,7 +92,7 @@ func TestRestLayerDelete(t *testing.T) {
 
 			serviceMock: &serviceMock[*core.Layer]{err: core.ErrRequiredLayer},
 
-			expectStatus: http.StatusUnprocessableEntity,
+			expectStatus: http.StatusConflict,
 		},
 		{
 			name: "Error/InvalidRequest",

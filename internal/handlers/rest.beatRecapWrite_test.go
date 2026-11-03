@@ -45,7 +45,8 @@ func TestRestBeatRecapWrite(t *testing.T) {
 
 		serviceMock *serviceMock[struct{}]
 
-		expectStatus int
+		expectStatus   int
+		expectResponse any
 	}{
 		{
 			name: "Success",
@@ -86,6 +87,16 @@ func TestRestBeatRecapWrite(t *testing.T) {
 			serviceMock: &serviceMock[struct{}]{err: core.ErrProjectNotFound},
 
 			expectStatus: http.StatusNotFound,
+		},
+		{
+			name: "Error/ProjectBudget",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[struct{}]{err: core.ErrProjectBudget},
+
+			expectStatus:   http.StatusConflict,
+			expectResponse: limitProblem("projectBytes"),
 		},
 		{
 			name: "Error/BeatNotFound",
@@ -137,7 +148,7 @@ func TestRestBeatRecapWrite(t *testing.T) {
 			w := httptest.NewRecorder()
 			handlers.NewRestBeatRecapWrite(service, config.LoggerDev).ServeHTTP(w, testCase.request(t))
 
-			requireResponse(t, w.Result(), testCase.expectStatus, nil)
+			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
 			service.AssertExpectations(t)
 		})
 	}

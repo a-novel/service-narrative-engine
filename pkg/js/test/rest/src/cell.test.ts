@@ -147,10 +147,10 @@ describe("cellWrite", () => {
     await expectStatus(cellWrite(api, accessToken, request), 404);
   });
 
-  it("returns 422 for a write that would bring its scene past 400,000 characters, and writes nothing", async () => {
+  it("returns 409 for a write that would bring its scene past 400,000 characters, and writes nothing", async () => {
     const { projectID, cells } = await halfCells();
     await cellWrite(api, accessToken, { projectID, ...cells[0] });
-    await expectStatus(cellWrite(api, accessToken, { projectID, ...cells[1] }), 422);
+    await expectStatus(cellWrite(api, accessToken, { projectID, ...cells[1] }), 409);
 
     const stored = (await cellList(api, accessToken, { projectID })).cells;
     expect(stored.map((cell) => cell.layerID)).toEqual([cells[0].layerID]);
@@ -162,7 +162,7 @@ describe("cellWrite", () => {
 
     const refused = settled.filter((result) => result.status === "rejected");
     expect(refused).toHaveLength(1);
-    expect(isHttpStatusError(refused[0].reason, 422)).toBe(true);
+    expect(isHttpStatusError(refused[0].reason, 409)).toBe(true);
   });
 });
 
@@ -212,9 +212,9 @@ describe("cellsWrite", () => {
     await expectStatus(cellsWrite(api, accessToken, { projectID: other.id, cells }), 404);
   });
 
-  it("returns 422 for cells that would bring their scene past 400,000 characters, and writes none", async () => {
+  it("returns 409 for cells that would bring their scene past 400,000 characters, and writes none", async () => {
     const { projectID, cells } = await halfCells();
-    await expectStatus(cellsWrite(api, accessToken, { projectID, cells }), 422);
+    await expectStatus(cellsWrite(api, accessToken, { projectID, cells }), 409);
 
     await expect(cellList(api, accessToken, { projectID })).resolves.toMatchObject({ cells: [] });
   });

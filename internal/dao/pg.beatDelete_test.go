@@ -79,6 +79,7 @@ func TestPgBeatDelete(t *testing.T) {
 
 				result, err := daoBeatDelete.Exec(ctx, testCase.request)
 				require.ErrorIs(t, err, testCase.expectErr)
+				requireStoredBytes(ctx, t)
 				require.Equal(t, testCase.expect, result)
 
 				// The beats after the deleted one move up, and its cells go with it.

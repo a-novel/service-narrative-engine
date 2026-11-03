@@ -36,7 +36,7 @@ func TestSceneList(t *testing.T) {
 			request: &core.SceneListRequest{OwnerID: ownerID, ProjectID: projectID, Limit: 50, Offset: 100},
 
 			ownerMock:   &daoMock[bool]{resp: true},
-			listRequest: &dao.SceneListRequest{ProjectID: projectID, Limit: 50, Offset: 100},
+			listRequest: &dao.SceneListRequest{ProjectID: projectID, Limit: 50, Offset: 100, MaxBytes: core.ListPageBytesMax},
 			listMock:    &daoMock[[]*dao.SceneListRow]{resp: []*dao.SceneListRow{{Scene: *daoScene(sceneID1, 100), Total: 120}}},
 
 			expect: &core.ScenePage{Scenes: []*core.Scene{coreScene(sceneID1, 100)}, Total: 120},
@@ -46,9 +46,11 @@ func TestSceneList(t *testing.T) {
 
 			request: &core.SceneListRequest{OwnerID: ownerID, ProjectID: projectID},
 
-			ownerMock:   &daoMock[bool]{resp: true},
-			listRequest: &dao.SceneListRequest{ProjectID: projectID, Limit: core.SceneListLimitDefault},
-			listMock:    &daoMock[[]*dao.SceneListRow]{},
+			ownerMock: &daoMock[bool]{resp: true},
+			listRequest: &dao.SceneListRequest{
+				ProjectID: projectID, Limit: core.SceneListLimitDefault, MaxBytes: core.ListPageBytesMax,
+			},
+			listMock: &daoMock[[]*dao.SceneListRow]{},
 
 			expect: &core.ScenePage{Scenes: []*core.Scene{}},
 		},
@@ -96,9 +98,11 @@ func TestSceneList(t *testing.T) {
 
 			request: &core.SceneListRequest{OwnerID: ownerID, ProjectID: projectID},
 
-			ownerMock:   &daoMock[bool]{resp: true},
-			listRequest: &dao.SceneListRequest{ProjectID: projectID, Limit: core.SceneListLimitDefault},
-			listMock:    &daoMock[[]*dao.SceneListRow]{err: errFoo},
+			ownerMock: &daoMock[bool]{resp: true},
+			listRequest: &dao.SceneListRequest{
+				ProjectID: projectID, Limit: core.SceneListLimitDefault, MaxBytes: core.ListPageBytesMax,
+			},
+			listMock: &daoMock[[]*dao.SceneListRow]{err: errFoo},
 
 			expectErr: errFoo,
 		},

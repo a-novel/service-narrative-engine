@@ -106,10 +106,10 @@ describe("layerCreate", () => {
     );
   });
 
-  it("returns 422 when the project holds 1000 layers", async () => {
+  it("returns 409 when the project holds 1000 layers", async () => {
     await fillLayers();
 
-    await expectStatus(createNotes("Extra"), 422);
+    await expectStatus(createNotes("Extra"), 409);
   });
 });
 
@@ -140,12 +140,12 @@ describe("layersCreate", () => {
     );
   });
 
-  it("returns 422 when the batch would pass 1000 layers", async () => {
+  it("returns 409 when the batch would pass 1000 layers", async () => {
     await fillLayers();
 
     await expectStatus(
       layersCreate(api, accessToken, { projectID: project.id, layers: [{ kind: LayerKind.Notes, name: "Extra" }] }),
-      422
+      409
     );
   });
 });
@@ -258,8 +258,8 @@ describe("layerDelete", () => {
     });
   });
 
-  it("returns 422 for the last layer of a required kind", async () => {
-    await expectStatus(layerDelete(api, accessToken, { projectID: project.id, id: manuscript.id }), 422);
+  it("returns 409 for the last layer of a required kind", async () => {
+    await expectStatus(layerDelete(api, accessToken, { projectID: project.id, id: manuscript.id }), 409);
   });
 
   it("returns 404 for an absent layer", async () => {
@@ -280,8 +280,8 @@ describe("layersDelete", () => {
     await expect(layerNames()).resolves.toEqual([manuscript.name, "Two"]);
   });
 
-  it("returns 422 when the delete would leave no layer of a required kind", async () => {
-    await expectStatus(layersDelete(api, accessToken, { projectID: project.id, ids: [manuscript.id] }), 422);
+  it("returns 409 when the delete would leave no layer of a required kind", async () => {
+    await expectStatus(layersDelete(api, accessToken, { projectID: project.id, ids: [manuscript.id] }), 409);
   });
 
   it("deletes none of the layers when one is absent", async () => {

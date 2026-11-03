@@ -25,6 +25,11 @@ type LayerCreateDaoInsert interface {
 	Exec(ctx context.Context, request *dao.LayerInsertRequest) (*dao.Layer, error)
 }
 
+// LayerCreateDaoBytes reads how many bytes the project stores, the new layer included.
+type LayerCreateDaoBytes interface {
+	Exec(ctx context.Context, request *dao.ProjectBytesRequest) (*dao.ProjectBytes, error)
+}
+
 // LayerCreateRequest carries a new layer and its place in the project.
 type LayerCreateRequest struct {
 	OwnerID   uuid.UUID `validate:"required"`
@@ -43,19 +48,22 @@ type LayerCreateRequest struct {
 }
 
 // LayerCreate adds one layer of any kind to a project at the position the caller names. The layers from
-// that position on move down by one. [LayersCreate] adds several at once.
+// that position on move down by one. [LayersCreate] adds several at once. It writes nothing when the
+// project would store more than [ProjectBytesMax] bytes.
 type LayerCreate struct {
 	daoLock    LayerCreateDaoLock
 	daoInsert  LayerCreateDaoInsert
+	daoBytes   LayerCreateDaoBytes
 	transactor transaction.Transactor
 }
 
 func NewLayerCreate(
 	daoLock LayerCreateDaoLock,
 	daoInsert LayerCreateDaoInsert,
+	daoBytes LayerCreateDaoBytes,
 	transactor transaction.Transactor,
 ) *LayerCreate {
-	return &LayerCreate{daoLock: daoLock, daoInsert: daoInsert, transactor: transactor}
+	return &LayerCreate{daoLock: daoLock, daoInsert: daoInsert, daoBytes: daoBytes, transactor: transactor}
 }
 
 func (service *LayerCreate) Exec(ctx context.Context, request *LayerCreateRequest) (*Layer, error) {
@@ -105,6 +113,11 @@ func (service *LayerCreate) Exec(ctx context.Context, request *LayerCreateReques
 
 		if err != nil {
 			return fmt.Errorf("insert layer: %w", err)
+		}
+
+		err = keepProjectBudget(ctx, service.daoBytes, projectBudgetOpts{projectID: request.ProjectID})
+		if err != nil {
+			return fmt.Errorf("keep project budget: %w", err)
 		}
 
 		layer = newLayer(inserted)

@@ -121,6 +121,8 @@ paths:
           $ref: "#/components/responses/invalidToken"
         "403":
           $ref: "#/components/responses/forbidden"
+        "409":
+          $ref: "#/components/responses/projectsFull"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -205,6 +207,8 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
+        "409":
+          $ref: "#/components/responses/projectBudget"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -308,7 +312,7 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
-        "422":
+        "409":
           $ref: "#/components/responses/projectFull"
         "429":
           $ref: "#/components/responses/tooManyRequests"
@@ -340,6 +344,8 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
+        "409":
+          $ref: "#/components/responses/projectBudget"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -449,8 +455,9 @@ paths:
       operationId: beatList
       summary: List the beats of a project.
       description: |
-        Returns a page of a project's beats, in narrative order, with how many the project holds in all. To read the next
-        page, raise `offset` by the page size.
+        Returns a page of a project's beats, in narrative order, with how many the project holds in all. A page
+        stops early once it holds 4 MiB, so it may carry fewer beats than `limit`. To read the next page, raise
+        `offset` by the beats received, while that stays below the total.
       tags: [beat]
       parameters:
         - $ref: "#/components/parameters/parentProjectID"
@@ -499,7 +506,7 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
-        "422":
+        "409":
           $ref: "#/components/responses/projectFull"
         "429":
           $ref: "#/components/responses/tooManyRequests"
@@ -532,6 +539,8 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
+        "409":
+          $ref: "#/components/responses/projectBudget"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -594,7 +603,7 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
-        "422":
+        "409":
           $ref: "#/components/responses/projectFull"
         "429":
           $ref: "#/components/responses/tooManyRequests"
@@ -626,6 +635,8 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
+        "409":
+          $ref: "#/components/responses/projectBudget"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -669,7 +680,7 @@ paths:
         Moves a scene to `position` in the beat `beatID` names, its own or another beat of the project, and
         returns it there. Its old beat closes the gap and the target beat opens one, so the scene keeps its id
         and its cells. A position past the target beat's last scene moves it last. A full target beat answers
-        422.
+        409.
       tags: [scene]
       requestBody:
         required: true
@@ -688,8 +699,8 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
-        "422":
-          $ref: "#/components/responses/projectFull"
+        "409":
+          $ref: "#/components/responses/beatFull"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -703,8 +714,9 @@ paths:
       summary: List the scenes of a project.
       description: |
         Returns a page of a project's scenes, in narrative order: by beat, then by position in the beat. The
-        page comes with how many scenes the project holds in all. To read the next page, raise `offset` by the
-        page size.
+        page comes with how many scenes the project holds in all. A page stops early once it holds 4 MiB, so it
+        may carry fewer scenes than `limit`. To read the next page, raise `offset` by the scenes received, while
+        that stays below the total.
       tags: [scene]
       parameters:
         - $ref: "#/components/parameters/parentProjectID"
@@ -755,7 +767,7 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
-        "422":
+        "409":
           $ref: "#/components/responses/projectFull"
         "429":
           $ref: "#/components/responses/tooManyRequests"
@@ -788,6 +800,8 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
+        "409":
+          $ref: "#/components/responses/projectBudget"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -850,7 +864,7 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
-        "422":
+        "409":
           $ref: "#/components/responses/projectFull"
         "429":
           $ref: "#/components/responses/tooManyRequests"
@@ -882,6 +896,8 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
+        "409":
+          $ref: "#/components/responses/projectBudget"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -911,7 +927,7 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
-        "422":
+        "409":
           $ref: "#/components/responses/requiredLayer"
         "429":
           $ref: "#/components/responses/tooManyRequests"
@@ -957,8 +973,9 @@ paths:
       operationId: layerList
       summary: List the layers of a project.
       description: |
-        Returns a page of a project's layers, in order, with how many the project holds in all. To read the next
-        page, raise `offset` by the page size.
+        Returns a page of a project's layers, in order, with how many the project holds in all. A page stops
+        early once it holds 4 MiB, so it may carry fewer layers than `limit`. To read the next page, raise
+        `offset` by the layers received, while that stays below the total.
       tags: [layer]
       parameters:
         - $ref: "#/components/parameters/parentProjectID"
@@ -1007,7 +1024,7 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
-        "422":
+        "409":
           $ref: "#/components/responses/projectFull"
         "429":
           $ref: "#/components/responses/tooManyRequests"
@@ -1040,6 +1057,8 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
+        "409":
+          $ref: "#/components/responses/projectBudget"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -1069,7 +1088,7 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
-        "422":
+        "409":
           $ref: "#/components/responses/requiredLayer"
         "429":
           $ref: "#/components/responses/tooManyRequests"
@@ -1087,7 +1106,7 @@ paths:
         scene, layer and write time without the content the client already holds. The content follows the
         content schema of the layer's kind and weighs at most 2 MiB, and the body at most 4 MiB. The first
         write creates the cell. A write that would bring the scene's cells past 400,000 characters, counted
-        over their stored JSON documents, writes nothing and answers 422. cellsWrite writes several at once.
+        over their stored JSON documents, writes nothing and answers 409. cellsWrite writes several at once.
       tags: [cell]
       requestBody:
         required: true
@@ -1106,7 +1125,7 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
-        "422":
+        "409":
           $ref: "#/components/responses/projectFull"
         "429":
           $ref: "#/components/responses/tooManyRequests"
@@ -1158,8 +1177,9 @@ paths:
       summary: List the cells of a project.
       description: |
         Returns a page of the cells written so far in a project, by the narrative order of their scene, then
-        the position of their layer, with how many the project holds in all. A cell nobody wrote yet is absent. To read the next
-        page, raise `offset` by the page size.
+        the position of their layer, with how many the project holds in all. A cell nobody wrote yet is absent. A
+        page stops early once it holds 4 MiB, at least one cell, so it may carry fewer cells than `limit`. To
+        read the next page, raise `offset` by the cells received, while that stays below the total.
       tags: [cell]
       parameters:
         - $ref: "#/components/parameters/parentProjectID"
@@ -1192,7 +1212,7 @@ paths:
         holds. Each content follows the content schema of its layer's kind and weighs at most 2 MiB, and the
         whole body at most 50 MiB. The first write of a cell creates it. The cells are all written, or none
         are: none when one of their scenes would hold more than 400,000 characters over its cells' stored
-        JSON documents, which answers 422.
+        JSON documents, which answers 409.
       tags: [cell]
       requestBody:
         required: true
@@ -1211,7 +1231,7 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
-        "422":
+        "409":
           $ref: "#/components/responses/projectFull"
         "429":
           $ref: "#/components/responses/tooManyRequests"
@@ -1229,8 +1249,9 @@ paths:
         narrative order, with its beat and the layer's blocks for it. The beats appendix lists every beat in
         order, those without scenes included. A scene the layer holds no text for keeps its place with no
         blocks. A project may hold several manuscript layers, such as a branch of the story, so the request
-        names the one to export. A layer of another kind answers 404. An instance builds as many exports at
-        once as it has CPUs; one more answers 429.
+        names the one to export. A layer of another kind answers 404, and a project past its 16 MiB budget of
+        stored bytes 409. An instance builds a bounded number of whole-project reads at once, exports and
+        generation snapshots together: a request past the bound waits for a slot rather than failing.
       tags: [manuscript]
       parameters:
         - $ref: "#/components/parameters/parentProjectID"
@@ -1246,6 +1267,8 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
+        "409":
+          $ref: "#/components/responses/projectBudget"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -1628,7 +1651,40 @@ components:
     projectFull:
       description: |
         The project already holds as many beats or layers as it may, the beat as many scenes, or the write
-        would bring a scene past 400,000 characters.
+        would bring a scene past 400,000 characters, and the route answers the status text. A write that would
+        bring the project past its 16 MiB budget of stored bytes answers a problem whose `limit` tag is
+        `projectBytes` instead. Nothing was written.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/limitProblem"
+        text/plain:
+          schema:
+            type: string
+            examples: [Conflict]
+
+    beatFull:
+      description: |
+        The target beat already holds as many scenes as it may.
+
+    projectBudget:
+      description: |
+        The write would bring the project past its 16 MiB budget of stored bytes, and nothing was written. A
+        read of a whole project already past it, such as an export, answers the same. The problem's `limit`
+        tag is `projectBytes`.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/limitProblem"
+
+    projectsFull:
+      description: |
+        The caller already owns 100 projects, as many as a user may, and nothing was created. The problem's
+        `limit` tag is `projects`.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/limitProblem"
 
     requiredLayer:
       description: |
@@ -1722,7 +1778,7 @@ components:
       description: |
         The generation outgrows every call its kind allows: the parts that always enter pass its long limit,
         or a single text or block would rewrite past the output cap. A narrower range, fewer targets or
-        excluded layers fit.
+        excluded layers fit. A project past its 16 MiB budget of stored bytes answers the same.
 
     recapWritten:
       description: The recap is stored.
@@ -1730,7 +1786,16 @@ components:
     recapConflict:
       description: |
         The recap read its source at a version older than the stored recap's, or newer than the source's own,
-        and nothing was written.
+        and the route answers the status text. A recap that would bring the project past its 16 MiB budget of
+        stored bytes answers a problem whose `limit` tag is `projectBytes` instead. Nothing was written.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/limitProblem"
+        text/plain:
+          schema:
+            type: string
+            examples: [Conflict]
 
     generationQuota:
       description: |
@@ -3138,6 +3203,40 @@ components:
               type: string
               description: genai's message naming the cap that refused the generation's first call.
               examples: ['usage cap reached: purpose "studio.generation" concurrency: 2 generations already in flight']
+
+    limitProblem:
+      type: object
+      description: |
+        An RFC 9457 problem details body answering a write refused for a storage limit of the project or of the
+        caller. Clients ignore extension members they do not know.
+      required: [type, title, status, tags]
+      additionalProperties: true
+      properties:
+        type:
+          type: string
+          description: The problem type; about:blank makes the title the HTTP status text.
+          const: about:blank
+        title:
+          type: string
+          description: The HTTP status text.
+          examples: [Conflict]
+        status:
+          type: integer
+          description: The HTTP status code.
+          const: 409
+        tags:
+          type: object
+          description: Public details about the refusal. Clients ignore tags they do not know.
+          required: [limit]
+          additionalProperties: true
+          properties:
+            limit:
+              type: string
+              description: |
+                The limit the request reached: `projectBytes` for the 16 MiB a project stores, `projects` for the
+                100 projects a user owns.
+              enum: [projectBytes, projects]
+              examples: [projectBytes]
 
     plannedDowntimeProblem:
       type: object

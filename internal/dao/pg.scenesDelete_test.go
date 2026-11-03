@@ -114,6 +114,7 @@ func TestPgScenesDelete(t *testing.T) {
 
 				result, err := daoScenesDelete.Exec(ctx, testCase.request)
 				require.NoError(t, err)
+				requireStoredBytes(ctx, t)
 				require.ElementsMatch(t, testCase.expect, result)
 
 				// The scenes after the deleted ones in their beats move up, and their cells go with them.

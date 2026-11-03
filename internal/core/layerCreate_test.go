@@ -39,6 +39,7 @@ func TestLayerCreate(t *testing.T) {
 
 		lockMock   *daoMock[bool]
 		insertMock *daoMock[*dao.Layer]
+		bytesMock  *daoMock[*dao.ProjectBytes]
 		transactor transaction.Transactor
 
 		expect    *core.Layer
@@ -51,6 +52,7 @@ func TestLayerCreate(t *testing.T) {
 
 			lockMock:   &daoMock[bool]{resp: true},
 			insertMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID3, 0)},
+			bytesMock:  withinBudget,
 
 			expect: coreLayer(layerID3, 0),
 		},
@@ -61,6 +63,7 @@ func TestLayerCreate(t *testing.T) {
 
 			lockMock:   &daoMock[bool]{resp: true},
 			insertMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID3, 2)},
+			bytesMock:  withinBudget,
 
 			expect: coreLayer(layerID3, 2),
 		},
@@ -71,6 +74,7 @@ func TestLayerCreate(t *testing.T) {
 
 			lockMock:   &daoMock[bool]{resp: true},
 			insertMock: &daoMock[*dao.Layer]{resp: daoLayer(layerID3, 1, core.LayerKindManuscript)},
+			bytesMock:  withinBudget,
 
 			expect: manuscript,
 		},
@@ -142,6 +146,28 @@ func TestLayerCreate(t *testing.T) {
 
 			expectErr: errFoo,
 		},
+		{
+			name: "Error/ProjectBudget",
+
+			request: request(0, core.LayerKindNotes),
+
+			lockMock:   &daoMock[bool]{resp: true},
+			insertMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID3, 0)},
+			bytesMock:  overBudget,
+
+			expectErr: core.ErrProjectBudget,
+		},
+		{
+			name: "Error/ProjectBytes",
+
+			request: request(0, core.LayerKindNotes),
+
+			lockMock:   &daoMock[bool]{resp: true},
+			insertMock: &daoMock[*dao.Layer]{resp: notesLayer(layerID3, 0)},
+			bytesMock:  &daoMock[*dao.ProjectBytes]{err: errFoo},
+
+			expectErr: errFoo,
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -150,6 +176,7 @@ func TestLayerCreate(t *testing.T) {
 
 			mockLock := coremocks.NewMockLayerCreateDaoLock(t)
 			mockInsert := coremocks.NewMockLayerCreateDaoInsert(t)
+			mockBytes := coremocks.NewMockLayerCreateDaoBytes(t)
 
 			if testCase.lockMock != nil {
 				mockLock.EXPECT().
@@ -167,12 +194,18 @@ func TestLayerCreate(t *testing.T) {
 					Return(testCase.insertMock.resp, testCase.insertMock.err)
 			}
 
+			if testCase.bytesMock != nil {
+				mockBytes.EXPECT().
+					Exec(mock.Anything, &dao.ProjectBytesRequest{ID: projectID}).
+					Return(testCase.bytesMock.resp, testCase.bytesMock.err)
+			}
+
 			transactor := testCase.transactor
 			if transactor == nil {
 				transactor = transactiontest.NewTransactor()
 			}
 
-			service := core.NewLayerCreate(mockLock, mockInsert, transactor)
+			service := core.NewLayerCreate(mockLock, mockInsert, mockBytes, transactor)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
@@ -180,6 +213,7 @@ func TestLayerCreate(t *testing.T) {
 
 			mockLock.AssertExpectations(t)
 			mockInsert.AssertExpectations(t)
+			mockBytes.AssertExpectations(t)
 		})
 	}
 }

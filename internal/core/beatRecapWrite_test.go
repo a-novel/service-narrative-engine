@@ -8,6 +8,9 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/a-novel-kit/golib/transaction"
+	"github.com/a-novel-kit/golib/transaction/transactiontest"
+
 	"github.com/a-novel/service-narrative-engine/internal/core"
 	coremocks "github.com/a-novel/service-narrative-engine/internal/core/mocks"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
@@ -36,8 +39,10 @@ func TestBeatRecapWrite(t *testing.T) {
 
 		request *core.BeatRecapWriteRequest
 
-		ownerMock *daoMock[bool]
-		daoMock   *daoMock[struct{}]
+		lockMock   *daoMock[bool]
+		daoMock    *daoMock[struct{}]
+		bytesMock  *daoMock[*dao.ProjectBytes]
+		transactor transaction.Transactor
 
 		expectErr error
 	}{
@@ -46,8 +51,9 @@ func TestBeatRecapWrite(t *testing.T) {
 
 			request: request(sources),
 
-			ownerMock: &daoMock[bool]{resp: true},
+			lockMock:  &daoMock[bool]{resp: true},
 			daoMock:   &daoMock[struct{}]{},
+			bytesMock: withinBudget,
 		},
 		{
 			name: "Error/RepeatedScene",
@@ -62,7 +68,7 @@ func TestBeatRecapWrite(t *testing.T) {
 
 			request: request(sources),
 
-			ownerMock: &daoMock[bool]{resp: false},
+			lockMock: &daoMock[bool]{resp: false},
 
 			expectErr: core.ErrProjectNotFound,
 		},
@@ -71,8 +77,8 @@ func TestBeatRecapWrite(t *testing.T) {
 
 			request: request(sources),
 
-			ownerMock: &daoMock[bool]{resp: true},
-			daoMock:   &daoMock[struct{}]{err: dao.ErrBeatRecapUpdateNotFound},
+			lockMock: &daoMock[bool]{resp: true},
+			daoMock:  &daoMock[struct{}]{err: dao.ErrBeatRecapUpdateNotFound},
 
 			expectErr: core.ErrBeatNotFound,
 		},
@@ -81,8 +87,8 @@ func TestBeatRecapWrite(t *testing.T) {
 
 			request: request(sources),
 
-			ownerMock: &daoMock[bool]{resp: true},
-			daoMock:   &daoMock[struct{}]{err: dao.ErrBeatRecapUpdateConflict},
+			lockMock: &daoMock[bool]{resp: true},
+			daoMock:  &daoMock[struct{}]{err: dao.ErrBeatRecapUpdateConflict},
 
 			expectErr: core.ErrRecapConflict,
 		},
@@ -91,8 +97,39 @@ func TestBeatRecapWrite(t *testing.T) {
 
 			request: request(sources),
 
-			ownerMock: &daoMock[bool]{resp: true},
-			daoMock:   &daoMock[struct{}]{err: errFoo},
+			lockMock: &daoMock[bool]{resp: true},
+			daoMock:  &daoMock[struct{}]{err: errFoo},
+
+			expectErr: errFoo,
+		},
+		{
+			name: "Error/ProjectBudget",
+
+			request: request(sources),
+
+			lockMock:  &daoMock[bool]{resp: true},
+			daoMock:   &daoMock[struct{}]{},
+			bytesMock: overBudget,
+
+			expectErr: core.ErrProjectBudget,
+		},
+		{
+			name: "Error/ProjectBytes",
+
+			request: request(sources),
+
+			lockMock:  &daoMock[bool]{resp: true},
+			daoMock:   &daoMock[struct{}]{},
+			bytesMock: &daoMock[*dao.ProjectBytes]{err: errFoo},
+
+			expectErr: errFoo,
+		},
+		{
+			name: "Error/Transaction",
+
+			request: request(sources),
+
+			transactor: transactiontest.NewFailingTransactor(errFoo),
 
 			expectErr: errFoo,
 		},
@@ -102,13 +139,14 @@ func TestBeatRecapWrite(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockOwner := coremocks.NewMockBeatRecapWriteDaoOwner(t)
+			mockLock := coremocks.NewMockBeatRecapWriteDaoLock(t)
 			mockDao := coremocks.NewMockBeatRecapWriteDao(t)
+			mockBytes := coremocks.NewMockBeatRecapWriteDaoBytes(t)
 
-			if testCase.ownerMock != nil {
-				mockOwner.EXPECT().
-					Exec(mock.Anything, &dao.ProjectOwnedRequest{ID: projectID, OwnerID: ownerID}).
-					Return(testCase.ownerMock.resp, testCase.ownerMock.err)
+			if testCase.lockMock != nil {
+				mockLock.EXPECT().
+					Exec(mock.Anything, &dao.ProjectLockRequest{ID: projectID, OwnerID: ownerID}).
+					Return(testCase.lockMock.resp, testCase.lockMock.err)
 			}
 
 			if testCase.daoMock != nil {
@@ -120,13 +158,25 @@ func TestBeatRecapWrite(t *testing.T) {
 					Return(testCase.daoMock.err)
 			}
 
-			service := core.NewBeatRecapWrite(mockOwner, mockDao)
+			if testCase.bytesMock != nil {
+				mockBytes.EXPECT().
+					Exec(mock.Anything, &dao.ProjectBytesRequest{ID: projectID}).
+					Return(testCase.bytesMock.resp, testCase.bytesMock.err)
+			}
+
+			transactor := testCase.transactor
+			if transactor == nil {
+				transactor = transactiontest.NewTransactor()
+			}
+
+			service := core.NewBeatRecapWrite(mockLock, mockDao, mockBytes, transactor)
 
 			err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 
-			mockOwner.AssertExpectations(t)
+			mockLock.AssertExpectations(t)
 			mockDao.AssertExpectations(t)
+			mockBytes.AssertExpectations(t)
 		})
 	}
 }

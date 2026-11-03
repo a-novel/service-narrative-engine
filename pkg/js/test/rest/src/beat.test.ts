@@ -94,10 +94,10 @@ describe("beatCreate", () => {
     await expectStatus(beatCreate(api, accessToken, { projectID: ABSENT_ID, title: "Beat", color: COLOR }), 404);
   });
 
-  it("returns 422 when the project holds 200 beats", async () => {
+  it("returns 409 when the project holds 200 beats", async () => {
     await fillBeats();
 
-    await expectStatus(createBeat("Extra"), 422);
+    await expectStatus(createBeat("Extra"), 409);
   });
 });
 
@@ -137,12 +137,12 @@ describe("beatsCreate", () => {
     );
   });
 
-  it("returns 422 when the batch would pass 200 beats", async () => {
+  it("returns 409 when the batch would pass 200 beats", async () => {
     await fillBeats();
 
     await expectStatus(
       beatsCreate(api, accessToken, { projectID: project.id, beats: [{ title: "Extra", color: COLOR }] }),
-      422
+      409
     );
   });
 

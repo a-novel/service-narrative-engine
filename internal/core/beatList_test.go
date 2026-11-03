@@ -36,7 +36,7 @@ func TestBeatList(t *testing.T) {
 			request: &core.BeatListRequest{OwnerID: ownerID, ProjectID: projectID, Limit: 50, Offset: 100},
 
 			ownerMock:   &daoMock[bool]{resp: true},
-			listRequest: &dao.BeatListRequest{ProjectID: projectID, Limit: 50, Offset: 100},
+			listRequest: &dao.BeatListRequest{ProjectID: projectID, Limit: 50, Offset: 100, MaxBytes: core.ListPageBytesMax},
 			listMock:    &daoMock[[]*dao.BeatListRow]{resp: []*dao.BeatListRow{{Beat: *daoBeat(beatID1, 100), Total: 120}}},
 
 			expect: &core.BeatPage{Beats: []*core.Beat{coreBeat(beatID1, 100)}, Total: 120},
@@ -46,9 +46,11 @@ func TestBeatList(t *testing.T) {
 
 			request: &core.BeatListRequest{OwnerID: ownerID, ProjectID: projectID},
 
-			ownerMock:   &daoMock[bool]{resp: true},
-			listRequest: &dao.BeatListRequest{ProjectID: projectID, Limit: core.BeatListLimitDefault},
-			listMock:    &daoMock[[]*dao.BeatListRow]{},
+			ownerMock: &daoMock[bool]{resp: true},
+			listRequest: &dao.BeatListRequest{
+				ProjectID: projectID, Limit: core.BeatListLimitDefault, MaxBytes: core.ListPageBytesMax,
+			},
+			listMock: &daoMock[[]*dao.BeatListRow]{},
 
 			expect: &core.BeatPage{Beats: []*core.Beat{}},
 		},
@@ -96,9 +98,11 @@ func TestBeatList(t *testing.T) {
 
 			request: &core.BeatListRequest{OwnerID: ownerID, ProjectID: projectID},
 
-			ownerMock:   &daoMock[bool]{resp: true},
-			listRequest: &dao.BeatListRequest{ProjectID: projectID, Limit: core.BeatListLimitDefault},
-			listMock:    &daoMock[[]*dao.BeatListRow]{err: errFoo},
+			ownerMock: &daoMock[bool]{resp: true},
+			listRequest: &dao.BeatListRequest{
+				ProjectID: projectID, Limit: core.BeatListLimitDefault, MaxBytes: core.ListPageBytesMax,
+			},
+			listMock: &daoMock[[]*dao.BeatListRow]{err: errFoo},
 
 			expectErr: errFoo,
 		},

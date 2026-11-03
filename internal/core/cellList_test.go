@@ -36,7 +36,7 @@ func TestCellList(t *testing.T) {
 			request: &core.CellListRequest{OwnerID: ownerID, ProjectID: projectID, Limit: 50, Offset: 100},
 
 			ownerMock:   &daoMock[bool]{resp: true},
-			listRequest: &dao.CellListRequest{ProjectID: projectID, Limit: 50, Offset: 100},
+			listRequest: &dao.CellListRequest{ProjectID: projectID, Limit: 50, Offset: 100, MaxBytes: core.ListPageBytesMax},
 			listMock: &daoMock[[]*dao.CellListRow]{resp: []*dao.CellListRow{
 				{Cell: dao.Cell{SceneID: sceneID1, LayerID: layerID1, UpdatedAt: updatedAt}, Total: 120},
 			}},
@@ -51,9 +51,11 @@ func TestCellList(t *testing.T) {
 
 			request: &core.CellListRequest{OwnerID: ownerID, ProjectID: projectID},
 
-			ownerMock:   &daoMock[bool]{resp: true},
-			listRequest: &dao.CellListRequest{ProjectID: projectID, Limit: core.CellListLimitDefault},
-			listMock:    &daoMock[[]*dao.CellListRow]{},
+			ownerMock: &daoMock[bool]{resp: true},
+			listRequest: &dao.CellListRequest{
+				ProjectID: projectID, Limit: core.CellListLimitDefault, MaxBytes: core.ListPageBytesMax,
+			},
+			listMock: &daoMock[[]*dao.CellListRow]{},
 
 			expect: &core.CellPage{Cells: []*core.Cell{}},
 		},
@@ -101,9 +103,11 @@ func TestCellList(t *testing.T) {
 
 			request: &core.CellListRequest{OwnerID: ownerID, ProjectID: projectID},
 
-			ownerMock:   &daoMock[bool]{resp: true},
-			listRequest: &dao.CellListRequest{ProjectID: projectID, Limit: core.CellListLimitDefault},
-			listMock:    &daoMock[[]*dao.CellListRow]{err: errFoo},
+			ownerMock: &daoMock[bool]{resp: true},
+			listRequest: &dao.CellListRequest{
+				ProjectID: projectID, Limit: core.CellListLimitDefault, MaxBytes: core.ListPageBytesMax,
+			},
+			listMock: &daoMock[[]*dao.CellListRow]{err: errFoo},
 
 			expectErr: errFoo,
 		},

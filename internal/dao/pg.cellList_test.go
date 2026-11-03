@@ -29,7 +29,7 @@ func TestPgCellList(t *testing.T) {
 		{
 			name: "Success",
 
-			request: &dao.CellListRequest{ProjectID: projectID, Limit: 10},
+			request: &dao.CellListRequest{ProjectID: projectID, Limit: 10, MaxBytes: pageBytes},
 
 			expect:      composerFixtures().cells,
 			expectTotal: 2,
@@ -37,7 +37,7 @@ func TestPgCellList(t *testing.T) {
 		{
 			name: "Success/Page",
 
-			request: &dao.CellListRequest{ProjectID: projectID, Limit: 1, Offset: 1},
+			request: &dao.CellListRequest{ProjectID: projectID, Limit: 1, Offset: 1, MaxBytes: pageBytes},
 
 			expect:      composerFixtures().cells[1:],
 			expectTotal: 2,
@@ -45,12 +45,30 @@ func TestPgCellList(t *testing.T) {
 		{
 			name: "Success/PastEnd",
 
-			request: &dao.CellListRequest{ProjectID: projectID, Limit: 10, Offset: 2},
+			request: &dao.CellListRequest{ProjectID: projectID, Limit: 10, Offset: 2, MaxBytes: pageBytes},
+		},
+		{
+			name: "Success/BytesBound",
+
+			// The first cell holds 14 bytes as text, and the second would bring the page to 31.
+			request: &dao.CellListRequest{ProjectID: projectID, Limit: 10, MaxBytes: 30},
+
+			expect:      composerFixtures().cells[:1],
+			expectTotal: 2,
+		},
+		{
+			name: "Success/BytesBoundFirstRow",
+
+			// A page keeps its first cell, whatever its bytes.
+			request: &dao.CellListRequest{ProjectID: projectID, Limit: 10, Offset: 1, MaxBytes: 1},
+
+			expect:      composerFixtures().cells[1:],
+			expectTotal: 2,
 		},
 		{
 			name: "Success/OtherProject",
 
-			request: &dao.CellListRequest{ProjectID: otherProjectID, Limit: 10},
+			request: &dao.CellListRequest{ProjectID: otherProjectID, Limit: 10, MaxBytes: pageBytes},
 		},
 	}
 
