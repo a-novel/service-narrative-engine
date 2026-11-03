@@ -34,6 +34,9 @@ HEALTHCHECK --interval=1s --timeout=5s --retries=10 --start-period=1s \
   CMD ["wget", "-qO", "/dev/null", "http://localhost:8080/v1/ping"]
 
 ENV REST_PORT=8080
+# Local, test and consumer stacks call the server directly, with no service token. Production runs the
+# rest image, which keeps the issuer required.
+ENV SERVICE_TOKEN_ISSUER_OPTIONAL=true
 
 EXPOSE 8080
 

@@ -60,7 +60,7 @@ var AppPresetDefault = App{
 		Audience: env.ServiceTokenAudience,
 		Callers:  env.ServiceTokenCallers,
 	},
-	ServiceTokenDisabled: env.ServiceTokenDisabled,
+	ServiceTokenIssuerOptional: env.ServiceTokenIssuerOptional,
 	Limits: Limits{
 		ItemMaxRequestSize:  env.RestMaxItemRequestSize,
 		MaxStreamDuration:   env.RestMaxStreamDuration,

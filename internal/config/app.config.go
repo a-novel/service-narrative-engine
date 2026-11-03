@@ -70,9 +70,9 @@ type App struct {
 	Rest httpf.ServerConfig `json:"rest" yaml:"rest"`
 	// ServiceToken names the service tokens the REST server accepts.
 	ServiceToken servicetoken.Config `json:"serviceToken" yaml:"serviceToken"`
-	// ServiceTokenDisabled lets the REST server take every request without a service token, on a local or
-	// test stack. Without it, a ServiceToken with no issuer refuses to start.
-	ServiceTokenDisabled bool `json:"serviceTokenDisabled" yaml:"serviceTokenDisabled"`
+	// ServiceTokenIssuerOptional lets the REST server start with no ServiceToken issuer, and take every
+	// request without a service token. Without it, a ServiceToken with no issuer refuses to start.
+	ServiceTokenIssuerOptional bool `json:"serviceTokenIssuerOptional" yaml:"serviceTokenIssuerOptional"`
 	// Limits bounds what one request carries, below the REST server's own limits.
 	Limits Limits `json:"limits" yaml:"limits"`
 	// Generations configures the model calls of generations.
