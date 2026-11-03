@@ -90,6 +90,18 @@ func (service *BeatsCreate) Exec(ctx context.Context, request *BeatsCreateReques
 		return nil, otel.ReportError(span, err)
 	}
 
+	insertItems := make([]dao.BeatsInsertItem, len(request.Beats))
+
+	for i, item := range request.Beats {
+		insertItems[i] = dao.BeatsInsertItem{
+			ID:          ids[i],
+			Title:       item.Title,
+			Color:       strings.ToLower(item.Color),
+			Description: item.Description,
+			Prompt:      item.Prompt,
+		}
+	}
+
 	var beats []*Beat
 
 	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
@@ -104,13 +116,8 @@ func (service *BeatsCreate) Exec(ctx context.Context, request *BeatsCreateReques
 		inserted, err := service.daoInsert.Exec(ctx, &dao.BeatsInsertRequest{
 			ProjectID: request.ProjectID,
 			Position:  request.Position,
-			Beats: lo.Map(request.Beats, func(item BeatsCreateItem, index int) dao.BeatsInsertItem {
-				return dao.BeatsInsertItem{
-					ID: ids[index], Title: item.Title, Color: strings.ToLower(item.Color),
-					Description: item.Description, Prompt: item.Prompt,
-				}
-			}),
-			Now: time.Now(),
+			Beats:     insertItems,
+			Now:       time.Now(),
 		})
 		if errors.Is(err, dao.ErrBeatsInsertFull) {
 			err = errors.Join(err, ErrProjectFull)

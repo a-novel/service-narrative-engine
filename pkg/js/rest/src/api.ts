@@ -10,11 +10,6 @@ const STREAM_ATTEMPTS = 5;
 /** The pause before a stream reconnects, in milliseconds. It doubles with each attempt that receives no event. */
 const STREAM_RETRY_DELAY = 500;
 
-// Parses the JSON body as-is, trusting it to match T. Used when no schema is supplied.
-async function decodeRawHttpResponse<T>(response: Response): Promise<T> {
-  return await response.json();
-}
-
 /**
  * Health of a single upstream dependency reported by the service. The health endpoint is
  * unauthenticated, so the report carries the state alone. Diagnostics stay on the server's traces.
@@ -39,11 +34,14 @@ export class NarrativeEngineApi {
     await fetch(`${this._baseUrl}${input}`, init).then(handleHttpResponse);
   }
 
-  /** Sends a request and decodes the JSON body, validating it against the schema when given. */
+  /**
+   * Sends a request and decodes the JSON body. The schema validates it when given; without one, the body is trusted
+   * to match T.
+   */
   async fetch<T>(input: string, validator?: ZodType<T>, init?: RequestInit): Promise<T> {
     return await fetch(`${this._baseUrl}${input}`, init)
       .then(handleHttpResponse)
-      .then(validator ? decodeHttpResponse(validator) : decodeRawHttpResponse<T>);
+      .then(validator ? decodeHttpResponse(validator) : (response): Promise<T> => response.json());
   }
 
   /**

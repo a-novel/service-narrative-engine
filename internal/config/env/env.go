@@ -2,6 +2,7 @@ package env
 
 import (
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/a-novel-kit/golib/config"
@@ -72,7 +73,7 @@ var (
 	// PostgresHost is the PostgreSQL server hostname or IP address.
 	PostgresHost = getEnv("POSTGRES_HOST")
 	// PostgresPort is the PostgreSQL server port.
-	PostgresPort = config.LoadEnv(getEnv("POSTGRES_PORT"), PostgresPortDefault, config.IntParser)
+	PostgresPort = config.LoadEnv(getEnv("POSTGRES_PORT"), PostgresPortDefault, strconv.Atoi)
 	// PostgresUser is the PostgreSQL login role.
 	PostgresUser = getEnv("POSTGRES_USER")
 	// PostgresPassword is the PostgreSQL login credential.
@@ -80,17 +81,17 @@ var (
 	// PostgresDatabase is the PostgreSQL database name.
 	PostgresDatabase = getEnv("POSTGRES_DATABASE")
 	// PostgresTLSEnabled controls transport encryption for the PostgreSQL connection.
-	PostgresTLSEnabled = config.LoadEnv(getEnv("POSTGRES_TLS_ENABLED"), PostgresTLSEnabledDefault, config.BoolParser)
+	PostgresTLSEnabled = config.LoadEnv(getEnv("POSTGRES_TLS_ENABLED"), PostgresTLSEnabledDefault, strconv.ParseBool)
 
 	// PostgresMaxOpenConns is the maximum number of open connections to the database.
-	PostgresMaxOpenConns = config.LoadEnv(getEnv("POSTGRES_MAX_OPEN_CONNS"), PostgresMaxOpenConnsDefault, config.IntParser)
+	PostgresMaxOpenConns = config.LoadEnv(getEnv("POSTGRES_MAX_OPEN_CONNS"), PostgresMaxOpenConnsDefault, strconv.Atoi)
 	// PostgresMaxIdleConns is the maximum number of connections kept open while idle.
-	PostgresMaxIdleConns = config.LoadEnv(getEnv("POSTGRES_MAX_IDLE_CONNS"), PostgresMaxIdleConnsDefault, config.IntParser)
+	PostgresMaxIdleConns = config.LoadEnv(getEnv("POSTGRES_MAX_IDLE_CONNS"), PostgresMaxIdleConnsDefault, strconv.Atoi)
 
 	// ServiceJsonKeysHost is the hostname of the JSON Keys service, without scheme or port.
 	ServiceJsonKeysHost = config.LoadEnv(getEnv("SERVICE_JSON_KEYS_HOST"), ServiceJsonKeysHostDefault, config.StringParser)
 	// ServiceJsonKeysPort is the gRPC port of the JSON Keys service.
-	ServiceJsonKeysPort = config.LoadEnv(getEnv("SERVICE_JSON_KEYS_PORT"), ServiceJsonKeysPortDefault, config.IntParser)
+	ServiceJsonKeysPort = config.LoadEnv(getEnv("SERVICE_JSON_KEYS_PORT"), ServiceJsonKeysPortDefault, strconv.Atoi)
 	// ServiceJsonKeysTokenPath is the file the kubelet projects this service's token for JSON Keys into.
 	// When set, the JSON Keys connection sends that token with every call.
 	ServiceJsonKeysTokenPath = getEnv("SERVICE_JSON_KEYS_TOKEN_PATH")
@@ -99,7 +100,7 @@ var (
 	// unconfigured, and the generation routes answer 503.
 	ServiceGenaiHost = getEnv("SERVICE_GENAI_HOST")
 	// ServiceGenaiPort is the gRPC port of the genai service.
-	ServiceGenaiPort = config.LoadEnv(getEnv("SERVICE_GENAI_PORT"), ServiceGenaiPortDefault, config.IntParser)
+	ServiceGenaiPort = config.LoadEnv(getEnv("SERVICE_GENAI_PORT"), ServiceGenaiPortDefault, strconv.Atoi)
 	// ServiceGenaiTokenPath is the file the kubelet projects this service's token for genai into. When set,
 	// the genai connection sends that token with every call.
 	ServiceGenaiTokenPath = getEnv("SERVICE_GENAI_TOKEN_PATH")
@@ -107,7 +108,7 @@ var (
 	// AppName is the name of the application, as it appears in logs and tracing.
 	AppName = config.LoadEnv(getEnv("APP_NAME"), AppNameDefault, config.StringParser)
 	// Otel enables OpenTelemetry tracing.
-	Otel = config.LoadEnv(getEnv("OTEL"), false, config.BoolParser)
+	Otel = config.LoadEnv(getEnv("OTEL"), false, strconv.ParseBool)
 
 	// Rest configures the REST server from the REST_* variables.
 	Rest = httpf.LoadServerConfig(getEnv, restDefaults())
@@ -117,11 +118,11 @@ var (
 	)
 	// RestMaxStreamDuration bounds a streamed response.
 	RestMaxStreamDuration = config.LoadEnv(
-		getEnv("REST_MAX_STREAM_DURATION"), RestMaxStreamDurationDefault, config.DurationParser,
+		getEnv("REST_MAX_STREAM_DURATION"), RestMaxStreamDurationDefault, time.ParseDuration,
 	)
 	// RestMaxStreamsPerCaller caps the streams one caller holds open on an instance.
 	RestMaxStreamsPerCaller = config.LoadEnv(
-		getEnv("REST_MAX_STREAMS_PER_CALLER"), RestMaxStreamsPerCallerDefault, config.IntParser,
+		getEnv("REST_MAX_STREAMS_PER_CALLER"), RestMaxStreamsPerCallerDefault, strconv.Atoi,
 	)
 
 	// ServiceTokenIssuer is the issuer of the service tokens the REST server accepts, as a token's "iss"

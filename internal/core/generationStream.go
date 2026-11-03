@@ -108,7 +108,12 @@ func (service *GenerationStream) Exec(
 	// genai refuses a stream on its first message, so the stream opens once that message is in.
 	first, err := stream.Recv()
 	if errors.Is(err, io.EOF) {
-		return service.ended(ctx, request)
+		events, err := service.ended(ctx, request)
+		if err != nil {
+			return nil, otel.ReportError(span, err)
+		}
+
+		return events, nil
 	}
 
 	if err != nil {
@@ -135,9 +140,9 @@ func (service *GenerationStream) ended(
 
 	switch {
 	case !result.settled():
-		return nil, ErrGenerationNotStreamed
+		return nil, otel.ReportError(span, ErrGenerationNotStreamed)
 	case request.After != nil:
-		return nil, ErrStreamEnded
+		return nil, otel.ReportError(span, ErrStreamEnded)
 	}
 
 	return func(yield func(*GenerationEvent, error) bool) {

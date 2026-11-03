@@ -76,7 +76,7 @@ type ProjectStreamDaoCells interface {
 // of the section come up to it, itself included. The project's record counts 1, and the end record 0.
 type ProjectStreamPosition struct {
 	// Section is one of [ProjectStreamSections].
-	Section string `validate:"oneof=project beats scenes layers cells end"`
+	Section string `validate:"streamsection"`
 	Count   int    `validate:"min=0"`
 }
 
@@ -159,7 +159,7 @@ func (service *ProjectStream) Exec(
 	}
 
 	if after.Section == ProjectStreamEnd {
-		return nil, ErrStreamEnded
+		return nil, otel.ReportError(span, ErrStreamEnded)
 	}
 
 	return func(yield func(*ProjectRecord, error) bool) {

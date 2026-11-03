@@ -54,6 +54,12 @@ func ValidateSceneField(fl validator.FieldLevel) bool {
 	return slices.Contains(SceneFields, fl.Field().String())
 }
 
+// ValidateStreamSection reports whether a string is one of [ProjectStreamSections]. The package registers it as
+// the "streamsection" struct tag.
+func ValidateStreamSection(fl validator.FieldLevel) bool {
+	return slices.Contains(ProjectStreamSections, fl.Field().String())
+}
+
 // ValidateUniqueCells reports whether a list of [CellsWriteItem] names each pair of a scene and a layer
 // once. The package registers it as the "uniquecells" struct tag.
 func ValidateUniqueCells(fl validator.FieldLevel) bool {
@@ -77,7 +83,7 @@ func ValidateUniqueCells(fl validator.FieldLevel) bool {
 }
 
 func init() {
-	for tag, fn := range map[string]validator.Func{
+	validations := map[string]validator.Func{
 		"notblank":       ValidateNotBlank,
 		"language":       ValidateLanguage,
 		"layerkind":      ValidateLayerKind,
@@ -85,7 +91,10 @@ func init() {
 		"generationkind": ValidateGenerationKind,
 		"targetmode":     ValidateTargetMode,
 		"scenefield":     ValidateSceneField,
-	} {
+		"streamsection":  ValidateStreamSection,
+	}
+
+	for tag, fn := range validations {
 		err := validate.RegisterValidation(tag, fn)
 		if err != nil {
 			panic(err)

@@ -89,6 +89,19 @@ func (service *ScenesCreate) Exec(ctx context.Context, request *ScenesCreateRequ
 		return nil, otel.ReportError(span, err)
 	}
 
+	insertItems := make([]dao.ScenesInsertItem, len(request.Scenes))
+
+	for i, item := range request.Scenes {
+		insertItems[i] = dao.ScenesInsertItem{
+			ID:          ids[i],
+			BeatID:      item.BeatID,
+			Position:    item.Position,
+			Title:       item.Title,
+			Description: item.Description,
+			Prompt:      item.Prompt,
+		}
+	}
+
 	var scenes []*Scene
 
 	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
@@ -102,13 +115,8 @@ func (service *ScenesCreate) Exec(ctx context.Context, request *ScenesCreateRequ
 
 		inserted, err := service.daoInsert.Exec(ctx, &dao.ScenesInsertRequest{
 			ProjectID: request.ProjectID,
-			Scenes: lo.Map(request.Scenes, func(item ScenesCreateItem, index int) dao.ScenesInsertItem {
-				return dao.ScenesInsertItem{
-					ID: ids[index], BeatID: item.BeatID, Position: item.Position, Title: item.Title,
-					Description: item.Description, Prompt: item.Prompt,
-				}
-			}),
-			Now: time.Now(),
+			Scenes:    insertItems,
+			Now:       time.Now(),
 		})
 		switch {
 		case errors.Is(err, dao.ErrScenesInsertFull):

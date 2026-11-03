@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"io"
 	"net/http"
 
 	"github.com/a-novel-kit/golib/otel"
@@ -21,7 +22,7 @@ func (handler *RestPing) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
 
-	_, err := w.Write([]byte("pong"))
+	_, err := io.WriteString(w, "pong")
 	if err != nil {
 		_ = otel.ReportError(span, err)
 	}

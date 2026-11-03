@@ -60,7 +60,7 @@ func (dao *PgBeatRecapUpdate) Exec(ctx context.Context, request *BeatRecapUpdate
 
 	err = db.NewRaw(
 		beatRecapUpdateQuery,
-		request.ProjectID, request.ID, string(request.Recap), request.BeatUpdatedAt, string(request.Sources),
+		request.ProjectID, request.ID, request.Recap, request.BeatUpdatedAt, request.Sources,
 	).Scan(ctx, &written)
 
 	switch {

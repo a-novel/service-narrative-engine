@@ -73,7 +73,7 @@ func (dao *PgCellUpsert) Exec(ctx context.Context, request *CellUpsertRequest) (
 	entity := &CellUpsertRow{}
 
 	err = db.NewRaw(
-		cellUpsertQuery, request.ProjectID, request.SceneID, request.LayerID, string(request.Content), request.Now,
+		cellUpsertQuery, request.ProjectID, request.SceneID, request.LayerID, request.Content, request.Now,
 	).Scan(ctx, entity)
 
 	switch {

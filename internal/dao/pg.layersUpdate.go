@@ -63,8 +63,7 @@ func (dao *PgLayersUpdate) Exec(ctx context.Context, request *LayersUpdateReques
 
 	err = db.NewRaw(
 		layersUpdateQuery, request.ProjectID, bun.List(ids), bun.List(names), bun.List(descriptions), request.Now,
-	).
-		Scan(ctx, &entities)
+	).Scan(ctx, &entities)
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("execute query: %w", err))
 	}

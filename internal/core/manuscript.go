@@ -54,8 +54,8 @@ func newManuscript(project *dao.Project, rows []*dao.ManuscriptRow) (*Manuscript
 	manuscript := &Manuscript{
 		Title:    project.Title,
 		Language: project.Language,
-		Beats:    []*ManuscriptBeat{},
-		Scenes:   []*ManuscriptScene{},
+		Beats:    make([]*ManuscriptBeat, 0, len(rows)),
+		Scenes:   make([]*ManuscriptScene, 0, len(rows)),
 	}
 
 	var beatID uuid.UUID

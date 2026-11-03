@@ -91,6 +91,7 @@ func (service *GenerationSubmit) Exec(ctx context.Context, request *GenerationSu
 	span.SetAttributes(
 		attribute.String("project.id", request.ProjectID.String()),
 		attribute.String("project.owner_id", request.OwnerID.String()),
+		attribute.String("generation.kind", request.Kind),
 	)
 
 	err := validate.Struct(request)
@@ -113,28 +114,26 @@ func (service *GenerationSubmit) Exec(ctx context.Context, request *GenerationSu
 		return nil, otel.ReportError(span, fmt.Errorf("plan generation: %w", err))
 	}
 
-	generation := &Generation{Kind: plan.Kind}
+	generation := &Generation{Kind: plan.Kind, Calls: make([]*GenerationCall, len(plan.Calls))}
 
 	var waiting string
 
-	for _, call := range plan.Calls {
+	for position, call := range plan.Calls {
 		submitted := &GenerationCall{Context: call, Waiting: waiting}
-		generation.Calls = append(generation.Calls, submitted)
+		generation.Calls[position] = submitted
 
 		// A cap that refused a call refuses the calls after it as well, until a call settles.
 		if waiting != "" {
 			continue
 		}
 
-		submitted.Result, submitted.Waiting, err = service.submit(ctx, request, plan.Kind, call, len(generation.Calls)-1)
+		submitted.Result, submitted.Waiting, err = service.submit(ctx, request, plan.Kind, call, position)
 		if err != nil {
 			return nil, otel.ReportError(span, fmt.Errorf("submit call: %w", err))
 		}
 
 		waiting = submitted.Waiting
 	}
-
-	span.SetAttributes(attribute.Int("generation.calls", len(generation.Calls)))
 
 	if lo.EveryBy(generation.Calls, func(call *GenerationCall) bool { return call.Waiting != "" }) {
 		return nil, otel.ReportError(span, &GenerationQuotaError{Cap: waiting})

@@ -61,7 +61,7 @@ func (dao *PgCellRecapUpdate) Exec(ctx context.Context, request *CellRecapUpdate
 
 	err = db.NewRaw(
 		cellRecapUpdateQuery,
-		request.ProjectID, request.SceneID, request.LayerID, string(request.Recap), request.CellUpdatedAt,
+		request.ProjectID, request.SceneID, request.LayerID, request.Recap, request.CellUpdatedAt,
 	).Scan(ctx, &written)
 
 	switch {

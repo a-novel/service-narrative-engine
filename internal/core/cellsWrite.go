@@ -140,6 +140,12 @@ func (service *CellsWrite) Exec(ctx context.Context, request *CellsWriteRequest)
 
 	sceneIDs := lo.Uniq(lo.Map(request.Cells, func(cell CellsWriteItem, _ int) uuid.UUID { return cell.SceneID }))
 
+	upsertItems := make([]dao.CellsUpsertItem, len(request.Cells))
+
+	for i, cell := range request.Cells {
+		upsertItems[i] = dao.CellsUpsertItem{SceneID: cell.SceneID, LayerID: cell.LayerID, Content: cell.Content}
+	}
+
 	var entities []*dao.CellUpsertRow
 
 	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
@@ -150,10 +156,8 @@ func (service *CellsWrite) Exec(ctx context.Context, request *CellsWriteRequest)
 
 		entities, err = service.dao.Exec(ctx, &dao.CellsUpsertRequest{
 			ProjectID: request.ProjectID,
-			Cells: lo.Map(request.Cells, func(cell CellsWriteItem, _ int) dao.CellsUpsertItem {
-				return dao.CellsUpsertItem{SceneID: cell.SceneID, LayerID: cell.LayerID, Content: cell.Content}
-			}),
-			Now: time.Now(),
+			Cells:     upsertItems,
+			Now:       time.Now(),
 		})
 
 		switch {

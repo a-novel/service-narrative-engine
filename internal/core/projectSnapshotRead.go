@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/google/uuid"
 	"github.com/samber/lo"
-	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/a-novel-kit/golib/otel"
 
@@ -84,11 +84,6 @@ func (service *ProjectSnapshotRead) Exec(
 ) (*ProjectSnapshot, error) {
 	ctx, span := otel.Tracer().Start(ctx, "core.ProjectSnapshotRead")
 	defer span.End()
-
-	span.SetAttributes(
-		attribute.String("project.id", request.ProjectID.String()),
-		attribute.String("project.owner_id", request.OwnerID.String()),
-	)
 
 	err := validate.Struct(request)
 	if err != nil {
@@ -176,6 +171,8 @@ func readPages[Row, Item any](
 		}
 
 		var total int
+
+		items = slices.Grow(items, len(rows))
 
 		for _, row := range rows {
 			var item *Item

@@ -11,14 +11,14 @@ import {
 } from "@a-novel/service-authentication-rest";
 
 /** A Mailpit search result, reduced to the message IDs. */
-interface MailpitSearchResponse {
+type MailpitSearchResponse = {
   messages: Array<{ ID: string }>;
-}
+};
 
 /** A Mailpit message, reduced to its HTML body. */
-interface MailpitMessage {
+type MailpitMessage = {
   HTML: string;
-}
+};
 
 /** Matches the account-creation link of an invitation email, its `&` still escaped as in HTML. */
 const REGISTRATION_LINK = /href="([^"]*\/ext\/account\/create\?[^"]*)"/;
@@ -96,6 +96,10 @@ export async function registrationShortCode(email: string): Promise<string> {
 
 /** Returns the JSON body of a successful Mailpit response. */
 async function readJSON(response: Response): Promise<unknown> {
-  if (!response.ok) throw new Error(`Mailpit answered ${response.status}`);
+  if (!response.ok) {
+    await response.body?.cancel();
+    throw new Error(`Mailpit answered ${response.status}`);
+  }
+
   return await response.json();
 }

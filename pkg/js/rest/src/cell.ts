@@ -38,6 +38,9 @@ export const WrittenCellSchema = z.object({
 /** The value {@link WrittenCellSchema} validates. */
 export type WrittenCell = z.infer<typeof WrittenCellSchema>;
 
+/** Written cells, as the batch endpoint returns them. */
+const WrittenCellsSchema = z.array(WrittenCellSchema);
+
 /**
  * A page of a project's cells, by the narrative order of their scene, then the position of their layer,
  * with how many the project holds in all.
@@ -119,7 +122,7 @@ export async function cellsWrite(
   accessToken: string,
   request: CellsWriteRequest
 ): Promise<WrittenCell[]> {
-  return await api.fetch("/v1/cells", z.array(WrittenCellSchema), {
+  return await api.fetch("/v1/cells", WrittenCellsSchema, {
     method: "PUT",
     headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
     body: JSON.stringify(request),

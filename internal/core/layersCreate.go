@@ -88,6 +88,17 @@ func (service *LayersCreate) Exec(ctx context.Context, request *LayersCreateRequ
 		return nil, otel.ReportError(span, err)
 	}
 
+	insertItems := make([]dao.LayersInsertItem, len(request.Layers))
+
+	for i, item := range request.Layers {
+		insertItems[i] = dao.LayersInsertItem{
+			ID:          ids[i],
+			Kind:        item.Kind,
+			Name:        item.Name,
+			Description: item.Description,
+		}
+	}
+
 	var layers []*Layer
 
 	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
@@ -102,10 +113,8 @@ func (service *LayersCreate) Exec(ctx context.Context, request *LayersCreateRequ
 		inserted, err := service.daoInsert.Exec(ctx, &dao.LayersInsertRequest{
 			ProjectID: request.ProjectID,
 			Position:  request.Position,
-			Layers: lo.Map(request.Layers, func(item LayersCreateItem, index int) dao.LayersInsertItem {
-				return dao.LayersInsertItem{ID: ids[index], Kind: item.Kind, Name: item.Name, Description: item.Description}
-			}),
-			Now: time.Now(),
+			Layers:    insertItems,
+			Now:       time.Now(),
 		})
 		if errors.Is(err, dao.ErrLayersInsertFull) {
 			err = errors.Join(err, ErrProjectFull)

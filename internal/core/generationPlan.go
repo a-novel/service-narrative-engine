@@ -162,14 +162,10 @@ func (service *GenerationPlan) Exec(ctx context.Context, request *GenerationPlan
 	_, span := otel.Tracer().Start(ctx, "core.GenerationPlan")
 	defer span.End()
 
-	span.SetAttributes(attribute.String("generation.kind", request.Kind))
-
 	err := validate.Struct(request)
 	if err != nil {
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
-
-	span.SetAttributes(attribute.String("project.id", request.Snapshot.Project.ID.String()))
 
 	kind, ok := service.config.Kinds[request.Kind]
 	if !ok {
