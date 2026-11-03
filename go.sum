@@ -8,8 +8,8 @@ github.com/a-novel/service-authentication/v2 v2.25.0 h1:U9yucd2ImngYooSyw96cZkNB
 github.com/a-novel/service-authentication/v2 v2.25.0/go.mod h1:ouIMqXrKtpOmmspfmjw2Q1wFbiuBRvKBoUdtMneKDjU=
 github.com/a-novel/service-genai v0.8.6 h1:knShgUzqTn/lAb2e27PaAMoG+g42q6r7oJqa+/VGf4A=
 github.com/a-novel/service-genai v0.8.6/go.mod h1:VPVwW9h/L16O9579OFdrxNzAUDGub91uKfp1tGkZUI4=
-github.com/a-novel/service-json-keys/v2 v2.15.3 h1:Q1+Bft1YMybLNAsaUWIwr1gTH0Pt/mchFgQo2V5iuIk=
-github.com/a-novel/service-json-keys/v2 v2.15.3/go.mod h1:8LffbTsfsKjMhL2LR1MvZMBqTECAgxMDFSLPVJbVY3E=
+github.com/a-novel/service-json-keys/v2 v2.15.4 h1:cmyewZwMKxqwooX9miw5wbR1ftAIDpIInkRDlCbps0E=
+github.com/a-novel/service-json-keys/v2 v2.15.4/go.mod h1:vlY9dkdbf0/s6zJjPug8IrsFZrTXOOpxZwrR60PpT9I=
 github.com/alicebob/miniredis/v2 v2.40.0 h1:6IgTQbvm2JiMYZ8yur/acNJzVjtSOWCelxXbk/LUBXc=
 github.com/alicebob/miniredis/v2 v2.40.0/go.mod h1:TcL7YfarKPGDAthEtl5NBeHZfeUQj6OXMm/+iu5cLMM=
 github.com/bsm/ginkgo/v2 v2.12.0 h1:Ny8MWAHyOepLGlLKYmXG4IEkioBysk6GpaRTLC8zwWs=
