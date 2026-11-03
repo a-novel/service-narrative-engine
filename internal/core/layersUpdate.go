@@ -77,12 +77,16 @@ func (service *LayersUpdate) Exec(ctx context.Context, request *LayersUpdateRequ
 		return nil, otel.ReportError(span, fmt.Errorf("check owner: %w", err))
 	}
 
+	updateItems := make([]dao.LayersUpdateItem, len(request.Layers))
+
+	for i, item := range request.Layers {
+		updateItems[i] = dao.LayersUpdateItem{ID: item.ID, Name: item.Name, Description: item.Description}
+	}
+
 	updated, err := service.dao.Exec(ctx, &dao.LayersUpdateRequest{
 		ProjectID: request.ProjectID,
-		Layers: lo.Map(request.Layers, func(item LayersUpdateItem, _ int) dao.LayersUpdateItem {
-			return dao.LayersUpdateItem{ID: item.ID, Name: item.Name, Description: item.Description}
-		}),
-		Now: time.Now(),
+		Layers:    updateItems,
+		Now:       time.Now(),
 	})
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("update layers: %w", err))

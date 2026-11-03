@@ -70,7 +70,7 @@ func daoLayer(id uuid.UUID, position int, kind string) *dao.Layer {
 }
 
 func notesLayer(id uuid.UUID, position int) *dao.Layer {
-	return daoLayer(id, position, "notes")
+	return daoLayer(id, position, core.LayerKindNotes)
 }
 
 func daoProject() *dao.Project {

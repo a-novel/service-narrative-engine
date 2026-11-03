@@ -1,20 +1,10 @@
 package handlers_test
 
 import (
-	"bytes"
 	"encoding/json"
-	"errors"
-	"io"
-	"maps"
-	"net/http"
-	"net/http/httptest"
-	"testing"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/stretchr/testify/require"
-
-	serviceauthentication "github.com/a-novel/service-authentication/v2/pkg/go"
 
 	"github.com/a-novel/service-narrative-engine/internal/core"
 )
@@ -81,60 +71,19 @@ var (
 	}
 )
 
-// serviceMock is what the service mock of a handler test case returns. A nil one means the handler
-// must not call the service.
-type serviceMock[Resp any] struct {
-	resp Resp
-	err  error
-}
+const (
+	// suggestOutput is a valid suggest output, with one text suggestion.
+	suggestOutput = `{"manuscript":[],"text":[{"target":"T1","note":"Names the scene.","text":"La lettre"}]}`
+	// suggestModel names the model that wrote [suggestOutput].
+	suggestModel = "gpt-6.1-terra-2026-09-30"
+)
 
-// withComposer returns the JSON of a new project carrying the layers it starts with.
-func withComposer(project map[string]any, layers []any) map[string]any {
-	composer := maps.Clone(project)
-	composer["layers"] = layers
+var (
+	// genaiID names the genai generation of the generation tests.
+	genaiID = uuid.MustParse("00000000-0000-0000-0000-0000000000c1")
 
-	return composer
-}
-
-// asUser returns the request as the auth middleware hands it over: carrying the claims of userID,
-// or of an anonymous session when userID is nil.
-func asUser(request *http.Request, userID *uuid.UUID) *http.Request {
-	claims := &serviceauthentication.Claims{UserID: userID}
-
-	return request.WithContext(serviceauthentication.SetClaimsContext(request.Context(), claims))
-}
-
-// newRequest returns a request of the project owner, carrying body as JSON unless it is nil.
-func newRequest(t *testing.T, method, target string, body any) *http.Request {
-	t.Helper()
-
-	var data []byte
-
-	if body != nil {
-		var err error
-
-		data, err = json.Marshal(body)
-		require.NoError(t, err)
+	// jsonResult is the JSON of a succeeded genai generation of [suggestOutput].
+	jsonResult = map[string]any{
+		"id": genaiID.String(), "status": "succeeded", "output": mustDecode(suggestOutput), "model": suggestModel,
 	}
-
-	return asUser(httptest.NewRequestWithContext(t.Context(), method, target, bytes.NewReader(data)), &ownerID)
-}
-
-// requireResponse checks the status of a handler's response, and its JSON body when one is
-// expected.
-func requireResponse(t *testing.T, response *http.Response, expectStatus int, expectBody any) {
-	t.Helper()
-
-	require.Equal(t, expectStatus, response.StatusCode)
-
-	if expectBody == nil {
-		return
-	}
-
-	data, err := io.ReadAll(response.Body)
-	require.NoError(t, errors.Join(err, response.Body.Close()))
-
-	var body any
-	require.NoError(t, json.Unmarshal(data, &body))
-	require.Equal(t, expectBody, body)
-}
+)

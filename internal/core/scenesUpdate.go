@@ -79,14 +79,21 @@ func (service *ScenesUpdate) Exec(ctx context.Context, request *ScenesUpdateRequ
 		return nil, otel.ReportError(span, fmt.Errorf("check owner: %w", err))
 	}
 
+	updateItems := make([]dao.ScenesUpdateItem, len(request.Scenes))
+
+	for i, item := range request.Scenes {
+		updateItems[i] = dao.ScenesUpdateItem{
+			ID:          item.ID,
+			Title:       item.Title,
+			Description: item.Description,
+			Prompt:      item.Prompt,
+		}
+	}
+
 	updated, err := service.dao.Exec(ctx, &dao.ScenesUpdateRequest{
 		ProjectID: request.ProjectID,
-		Scenes: lo.Map(request.Scenes, func(item ScenesUpdateItem, _ int) dao.ScenesUpdateItem {
-			return dao.ScenesUpdateItem{
-				ID: item.ID, Title: item.Title, Description: item.Description, Prompt: item.Prompt,
-			}
-		}),
-		Now: time.Now(),
+		Scenes:    updateItems,
+		Now:       time.Now(),
 	})
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("update scenes: %w", err))

@@ -105,6 +105,8 @@ func TestRestHealth(t *testing.T) {
 				"client:postgres": map[string]any{"status": testCase.expectHealth},
 				"api:jsonKeys":    map[string]any{"status": testCase.expectJsonKeys},
 			}, report)
+
+			jsonKeys.AssertExpectations(t)
 		})
 	}
 }

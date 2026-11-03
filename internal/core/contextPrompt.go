@@ -305,7 +305,7 @@ func (draft *contextDraft) renderScene(
 
 // neighborhood renders the scenes that enter the context, in narrative order.
 func (draft *contextDraft) neighborhood(templates *template.Template) (string, error) {
-	var scenes []string
+	scenes := make([]string, 0, len(draft.scenes))
 
 	for _, scene := range draft.scenes {
 		if scene.level != ContextLevelOmitted {
@@ -330,7 +330,8 @@ func (draft *contextDraft) showTargetContext(templates *template.Template, budge
 	}
 
 	for len(sides) > 0 {
-		var open []*contextSide
+		// open filters sides in place, since it never passes the side being read.
+		open := sides[:0]
 
 		for _, side := range sides {
 			block := side.next()
@@ -419,7 +420,7 @@ func (draft *contextDraft) allocate(templates *template.Template, budget int) er
 func (draft *contextDraft) upgrade(templates *template.Template, scene *draftScene, budget int) (int, error) {
 	outline := scene.renders[ContextLevelOutline].size
 
-	for _, level := range append([]string{ContextLevelFull}, recapLevels...) {
+	for _, level := range upgradeLevels {
 		least, ok := scene.adds(level)
 		if !ok || least > budget {
 			continue
@@ -470,7 +471,8 @@ func (scene *draftScene) adds(level string) (int, bool) {
 // its handle. A condensed, compact or essentials scene shows its manuscript as that version of its fresh
 // recaps, and an outline scene leaves it out. Every level shows the other cells whole.
 func (scene *draftScene) shows(level string) []*shownCell {
-	var shown []*shownCell
+	shown := make([]*shownCell, 0, len(scene.cells))
+	recapLevel := slices.Contains(recapLevels, level)
 
 	for _, cell := range scene.cells {
 		manuscript := cell.layer.layer.Kind == LayerKindManuscript
@@ -478,7 +480,7 @@ func (scene *draftScene) shows(level string) []*shownCell {
 		switch {
 		case level == ContextLevelFull, !manuscript:
 			shown = append(shown, &shownCell{cell: cell})
-		case cell.recap != nil && slices.Contains(recapLevels, level):
+		case cell.recap != nil && recapLevel:
 			shown = append(shown, &shownCell{cell: cell, version: level})
 		}
 	}
@@ -494,7 +496,10 @@ func (scene *draftScene) view(level string, prompts bool) *promptScene {
 		view.BeatPrompt, view.Prompt = scene.beat.beat.Prompt, scene.scene.Prompt
 	}
 
-	for _, shown := range scene.shows(level) {
+	cells := scene.shows(level)
+	view.Cells = make([]*promptCell, len(cells))
+
+	for index, shown := range cells {
 		cell := &promptCell{Layer: shown.cell.layer.handle}
 
 		switch {
@@ -506,7 +511,7 @@ func (scene *draftScene) view(level string, prompts bool) *promptScene {
 			cell.Content = shown.cell.content
 		}
 
-		view.Cells = append(view.Cells, cell)
+		view.Cells[index] = cell
 	}
 
 	return view
@@ -594,6 +599,7 @@ func (draft *contextDraft) renderBeat(
 func (draft *contextDraft) frameView(beats []string) *promptFrame {
 	view := &promptFrame{
 		Title: draft.project.Title, Premise: draft.project.Premise, Language: draft.project.Language, Beats: beats,
+		Layers: make([]*promptLayer, 0, len(draft.layers)),
 	}
 
 	for _, layer := range draft.layers {
@@ -624,8 +630,9 @@ func (draft *contextDraft) beatView(beat *draftBeat, level string) *promptFrameB
 	}
 
 	view.Description = beat.beat.Description
+	view.Lines = make([]*promptFrameScene, len(beat.scenes))
 
-	for _, scene := range beat.scenes {
+	for index, scene := range beat.scenes {
 		line := &promptFrameScene{Handle: scene.handle, Title: scene.scene.Title, Description: scene.scene.Description}
 
 		for _, target := range draft.targets {
@@ -641,7 +648,7 @@ func (draft *contextDraft) beatView(beat *draftBeat, level string) *promptFrameB
 			}
 		}
 
-		view.Lines = append(view.Lines, line)
+		view.Lines[index] = line
 	}
 
 	return view
@@ -715,9 +722,12 @@ func (target *draftTarget) view() *promptTarget {
 // beatView returns what the template renders for the beat a consolidation recaps. Each scene shows its
 // manuscript as its fresh compact recap where one exists, or whole.
 func (target *draftTarget) beatView() *promptRecapBeat {
-	view := &promptRecapBeat{Title: target.beat.beat.Title, Description: target.beat.beat.Description}
+	view := &promptRecapBeat{
+		Title: target.beat.beat.Title, Description: target.beat.beat.Description,
+		Scenes: make([]*promptRecapScene, len(target.beat.scenes)),
+	}
 
-	for _, scene := range target.beat.scenes {
+	for index, scene := range target.beat.scenes {
 		line := &promptRecapScene{Handle: scene.handle}
 
 		for _, cell := range scene.cells {
@@ -732,7 +742,7 @@ func (target *draftTarget) beatView() *promptRecapBeat {
 			}
 		}
 
-		view.Scenes = append(view.Scenes, line)
+		view.Scenes[index] = line
 	}
 
 	return view
@@ -745,28 +755,7 @@ func (draft *contextDraft) call() *ContextCall {
 	call.Beats = lo.Map(draft.beats, func(beat *draftBeat, _ int) *ContextBeat {
 		return &ContextBeat{BeatID: beat.beat.ID, Level: beat.level}
 	})
-
-	for _, scene := range draft.scenes {
-		planned := &ContextScene{
-			Handle: scene.handle, SceneID: scene.scene.ID, Level: scene.level, Override: scene.override,
-			UpdatedAt: lo.Ternary(scene.override, time.Time{}, scene.scene.UpdatedAt),
-		}
-
-		if scene.level != ContextLevelOmitted {
-			for _, shown := range scene.shows(scene.level) {
-				if shown.cell.target != nil {
-					continue
-				}
-
-				planned.Cells = append(planned.Cells, &ContextCell{
-					LayerID: shown.cell.layer.layer.ID, Recap: shown.version,
-					Override: shown.cell.override, UpdatedAt: shown.cell.updatedAt,
-				})
-			}
-		}
-
-		call.Scenes = append(call.Scenes, planned)
-	}
+	call.Scenes = lo.Map(draft.scenes, func(scene *draftScene, _ int) *ContextScene { return scene.plan() })
 
 	for _, layer := range draft.layers {
 		if !layer.excluded || layer.target {
@@ -777,6 +766,32 @@ func (draft *contextDraft) call() *ContextCall {
 	call.Targets = lo.Map(draft.targets, func(target *draftTarget, _ int) *ContextTarget { return target.plan() })
 
 	return call
+}
+
+// plan returns the plan of the scene, with the cells it shows at its level. Its targets' cells show in the
+// task, so the plan lists them with the targets instead.
+func (scene *draftScene) plan() *ContextScene {
+	planned := &ContextScene{
+		Handle: scene.handle, SceneID: scene.scene.ID, Level: scene.level, Override: scene.override,
+		UpdatedAt: lo.Ternary(scene.override, time.Time{}, scene.scene.UpdatedAt),
+	}
+
+	if scene.level == ContextLevelOmitted {
+		return planned
+	}
+
+	for _, shown := range scene.shows(scene.level) {
+		if shown.cell.target != nil {
+			continue
+		}
+
+		planned.Cells = append(planned.Cells, &ContextCell{
+			LayerID: shown.cell.layer.layer.ID, Recap: shown.version,
+			Override: shown.cell.override, UpdatedAt: shown.cell.updatedAt,
+		})
+	}
+
+	return planned
 }
 
 // plan returns the plan of the target.

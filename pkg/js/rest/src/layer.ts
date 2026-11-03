@@ -29,6 +29,9 @@ export const LayerSchema = z.object({
 /** The value {@link LayerSchema} validates. */
 export type Layer = z.infer<typeof LayerSchema>;
 
+/** Layers, as the batch endpoints return them. */
+const LayersSchema = z.array(LayerSchema);
+
 /** The name of a layer, which is not blank. */
 export const LayerNameSchema = z.string().max(100).regex(/\S/);
 
@@ -162,7 +165,7 @@ export async function layersCreate(
   accessToken: string,
   request: LayersCreateRequest
 ): Promise<Layer[]> {
-  return await api.fetch("/v1/layers", z.array(LayerSchema), {
+  return await api.fetch("/v1/layers", LayersSchema, {
     method: "POST",
     headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
     body: JSON.stringify(request),
@@ -195,7 +198,7 @@ export async function layersUpdate(
   accessToken: string,
   request: LayersUpdateRequest
 ): Promise<Layer[]> {
-  return await api.fetch("/v1/layers", z.array(LayerSchema), {
+  return await api.fetch("/v1/layers", LayersSchema, {
     method: "PUT",
     headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
     body: JSON.stringify(request),
@@ -246,8 +249,9 @@ export async function layersDelete(
   accessToken: string,
   request: LayersDeleteRequest
 ): Promise<Layer[]> {
-  const params = new URLSearchParams([["projectID", request.projectID], ...request.ids.map((id) => ["id", id])]);
-  return await api.fetch(`/v1/layers?${params.toString()}`, z.array(LayerSchema), {
+  const params = new URLSearchParams({ projectID: request.projectID });
+  for (const id of request.ids) params.append("id", id);
+  return await api.fetch(`/v1/layers?${params.toString()}`, LayersSchema, {
     method: "DELETE",
     headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
   });

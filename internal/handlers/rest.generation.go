@@ -143,10 +143,13 @@ func loadGenerationResult(result *core.GenerationResult) *RestGenerationResult {
 
 // loadGenerationContext keeps the scenes the call shows, and leaves out those it omits.
 func loadGenerationContext(call *core.ContextCall) *RestGenerationContext {
-	scenes := lo.FilterMap(call.Scenes, func(scene *core.ContextScene, _ int) (*RestContextScene, bool) {
-		return &RestContextScene{Handle: scene.Handle, SceneID: scene.SceneID, Level: scene.Level},
-			scene.Level != core.ContextLevelOmitted
-	})
+	scenes := make([]*RestContextScene, 0, len(call.Scenes))
+
+	for _, scene := range call.Scenes {
+		if scene.Level != core.ContextLevelOmitted {
+			scenes = append(scenes, &RestContextScene{Handle: scene.Handle, SceneID: scene.SceneID, Level: scene.Level})
+		}
+	}
 
 	return &RestGenerationContext{
 		Targets: lo.Map(call.Targets, func(target *core.ContextTarget, _ int) *RestContextTarget {
@@ -173,7 +176,8 @@ func loadContextTarget(target *core.ContextTarget) *RestContextTarget {
 	loaded := &RestContextTarget{
 		Handle: target.Handle, SceneID: optionalID(target.SceneID), LayerID: optionalID(target.LayerID),
 		BeatID: optionalID(target.BeatID), Field: target.Field, Mode: target.Mode,
-		Kept: target.Kept, Override: target.Override, Sources: loadBeatRecapSources(target.Sources),
+		Kept: target.Kept, Override: target.Override, UpdatedAt: optionalTime(target.UpdatedAt),
+		Sources: loadBeatRecapSources(target.Sources),
 		Blocks: lo.Map(target.Blocks, func(block *core.ContextBlock, _ int) *RestContextBlock {
 			return &RestContextBlock{Handle: block.Handle, Position: block.Position}
 		}),
@@ -181,10 +185,6 @@ func loadContextTarget(target *core.ContextTarget) *RestContextTarget {
 
 	if target.Range != nil {
 		loaded.Range = &RestRange{Start: target.Range.Start, End: target.Range.End}
-	}
-
-	if !target.UpdatedAt.IsZero() {
-		loaded.UpdatedAt = &target.UpdatedAt
 	}
 
 	return loaded

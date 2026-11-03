@@ -82,15 +82,22 @@ func (service *BeatsUpdate) Exec(ctx context.Context, request *BeatsUpdateReques
 		return nil, otel.ReportError(span, fmt.Errorf("check owner: %w", err))
 	}
 
+	updateItems := make([]dao.BeatsUpdateItem, len(request.Beats))
+
+	for i, item := range request.Beats {
+		updateItems[i] = dao.BeatsUpdateItem{
+			ID:          item.ID,
+			Title:       item.Title,
+			Color:       strings.ToLower(item.Color),
+			Description: item.Description,
+			Prompt:      item.Prompt,
+		}
+	}
+
 	updated, err := service.dao.Exec(ctx, &dao.BeatsUpdateRequest{
 		ProjectID: request.ProjectID,
-		Beats: lo.Map(request.Beats, func(item BeatsUpdateItem, _ int) dao.BeatsUpdateItem {
-			return dao.BeatsUpdateItem{
-				ID: item.ID, Title: item.Title, Color: strings.ToLower(item.Color),
-				Description: item.Description, Prompt: item.Prompt,
-			}
-		}),
-		Now: time.Now(),
+		Beats:     updateItems,
+		Now:       time.Now(),
 	})
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("update beats: %w", err))

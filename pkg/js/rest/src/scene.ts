@@ -19,6 +19,9 @@ export const SceneSchema = z.object({
 /** The value {@link SceneSchema} validates. */
 export type Scene = z.infer<typeof SceneSchema>;
 
+/** Scenes, as the batch endpoints return them. */
+const ScenesSchema = z.array(SceneSchema);
+
 /** The title of a scene, which is not blank. */
 export const SceneTitleSchema = z.string().max(200).regex(/\S/);
 
@@ -162,7 +165,7 @@ export async function scenesCreate(
   accessToken: string,
   request: ScenesCreateRequest
 ): Promise<Scene[]> {
-  return await api.fetch("/v1/scenes", z.array(SceneSchema), {
+  return await api.fetch("/v1/scenes", ScenesSchema, {
     method: "POST",
     headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
     body: JSON.stringify(request),
@@ -195,7 +198,7 @@ export async function scenesUpdate(
   accessToken: string,
   request: ScenesUpdateRequest
 ): Promise<Scene[]> {
-  return await api.fetch("/v1/scenes", z.array(SceneSchema), {
+  return await api.fetch("/v1/scenes", ScenesSchema, {
     method: "PUT",
     headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
     body: JSON.stringify(request),
@@ -221,8 +224,7 @@ export async function sceneMove(
 
 /**
  * Deletes one scene with its cells and returns it as it was; the scenes after it in its beat move up one
- * place.
- * Throws on HTTP 404 when the caller owns no such project, or the project holds no such scene.
+ * place. Throws on HTTP 404 when the caller owns no such project, or the project holds no such scene.
  */
 export async function sceneDelete(
   api: NarrativeEngineApi,
@@ -246,8 +248,9 @@ export async function scenesDelete(
   accessToken: string,
   request: ScenesDeleteRequest
 ): Promise<Scene[]> {
-  const params = new URLSearchParams([["projectID", request.projectID], ...request.ids.map((id) => ["id", id])]);
-  return await api.fetch(`/v1/scenes?${params.toString()}`, z.array(SceneSchema), {
+  const params = new URLSearchParams({ projectID: request.projectID });
+  for (const id of request.ids) params.append("id", id);
+  return await api.fetch(`/v1/scenes?${params.toString()}`, ScenesSchema, {
     method: "DELETE",
     headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
   });

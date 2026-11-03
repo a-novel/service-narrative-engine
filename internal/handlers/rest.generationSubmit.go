@@ -174,23 +174,27 @@ func (handler *RestGenerationSubmit) ServeHTTP(w http.ResponseWriter, r *http.Re
 	httpf.SendJSONStatus(w, span, http.StatusAccepted, loadGeneration(result))
 }
 
-// saveGenerationTargets keeps a request without targets at nil, since only a suggest generation takes them,
-// and a missing target at nil, which the core refuses.
+// saveGenerationTargets keeps a request without targets at nil, since only a suggest generation takes them.
 func saveGenerationTargets(targets []*RestGenerationTarget) []*core.GenerationTarget {
 	if targets == nil {
 		return nil
 	}
 
 	return lo.Map(targets, func(target *RestGenerationTarget, _ int) *core.GenerationTarget {
-		if target == nil {
-			return nil
-		}
-
-		return &core.GenerationTarget{
-			SceneID: target.SceneID, LayerID: target.LayerID, Field: target.Field, Mode: target.Mode,
-			Range: saveRange(target.Range), Kept: target.Kept,
-		}
+		return saveGenerationTarget(target)
 	})
+}
+
+// saveGenerationTarget returns nil for a missing target, which the core refuses.
+func saveGenerationTarget(target *RestGenerationTarget) *core.GenerationTarget {
+	if target == nil {
+		return nil
+	}
+
+	return &core.GenerationTarget{
+		SceneID: target.SceneID, LayerID: target.LayerID, Field: target.Field, Mode: target.Mode,
+		Range: saveRange(target.Range), Kept: target.Kept,
+	}
 }
 
 func saveGenerationCell(cell *RestGenerationCell) *core.GenerationCell {
@@ -216,20 +220,28 @@ func saveGenerationOverrides(overrides *RestGenerationOverrides) *core.Generatio
 
 	return &core.GenerationOverrides{
 		Scenes: lo.Map(overrides.Scenes, func(scene *RestSceneOverride, _ int) *core.SceneOverride {
-			if scene == nil {
-				return nil
-			}
-
-			return &core.SceneOverride{
-				ID: scene.ID, Title: scene.Title, Description: scene.Description, Prompt: scene.Prompt,
-			}
+			return saveSceneOverride(scene)
 		}),
 		Cells: lo.Map(overrides.Cells, func(cell *RestCellOverride, _ int) *core.CellOverride {
-			if cell == nil {
-				return nil
-			}
-
-			return &core.CellOverride{SceneID: cell.SceneID, LayerID: cell.LayerID, Content: cell.Content}
+			return saveCellOverride(cell)
 		}),
 	}
+}
+
+// saveSceneOverride returns nil for a missing override, which the core refuses.
+func saveSceneOverride(scene *RestSceneOverride) *core.SceneOverride {
+	if scene == nil {
+		return nil
+	}
+
+	return &core.SceneOverride{ID: scene.ID, Title: scene.Title, Description: scene.Description, Prompt: scene.Prompt}
+}
+
+// saveCellOverride returns nil for a missing override, which the core refuses.
+func saveCellOverride(cell *RestCellOverride) *core.CellOverride {
+	if cell == nil {
+		return nil
+	}
+
+	return &core.CellOverride{SceneID: cell.SceneID, LayerID: cell.LayerID, Content: cell.Content}
 }

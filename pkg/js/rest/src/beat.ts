@@ -30,6 +30,9 @@ export const BeatSchema = z.object({
 /** The value {@link BeatSchema} validates. */
 export type Beat = z.infer<typeof BeatSchema>;
 
+/** Beats, as the batch endpoints return them. */
+const BeatsSchema = z.array(BeatSchema);
+
 /** The title of a beat, which is not blank. */
 export const BeatTitleSchema = z.string().max(200).regex(/\S/);
 
@@ -167,7 +170,7 @@ export async function beatsCreate(
   accessToken: string,
   request: BeatsCreateRequest
 ): Promise<Beat[]> {
-  return await api.fetch("/v1/beats", z.array(BeatSchema), {
+  return await api.fetch("/v1/beats", BeatsSchema, {
     method: "POST",
     headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
     body: JSON.stringify(request),
@@ -200,7 +203,7 @@ export async function beatsUpdate(
   accessToken: string,
   request: BeatsUpdateRequest
 ): Promise<Beat[]> {
-  return await api.fetch("/v1/beats", z.array(BeatSchema), {
+  return await api.fetch("/v1/beats", BeatsSchema, {
     method: "PUT",
     headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
     body: JSON.stringify(request),
@@ -245,8 +248,9 @@ export async function beatsDelete(
   accessToken: string,
   request: BeatsDeleteRequest
 ): Promise<Beat[]> {
-  const params = new URLSearchParams([["projectID", request.projectID], ...request.ids.map((id) => ["id", id])]);
-  return await api.fetch(`/v1/beats?${params.toString()}`, z.array(BeatSchema), {
+  const params = new URLSearchParams({ projectID: request.projectID });
+  for (const id of request.ids) params.append("id", id);
+  return await api.fetch(`/v1/beats?${params.toString()}`, BeatsSchema, {
     method: "DELETE",
     headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
   });

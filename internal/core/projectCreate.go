@@ -74,8 +74,16 @@ func (service *ProjectCreate) Exec(ctx context.Context, request *ProjectCreateRe
 		return nil, otel.ReportError(span, err)
 	}
 
+	kinds := slices.Sorted(maps.Keys(requiredLayers))
+	layerItems := make([]dao.LayersInsertItem, len(kinds))
+
+	for i, kind := range kinds {
+		layerItems[i] = dao.LayersInsertItem{ID: ids[1+i], Kind: kind, Name: requiredLayers[kind]}
+	}
+
 	now := time.Now()
-	composer := &ProjectComposer{}
+
+	var composer *ProjectComposer
 
 	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
 		project, err := service.daoProject.Exec(ctx, &dao.ProjectInsertRequest{
@@ -90,15 +98,11 @@ func (service *ProjectCreate) Exec(ctx context.Context, request *ProjectCreateRe
 			return fmt.Errorf("insert project: %w", err)
 		}
 
-		kinds := slices.Sorted(maps.Keys(requiredLayers))
-
 		layers, err := service.daoLayers.Exec(ctx, &dao.LayersInsertRequest{
 			ProjectID: project.ID,
 			Position:  0,
-			Layers: lo.Map(kinds, func(kind string, index int) dao.LayersInsertItem {
-				return dao.LayersInsertItem{ID: ids[1+index], Kind: kind, Name: requiredLayers[kind]}
-			}),
-			Now: now,
+			Layers:    layerItems,
+			Now:       now,
 		})
 		if err != nil {
 			return fmt.Errorf("insert required layers: %w", err)
@@ -106,8 +110,10 @@ func (service *ProjectCreate) Exec(ctx context.Context, request *ProjectCreateRe
 
 		slices.SortFunc(layers, func(a, b *dao.Layer) int { return cmp.Compare(a.Position, b.Position) })
 
-		composer.Project = newProject(project)
-		composer.Layers = lo.Map(layers, func(entity *dao.Layer, _ int) *Layer { return newLayer(entity) })
+		composer = &ProjectComposer{
+			Project: newProject(project),
+			Layers:  lo.Map(layers, func(entity *dao.Layer, _ int) *Layer { return newLayer(entity) }),
+		}
 
 		return nil
 	})

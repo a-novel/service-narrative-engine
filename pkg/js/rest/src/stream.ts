@@ -19,10 +19,11 @@ const CR = 0x0d;
 export async function* readEventStream(body: ReadableStream<Uint8Array<ArrayBuffer>>): AsyncGenerator<ServerSentEvent> {
   let id = "";
   let type = "";
-  let data: string[] = [];
+  // Each data line adds its value and a line feed, and the event drops the last one.
+  let data = "";
 
-  // A line may span chunks: its parts wait in pending until its end arrives.
-  let pending: string[] = [];
+  // A line may span chunks: its start waits in pending until its end arrives.
+  let pending = "";
   let afterCR = false;
   let first = true;
 
@@ -45,9 +46,8 @@ export async function* readEventStream(body: ReadableStream<Uint8Array<ArrayBuff
       afterCR = false;
       if (code !== LF && code !== CR) continue;
 
-      pending.push(chunk.slice(start, index));
-      const line = pending.join("");
-      pending = [];
+      const line = pending + chunk.slice(start, index);
+      pending = "";
 
       if (code === CR && index === chunk.length - 1) afterCR = true;
       else if (code === CR && chunk.charCodeAt(index + 1) === LF) index++;
@@ -55,9 +55,9 @@ export async function* readEventStream(body: ReadableStream<Uint8Array<ArrayBuff
 
       // A blank line dispatches the event.
       if (line === "") {
-        if (data.length > 0) yield { id, type: type || "message", data: data.join("\n") };
+        if (data !== "") yield { id, type: type || "message", data: data.slice(0, -1) };
         type = "";
-        data = [];
+        data = "";
         continue;
       }
 
@@ -69,11 +69,11 @@ export async function* readEventStream(body: ReadableStream<Uint8Array<ArrayBuff
       if (value.startsWith(" ")) value = value.slice(1);
 
       if (field === "event") type = value;
-      else if (field === "data") data.push(value);
+      else if (field === "data") data += value + "\n";
       else if (field === "id" && !value.includes("\0")) id = value;
     }
 
-    pending.push(chunk.slice(start));
+    pending += chunk.slice(start);
   }
 }
 

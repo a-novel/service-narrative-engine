@@ -70,8 +70,7 @@ func (dao *PgBeatsUpdate) Exec(ctx context.Context, request *BeatsUpdateRequest)
 	err = db.NewRaw(
 		beatsUpdateQuery, request.ProjectID, bun.List(ids), bun.List(titles), bun.List(colors),
 		bun.List(descriptions), bun.List(prompts), request.Now,
-	).
-		Scan(ctx, &entities)
+	).Scan(ctx, &entities)
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("execute query: %w", err))
 	}

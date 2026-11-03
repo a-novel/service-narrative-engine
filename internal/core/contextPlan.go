@@ -32,6 +32,9 @@ const (
 // recapLevels lists the levels that show a recap, richest first.
 var recapLevels = []string{ContextLevelCondensed, ContextLevelCompact, ContextLevelEssentials}
 
+// upgradeLevels lists the levels an outlined scene may rise to, richest first: whole, then each recap level.
+var upgradeLevels = append([]string{ContextLevelFull}, recapLevels...)
+
 // ContextPlan says what one generation reads, in one model call or several. A generation runs one call
 // unless it outgrows it and its kind splits it: suggest then gives each target a call of its own, and check
 // checks consecutive windows of scenes.
@@ -203,7 +206,7 @@ type Prompt struct {
 
 // size counts the characters the model reads in the prompt.
 func (prompt *Prompt) size() int {
-	return utf8.RuneCountInString(prompt.Developer) + utf8.RuneCountInString(string(prompt.Schema)) +
+	return utf8.RuneCountInString(prompt.Developer) + utf8.RuneCount(prompt.Schema) +
 		utf8.RuneCountInString(prompt.Frame) + utf8.RuneCountInString(prompt.Neighborhood) +
 		utf8.RuneCountInString(prompt.Task)
 }

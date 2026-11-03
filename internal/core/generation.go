@@ -220,7 +220,7 @@ func readOutput(raw []byte) (*providerOutput, string) {
 		return nil, "response " + response.Status
 	}
 
-	var text string
+	var text json.RawMessage
 
 	for _, item := range response.Output {
 		for _, content := range item.Content {
@@ -228,7 +228,7 @@ func readOutput(raw []byte) (*providerOutput, string) {
 			case "refusal":
 				return nil, "refused: " + content.Refusal
 			case "output_text":
-				text += content.Text
+				text = append(text, content.Text...)
 			}
 		}
 	}
@@ -238,10 +238,10 @@ func readOutput(raw []byte) (*providerOutput, string) {
 		return nil, "unknown output format: " + response.Text.Format.Name
 	}
 
-	err = schema.Validate(json.RawMessage(text))
+	err = schema.Validate(text)
 	if err != nil {
 		return nil, "malformed output: " + err.Error()
 	}
 
-	return &providerOutput{text: json.RawMessage(text), model: response.Model}, ""
+	return &providerOutput{text: text, model: response.Model}, ""
 }

@@ -324,8 +324,9 @@ export async function generationSubmit(
 }
 
 /**
- * Reads one call of a generation through genai, until it settles. genai keeps a settled generation 6 hours.
- * Throws on HTTP 404 when the caller has no such generation, and 503 when genai is unavailable.
+ * Reads one call of a generation through genai, as it stands. A caller reads it again until it settles. genai
+ * keeps a settled generation 6 hours. Throws on HTTP 404 when the caller has no such generation, and 503 when
+ * genai is unavailable.
  */
 export async function generationGet(
   api: NarrativeEngineApi,

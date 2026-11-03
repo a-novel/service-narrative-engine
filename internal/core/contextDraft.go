@@ -261,8 +261,10 @@ func newContextDraft(
 
 	draft.collectCells()
 	draft.readBeatRecaps()
-	draft.ranked = draft.rank()
-	draft.rankedBeats = draft.rankBeats()
+
+	focusNames := draft.focusNames()
+	draft.ranked = draft.rank(focusNames)
+	draft.rankedBeats = draft.rankBeats(focusNames)
 
 	return draft, nil
 }
@@ -875,12 +877,10 @@ func (cell *draftCell) addNames(names map[string]bool) {
 	}
 }
 
-// rank scores each scene without a target by its relevance to the focus, and returns them most relevant
-// first. Equal scores keep narrative order.
-func (draft *contextDraft) rank() []*draftScene {
-	focusNames := draft.focusNames()
-
-	var focus []int
+// rank scores each scene without a target by its relevance to the focus, whose scenes use focusNames, and
+// returns them most relevant first. Equal scores keep narrative order.
+func (draft *contextDraft) rank(focusNames map[string]bool) []*draftScene {
+	focus := make([]int, 0, len(draft.scenes))
 
 	for position, scene := range draft.scenes {
 		if scene.focus {
@@ -888,7 +888,7 @@ func (draft *contextDraft) rank() []*draftScene {
 		}
 	}
 
-	var ranked []*draftScene
+	ranked := make([]*draftScene, 0, len(draft.scenes))
 
 	for position, scene := range draft.scenes {
 		if scene.pinned {
@@ -905,12 +905,10 @@ func (draft *contextDraft) rank() []*draftScene {
 }
 
 // rankBeats scores each beat without a target as rank scores scenes: by its distance in beat order to the
-// closest beat holding a focus scene, and by the names its scenes and its recap share with the focus. It
+// closest beat holding a focus scene, and by the names its scenes and its recap share with focusNames. It
 // returns them most relevant first, and equal scores keep beat order.
-func (draft *contextDraft) rankBeats() []*draftBeat {
-	focusNames := draft.focusNames()
-
-	var focus []int
+func (draft *contextDraft) rankBeats(focusNames map[string]bool) []*draftBeat {
+	focus := make([]int, 0, len(draft.beats))
 
 	for position, beat := range draft.beats {
 		if lo.ContainsBy(beat.scenes, func(scene *draftScene) bool { return scene.focus }) {
@@ -918,7 +916,7 @@ func (draft *contextDraft) rankBeats() []*draftBeat {
 		}
 	}
 
-	var ranked []*draftBeat
+	ranked := make([]*draftBeat, 0, len(draft.beats))
 
 	for position, beat := range draft.beats {
 		if beat.pinned {
@@ -979,17 +977,23 @@ func relevance(distance, sharedNames int) float64 {
 	return 1/float64(1+distance) + nameWeight*float64(sharedNames)
 }
 
-// distance returns how many scenes separate position from the closest of the focus positions, or 0
-// without a focus.
+// distance returns how many scenes separate position from the closest of the focus positions, sorted in
+// increasing order, or 0 without a focus.
 func distance(position int, focus []int) int {
 	if len(focus) == 0 {
 		return 0
 	}
 
+	// The closest focus position is the first one at or after position, or the one before it.
+	next, _ := slices.BinarySearch(focus, position)
 	closest := math.MaxInt
 
-	for _, other := range focus {
-		closest = min(closest, max(position-other, other-position))
+	if next < len(focus) {
+		closest = focus[next] - position
+	}
+
+	if next > 0 {
+		closest = min(closest, position-focus[next-1])
 	}
 
 	return closest

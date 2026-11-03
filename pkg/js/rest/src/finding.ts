@@ -81,14 +81,24 @@ export function findingsVerify(
     return normalized !== "" && text.includes(normalized);
   };
 
-  return output.findings.flatMap(({ category, message, evidence }) => {
-    const verified = evidence.flatMap(({ scene, quote }) => {
-      const sceneID = scenes.get(scene);
-      return sceneID !== undefined && holds(sceneID, quote) ? [{ sceneID, quote }] : [];
-    });
+  return output.findings.flatMap((finding) => verifiedFinding(finding, scenes, holds));
+}
 
-    return verified.length === evidence.length ? [{ category, message, evidence: verified }] : [];
+/**
+ * Returns the finding with its quotes mapped from scene handles to scene IDs, or nothing when one of its quotes
+ * names a scene the call did not show or does not hold.
+ */
+function verifiedFinding(
+  { category, message, evidence }: CheckOutput["findings"][number],
+  scenes: Map<string, string>,
+  holds: (sceneID: string, quote: string) => boolean
+): Finding[] {
+  const verified = evidence.flatMap(({ scene, quote }) => {
+    const sceneID = scenes.get(scene);
+    return sceneID !== undefined && holds(sceneID, quote) ? [{ sceneID, quote }] : [];
   });
+
+  return verified.length === evidence.length ? [{ category, message, evidence: verified }] : [];
 }
 
 /**

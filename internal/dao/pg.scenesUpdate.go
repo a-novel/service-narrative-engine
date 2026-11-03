@@ -67,8 +67,7 @@ func (dao *PgScenesUpdate) Exec(ctx context.Context, request *ScenesUpdateReques
 	err = db.NewRaw(
 		scenesUpdateQuery, request.ProjectID, bun.List(ids), bun.List(titles),
 		bun.List(descriptions), bun.List(prompts), request.Now,
-	).
-		Scan(ctx, &entities)
+	).Scan(ctx, &entities)
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("execute query: %w", err))
 	}

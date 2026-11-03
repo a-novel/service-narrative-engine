@@ -1,7 +1,6 @@
 package handlers_test
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -17,12 +16,6 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/handlers"
 	handlersmocks "github.com/a-novel/service-narrative-engine/internal/handlers/mocks"
 )
-
-// genaiID names the genai generation of the generation tests.
-var genaiID = uuid.MustParse("00000000-0000-0000-0000-0000000000c1")
-
-// suggestOutput is a valid suggest output, with one text suggestion.
-const suggestOutput = `{"manuscript":[],"text":[{"target":"T1","note":"Names the scene.","text":"La lettre"}]}`
 
 // concurrencyCap is the message genai refuses a call with once the user runs as many as their tier allows.
 const concurrencyCap = `usage cap reached: purpose "studio.generation" concurrency: 2 generations already in flight`
@@ -52,7 +45,7 @@ func TestRestGenerationSubmit(t *testing.T) {
 		})
 	}
 
-	context := &core.ContextCall{
+	contextCall := &core.ContextCall{
 		Targets: []*core.ContextTarget{{
 			Handle: "M1", SceneID: sceneID, LayerID: layerID, Mode: core.TargetModeRevise,
 			Range: &core.Range{Start: 0, End: 2}, Kept: []int{1},
@@ -66,8 +59,8 @@ func TestRestGenerationSubmit(t *testing.T) {
 		Estimate: 1200,
 	}
 	generation := &core.Generation{Kind: core.GenerationKindSuggest, Calls: []*core.GenerationCall{
-		{Result: &core.GenerationResult{ID: genaiID, Status: core.GenerationStatusRunning}, Context: context},
-		{Waiting: concurrencyCap, Context: context},
+		{Result: &core.GenerationResult{ID: genaiID, Status: core.GenerationStatusRunning}, Context: contextCall},
+		{Waiting: concurrencyCap, Context: contextCall},
 	}}
 
 	jsonContext := map[string]any{
@@ -268,24 +261,4 @@ func TestRestGenerationSubmit(t *testing.T) {
 			service.AssertExpectations(t)
 		})
 	}
-}
-
-// suggestModel names the model that wrote [suggestOutput].
-const suggestModel = "gpt-6.1-terra-2026-09-30"
-
-// jsonResult is the JSON of a succeeded genai generation of [suggestOutput].
-var jsonResult = map[string]any{
-	"id": genaiID.String(), "status": "succeeded", "output": mustDecode(suggestOutput), "model": suggestModel,
-}
-
-// mustDecode decodes JSON, for an expected response body.
-func mustDecode(data string) any {
-	var value any
-
-	err := json.Unmarshal([]byte(data), &value)
-	if err != nil {
-		panic(err)
-	}
-
-	return value
 }
