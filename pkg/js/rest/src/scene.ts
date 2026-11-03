@@ -1,4 +1,5 @@
 import type { NarrativeEngineApi } from "./api";
+import { maxChars } from "./text";
 
 import { HTTP_HEADERS } from "@a-novel-kit/nodelib-browser/http";
 
@@ -23,13 +24,13 @@ export type Scene = z.infer<typeof SceneSchema>;
 const ScenesSchema = z.array(SceneSchema);
 
 /** The title of a scene, which is not blank. */
-export const SceneTitleSchema = z.string().max(200).regex(/\S/);
+export const SceneTitleSchema = maxChars(200).regex(/\S/);
 
 /** What refines the beat's description for a scene, written for the author. */
-export const SceneDescriptionSchema = z.string().max(20000);
+export const SceneDescriptionSchema = maxChars(20000);
 
 /** What refines the beat's prompt for a scene, for the model. */
-export const ScenePromptSchema = z.string().max(20000);
+export const ScenePromptSchema = maxChars(20000);
 
 /** The fields of a scene: a required title, and an optional description and prompt that refine the beat's. */
 export const SceneFieldsSchema = z.object({
@@ -45,7 +46,7 @@ export const SceneFieldsSchema = z.object({
 export const SceneCreateRequestSchema = SceneFieldsSchema.extend({
   projectID: z.uuid(),
   beatID: z.uuid(),
-  position: z.int().min(0).optional(),
+  position: z.int().min(0).max(2147483647).optional(),
 });
 
 /** The value {@link SceneCreateRequestSchema} validates. */
@@ -58,7 +59,7 @@ export type SceneCreateRequest = z.infer<typeof SceneCreateRequestSchema>;
 export const ScenesCreateRequestSchema = z.object({
   projectID: z.uuid(),
   scenes: z
-    .array(SceneFieldsSchema.extend({ beatID: z.uuid(), position: z.int().min(0).optional() }))
+    .array(SceneFieldsSchema.extend({ beatID: z.uuid(), position: z.int().min(0).max(2147483647).optional() }))
     .min(1)
     .max(100),
 });
@@ -95,7 +96,7 @@ export const SceneMoveRequestSchema = z.object({
   projectID: z.uuid(),
   id: z.uuid(),
   beatID: z.uuid(),
-  position: z.int().min(0),
+  position: z.int().min(0).max(2147483647),
 });
 
 /** The value {@link SceneMoveRequestSchema} validates. */

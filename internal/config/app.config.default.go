@@ -64,6 +64,8 @@ var AppPresetDefault = App{
 		ItemMaxRequestSize:  env.RestMaxItemRequestSize,
 		MaxStreamDuration:   env.RestMaxStreamDuration,
 		MaxStreamsPerCaller: env.RestMaxStreamsPerCaller,
+		GenerationRate:      env.RestRateLimitGeneration,
+		ExportMaxConcurrent: env.RestMaxConcurrentExports,
 	},
 	Generations: GenerationsConfigDefault,
 

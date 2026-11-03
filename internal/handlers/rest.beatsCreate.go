@@ -43,7 +43,7 @@ type RestBeatsCreateRequest struct {
 	Beats []RestBeatsCreateItem `json:"beats"`
 }
 
-// RestBeatsCreate is the HTTP handler for the create-beats endpoint. It responds 201 with the new beats in
+// RestBeatsCreate is the HTTP handler for the create-beats endpoint. It responds 200 with the new beats in
 // narrative order.
 type RestBeatsCreate struct {
 	service RestBeatsCreateService
@@ -91,7 +91,7 @@ func (handler *RestBeatsCreate) ServeHTTP(w http.ResponseWriter, r *http.Request
 	}
 
 	response := lo.Map(result, func(beat *core.Beat, _ int) Beat { return loadBeat(beat) })
-	httpf.SendJSONStatus(w, span, http.StatusCreated, response)
+	httpf.SendJSONStatus(w, span, http.StatusOK, response)
 }
 
 // loadBeatsCreateItem converts one item of the request body to its core counterpart.

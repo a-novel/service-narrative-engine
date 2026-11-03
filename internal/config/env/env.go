@@ -2,6 +2,7 @@ package env
 
 import (
 	"os"
+	"runtime"
 	"strconv"
 	"time"
 
@@ -65,6 +66,15 @@ const (
 )
 
 var (
+	// RestRateLimitGenerationDefault caps a user's generation submits. Each one reads the whole project and
+	// plans its calls before genai's per-user quota applies, so a burst costs this service first.
+	RestRateLimitGenerationDefault = config.Must(httpf.ParseRate("30/1m"))
+	// RestMaxConcurrentExportsDefault sizes the export gate to the CPUs: an export encodes a whole
+	// manuscript, and more exports at once add memory but no throughput.
+	RestMaxConcurrentExportsDefault = runtime.GOMAXPROCS(0)
+)
+
+var (
 	// PostgresDSN is the legacy URL used when PostgresHost is empty, formatted as
 	//	postgres://<user>:<password>@<host>:<port>/<database>
 	//
@@ -123,6 +133,14 @@ var (
 	// RestMaxStreamsPerCaller caps the streams one caller holds open on an instance.
 	RestMaxStreamsPerCaller = config.LoadEnv(
 		getEnv("REST_MAX_STREAMS_PER_CALLER"), RestMaxStreamsPerCallerDefault, strconv.Atoi,
+	)
+	// RestRateLimitGeneration caps each signed-in user's generation submits.
+	RestRateLimitGeneration = config.LoadEnv(
+		getEnv("REST_RATE_LIMIT_GENERATION"), RestRateLimitGenerationDefault, httpf.ParseRate,
+	)
+	// RestMaxConcurrentExports caps the manuscript exports an instance builds at once.
+	RestMaxConcurrentExports = config.LoadEnv(
+		getEnv("REST_MAX_CONCURRENT_EXPORTS"), RestMaxConcurrentExportsDefault, strconv.Atoi,
 	)
 
 	// ServiceTokenIssuer is the issuer of the service tokens the REST server accepts, as a token's "iss"

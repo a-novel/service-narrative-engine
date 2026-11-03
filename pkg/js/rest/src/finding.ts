@@ -1,5 +1,6 @@
 import type { ManuscriptContent, NotesContent } from "./content";
 import type { GenerationContext } from "./generation";
+import { maxChars } from "./text";
 
 import { z } from "zod";
 
@@ -36,9 +37,9 @@ export const CheckOutputSchema = z.strictObject({
     .array(
       z.strictObject({
         category: FindingCategorySchema,
-        message: z.string().max(1000),
+        message: maxChars(1000),
         evidence: z
-          .array(z.strictObject({ scene: z.string().regex(/^S[0-9]+$/), quote: z.string().max(1000) }))
+          .array(z.strictObject({ scene: z.string().regex(/^S[0-9]+$/), quote: maxChars(1000) }))
           .min(1)
           .max(10),
       })

@@ -49,7 +49,7 @@ func TestRestSceneCreate(t *testing.T) {
 
 			serviceMock: &serviceMock[*core.Scene]{resp: coreScene},
 
-			expectStatus:   http.StatusCreated,
+			expectStatus:   http.StatusOK,
 			expectResponse: jsonScene,
 		},
 		{

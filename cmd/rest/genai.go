@@ -2,7 +2,8 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"net"
+	"strconv"
 
 	"github.com/samber/lo"
 	"google.golang.org/grpc"
@@ -36,7 +37,7 @@ func newGenaiClient(ctx context.Context, dependencies config.Dependencies) genai
 	}
 
 	return lo.Must(servicegenai.NewClient(
-		fmt.Sprintf("%s:%d", dependencies.ServiceGenaiHost, dependencies.ServiceGenaiPort),
+		net.JoinHostPort(dependencies.ServiceGenaiHost, strconv.Itoa(dependencies.ServiceGenaiPort)),
 		lo.Must(dependencies.ServiceGenaiCredentials.Options(ctx))...,
 	))
 }

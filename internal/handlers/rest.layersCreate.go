@@ -42,7 +42,7 @@ type RestLayersCreateRequest struct {
 	Layers []RestLayersCreateItem `json:"layers"`
 }
 
-// RestLayersCreate is the HTTP handler for the create-layers endpoint. It responds 201 with the new layers in
+// RestLayersCreate is the HTTP handler for the create-layers endpoint. It responds 200 with the new layers in
 // order.
 type RestLayersCreate struct {
 	service RestLayersCreateService
@@ -90,7 +90,7 @@ func (handler *RestLayersCreate) ServeHTTP(w http.ResponseWriter, r *http.Reques
 	}
 
 	response := lo.Map(result, func(layer *core.Layer, _ int) Layer { return loadLayer(layer) })
-	httpf.SendJSONStatus(w, span, http.StatusCreated, response)
+	httpf.SendJSONStatus(w, span, http.StatusOK, response)
 }
 
 // loadLayersCreateItem converts one item of the request body to its core counterpart.

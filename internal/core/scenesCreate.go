@@ -33,7 +33,7 @@ type ScenesCreateItem struct {
 
 	// Position is the scene's place in its beat, from 0: before the beat's scene at that position, or last
 	// past the end. New scenes at one position keep the order of the request.
-	Position int `validate:"min=0"`
+	Position int `validate:"min=0,max=2147483647"`
 
 	// Title names the scene in the composer.
 	Title string `validate:"required,notblank,max=200"`

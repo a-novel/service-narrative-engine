@@ -1,4 +1,5 @@
 import type { NarrativeEngineApi } from "./api";
+import { maxChars } from "./text";
 
 import { HTTP_HEADERS } from "@a-novel-kit/nodelib-browser/http";
 
@@ -9,10 +10,10 @@ import { z } from "zod";
  * It is the output of a consolidate generation, and mirrors the server's `output.consolidate.schema.json`.
  */
 export const RecapSchema = z.strictObject({
-  condensed: z.string().max(200000),
-  compact: z.string().max(40000),
-  essentials: z.string().max(1000),
-  names: z.array(z.string().max(200)).max(100),
+  condensed: maxChars(200000),
+  compact: maxChars(40000),
+  essentials: maxChars(1000),
+  names: z.array(maxChars(200)).max(100),
 });
 
 /** The value {@link RecapSchema} validates. */

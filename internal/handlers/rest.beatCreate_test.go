@@ -49,7 +49,7 @@ func TestRestBeatCreate(t *testing.T) {
 
 			serviceMock: &serviceMock[*core.Beat]{resp: coreBeat},
 
-			expectStatus:   http.StatusCreated,
+			expectStatus:   http.StatusOK,
 			expectResponse: jsonBeat,
 		},
 		{

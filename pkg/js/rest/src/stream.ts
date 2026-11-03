@@ -12,9 +12,15 @@ const LF = 0x0a;
 const CR = 0x0d;
 
 /**
- * Parses an event stream body into its events, following the interpretation algorithm of the HTML standard: lines
- * end with CRLF, LF or CR, comments and unknown fields are ignored, and an event without data is dropped, as is an
- * event the body ends before.
+ * Parses an event stream body into its events, following the interpretation algorithm of the HTML standard (WHATWG
+ * HTML §9.2.6, "Interpreting an event stream"): the decoder strips one leading byte order mark, lines end with CRLF,
+ * LF or CR, comments and unknown fields are ignored, and an event without data is dropped, as is an event the body
+ * ends before.
+ *
+ * Two parts of the algorithm belong to the connection, which `NarrativeEngineApi.stream` owns, and are left
+ * out on purpose. The `retry` field is ignored: the server sends none, and the stream paces its reconnects itself.
+ * An event without data still sets the last event ID in the standard, and here only the next event carries it: the
+ * server sends no such event.
  */
 export async function* readEventStream(body: ReadableStream<Uint8Array<ArrayBuffer>>): AsyncGenerator<ServerSentEvent> {
   let id = "";
@@ -25,12 +31,8 @@ export async function* readEventStream(body: ReadableStream<Uint8Array<ArrayBuff
   // A line may span chunks: its start waits in pending until its end arrives.
   let pending = "";
   let afterCR = false;
-  let first = true;
 
-  for await (let chunk of body.pipeThrough(new TextDecoderStream())) {
-    if (first && chunk.startsWith("﻿")) chunk = chunk.slice(1);
-    first = false;
-
+  for await (const chunk of body.pipeThrough(new TextDecoderStream())) {
     let start = 0;
 
     for (let index = 0; index < chunk.length; index++) {

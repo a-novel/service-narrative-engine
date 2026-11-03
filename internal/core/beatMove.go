@@ -32,7 +32,7 @@ type BeatMoveRequest struct {
 
 	// Position is the beat's place in narrative order after the move, from 0. A position past the last
 	// beat moves it last.
-	Position int `validate:"min=0"`
+	Position int `validate:"min=0,max=2147483647"`
 }
 
 // BeatMove moves a beat within its project, and returns it at its new position. The beats between its

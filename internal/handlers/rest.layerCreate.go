@@ -34,7 +34,7 @@ type RestLayerCreateRequest struct {
 	Description string `json:"description"`
 }
 
-// RestLayerCreate is the HTTP handler for the create-layer endpoint. It responds 201 with the
+// RestLayerCreate is the HTTP handler for the create-layer endpoint. It responds 200 with the
 // layer at its place.
 type RestLayerCreate struct {
 	service RestLayerCreateService
@@ -81,5 +81,5 @@ func (handler *RestLayerCreate) ServeHTTP(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	httpf.SendJSONStatus(w, span, http.StatusCreated, loadLayer(result))
+	httpf.SendJSONStatus(w, span, http.StatusOK, loadLayer(result))
 }

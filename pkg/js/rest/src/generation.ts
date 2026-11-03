@@ -3,6 +3,7 @@ import { ManuscriptContentSchema, NotesContentSchema } from "./content";
 import { BeatRecapSourceSchema } from "./recap";
 import { SceneDescriptionSchema, ScenePromptSchema, SceneTitleSchema } from "./scene";
 import { wait } from "./stream";
+import { maxChars } from "./text";
 
 import { HTTP_HEADERS } from "@a-novel-kit/nodelib-browser/http";
 
@@ -155,7 +156,7 @@ const generationBase = {
 
 // What a generation that reads the author's work as it stands takes beside its kind's own fields.
 const generationReading = {
-  instruction: z.string().max(4000).optional(),
+  instruction: maxChars(4000).optional(),
   exclude: z.array(z.uuid()).max(1000).optional(),
   overrides: GenerationOverridesSchema.optional(),
 };

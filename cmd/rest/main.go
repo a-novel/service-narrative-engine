@@ -4,9 +4,9 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"log"
+	"net"
 	"os"
 	"os/signal"
 	"strconv"
@@ -61,7 +61,7 @@ func main() {
 	// =================================================================================================================
 
 	jsonKeysClient := lo.Must(servicejsonkeys.NewClient(
-		fmt.Sprintf("%s:%d", cfg.Dependencies.ServiceJsonKeysHost, cfg.Dependencies.ServiceJsonKeysPort),
+		net.JoinHostPort(cfg.Dependencies.ServiceJsonKeysHost, strconv.Itoa(cfg.Dependencies.ServiceJsonKeysPort)),
 		lo.Must(cfg.Dependencies.ServiceJsonKeysCredentials.Options(ctx))...,
 	))
 	defer jsonKeysClient.Close()
@@ -227,6 +227,7 @@ func main() {
 	// =================================================================================================================
 
 	router := httpf.NewRouter(cfg.Rest, cfg.Otel, cfg.RestLogger, cfg.App.DowntimeStart)
+	limit := handlers.NewRestLimits(cfg.Rest, cfg.Limits)
 	withServiceToken := handlers.RestServiceToken(
 		cfg.ServiceToken, httpf.NewPoolClient(httpf.PoolOptions{}), cfg.Logger, cfg.Rest.Liveness,
 	)
@@ -237,7 +238,6 @@ func main() {
 		// A stream outlives the request timeout, and ends at shutdown: its client resumes on another
 		// instance. One cap counts a caller's open streams across both stream routes.
 		stream := api.With(httpf.Streaming(cfg.Limits.MaxStreamDuration), httpf.EndOnShutdown(ctx))
-		streamCap := httpf.LimitConcurrencyBy(cfg.Limits.MaxStreamsPerCaller, handlers.StreamCallerKey)
 
 		api.Get("/ping", handlerPing.ServeHTTP)
 		api.Get("/healthcheck", handlerHealth.ServeHTTP)
@@ -245,7 +245,8 @@ func main() {
 		withAuth(item, config.PermissionProjectWrite).Post("/projects", handlerProjectCreate.ServeHTTP)
 		withAuth(api, config.PermissionProjectRead).Get("/projects", handlerProjectList.ServeHTTP)
 		withAuth(api, config.PermissionProjectRead).Get("/project", handlerProjectGet.ServeHTTP)
-		withAuth(stream, config.PermissionProjectRead).With(streamCap).Get("/project/stream", handlerProjectStream.ServeHTTP)
+		withAuth(stream, config.PermissionProjectRead).With(limit.Stream).
+			Get("/project/stream", handlerProjectStream.ServeHTTP)
 		withAuth(item, config.PermissionProjectWrite).Put("/project", handlerProjectUpdate.ServeHTTP)
 		withAuth(item, config.PermissionProjectWrite).Delete("/project", handlerProjectDelete.ServeHTTP)
 
@@ -283,12 +284,13 @@ func main() {
 		withAuth(item, config.PermissionProjectWrite).Put("/cell/recap", handlerCellRecapWrite.ServeHTTP)
 		withAuth(item, config.PermissionProjectWrite).Put("/beat/recap", handlerBeatRecapWrite.ServeHTTP)
 
-		withAuth(api, config.PermissionProjectRead).Get("/manuscript", handlerManuscriptExport.ServeHTTP)
+		withAuth(api, config.PermissionProjectRead).With(limit.Export).Get("/manuscript", handlerManuscriptExport.ServeHTTP)
 
 		// A submit carries its overrides, so it takes a batch's body limit.
-		withAuth(api, config.PermissionProjectWrite).Post("/generation", handlerGenerationSubmit.ServeHTTP)
+		withAuth(api, config.PermissionProjectWrite).With(limit.Generation).
+			Post("/generation", handlerGenerationSubmit.ServeHTTP)
 		withAuth(api, config.PermissionProjectRead).Get("/generation", handlerGenerationGet.ServeHTTP)
-		withAuth(stream, config.PermissionProjectRead).With(streamCap).
+		withAuth(stream, config.PermissionProjectRead).With(limit.Stream).
 			Get("/generation/stream", handlerGenerationStream.ServeHTTP)
 		withAuth(api, config.PermissionProjectWrite).Delete("/generation", handlerGenerationCancel.ServeHTTP)
 	})

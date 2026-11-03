@@ -250,6 +250,18 @@ func TestCellsWrite(t *testing.T) {
 			expectErr: errFoo,
 		},
 		{
+			name: "Error/CellUnwritten",
+
+			request: request(notesCell, nextNotesCell),
+
+			ownerMock: &daoMock[bool]{resp: true},
+			kindMock:  &daoMock[[]*dao.LayerKind]{resp: []*dao.LayerKind{notesKind}},
+			lockMock:  &daoMock[struct{}]{},
+			daoMock:   &daoMock[[]*dao.CellUpsertRow]{resp: []*dao.CellUpsertRow{daoRow(notesCell)}},
+
+			expectErr: core.ErrCellsUnwritten,
+		},
+		{
 			// The second scene would pass the cap, so neither cell is kept.
 			name: "Error/SceneContentFull",
 

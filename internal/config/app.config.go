@@ -50,6 +50,12 @@ type Limits struct {
 	// MaxStreamsPerCaller caps the streams one caller holds open on an instance, across the stream
 	// routes. A stream past it answers 429.
 	MaxStreamsPerCaller int `json:"maxStreamsPerCaller" yaml:"maxStreamsPerCaller"`
+	// GenerationRate caps each signed-in user's generation submits, on top of the router's rate. A submit
+	// past it answers 429.
+	GenerationRate httpf.Rate `json:"generationRate" yaml:"generationRate"`
+	// ExportMaxConcurrent caps the manuscript exports an instance builds at once. An export past it
+	// answers 429.
+	ExportMaxConcurrent int `json:"exportMaxConcurrent" yaml:"exportMaxConcurrent"`
 }
 
 // App is the complete configuration the service reads at startup.

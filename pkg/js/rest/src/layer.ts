@@ -1,4 +1,5 @@
 import type { NarrativeEngineApi } from "./api";
+import { maxChars } from "./text";
 
 import { HTTP_HEADERS } from "@a-novel-kit/nodelib-browser/http";
 
@@ -33,10 +34,10 @@ export type Layer = z.infer<typeof LayerSchema>;
 const LayersSchema = z.array(LayerSchema);
 
 /** The name of a layer, which is not blank. */
-export const LayerNameSchema = z.string().max(100).regex(/\S/);
+export const LayerNameSchema = maxChars(100).regex(/\S/);
 
 /** What a layer records, which may be empty. */
-export const LayerDescriptionSchema = z.string().max(20000);
+export const LayerDescriptionSchema = maxChars(20000);
 
 /** A layer to add: its kind, such as {@link LayerKind.Notes}, a required name and an optional description. */
 export const LayerFieldsSchema = z.object({
@@ -48,7 +49,7 @@ export const LayerFieldsSchema = z.object({
 /** The layer to add at `position`, first when omitted. A position past the last layer appends it. */
 export const LayerCreateRequestSchema = LayerFieldsSchema.extend({
   projectID: z.uuid(),
-  position: z.int().min(0).optional(),
+  position: z.int().min(0).max(2147483647).optional(),
 });
 
 /** The value {@link LayerCreateRequestSchema} validates. */
@@ -60,7 +61,7 @@ export type LayerCreateRequest = z.infer<typeof LayerCreateRequestSchema>;
  */
 export const LayersCreateRequestSchema = z.object({
   projectID: z.uuid(),
-  position: z.int().min(0).optional(),
+  position: z.int().min(0).max(2147483647).optional(),
   layers: z.array(LayerFieldsSchema).min(1).max(100),
 });
 
@@ -94,7 +95,7 @@ export type LayersUpdateRequest = z.infer<typeof LayersUpdateRequestSchema>;
 export const LayerMoveRequestSchema = z.object({
   projectID: z.uuid(),
   id: z.uuid(),
-  position: z.int().min(0),
+  position: z.int().min(0).max(2147483647),
 });
 
 /** The value {@link LayerMoveRequestSchema} validates. */

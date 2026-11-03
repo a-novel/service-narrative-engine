@@ -32,7 +32,7 @@ type BeatCreateRequest struct {
 	ProjectID uuid.UUID `validate:"required"`
 
 	// Position is the beat's place in narrative order, from 0. A position past the last beat appends it.
-	Position int `validate:"min=0"`
+	Position int `validate:"min=0,max=2147483647"`
 
 	// Title names the beat in the composer.
 	Title string `validate:"required,notblank,max=200"`

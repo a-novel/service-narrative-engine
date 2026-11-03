@@ -1,5 +1,6 @@
 import type { NarrativeEngineApi } from "./api";
 import { BeatRecapSourceSchema, RecapSchema } from "./recap";
+import { maxChars } from "./text";
 
 import { HTTP_HEADERS } from "@a-novel-kit/nodelib-browser/http";
 
@@ -34,16 +35,16 @@ export type Beat = z.infer<typeof BeatSchema>;
 const BeatsSchema = z.array(BeatSchema);
 
 /** The title of a beat, which is not blank. */
-export const BeatTitleSchema = z.string().max(200).regex(/\S/);
+export const BeatTitleSchema = maxChars(200).regex(/\S/);
 
 /** The color of a beat in the composer, as a `#rrggbb` hex code in either case. */
 export const BeatColorSchema = z.string().regex(/^#[0-9A-Fa-f]{6}$/);
 
 /** What a beat is for, written for the author. */
-export const BeatDescriptionSchema = z.string().max(20000);
+export const BeatDescriptionSchema = maxChars(20000);
 
 /** Extra instructions for the model when it writes about a beat. */
-export const BeatPromptSchema = z.string().max(20000);
+export const BeatPromptSchema = maxChars(20000);
 
 /** The fields of a beat: a required title and color, and an optional description and prompt. */
 export const BeatFieldsSchema = z.object({
@@ -56,7 +57,7 @@ export const BeatFieldsSchema = z.object({
 /** The beat to add at `position`, first when omitted. A position past the last beat appends it. */
 export const BeatCreateRequestSchema = BeatFieldsSchema.extend({
   projectID: z.uuid(),
-  position: z.int().min(0).optional(),
+  position: z.int().min(0).max(2147483647).optional(),
 });
 
 /** The value {@link BeatCreateRequestSchema} validates. */
@@ -68,7 +69,7 @@ export type BeatCreateRequest = z.infer<typeof BeatCreateRequestSchema>;
  */
 export const BeatsCreateRequestSchema = z.object({
   projectID: z.uuid(),
-  position: z.int().min(0).optional(),
+  position: z.int().min(0).max(2147483647).optional(),
   beats: z.array(BeatFieldsSchema).min(1).max(100),
 });
 
@@ -100,7 +101,7 @@ export type BeatsUpdateRequest = z.infer<typeof BeatsUpdateRequestSchema>;
 export const BeatMoveRequestSchema = z.object({
   projectID: z.uuid(),
   id: z.uuid(),
-  position: z.int().min(0),
+  position: z.int().min(0).max(2147483647),
 });
 
 /** The value {@link BeatMoveRequestSchema} validates. */

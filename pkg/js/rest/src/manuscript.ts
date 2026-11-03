@@ -1,5 +1,6 @@
 import type { NarrativeEngineApi } from "./api";
 import { ManuscriptContentSchema } from "./content";
+import { maxChars } from "./text";
 
 import { HTTP_HEADERS } from "@a-novel-kit/nodelib-browser/http";
 
@@ -8,7 +9,7 @@ import { z } from "zod";
 /** One scene of an exported manuscript: its beat, its title and its blocks, in reading order. */
 export const ManuscriptSceneSchema = ManuscriptContentSchema.extend({
   beat: z.int().min(0).max(199),
-  title: z.string().max(200),
+  title: maxChars(200),
 });
 
 /** The value {@link ManuscriptSceneSchema} validates. */
@@ -16,8 +17,8 @@ export type ManuscriptScene = z.infer<typeof ManuscriptSceneSchema>;
 
 /** One beat of an exported manuscript, as its beats appendix lists it. */
 export const ManuscriptBeatSchema = z.strictObject({
-  title: z.string().max(200),
-  description: z.string().max(20000),
+  title: maxChars(200),
+  description: maxChars(20000),
 });
 
 /** The value {@link ManuscriptBeatSchema} validates. */
@@ -31,7 +32,7 @@ export type ManuscriptBeat = z.infer<typeof ManuscriptBeatSchema>;
 export const ManuscriptSchema = z.strictObject({
   format: z.literal("manuscript"),
   formatVersion: z.literal(1),
-  title: z.string().max(200),
+  title: maxChars(200),
   language: z.string(),
   scenes: z.array(ManuscriptSceneSchema).max(2000),
   appendices: z.looseObject({ beats: z.array(ManuscriptBeatSchema).max(200) }),

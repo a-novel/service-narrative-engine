@@ -3,6 +3,7 @@ package core_test
 import (
 	"context"
 	"errors"
+	"math"
 	"slices"
 	"testing"
 
@@ -103,6 +104,14 @@ func TestScenesCreate(t *testing.T) {
 			name: "Error/NegativePosition",
 
 			request: request(core.ScenesCreateItem{BeatID: beatID1, Position: -1, Title: "Scene"}),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			// PostgreSQL holds a position in an integer.
+			name: "Error/PositionPastInteger",
+
+			request: request(core.ScenesCreateItem{BeatID: beatID1, Position: math.MaxInt32 + 1, Title: "Scene"}),
 
 			expectErr: core.ErrInvalidRequest,
 		},

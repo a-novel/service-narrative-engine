@@ -18,6 +18,10 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/models/schemas"
 )
 
+// ErrCellsUnwritten is returned by [CellsWrite] when the upsert writes fewer cells than the request names,
+// which the layer read rules out. The write rolls back.
+var ErrCellsUnwritten = errors.New("cells not written")
+
 // CellsWriteDaoOwner checks that the user owns the project.
 type CellsWriteDaoOwner interface {
 	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
@@ -169,6 +173,12 @@ func (service *CellsWrite) Exec(ctx context.Context, request *CellsWriteRequest)
 
 		if err != nil {
 			return fmt.Errorf("write cells: %w", err)
+		}
+
+		// The layer read proved every layer is the project's, so a missing row is a fault: it rolls the
+		// write back rather than answer a cell that was not written.
+		if len(entities) != len(request.Cells) {
+			return fmt.Errorf("%w: %d of %d cells", ErrCellsUnwritten, len(entities), len(request.Cells))
 		}
 
 		err = checkSceneContent(ctx, service.daoLength, request.ProjectID, sceneIDs)

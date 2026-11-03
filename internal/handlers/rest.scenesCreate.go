@@ -44,7 +44,7 @@ type RestScenesCreateRequest struct {
 	Scenes []RestScenesCreateItem `json:"scenes"`
 }
 
-// RestScenesCreate is the HTTP handler for the create-scenes endpoint. It responds 201 with the new scenes in
+// RestScenesCreate is the HTTP handler for the create-scenes endpoint. It responds 200 with the new scenes in
 // the order of the request.
 type RestScenesCreate struct {
 	service RestScenesCreateService
@@ -91,7 +91,7 @@ func (handler *RestScenesCreate) ServeHTTP(w http.ResponseWriter, r *http.Reques
 	}
 
 	response := lo.Map(result, func(scene *core.Scene, _ int) Scene { return loadScene(scene) })
-	httpf.SendJSONStatus(w, span, http.StatusCreated, response)
+	httpf.SendJSONStatus(w, span, http.StatusOK, response)
 }
 
 // loadScenesCreateItem converts one item of the request body to its core counterpart.

@@ -46,7 +46,7 @@ type LayersCreateRequest struct {
 
 	// Position is the place of the first new layer among the project's rows, from 0, and the others
 	// follow it. A position past the last layer appends them.
-	Position int `validate:"min=0"`
+	Position int `validate:"min=0,max=2147483647"`
 	// Layers lists the layers to add, in order, at most 100.
 	Layers []LayersCreateItem `validate:"required,min=1,max=100,dive"`
 }

@@ -3,6 +3,7 @@ import { type Beat, BeatSchema } from "./beat";
 import { type Cell, CellSchema } from "./cell";
 import { type Layer, LayerSchema } from "./layer";
 import { type Scene, SceneSchema } from "./scene";
+import { maxChars } from "./text";
 
 import { HTTP_HEADERS } from "@a-novel-kit/nodelib-browser/http";
 
@@ -50,10 +51,10 @@ export const ProjectPageSchema = z.object({
 export type ProjectPage = z.infer<typeof ProjectPageSchema>;
 
 /** The title of a project, which is not blank. */
-export const ProjectTitleSchema = z.string().max(200).regex(/\S/);
+export const ProjectTitleSchema = maxChars(200).regex(/\S/);
 
 /** What a project's narrative is about, which may be empty. */
-export const ProjectPremiseSchema = z.string().max(20000);
+export const ProjectPremiseSchema = maxChars(20000);
 
 /** The project to create. Its scenes come next, from `sceneCreate`. */
 export const ProjectCreateRequestSchema = z.object({

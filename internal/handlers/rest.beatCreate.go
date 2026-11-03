@@ -36,7 +36,7 @@ type RestBeatCreateRequest struct {
 	Prompt string `json:"prompt"`
 }
 
-// RestBeatCreate is the HTTP handler for the create-beat endpoint. It responds 201 with the beat at
+// RestBeatCreate is the HTTP handler for the create-beat endpoint. It responds 200 with the beat at
 // its place.
 type RestBeatCreate struct {
 	service RestBeatCreateService
@@ -84,5 +84,5 @@ func (handler *RestBeatCreate) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	httpf.SendJSONStatus(w, span, http.StatusCreated, loadBeat(result))
+	httpf.SendJSONStatus(w, span, http.StatusOK, loadBeat(result))
 }

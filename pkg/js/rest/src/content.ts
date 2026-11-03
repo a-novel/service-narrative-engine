@@ -1,3 +1,5 @@
+import { maxChars } from "./text";
+
 import { z } from "zod";
 
 /**
@@ -5,7 +7,7 @@ import { z } from "zod";
  * keeps the mark through the writer's edits, splits and merges. The mark is the client's declaration, not proof of
  * where the text came from: the server checks only its shape.
  */
-export const GeneratedMarkSchema = z.strictObject({ model: z.string().min(1).max(200) });
+export const GeneratedMarkSchema = z.strictObject({ model: maxChars(200).min(1) });
 
 /** The value {@link GeneratedMarkSchema} validates. */
 export type GeneratedMark = z.infer<typeof GeneratedMarkSchema>;
@@ -13,7 +15,7 @@ export type GeneratedMark = z.infer<typeof GeneratedMarkSchema>;
 /** Plain manuscript prose: action, description or exposition. */
 export const NarrationBlockSchema = z.strictObject({
   kind: z.literal("narration"),
-  text: z.string().max(100000),
+  text: maxChars(100000),
   generated: GeneratedMarkSchema.optional(),
 });
 
@@ -22,8 +24,8 @@ export type NarrationBlock = z.infer<typeof NarrationBlockSchema>;
 
 /** One part of a dialogue line: words the speaker says, or how they say what follows. */
 export const DialoguePartSchema = z.union([
-  z.strictObject({ text: z.string().max(20000) }),
-  z.strictObject({ tone: z.string().max(500) }),
+  z.strictObject({ text: maxChars(20000) }),
+  z.strictObject({ tone: maxChars(500) }),
 ]);
 
 /** The value {@link DialoguePartSchema} validates. */
@@ -32,7 +34,7 @@ export type DialoguePart = z.infer<typeof DialoguePartSchema>;
 /** One spoken line of the manuscript: a speaker and ordered parts. */
 export const DialogueBlockSchema = z.strictObject({
   kind: z.literal("dialogue"),
-  speaker: z.string().max(200),
+  speaker: maxChars(200),
   parts: z.array(DialoguePartSchema).max(500),
   generated: GeneratedMarkSchema.optional(),
 });
@@ -56,7 +58,7 @@ export const ManuscriptContentSchema = z.strictObject({ blocks: z.array(BlockSch
 export type ManuscriptContent = z.infer<typeof ManuscriptContentSchema>;
 
 /** The content of a notes cell: free text. It mirrors the server's `content.notes.schema.json`. */
-export const NotesContentSchema = z.strictObject({ text: z.string().max(200000) });
+export const NotesContentSchema = z.strictObject({ text: maxChars(200000) });
 
 /** The value {@link NotesContentSchema} validates. */
 export type NotesContent = z.infer<typeof NotesContentSchema>;

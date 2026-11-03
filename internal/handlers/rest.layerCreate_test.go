@@ -48,7 +48,7 @@ func TestRestLayerCreate(t *testing.T) {
 
 			serviceMock: &serviceMock[*core.Layer]{resp: coreLayer},
 
-			expectStatus:   http.StatusCreated,
+			expectStatus:   http.StatusOK,
 			expectResponse: jsonLayer,
 		},
 		{
