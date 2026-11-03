@@ -108,6 +108,10 @@ var (
 	// ServiceJsonKeysTokenPath is the file the kubelet projects this service's token for JSON Keys into.
 	// When set, the JSON Keys connection sends that token with every call.
 	ServiceJsonKeysTokenPath = getEnv("SERVICE_JSON_KEYS_TOKEN_PATH")
+	// ServiceJsonKeysTLS dials the JSON Keys service over TLS once ServiceJsonKeysTokenPath names a token.
+	// The server's certificate is verified for ServiceJsonKeysHost against the system roots, which
+	// SSL_CERT_DIR extends.
+	ServiceJsonKeysTLS = config.LoadEnv(getEnv("SERVICE_JSON_KEYS_TLS"), false, strconv.ParseBool)
 
 	// ServiceGenaiHost is the hostname of the genai service, without scheme or port. Empty leaves genai
 	// unconfigured, and the generation routes answer 503.
@@ -117,6 +121,10 @@ var (
 	// ServiceGenaiTokenPath is the file the kubelet projects this service's token for genai into. When set,
 	// the genai connection sends that token with every call.
 	ServiceGenaiTokenPath = getEnv("SERVICE_GENAI_TOKEN_PATH")
+	// ServiceGenaiTLS dials the genai service over TLS once ServiceGenaiTokenPath names a token. The
+	// server's certificate is verified for ServiceGenaiHost against the system roots, which SSL_CERT_DIR
+	// extends.
+	ServiceGenaiTLS = config.LoadEnv(getEnv("SERVICE_GENAI_TLS"), false, strconv.ParseBool)
 
 	// AppName is the name of the application, as it appears in logs and tracing.
 	AppName = config.LoadEnv(getEnv("APP_NAME"), AppNameDefault, config.StringParser)
