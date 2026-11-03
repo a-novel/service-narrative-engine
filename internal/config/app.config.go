@@ -50,6 +50,12 @@ type Limits struct {
 	// MaxStreamsPerCaller caps the streams one caller holds open on an instance, across the stream
 	// routes. A stream past it answers 429.
 	MaxStreamsPerCaller int `json:"maxStreamsPerCaller" yaml:"maxStreamsPerCaller"`
+	// GenerationRate caps each signed-in user's generation submits, on top of the router's rate. A submit
+	// past it answers 429.
+	GenerationRate httpf.Rate `json:"generationRate" yaml:"generationRate"`
+	// ExportMaxConcurrent caps the manuscript exports an instance builds at once. An export past it
+	// answers 429.
+	ExportMaxConcurrent int `json:"exportMaxConcurrent" yaml:"exportMaxConcurrent"`
 }
 
 // App is the complete configuration the service reads at startup.
@@ -62,9 +68,11 @@ type App struct {
 	Permissions serviceauthentication.Permissions `json:"permissions" yaml:"permissions"`
 	// Rest configures the REST server.
 	Rest httpf.ServerConfig `json:"rest" yaml:"rest"`
-	// ServiceToken names the service tokens the REST server accepts. Without an issuer, it takes every
-	// request without one.
+	// ServiceToken names the service tokens the REST server accepts.
 	ServiceToken servicetoken.Config `json:"serviceToken" yaml:"serviceToken"`
+	// ServiceIssuerOptional lets the REST server start with no ServiceToken issuer, and take every
+	// request without a service token. Without it, a ServiceToken with no issuer refuses to start.
+	ServiceIssuerOptional bool `json:"serviceIssuerOptional" yaml:"serviceIssuerOptional"`
 	// Limits bounds what one request carries, below the REST server's own limits.
 	Limits Limits `json:"limits" yaml:"limits"`
 	// Generations configures the model calls of generations.

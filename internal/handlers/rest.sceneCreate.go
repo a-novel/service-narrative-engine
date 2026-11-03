@@ -35,7 +35,7 @@ type RestSceneCreateRequest struct {
 	Prompt string `json:"prompt"`
 }
 
-// RestSceneCreate is the HTTP handler for the create-scene endpoint. It responds 201 with the scene at
+// RestSceneCreate is the HTTP handler for the create-scene endpoint. It responds 200 with the scene at
 // its place.
 type RestSceneCreate struct {
 	service RestSceneCreateService
@@ -83,5 +83,5 @@ func (handler *RestSceneCreate) ServeHTTP(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	httpf.SendJSONStatus(w, span, http.StatusCreated, loadScene(result))
+	httpf.SendJSONStatus(w, span, http.StatusOK, loadScene(result))
 }

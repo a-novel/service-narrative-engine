@@ -33,7 +33,7 @@ type SceneCreateRequest struct {
 	BeatID uuid.UUID `validate:"required"`
 
 	// Position is the scene's place in its beat, from 0. A position past the beat's last scene appends it.
-	Position int `validate:"min=0"`
+	Position int `validate:"min=0,max=2147483647"`
 
 	// Title names the scene in the composer.
 	Title string `validate:"required,notblank,max=200"`

@@ -32,7 +32,7 @@ type LayerCreateRequest struct {
 
 	// Position is the layer's place among the project's rows, from 0. A position past the last layer
 	// appends it.
-	Position int `validate:"min=0"`
+	Position int `validate:"min=0,max=2147483647"`
 	// Kind names the content schema the layer's cells follow, such as manuscript or notes.
 	Kind string `validate:"required,layerkind"`
 

@@ -2,6 +2,7 @@ package env
 
 import (
 	"os"
+	"runtime"
 	"strconv"
 	"time"
 
@@ -65,6 +66,15 @@ const (
 )
 
 var (
+	// RestRateLimitGenerationDefault caps a user's generation submits. Each one reads the whole project and
+	// plans its calls before genai's per-user quota applies, so a burst costs this service first.
+	RestRateLimitGenerationDefault = config.Must(httpf.ParseRate("30/1m"))
+	// RestMaxConcurrentExportsDefault sizes the export gate to the CPUs: an export encodes a whole
+	// manuscript, and more exports at once add memory but no throughput.
+	RestMaxConcurrentExportsDefault = runtime.GOMAXPROCS(0)
+)
+
+var (
 	// PostgresDSN is the legacy URL used when PostgresHost is empty, formatted as
 	//	postgres://<user>:<password>@<host>:<port>/<database>
 	//
@@ -124,13 +134,25 @@ var (
 	RestMaxStreamsPerCaller = config.LoadEnv(
 		getEnv("REST_MAX_STREAMS_PER_CALLER"), RestMaxStreamsPerCallerDefault, strconv.Atoi,
 	)
+	// RestRateLimitGeneration caps each signed-in user's generation submits.
+	RestRateLimitGeneration = config.LoadEnv(
+		getEnv("REST_RATE_LIMIT_GENERATION"), RestRateLimitGenerationDefault, httpf.ParseRate,
+	)
+	// RestMaxConcurrentExports caps the manuscript exports an instance builds at once.
+	RestMaxConcurrentExports = config.LoadEnv(
+		getEnv("REST_MAX_CONCURRENT_EXPORTS"), RestMaxConcurrentExportsDefault, strconv.Atoi,
+	)
 
 	// ServiceTokenIssuer is the issuer of the service tokens the REST server accepts, as a token's "iss"
-	// claim names it. When empty, the server takes every request without a service token.
+	// claim names it. Empty, the server refuses to start unless ServiceIssuerOptional is set.
 	ServiceTokenIssuer = getEnv("SERVICE_TOKEN_ISSUER")
 	// ServiceTokenAudience is the audience the REST server answers to. Each caller requests its token
 	// for it.
 	ServiceTokenAudience = getEnv("SERVICE_TOKEN_AUDIENCE")
+	// ServiceIssuerOptional lets a server with no ServiceTokenIssuer start and take every request,
+	// as the standalone image does for local, test and consumer stacks. A set issuer keeps the gate
+	// whatever it says.
+	ServiceIssuerOptional = config.LoadEnv(getEnv("SERVICE_ISSUER_OPTIONAL"), false, strconv.ParseBool)
 	// ServiceTokenCallers are the service accounts allowed to call, as a comma-separated list of
 	// system:serviceaccount:<namespace>:<name>.
 	ServiceTokenCallers = config.LoadEnv(getEnv("SERVICE_TOKEN_CALLERS"), nil, config.SliceParser(config.StringParser))

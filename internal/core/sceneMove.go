@@ -34,7 +34,7 @@ type SceneMoveRequest struct {
 	BeatID uuid.UUID `validate:"required"`
 	// Position is the scene's place in that beat after the move, from 0. A position past the beat's last
 	// scene moves it last.
-	Position int `validate:"min=0"`
+	Position int `validate:"min=0,max=2147483647"`
 }
 
 // SceneMove moves a scene to a position in a beat of its project, and returns it there. Its old beat closes

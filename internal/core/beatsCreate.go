@@ -48,7 +48,7 @@ type BeatsCreateRequest struct {
 
 	// Position is the place of the first new beat in narrative order, from 0, and the others follow it.
 	// A position past the last beat appends them.
-	Position int `validate:"min=0"`
+	Position int `validate:"min=0,max=2147483647"`
 	// Beats lists the beats to add, in narrative order, at most 100.
 	Beats []BeatsCreateItem `validate:"required,min=1,max=100,dive"`
 }

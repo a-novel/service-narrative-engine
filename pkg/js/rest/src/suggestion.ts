@@ -1,9 +1,10 @@
 import { type Block, DialogueBlockSchema, type ManuscriptContent, NarrationBlockSchema } from "./content";
 import { type ContextTarget, type GenerationContext, type GenerationRange, TargetMode } from "./generation";
+import { maxChars } from "./text";
 
 import { z } from "zod";
 
-const NoteSchema = z.string().max(300);
+const NoteSchema = maxChars(300);
 const BlockHandleSchema = z.string().regex(/^B[0-9]+$/);
 // The model writes blocks without the generated mark, which suggestionApply sets.
 const NewBlocksSchema = z
@@ -47,7 +48,7 @@ export const SuggestOutputSchema = z.strictObject({
       z.strictObject({
         target: z.string().regex(/^T[0-9]+$/),
         note: NoteSchema,
-        text: z.string().max(200000),
+        text: maxChars(200000),
       })
     )
     .max(20),

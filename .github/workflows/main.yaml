@@ -301,7 +301,8 @@ jobs:
           file: builds/rest.Dockerfile
           image_name: ${{ github.repository }}/rest
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          run_args: -e POSTGRES_DSN="${POSTGRES_DSN}"
+          # The smoke run calls the server directly; production gives it an issuer.
+          run_args: -e POSTGRES_DSN="${POSTGRES_DSN}" -e SERVICE_ISSUER_OPTIONAL=true
 
   build-standalone-rest:
     runs-on: ubuntu-latest

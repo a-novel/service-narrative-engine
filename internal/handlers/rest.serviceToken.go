@@ -11,7 +11,7 @@ import (
 // RestServiceToken returns the middleware that refuses a request unless its service token matches
 // tokenConfig, and logs each refusal through logger. A request to a path listed in open passes
 // unchecked, and client fetches the issuer's keys. Without an issuer, the middleware lets every
-// request through.
+// request through: the server starts so only when SERVICE_ISSUER_OPTIONAL allows it.
 //
 // Wrap the whole router with it. The router then reads the client IP header and counts its rate
 // limits for verified callers alone.

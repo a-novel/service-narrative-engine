@@ -60,10 +60,13 @@ var AppPresetDefault = App{
 		Audience: env.ServiceTokenAudience,
 		Callers:  env.ServiceTokenCallers,
 	},
+	ServiceIssuerOptional: env.ServiceIssuerOptional,
 	Limits: Limits{
 		ItemMaxRequestSize:  env.RestMaxItemRequestSize,
 		MaxStreamDuration:   env.RestMaxStreamDuration,
 		MaxStreamsPerCaller: env.RestMaxStreamsPerCaller,
+		GenerationRate:      env.RestRateLimitGeneration,
+		ExportMaxConcurrent: env.RestMaxConcurrentExports,
 	},
 	Generations: GenerationsConfigDefault,
 

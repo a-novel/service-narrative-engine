@@ -32,7 +32,7 @@ type LayerMoveRequest struct {
 
 	// Position is the layer's place among the project's rows after the move, from 0. A position past
 	// the last layer moves it last.
-	Position int `validate:"min=0"`
+	Position int `validate:"min=0,max=2147483647"`
 }
 
 // LayerMove moves a layer within its project, and returns it at its new position. The layers between its

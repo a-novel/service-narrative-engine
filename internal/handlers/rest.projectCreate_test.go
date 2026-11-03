@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 
 	"github.com/a-novel/service-narrative-engine/internal/config"
 	"github.com/a-novel/service-narrative-engine/internal/core"
@@ -38,6 +39,8 @@ func TestRestProjectCreate(t *testing.T) {
 
 		expectStatus   int
 		expectResponse any
+		// expectLocation is the Location header of the response, which names the created project.
+		expectLocation string
 	}{
 		{
 			name: "Success",
@@ -50,6 +53,7 @@ func TestRestProjectCreate(t *testing.T) {
 
 			expectStatus:   http.StatusCreated,
 			expectResponse: withComposer(jsonProject, []any{jsonLayer}),
+			expectLocation: "/v1/project?id=" + projectID.String(),
 		},
 		{
 			name: "Error/Anonymous",
@@ -114,6 +118,7 @@ func TestRestProjectCreate(t *testing.T) {
 			handlers.NewRestProjectCreate(service, config.LoggerDev).ServeHTTP(w, testCase.request(t))
 
 			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
+			require.Equal(t, testCase.expectLocation, w.Header().Get("Location"))
 			service.AssertExpectations(t)
 		})
 	}
