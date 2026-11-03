@@ -153,3 +153,5 @@ services:
       SERVICE_GENAI_PORT: 8080
       # The suite sends many requests per route within a second from one address.
       REST_RATE_LIMITS_ENABLED: "false"
+      # The suite calls the server directly, with no service token.
+      SERVICE_TOKEN_DISABLED: "true"

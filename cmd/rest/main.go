@@ -36,6 +36,11 @@ import (
 func main() {
 	cfg := config.AppPresetDefault
 
+	// Without an issuer, every caller reaches the routes, so only a local or test stack may start so.
+	if cfg.ServiceToken.Issuer == "" && !cfg.ServiceTokenDisabled {
+		log.Fatalln("SERVICE_TOKEN_ISSUER is empty: set it, or set SERVICE_TOKEN_DISABLED=true on a local or test stack")
+	}
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
