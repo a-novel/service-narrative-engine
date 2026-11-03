@@ -142,7 +142,7 @@ jobs:
           image_name: ${{ github.repository }}/rest
           github_token: ${{ secrets.GITHUB_TOKEN }}
           # The smoke run calls the server directly; production gives it an issuer.
-          run_args: -e POSTGRES_DSN="${POSTGRES_DSN}" -e SERVICE_TOKEN_ISSUER_OPTIONAL=true
+          run_args: -e POSTGRES_DSN="${POSTGRES_DSN}" -e SERVICE_TOKENS_OPTIONAL=true
 
   build-standalone-rest:
     needs: [build-database]

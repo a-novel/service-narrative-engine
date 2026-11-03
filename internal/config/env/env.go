@@ -144,15 +144,15 @@ var (
 	)
 
 	// ServiceTokenIssuer is the issuer of the service tokens the REST server accepts, as a token's "iss"
-	// claim names it. Empty, the server refuses to start unless ServiceTokenIssuerOptional is set.
+	// claim names it. Empty, the server refuses to start unless ServiceTokensOptional is set.
 	ServiceTokenIssuer = getEnv("SERVICE_TOKEN_ISSUER")
 	// ServiceTokenAudience is the audience the REST server answers to. Each caller requests its token
 	// for it.
 	ServiceTokenAudience = getEnv("SERVICE_TOKEN_AUDIENCE")
-	// ServiceTokenIssuerOptional lets a server with no ServiceTokenIssuer start and take every request,
+	// ServiceTokensOptional lets a server with no ServiceTokenIssuer start and take every request,
 	// as the standalone image does for local, test and consumer stacks. A set issuer keeps the gate
 	// whatever it says.
-	ServiceTokenIssuerOptional = config.LoadEnv(getEnv("SERVICE_TOKEN_ISSUER_OPTIONAL"), false, strconv.ParseBool)
+	ServiceTokensOptional = config.LoadEnv(getEnv("SERVICE_TOKENS_OPTIONAL"), false, strconv.ParseBool)
 	// ServiceTokenCallers are the service accounts allowed to call, as a comma-separated list of
 	// system:serviceaccount:<namespace>:<name>.
 	ServiceTokenCallers = config.LoadEnv(getEnv("SERVICE_TOKEN_CALLERS"), nil, config.SliceParser(config.StringParser))
