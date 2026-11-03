@@ -48,10 +48,10 @@ var AppPresetDefault = App{
 	Dependencies: Dependencies{
 		ServiceJsonKeysHost:        env.ServiceJsonKeysHost,
 		ServiceJsonKeysPort:        env.ServiceJsonKeysPort,
-		ServiceJsonKeysCredentials: newCredentials(env.ServiceJsonKeysTokenPath),
+		ServiceJsonKeysCredentials: newCredentials(env.ServiceJsonKeysTokenPath, env.ServiceJsonKeysTLS),
 		ServiceGenaiHost:           env.ServiceGenaiHost,
 		ServiceGenaiPort:           env.ServiceGenaiPort,
-		ServiceGenaiCredentials:    newCredentials(env.ServiceGenaiTokenPath),
+		ServiceGenaiCredentials:    newCredentials(env.ServiceGenaiTokenPath, env.ServiceGenaiTLS),
 	},
 	Permissions: PermissionsConfigDefault,
 	Rest:        env.Rest,
@@ -78,14 +78,15 @@ var AppPresetDefault = App{
 	Postgres: PostgresPresetDefault,
 }
 
-// newCredentials authenticates a connection with the service token at tokenPath. Each callee has its
-// own audience, so each gets its own token. Without one, it sends nothing.
-func newCredentials(tokenPath string) grpcf.CredentialsProvider {
+// newCredentials authenticates a connection with the service token at tokenPath, over TLS once overTLS
+// is set. Each callee has its own audience, so each gets its own token. Without one, it sends nothing
+// and dials plaintext.
+func newCredentials(tokenPath string, overTLS bool) grpcf.CredentialsProvider {
 	if tokenPath == "" {
 		return &grpcf.LocalCredentialsProvider{}
 	}
 
-	return &grpcf.ServiceTokenCredentialsProvider{ServiceTokenPath: tokenPath}
+	return &grpcf.ServiceTokenCredentialsProvider{ServiceTokenPath: tokenPath, TLS: overTLS}
 }
 
 // newOtelPreset picks the exporter [OtelPresetDefault] describes.

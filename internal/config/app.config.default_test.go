@@ -43,6 +43,27 @@ func TestAppPresetDefault(t *testing.T) {
 				` &grpcf.ServiceTokenCredentialsProvider{ServiceTokenPath:"/tokens/genai", TLS:false}`,
 		},
 		{
+			name: "Success/ServiceTokensTLS",
+			env: []string{
+				"TEST_SERVICE_JSON_KEYS_TOKEN_PATH=/tokens/json-keys",
+				"TEST_SERVICE_JSON_KEYS_TLS=true",
+				"TEST_SERVICE_GENAI_TOKEN_PATH=/tokens/genai",
+				"TEST_SERVICE_GENAI_TLS=true",
+			},
+			expect: "15s" +
+				` &grpcf.ServiceTokenCredentialsProvider{ServiceTokenPath:"/tokens/json-keys", TLS:true}` +
+				` &grpcf.ServiceTokenCredentialsProvider{ServiceTokenPath:"/tokens/genai", TLS:true}`,
+		},
+		{
+			// A local stack has no service token, so it keeps a plaintext connection.
+			name: "Success/TLSWithoutServiceTokens",
+			env: []string{
+				"TEST_SERVICE_JSON_KEYS_TLS=true",
+				"TEST_SERVICE_GENAI_TLS=true",
+			},
+			expect: "15s " + local + " " + local,
+		},
+		{
 			name:            "Error/InvalidRestTimeoutRead",
 			restTimeoutRead: "invalid",
 			expectErr:       `time: invalid duration "invalid"`,
