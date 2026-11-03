@@ -6,7 +6,7 @@ require (
 	github.com/a-novel-kit/golib v0.62.2
 	github.com/a-novel/service-authentication/v2 v2.23.2
 	github.com/a-novel/service-genai v0.8.4
-	github.com/a-novel/service-json-keys/v2 v2.15.0
+	github.com/a-novel/service-json-keys/v2 v2.15.2
 	github.com/go-chi/chi/v5 v5.5.0
 	github.com/go-playground/validator/v10 v10.30.5
 	github.com/goccy/go-yaml v1.19.2
@@ -25,7 +25,7 @@ require (
 
 require (
 	charm.land/lipgloss/v2 v2.0.6 // indirect
-	github.com/a-novel-kit/jwt/v2 v2.6.0 // indirect
+	github.com/a-novel-kit/jwt/v2 v2.6.1 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/charmbracelet/colorprofile v0.4.3 // indirect
