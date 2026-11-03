@@ -6,8 +6,8 @@ github.com/a-novel-kit/jwt/v2 v2.6.1 h1:8iQ8ZcvU4L2CKReYeCX8ctK9ABgYEvAOycrggKgl
 github.com/a-novel-kit/jwt/v2 v2.6.1/go.mod h1:pkDVhDrwshhk8U2FJiZciPHVh8zq5WYDJCMBKOmd1PQ=
 github.com/a-novel/service-authentication/v2 v2.23.2 h1:J+1dqQz1wERKxZJXfjEy60AiQOLpodHi5SUmf9Rrcxo=
 github.com/a-novel/service-authentication/v2 v2.23.2/go.mod h1:Tt+YwyADvkjIYFLyhMwB7YbIP5NZLG2+6rFuaHJ1QNE=
-github.com/a-novel/service-genai v0.8.4 h1:PDy2r6cEBZcvu/RCCR/+4uKXZpQxGtcyvVWR5C1lQV0=
-github.com/a-novel/service-genai v0.8.4/go.mod h1:j3dOfxJFKWTYSFoEhzP4zhkaR7NhwMkKZJiyVc+m/+M=
+github.com/a-novel/service-genai v0.8.6 h1:knShgUzqTn/lAb2e27PaAMoG+g42q6r7oJqa+/VGf4A=
+github.com/a-novel/service-genai v0.8.6/go.mod h1:VPVwW9h/L16O9579OFdrxNzAUDGub91uKfp1tGkZUI4=
 github.com/a-novel/service-json-keys/v2 v2.15.2 h1:K3XScjvvXFfSbAhc9f/Ubi8RJxd4tQQcTrypCjo+QA0=
 github.com/a-novel/service-json-keys/v2 v2.15.2/go.mod h1:8LffbTsfsKjMhL2LR1MvZMBqTECAgxMDFSLPVJbVY3E=
 github.com/alicebob/miniredis/v2 v2.40.0 h1:6IgTQbvm2JiMYZ8yur/acNJzVjtSOWCelxXbk/LUBXc=
@@ -91,8 +91,8 @@ github.com/mattn/go-runewidth v0.0.24 h1:cpokDiIn0MGnhdHwuWnJBITySJ20QyNGnY2kR/a
 github.com/mattn/go-runewidth v0.0.24/go.mod h1:XBkDxAl56ILZc9knddidhrOlY5R/pDhgLpndooCuJAs=
 github.com/muesli/cancelreader v0.2.2 h1:3I4Kt4BQjOR54NavqnDogx/MIoWBFa0StPA8ELUXHmA=
 github.com/muesli/cancelreader v0.2.2/go.mod h1:3XuTXfFS2VjM+HTLZY9Ak0l6eUKfijIfMUZ4EgX0QYo=
-github.com/openai/openai-go/v3 v3.90.0 h1:OsAszzODKw2fz6jrasGCdUH8t3Zr8pUEnZAeW7QMKh4=
-github.com/openai/openai-go/v3 v3.90.0/go.mod h1:TQHvyB61TWJ7oEf7wnq4NAM/TatuqnUCJ+qbKj8POsE=
+github.com/openai/openai-go/v3 v3.91.0 h1:8qxJ0t/hZFJ2NBmHz4YXY9VpXA9xnVUzev+KwAzygJA=
+github.com/openai/openai-go/v3 v3.91.0/go.mod h1:TQHvyB61TWJ7oEf7wnq4NAM/TatuqnUCJ+qbKj8POsE=
 github.com/puzpuzpuz/xsync/v3 v3.5.1 h1:GJYJZwO6IdxN/IKbneznS6yPkVC+c3zyY/j19c++5Fg=
 github.com/puzpuzpuz/xsync/v3 v3.5.1/go.mod h1:VjzYrABPabuM4KyBh1Ftq6u8nhwY5tBPKP9jpmh0nnA=
 github.com/redis/go-redis/v9 v9.23.0 h1:/TTVdJa8BRNsybwwGGnmiYktHNlUXtbOQxlWpHBPL3s=
