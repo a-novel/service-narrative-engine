@@ -35,7 +35,9 @@ HEALTHCHECK --interval=1s --timeout=5s --retries=10 --start-period=1s \
 
 ENV REST_PORT=8080
 # Local, test and consumer stacks call the server directly, with no service token. Production runs the
-# rest image, which keeps the issuer required.
+# rest image, which keeps the issuer required. The variable holds a boolean, not a secret, though its
+# name says token.
+# hadolint ignore=DL3064
 ENV SERVICE_TOKEN_ISSUER_OPTIONAL=true
 
 EXPOSE 8080
