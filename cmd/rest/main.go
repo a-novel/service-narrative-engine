@@ -37,8 +37,8 @@ func main() {
 	cfg := config.AppPresetDefault
 
 	// Without an issuer, every caller reaches the routes, so only the standalone image starts so.
-	if cfg.ServiceToken.Issuer == "" && !cfg.ServiceTokensOptional {
-		log.Fatalln("SERVICE_TOKEN_ISSUER is empty: set it, or SERVICE_TOKENS_OPTIONAL=true outside production")
+	if cfg.ServiceToken.Issuer == "" && !cfg.ServiceIssuerOptional {
+		log.Fatalln("SERVICE_TOKEN_ISSUER is empty: set it, or SERVICE_ISSUER_OPTIONAL=true outside production")
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
