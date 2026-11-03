@@ -145,6 +145,7 @@ func TestPgLayersInsert(t *testing.T) {
 
 				result, err := daoLayersInsert.Exec(ctx, testCase.request)
 				require.ErrorIs(t, err, testCase.expectErr)
+				requireStoredBytes(ctx, t)
 
 				slices.SortFunc(result, func(a, b *dao.Layer) int { return cmp.Compare(a.Position, b.Position) })
 				require.Equal(t, testCase.expect, result)

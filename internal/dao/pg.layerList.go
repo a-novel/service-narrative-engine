@@ -24,6 +24,9 @@ type LayerListRequest struct {
 	Limit int
 	// Offset is how many layers in order come before the page.
 	Offset int
+	// MaxBytes bounds the bytes of the page: it stops before a row that would take it past the bound, and
+	// holds one row at least.
+	MaxBytes int64
 }
 
 // LayerListRow is one layer of a page.
@@ -53,7 +56,9 @@ func (dao *PgLayerList) Exec(ctx context.Context, request *LayerListRequest) ([]
 
 	var entities []*LayerListRow
 
-	err = db.NewRaw(layerListQuery, request.ProjectID, request.Limit, request.Offset).Scan(ctx, &entities)
+	err = db.NewRaw(
+		layerListQuery, request.ProjectID, request.Limit, request.Offset, request.MaxBytes,
+	).Scan(ctx, &entities)
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("execute query: %w", err))
 	}

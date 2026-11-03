@@ -87,6 +87,7 @@ func TestPgLayersUpdate(t *testing.T) {
 
 				result, err := daoLayersUpdate.Exec(ctx, testCase.request)
 				require.NoError(t, err)
+				requireStoredBytes(ctx, t)
 				require.ElementsMatch(t, testCase.expect, result)
 
 				// An ID the project does not hold leaves every layer unchanged, the valid ones included.

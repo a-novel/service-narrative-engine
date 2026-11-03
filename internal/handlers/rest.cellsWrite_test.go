@@ -80,6 +80,16 @@ func TestRestCellsWrite(t *testing.T) {
 			expectStatus: http.StatusNotFound,
 		},
 		{
+			name: "Error/ProjectBudget",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[[]*core.WrittenCell]{err: core.ErrProjectBudget},
+
+			expectStatus:   http.StatusConflict,
+			expectResponse: limitProblem("projectBytes"),
+		},
+		{
 			name: "Error/SceneNotFound",
 
 			request: validRequest,
@@ -104,7 +114,7 @@ func TestRestCellsWrite(t *testing.T) {
 
 			serviceMock: &serviceMock[[]*core.WrittenCell]{err: core.ErrProjectFull},
 
-			expectStatus: http.StatusUnprocessableEntity,
+			expectStatus: http.StatusConflict,
 		},
 		{
 			name: "Error/InvalidContent",

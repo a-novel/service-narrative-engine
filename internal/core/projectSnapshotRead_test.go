@@ -47,15 +47,49 @@ func TestProjectSnapshotRead(t *testing.T) {
 	coreRecap := core.Recap{Condensed: "Notes.", Compact: "Notes.", Essentials: "Notes.", Names: []string{"Marie"}}
 	sources := []*core.BeatRecapSource{{SceneID: sceneID1, CellUpdatedAt: createdAt}, {SceneID: sceneID2}}
 
+	snapshot := &core.ProjectSnapshot{
+		Project: &core.Project{
+			ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr",
+			CreatedAt: createdAt, UpdatedAt: updatedAt,
+		},
+		Beats: []*core.Beat{with(coreBeat(beatID1, 0), func(beat *core.Beat) {
+			beat.Recap, beat.RecapBeatUpdatedAt, beat.RecapSources = &coreRecap, createdAt, sources
+		})},
+		Scenes: []*core.Scene{coreScene(sceneID1, 0), coreScene(sceneID2, 1)},
+		Layers: []*core.Layer{coreLayer(layerID1, 0)},
+		Cells: lo.Times(snapshotCells, func(index int) *core.Cell {
+			cell := snapshotCell(index)
+
+			loaded := &core.Cell{
+				ProjectID: projectID, SceneID: sceneID1, LayerID: cell.LayerID, Content: cell.Content,
+				UpdatedAt: updatedAt,
+			}
+			if index == 0 {
+				loaded.Recap, loaded.RecapCellUpdatedAt = &coreRecap, createdAt
+			}
+
+			return loaded
+		}),
+		Recaps: []*core.CellRecap{{
+			Recap: coreRecap, SceneID: sceneID1, LayerID: snapshotCell(0).LayerID, CellUpdatedAt: createdAt,
+		}},
+		BeatRecaps: []*core.BeatRecap{{
+			Recap: coreRecap, BeatID: beatID1, BeatUpdatedAt: createdAt, Sources: sources,
+		}},
+	}
+
 	testCases := []struct {
 		name string
 
 		request *core.ProjectSnapshotReadRequest
 
 		ownerMock *daoMock[bool]
+		bytesMock *daoMock[*dao.ProjectBytes]
 		// read reads the project, its beats, scenes and layers, and cellsErr fails the cell list.
 		read     bool
 		cellsErr error
+		// cellPages are the sizes of the pages of cells the list returns, which hold every cell together.
+		cellPages []int
 
 		expect    *core.ProjectSnapshot
 		expectErr error
@@ -66,38 +100,26 @@ func TestProjectSnapshotRead(t *testing.T) {
 			request: &core.ProjectSnapshotReadRequest{OwnerID: ownerID, ProjectID: projectID},
 
 			ownerMock: &daoMock[bool]{resp: true},
+			bytesMock: withinBudget,
 			read:      true,
+			// A full page of cells asks for the next one.
+			cellPages: []int{2000, 1},
 
-			expect: &core.ProjectSnapshot{
-				Project: &core.Project{
-					ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr",
-					CreatedAt: createdAt, UpdatedAt: updatedAt,
-				},
-				Beats: []*core.Beat{with(coreBeat(beatID1, 0), func(beat *core.Beat) {
-					beat.Recap, beat.RecapBeatUpdatedAt, beat.RecapSources = &coreRecap, createdAt, sources
-				})},
-				Scenes: []*core.Scene{coreScene(sceneID1, 0), coreScene(sceneID2, 1)},
-				Layers: []*core.Layer{coreLayer(layerID1, 0)},
-				Cells: lo.Times(snapshotCells, func(index int) *core.Cell {
-					cell := snapshotCell(index)
+			expect: snapshot,
+		},
+		{
+			// A page that stops short of its limit at its byte bound still asks for the next one, until the
+			// pages hold the total.
+			name: "Success/ByteBound",
 
-					loaded := &core.Cell{
-						ProjectID: projectID, SceneID: sceneID1, LayerID: cell.LayerID, Content: cell.Content,
-						UpdatedAt: updatedAt,
-					}
-					if index == 0 {
-						loaded.Recap, loaded.RecapCellUpdatedAt = &coreRecap, createdAt
-					}
+			request: &core.ProjectSnapshotReadRequest{OwnerID: ownerID, ProjectID: projectID},
 
-					return loaded
-				}),
-				Recaps: []*core.CellRecap{{
-					Recap: coreRecap, SceneID: sceneID1, LayerID: snapshotCell(0).LayerID, CellUpdatedAt: createdAt,
-				}},
-				BeatRecaps: []*core.BeatRecap{{
-					Recap: coreRecap, BeatID: beatID1, BeatUpdatedAt: createdAt, Sources: sources,
-				}},
-			},
+			ownerMock: &daoMock[bool]{resp: true},
+			bytesMock: withinBudget,
+			read:      true,
+			cellPages: []int{1500, 1, 500},
+
+			expect: snapshot,
 		},
 		{
 			name: "Error/MissingProject",
@@ -116,11 +138,33 @@ func TestProjectSnapshotRead(t *testing.T) {
 			expectErr: core.ErrProjectNotFound,
 		},
 		{
+			// A project past its budget would take a context past every call's limit, and no page is read.
+			name: "Error/ProjectBudget",
+
+			request: &core.ProjectSnapshotReadRequest{OwnerID: ownerID, ProjectID: projectID},
+
+			ownerMock: &daoMock[bool]{resp: true},
+			bytesMock: overBudget,
+
+			expectErr: core.ErrContextTooLarge,
+		},
+		{
+			name: "Error/ProjectBytes",
+
+			request: &core.ProjectSnapshotReadRequest{OwnerID: ownerID, ProjectID: projectID},
+
+			ownerMock: &daoMock[bool]{resp: true},
+			bytesMock: &daoMock[*dao.ProjectBytes]{err: errFoo},
+
+			expectErr: errFoo,
+		},
+		{
 			name: "Error/Cells",
 
 			request: &core.ProjectSnapshotReadRequest{OwnerID: ownerID, ProjectID: projectID},
 
 			ownerMock: &daoMock[bool]{resp: true},
+			bytesMock: withinBudget,
 			read:      true,
 			cellsErr:  errFoo,
 
@@ -133,6 +177,7 @@ func TestProjectSnapshotRead(t *testing.T) {
 			t.Parallel()
 
 			mockOwner := coremocks.NewMockProjectSnapshotReadDaoOwner(t)
+			mockBytes := coremocks.NewMockProjectSnapshotReadDaoBytes(t)
 			mockProject := coremocks.NewMockProjectSnapshotReadDaoProject(t)
 			mockBeats := coremocks.NewMockProjectSnapshotReadDaoBeats(t)
 			mockScenes := coremocks.NewMockProjectSnapshotReadDaoScenes(t)
@@ -145,46 +190,58 @@ func TestProjectSnapshotRead(t *testing.T) {
 					Return(testCase.ownerMock.resp, testCase.ownerMock.err)
 			}
 
+			if testCase.bytesMock != nil {
+				mockBytes.EXPECT().
+					Exec(mock.Anything, &dao.ProjectBytesRequest{ID: projectID}).
+					Return(testCase.bytesMock.resp, testCase.bytesMock.err)
+			}
+
 			if testCase.read {
 				mockProject.EXPECT().
 					Exec(mock.Anything, &dao.ProjectSelectRequest{ID: projectID}).
 					Return(daoProject(), nil)
 				mockBeats.EXPECT().
-					Exec(mock.Anything, &dao.BeatListRequest{ProjectID: projectID, Limit: 2000}).
+					Exec(mock.Anything, &dao.BeatListRequest{ProjectID: projectID, Limit: 2000, MaxBytes: core.ListPageBytesMax}).
 					Return([]*dao.BeatListRow{{Beat: *recappedBeat, Total: 1}}, nil)
 				mockScenes.EXPECT().
-					Exec(mock.Anything, &dao.SceneListRequest{ProjectID: projectID, Limit: 2000}).
+					Exec(mock.Anything, &dao.SceneListRequest{ProjectID: projectID, Limit: 2000, MaxBytes: core.ListPageBytesMax}).
 					Return([]*dao.SceneListRow{
 						{Scene: *daoScene(sceneID1, 0), Total: 2}, {Scene: *daoScene(sceneID2, 1), Total: 2},
 					}, nil)
 				mockLayers.EXPECT().
-					Exec(mock.Anything, &dao.LayerListRequest{ProjectID: projectID, Limit: 2000}).
+					Exec(mock.Anything, &dao.LayerListRequest{ProjectID: projectID, Limit: 2000, MaxBytes: core.ListPageBytesMax}).
 					Return([]*dao.LayerListRow{{Layer: *notesLayer(layerID1, 0), Total: 1}}, nil)
 			}
 
-			// A full page of cells asks for the next one.
-			if testCase.read && testCase.cellsErr == nil {
+			var offset int
+
+			for _, size := range testCase.cellPages {
 				mockCells.EXPECT().
-					Exec(mock.Anything, &dao.CellListRequest{ProjectID: projectID, Limit: 2000}).
-					Return(cellRows[:2000], nil)
-				mockCells.EXPECT().
-					Exec(mock.Anything, &dao.CellListRequest{ProjectID: projectID, Limit: 2000, Offset: 2000}).
-					Return(cellRows[2000:], nil)
+					Exec(mock.Anything, &dao.CellListRequest{
+						ProjectID: projectID, Limit: 2000, Offset: offset, MaxBytes: core.ListPageBytesMax,
+					}).
+					Return(cellRows[offset:offset+size], nil).
+					Once()
+
+				offset += size
 			}
 
 			if testCase.cellsErr != nil {
 				mockCells.EXPECT().
-					Exec(mock.Anything, &dao.CellListRequest{ProjectID: projectID, Limit: 2000}).
+					Exec(mock.Anything, &dao.CellListRequest{ProjectID: projectID, Limit: 2000, MaxBytes: core.ListPageBytesMax}).
 					Return(nil, testCase.cellsErr)
 			}
 
-			service := core.NewProjectSnapshotRead(mockOwner, mockProject, mockBeats, mockScenes, mockLayers, mockCells)
+			service := core.NewProjectSnapshotRead(
+				mockOwner, mockBytes, mockProject, mockBeats, mockScenes, mockLayers, mockCells,
+			)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
 
 			mockOwner.AssertExpectations(t)
+			mockBytes.AssertExpectations(t)
 			mockProject.AssertExpectations(t)
 			mockBeats.AssertExpectations(t)
 			mockScenes.AssertExpectations(t)

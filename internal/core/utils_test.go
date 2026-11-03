@@ -1,7 +1,9 @@
 package core_test
 
 import (
+	"context"
 	"slices"
+	"testing"
 	"time"
 
 	"github.com/google/uuid"
@@ -148,4 +150,33 @@ func openaiResponse(kind string, content ...map[string]string) string {
 // outputText is a content part of an OpenAI message.
 func outputText(text string) map[string]string {
 	return map[string]string{"type": "output_text", "text": text}
+}
+
+var (
+	// withinBudget is a project at its byte budget, which a write may reach.
+	withinBudget = &daoMock[*dao.ProjectBytes]{resp: &dao.ProjectBytes{StoredBytes: core.ProjectBytesMax}}
+	// overBudget is a project one byte past its budget, which refuses the write that brought it there.
+	overBudget = &daoMock[*dao.ProjectBytes]{resp: &dao.ProjectBytes{StoredBytes: core.ProjectBytesMax + 1}}
+)
+
+// holdGate takes the only slot of gate, as another read of a whole project would, until the returned
+// function runs.
+func holdGate(t *testing.T, gate *core.ProjectReadGate) func() {
+	t.Helper()
+
+	holding, release := make(chan struct{}), make(chan struct{})
+
+	go func() {
+		// The read returns nil, and the test only needs the slot it holds.
+		_ = gate.Run(t.Context(), func(context.Context) error {
+			close(holding)
+			<-release
+
+			return nil
+		})
+	}()
+
+	<-holding
+
+	return func() { close(release) }
 }

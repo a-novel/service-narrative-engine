@@ -39,7 +39,8 @@ type SceneListRequest struct {
 }
 
 // SceneList reads a project's scenes page by page, in narrative order. Each page carries the total,
-// so a client knows when it holds every scene.
+// so a client knows when it holds every scene. A page stops early once it holds [ListPageBytesMax] bytes,
+// and the next starts at the offset plus the scenes received.
 type SceneList struct {
 	daoOwner SceneListDaoOwner
 	dao      SceneListDao
@@ -81,6 +82,7 @@ func (service *SceneList) Exec(ctx context.Context, request *SceneListRequest) (
 		ProjectID: request.ProjectID,
 		Limit:     request.Limit,
 		Offset:    request.Offset,
+		MaxBytes:  ListPageBytesMax,
 	})
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("list scenes: %w", err))

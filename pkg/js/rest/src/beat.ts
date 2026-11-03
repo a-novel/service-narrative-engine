@@ -145,9 +145,10 @@ export const BeatListRequestSchema = z.object({
 export type BeatListRequest = z.infer<typeof BeatListRequestSchema>;
 
 /**
- * Adds one beat to a project and returns it at its place; the beats from there on move down one place.
- * Throws on HTTP 404 when the caller owns no such project, and 422 when the project holds 200 beats
- * already. {@link beatsCreate} adds several at once.
+ * Adds one beat to a project and returns it at its place; the beats from there on move down one place. Throws on
+ * HTTP 404 when the caller owns no such project, 409 when the project holds 200 beats already, and 409 with
+ * `projectBytes` in the error's `tags.limit` when the project would pass its 16 MiB budget of stored bytes.
+ * {@link beatsCreate} adds several at once.
  */
 export async function beatCreate(
   api: NarrativeEngineApi,
@@ -162,9 +163,10 @@ export async function beatCreate(
 }
 
 /**
- * Adds beats to a project and returns them in narrative order; the beats from there on move down.
- * They are all added, or none are. Throws on HTTP 404 when the caller owns no such project, and 422
- * when the project would hold more than 200 beats.
+ * Adds beats to a project and returns them in narrative order; the beats from there on move down. They are all
+ * added, or none are. Throws on HTTP 404 when the caller owns no such project, 409 when the project would hold
+ * more than 200 beats, and 409 with `projectBytes` in the error's `tags.limit` when the project would pass its
+ * 16 MiB budget of stored bytes.
  */
 export async function beatsCreate(
   api: NarrativeEngineApi,
@@ -179,8 +181,9 @@ export async function beatsCreate(
 }
 
 /**
- * Replaces the title, color, description and prompt of a beat. Throws on HTTP 404 when the caller
- * owns no such project, or the project holds no such beat.
+ * Replaces the title, color, description and prompt of a beat. Throws on HTTP 404 when the caller owns no such
+ * project, or the project holds no such beat, and 409 with `projectBytes` in the error's `tags.limit` when the
+ * project would pass its 16 MiB budget of stored bytes.
  */
 export async function beatUpdate(
   api: NarrativeEngineApi,
@@ -195,9 +198,10 @@ export async function beatUpdate(
 }
 
 /**
- * Replaces the fields of several beats at once and returns them in the order of the request. They are
- * all updated, or none are. Throws on HTTP 404 when the caller owns no such project, or the project lacks
- * one of the beats.
+ * Replaces the fields of several beats at once and returns them in the order of the request. They are all
+ * updated, or none are. Throws on HTTP 404 when the caller owns no such project, or the project lacks one of the
+ * beats, and 409 with `projectBytes` in the error's `tags.limit` when the project would pass its 16 MiB budget
+ * of stored bytes.
  */
 export async function beatsUpdate(
   api: NarrativeEngineApi,
@@ -258,8 +262,9 @@ export async function beatsDelete(
 }
 
 /**
- * Lists a page of a project's beats, in narrative order, with their total. Raise `offset` by the page size for
- * the next page. Throws on HTTP 404 when the caller owns no such project.
+ * Lists a page of a project's beats, in narrative order, with their total. A page stops early once it holds
+ * 4 MiB, so raise `offset` by the beats received for the next page, while that stays below the total. Throws on
+ * HTTP 404 when the caller owns no such project.
  */
 export async function beatList(
   api: NarrativeEngineApi,

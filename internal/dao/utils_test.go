@@ -49,6 +49,31 @@ var (
 	now       = time.Date(2021, 1, 3, 0, 0, 0, 0, time.UTC)
 )
 
+// pageBytes bounds the bytes of a list page above what any fixture holds.
+const pageBytes = 1 << 20
+
+// storedBytesQuery reads, for each project, the count of the bytes its rows hold, and a fresh sum of them as
+// the migration that adds the count backfills it.
+const storedBytesQuery = `
+SELECT projects.id AS project_id, projects.stored_bytes AS stored, coalesce(sum(held.bytes), 0)::bigint AS bytes
+FROM projects
+LEFT JOIN (
+  SELECT project_id, bytes FROM beats
+  UNION ALL SELECT project_id, bytes FROM scenes
+  UNION ALL SELECT project_id, bytes FROM layers
+  UNION ALL SELECT project_id, bytes FROM cells
+) AS held ON held.project_id = projects.id
+GROUP BY projects.id`
+
+// storedBytes is the count of the bytes a project's rows hold, beside a fresh sum of them.
+type storedBytes struct {
+	ProjectID uuid.UUID `bun:"project_id,type:uuid"`
+	// Stored is the count the writes keep.
+	Stored int64 `bun:"stored"`
+	// Bytes is the fresh sum.
+	Bytes int64 `bun:"bytes"`
+}
+
 // fixtures is the data a DAO test seeds before it runs the operation under test.
 type fixtures struct {
 	projects []*dao.Project
@@ -191,6 +216,30 @@ func insertFixtures(ctx context.Context, t *testing.T, data fixtures) {
 		_, err = db.NewInsert().Model(&data.cells).Exec(ctx)
 		require.NoError(t, err)
 	}
+
+	// The inserts skip the writes that keep the stored bytes, so the count starts from a fresh sum.
+	_, err = db.NewRaw(
+		"UPDATE projects SET stored_bytes = fresh.bytes FROM (" + storedBytesQuery + ") AS fresh " +
+			"WHERE projects.id = fresh.project_id",
+	).Exec(ctx)
+	require.NoError(t, err)
+}
+
+// requireStoredBytes checks that the stored bytes of every project match a fresh sum over its rows.
+func requireStoredBytes(ctx context.Context, t *testing.T) {
+	t.Helper()
+
+	db, err := postgres.GetContext(ctx)
+	require.NoError(t, err)
+
+	var counts []*storedBytes
+
+	err = db.NewRaw(storedBytesQuery).Scan(ctx, &counts)
+	require.NoError(t, err)
+
+	for _, count := range counts {
+		require.Equal(t, count.Bytes, count.Stored, "stored bytes of project %s", count.ProjectID)
+	}
 }
 
 // requireCellsEqual compares cells field by field, and their content as JSON, since PostgreSQL
@@ -248,7 +297,9 @@ func sceneIn(scene *dao.Scene, beat uuid.UUID, position int) *dao.Scene {
 func listScenes(ctx context.Context, t *testing.T, project uuid.UUID) []*dao.Scene {
 	t.Helper()
 
-	rows, err := dao.NewPgSceneList().Exec(ctx, &dao.SceneListRequest{ProjectID: project, Limit: 100})
+	request := &dao.SceneListRequest{ProjectID: project, Limit: 100, MaxBytes: pageBytes}
+
+	rows, err := dao.NewPgSceneList().Exec(ctx, request)
 	require.NoError(t, err)
 
 	return lo.Map(rows, func(row *dao.SceneListRow, _ int) *dao.Scene { return &row.Scene })
@@ -258,7 +309,9 @@ func listScenes(ctx context.Context, t *testing.T, project uuid.UUID) []*dao.Sce
 func listBeats(ctx context.Context, t *testing.T, project uuid.UUID) []*dao.Beat {
 	t.Helper()
 
-	rows, err := dao.NewPgBeatList().Exec(ctx, &dao.BeatListRequest{ProjectID: project, Limit: 100})
+	request := &dao.BeatListRequest{ProjectID: project, Limit: 100, MaxBytes: pageBytes}
+
+	rows, err := dao.NewPgBeatList().Exec(ctx, request)
 	require.NoError(t, err)
 
 	return lo.Map(rows, func(row *dao.BeatListRow, _ int) *dao.Beat { return &row.Beat })
@@ -275,7 +328,9 @@ func beatScenes(ctx context.Context, t *testing.T, beat uuid.UUID) []*dao.Scene 
 func listLayers(ctx context.Context, t *testing.T, project uuid.UUID) []*dao.Layer {
 	t.Helper()
 
-	rows, err := dao.NewPgLayerList().Exec(ctx, &dao.LayerListRequest{ProjectID: project, Limit: 100})
+	request := &dao.LayerListRequest{ProjectID: project, Limit: 100, MaxBytes: pageBytes}
+
+	rows, err := dao.NewPgLayerList().Exec(ctx, request)
 	require.NoError(t, err)
 
 	return lo.Map(rows, func(row *dao.LayerListRow, _ int) *dao.Layer { return &row.Layer })
@@ -285,7 +340,9 @@ func listLayers(ctx context.Context, t *testing.T, project uuid.UUID) []*dao.Lay
 func listCells(ctx context.Context, t *testing.T, project uuid.UUID) []*dao.Cell {
 	t.Helper()
 
-	rows, err := dao.NewPgCellList().Exec(ctx, &dao.CellListRequest{ProjectID: project, Limit: 100})
+	request := &dao.CellListRequest{ProjectID: project, Limit: 100, MaxBytes: pageBytes}
+
+	rows, err := dao.NewPgCellList().Exec(ctx, request)
 	require.NoError(t, err)
 
 	return lo.Map(rows, func(row *dao.CellListRow, _ int) *dao.Cell { return &row.Cell })

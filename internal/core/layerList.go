@@ -39,7 +39,8 @@ type LayerListRequest struct {
 }
 
 // LayerList reads a project's layers page by page, in order. Each page carries the total, so a
-// client knows when it holds every layer.
+// client knows when it holds every layer. A page stops early once it holds [ListPageBytesMax] bytes, and
+// the next starts at the offset plus the layers received.
 type LayerList struct {
 	daoOwner LayerListDaoOwner
 	dao      LayerListDao
@@ -81,6 +82,7 @@ func (service *LayerList) Exec(ctx context.Context, request *LayerListRequest) (
 		ProjectID: request.ProjectID,
 		Limit:     request.Limit,
 		Offset:    request.Offset,
+		MaxBytes:  ListPageBytesMax,
 	})
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("list layers: %w", err))

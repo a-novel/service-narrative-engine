@@ -23,6 +23,11 @@ type ManuscriptExportDaoKind interface {
 	Exec(ctx context.Context, request *dao.LayerKindRequest) ([]*dao.LayerKind, error)
 }
 
+// ManuscriptExportDaoBytes reads how many bytes the project stores.
+type ManuscriptExportDaoBytes interface {
+	Exec(ctx context.Context, request *dao.ProjectBytesRequest) (*dao.ProjectBytes, error)
+}
+
 // ManuscriptExportDaoProject reads the project, for its title and language.
 type ManuscriptExportDaoProject interface {
 	Exec(ctx context.Context, request *dao.ProjectSelectRequest) (*dao.Project, error)
@@ -43,21 +48,28 @@ type ManuscriptExportRequest struct {
 
 // ManuscriptExport reads the text a manuscript layer holds across every scene of the project, with the
 // beats the scenes belong to. A layer the project does not hold, or of another kind, answers
-// [ErrLayerNotFound].
+// [ErrLayerNotFound], and a project past [ProjectBytesMax] stored bytes [ErrProjectBudget]. The read and
+// the build wait for a slot of the gate, which they share with every other read of a whole project.
 type ManuscriptExport struct {
 	daoOwner   ManuscriptExportDaoOwner
 	daoKind    ManuscriptExportDaoKind
+	daoBytes   ManuscriptExportDaoBytes
 	daoProject ManuscriptExportDaoProject
 	dao        ManuscriptExportDao
+	gate       *ProjectReadGate
 }
 
 func NewManuscriptExport(
 	daoOwner ManuscriptExportDaoOwner,
 	daoKind ManuscriptExportDaoKind,
+	daoBytes ManuscriptExportDaoBytes,
 	daoProject ManuscriptExportDaoProject,
 	dao ManuscriptExportDao,
+	gate *ProjectReadGate,
 ) *ManuscriptExport {
-	return &ManuscriptExport{daoOwner: daoOwner, daoKind: daoKind, daoProject: daoProject, dao: dao}
+	return &ManuscriptExport{
+		daoOwner: daoOwner, daoKind: daoKind, daoBytes: daoBytes, daoProject: daoProject, dao: dao, gate: gate,
+	}
 }
 
 func (service *ManuscriptExport) Exec(ctx context.Context, request *ManuscriptExportRequest) (*Manuscript, error) {
@@ -94,21 +106,32 @@ func (service *ManuscriptExport) Exec(ctx context.Context, request *ManuscriptEx
 		return nil, otel.ReportError(span, ErrLayerNotFound)
 	}
 
-	project, err := service.daoProject.Exec(ctx, &dao.ProjectSelectRequest{ID: request.ProjectID})
-	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("select project: %w", err))
-	}
+	var manuscript *Manuscript
 
-	rows, err := service.dao.Exec(ctx, &dao.ManuscriptSelectRequest{
-		ProjectID: request.ProjectID, LayerID: request.LayerID,
+	err = service.gate.Run(ctx, func(ctx context.Context) error {
+		err := keepProjectBudget(ctx, service.daoBytes, projectBudgetOpts{projectID: request.ProjectID})
+		if err != nil {
+			return fmt.Errorf("keep project budget: %w", err)
+		}
+
+		project, err := service.daoProject.Exec(ctx, &dao.ProjectSelectRequest{ID: request.ProjectID})
+		if err != nil {
+			return fmt.Errorf("select project: %w", err)
+		}
+
+		rows, err := service.dao.Exec(ctx, &dao.ManuscriptSelectRequest{
+			ProjectID: request.ProjectID, LayerID: request.LayerID,
+		})
+		if err != nil {
+			return fmt.Errorf("select manuscript: %w", err)
+		}
+
+		manuscript, err = newManuscript(project, rows)
+
+		return err
 	})
 	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("select manuscript: %w", err))
-	}
-
-	manuscript, err := newManuscript(project, rows)
-	if err != nil {
-		return nil, otel.ReportError(span, err)
+		return nil, otel.ReportError(span, fmt.Errorf("read manuscript: %w", err))
 	}
 
 	return manuscript, nil

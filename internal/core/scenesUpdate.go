@@ -11,18 +11,24 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/a-novel-kit/golib/otel"
+	"github.com/a-novel-kit/golib/transaction"
 
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// ScenesUpdateDaoOwner checks that the user owns the project.
-type ScenesUpdateDaoOwner interface {
-	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
+// ScenesUpdateDaoLock locks the project its owner names, so the writes to its bytes run one at a time.
+type ScenesUpdateDaoLock interface {
+	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
 }
 
 // ScenesUpdateDao writes the scenes' new fields, all of them or none.
 type ScenesUpdateDao interface {
 	Exec(ctx context.Context, request *dao.ScenesUpdateRequest) ([]*dao.Scene, error)
+}
+
+// ScenesUpdateDaoBytes reads how many bytes the project stores, the write included.
+type ScenesUpdateDaoBytes interface {
+	Exec(ctx context.Context, request *dao.ProjectBytesRequest) (*dao.ProjectBytes, error)
 }
 
 // ScenesUpdateItem is one scene of a [ScenesUpdateRequest].
@@ -46,14 +52,22 @@ type ScenesUpdateRequest struct {
 }
 
 // ScenesUpdate replaces the fields of several scenes at once, all of them or none, and returns them in the
-// order of the request. [SceneUpdate] updates one.
+// order of the request. [SceneUpdate] updates one. It writes nothing when the project would store more than
+// [ProjectBytesMax] bytes.
 type ScenesUpdate struct {
-	daoOwner ScenesUpdateDaoOwner
-	dao      ScenesUpdateDao
+	daoLock    ScenesUpdateDaoLock
+	dao        ScenesUpdateDao
+	daoBytes   ScenesUpdateDaoBytes
+	transactor transaction.Transactor
 }
 
-func NewScenesUpdate(daoOwner ScenesUpdateDaoOwner, dao ScenesUpdateDao) *ScenesUpdate {
-	return &ScenesUpdate{daoOwner: daoOwner, dao: dao}
+func NewScenesUpdate(
+	daoLock ScenesUpdateDaoLock,
+	dao ScenesUpdateDao,
+	daoBytes ScenesUpdateDaoBytes,
+	transactor transaction.Transactor,
+) *ScenesUpdate {
+	return &ScenesUpdate{daoLock: daoLock, dao: dao, daoBytes: daoBytes, transactor: transactor}
 }
 
 func (service *ScenesUpdate) Exec(ctx context.Context, request *ScenesUpdateRequest) ([]*Scene, error) {
@@ -71,14 +85,6 @@ func (service *ScenesUpdate) Exec(ctx context.Context, request *ScenesUpdateRequ
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	err = checkProjectOwnership(ctx, service.daoOwner, projectOwnershipOpts{
-		projectID: request.ProjectID,
-		ownerID:   request.OwnerID,
-	})
-	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("check owner: %w", err))
-	}
-
 	updateItems := make([]dao.ScenesUpdateItem, len(request.Scenes))
 
 	for i, item := range request.Scenes {
@@ -90,23 +96,46 @@ func (service *ScenesUpdate) Exec(ctx context.Context, request *ScenesUpdateRequ
 		}
 	}
 
-	updated, err := service.dao.Exec(ctx, &dao.ScenesUpdateRequest{
-		ProjectID: request.ProjectID,
-		Scenes:    updateItems,
-		Now:       time.Now(),
+	var scenes []*Scene
+
+	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
+		err := lockOwnedProject(ctx, service.daoLock, projectOwnershipOpts{
+			projectID: request.ProjectID,
+			ownerID:   request.OwnerID,
+		})
+		if err != nil {
+			return fmt.Errorf("lock project: %w", err)
+		}
+
+		updated, err := service.dao.Exec(ctx, &dao.ScenesUpdateRequest{
+			ProjectID: request.ProjectID,
+			Scenes:    updateItems,
+			Now:       time.Now(),
+		})
+		if err != nil {
+			return fmt.Errorf("update scenes: %w", err)
+		}
+
+		// The update writes none of the scenes when the project does not hold one of them.
+		if len(updated) != len(request.Scenes) {
+			return fmt.Errorf(
+				"%w: %d of %d scenes", ErrSceneNotFound, len(request.Scenes)-len(updated), len(request.Scenes),
+			)
+		}
+
+		err = keepProjectBudget(ctx, service.daoBytes, projectBudgetOpts{projectID: request.ProjectID})
+		if err != nil {
+			return fmt.Errorf("keep project budget: %w", err)
+		}
+
+		byID := lo.KeyBy(updated, func(entity *dao.Scene) uuid.UUID { return entity.ID })
+		scenes = lo.Map(request.Scenes, func(item ScenesUpdateItem, _ int) *Scene { return newScene(byID[item.ID]) })
+
+		return nil
 	})
 	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("update scenes: %w", err))
+		return nil, otel.ReportError(span, fmt.Errorf("run transaction: %w", err))
 	}
 
-	// The update writes none of the scenes when the project does not hold one of them.
-	if len(updated) != len(request.Scenes) {
-		return nil, otel.ReportError(span, fmt.Errorf(
-			"%w: %d of %d scenes", ErrSceneNotFound, len(request.Scenes)-len(updated), len(request.Scenes),
-		))
-	}
-
-	byID := lo.KeyBy(updated, func(entity *dao.Scene) uuid.UUID { return entity.ID })
-
-	return lo.Map(request.Scenes, func(item ScenesUpdateItem, _ int) *Scene { return newScene(byID[item.ID]) }), nil
+	return scenes, nil
 }

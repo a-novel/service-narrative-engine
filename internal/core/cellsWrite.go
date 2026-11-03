@@ -22,19 +22,14 @@ import (
 // which the layer read rules out. The write rolls back.
 var ErrCellsUnwritten = errors.New("cells not written")
 
-// CellsWriteDaoOwner checks that the user owns the project.
-type CellsWriteDaoOwner interface {
-	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
+// CellsWriteDaoLock locks the project its owner names, so the writes to its cells run one at a time.
+type CellsWriteDaoLock interface {
+	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
 }
 
 // CellsWriteDaoKind reads the kinds of the cells' layers, which name their content schemas.
 type CellsWriteDaoKind interface {
 	Exec(ctx context.Context, request *dao.LayerKindRequest) ([]*dao.LayerKind, error)
-}
-
-// CellsWriteDaoLock locks the cells' scenes, so writes to their cells run one at a time.
-type CellsWriteDaoLock interface {
-	Exec(ctx context.Context, request *dao.SceneLockRequest) error
 }
 
 // CellsWriteDao writes the cells. It refuses a scene or a layer of another project.
@@ -58,6 +53,11 @@ type CellsWriteItem struct {
 	Content json.RawMessage `validate:"required,max=2097152"`
 }
 
+// CellsWriteDaoBytes reads how many bytes the project stores, the write included.
+type CellsWriteDaoBytes interface {
+	Exec(ctx context.Context, request *dao.ProjectBytesRequest) (*dao.ProjectBytes, error)
+}
+
 // CellsWriteRequest carries the new content of cells.
 type CellsWriteRequest struct {
 	OwnerID   uuid.UUID `validate:"required"`
@@ -66,29 +66,29 @@ type CellsWriteRequest struct {
 	Cells []CellsWriteItem `validate:"required,min=1,max=100,uniquecells,dive"`
 }
 
-// CellsWrite writes the content of cells, which it validates against the content schema of each
-// layer's kind, and returns the written cells in the order of the request, without their content. The
-// first write of a cell creates it, and it writes all of them or none: none when one of their scenes would
-// hold more than [SceneContentMax] characters.
+// CellsWrite writes the content of cells, which it validates against the content schema of each layer's
+// kind, and returns the written cells in the order of the request, without their content. The first write
+// of a cell creates it, and it writes all of them or none: none when one of their scenes would hold more
+// than [SceneContentMax] characters, or the project more than [ProjectBytesMax] bytes.
 type CellsWrite struct {
-	daoOwner   CellsWriteDaoOwner
-	daoKind    CellsWriteDaoKind
 	daoLock    CellsWriteDaoLock
+	daoKind    CellsWriteDaoKind
 	dao        CellsWriteDao
 	daoLength  CellsWriteDaoLength
+	daoBytes   CellsWriteDaoBytes
 	transactor transaction.Transactor
 }
 
 func NewCellsWrite(
-	daoOwner CellsWriteDaoOwner,
-	daoKind CellsWriteDaoKind,
 	daoLock CellsWriteDaoLock,
+	daoKind CellsWriteDaoKind,
 	dao CellsWriteDao,
 	daoLength CellsWriteDaoLength,
+	daoBytes CellsWriteDaoBytes,
 	transactor transaction.Transactor,
 ) *CellsWrite {
 	return &CellsWrite{
-		daoOwner: daoOwner, daoKind: daoKind, daoLock: daoLock, dao: dao, daoLength: daoLength, transactor: transactor,
+		daoLock: daoLock, daoKind: daoKind, dao: dao, daoLength: daoLength, daoBytes: daoBytes, transactor: transactor,
 	}
 }
 
@@ -107,41 +107,7 @@ func (service *CellsWrite) Exec(ctx context.Context, request *CellsWriteRequest)
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	err = checkProjectOwnership(ctx, service.daoOwner, projectOwnershipOpts{
-		projectID: request.ProjectID,
-		ownerID:   request.OwnerID,
-	})
-	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("check owner: %w", err))
-	}
-
 	layerIDs := lo.Uniq(lo.Map(request.Cells, func(cell CellsWriteItem, _ int) uuid.UUID { return cell.LayerID }))
-
-	kinds, err := service.daoKind.Exec(ctx, &dao.LayerKindRequest{ProjectID: request.ProjectID, IDs: layerIDs})
-	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("read layer kinds: %w", err))
-	}
-
-	if len(kinds) != len(layerIDs) {
-		return nil, otel.ReportError(span, fmt.Errorf(
-			"%w: %d of %d layers", ErrLayerNotFound, len(layerIDs)-len(kinds), len(layerIDs),
-		))
-	}
-
-	kindOf := lo.SliceToMap(kinds, func(kind *dao.LayerKind) (uuid.UUID, string) { return kind.ID, kind.Kind })
-
-	for index, cell := range request.Cells {
-		schema, err := schemas.Content(kindOf[cell.LayerID])
-		if err != nil {
-			return nil, otel.ReportError(span, fmt.Errorf("content schema: %w", err))
-		}
-
-		err = schema.Validate(cell.Content)
-		if err != nil {
-			return nil, otel.ReportError(span, errors.Join(fmt.Errorf("cell %d: %w", index, err), ErrInvalidRequest))
-		}
-	}
-
 	sceneIDs := lo.Uniq(lo.Map(request.Cells, func(cell CellsWriteItem, _ int) uuid.UUID { return cell.SceneID }))
 
 	upsertItems := make([]dao.CellsUpsertItem, len(request.Cells))
@@ -153,9 +119,35 @@ func (service *CellsWrite) Exec(ctx context.Context, request *CellsWriteRequest)
 	var entities []*dao.CellUpsertRow
 
 	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
-		err := service.daoLock.Exec(ctx, &dao.SceneLockRequest{ProjectID: request.ProjectID, IDs: sceneIDs})
+		err := lockOwnedProject(ctx, service.daoLock, projectOwnershipOpts{
+			projectID: request.ProjectID,
+			ownerID:   request.OwnerID,
+		})
 		if err != nil {
-			return fmt.Errorf("lock scenes: %w", err)
+			return fmt.Errorf("lock project: %w", err)
+		}
+
+		kinds, err := service.daoKind.Exec(ctx, &dao.LayerKindRequest{ProjectID: request.ProjectID, IDs: layerIDs})
+		if err != nil {
+			return fmt.Errorf("read layer kinds: %w", err)
+		}
+
+		if len(kinds) != len(layerIDs) {
+			return fmt.Errorf("%w: %d of %d layers", ErrLayerNotFound, len(layerIDs)-len(kinds), len(layerIDs))
+		}
+
+		kindOf := lo.SliceToMap(kinds, func(kind *dao.LayerKind) (uuid.UUID, string) { return kind.ID, kind.Kind })
+
+		for index, cell := range request.Cells {
+			schema, err := schemas.Content(kindOf[cell.LayerID])
+			if err != nil {
+				return fmt.Errorf("content schema: %w", err)
+			}
+
+			err = schema.Validate(cell.Content)
+			if err != nil {
+				return errors.Join(fmt.Errorf("cell %d: %w", index, err), ErrInvalidRequest)
+			}
 		}
 
 		entities, err = service.dao.Exec(ctx, &dao.CellsUpsertRequest{
@@ -184,6 +176,11 @@ func (service *CellsWrite) Exec(ctx context.Context, request *CellsWriteRequest)
 		err = checkSceneContent(ctx, service.daoLength, request.ProjectID, sceneIDs)
 		if err != nil {
 			return fmt.Errorf("check scene content: %w", err)
+		}
+
+		err = keepProjectBudget(ctx, service.daoBytes, projectBudgetOpts{projectID: request.ProjectID})
+		if err != nil {
+			return fmt.Errorf("keep project budget: %w", err)
 		}
 
 		return nil

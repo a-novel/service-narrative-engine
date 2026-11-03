@@ -36,7 +36,7 @@ func TestLayerList(t *testing.T) {
 			request: &core.LayerListRequest{OwnerID: ownerID, ProjectID: projectID, Limit: 50, Offset: 100},
 
 			ownerMock:   &daoMock[bool]{resp: true},
-			listRequest: &dao.LayerListRequest{ProjectID: projectID, Limit: 50, Offset: 100},
+			listRequest: &dao.LayerListRequest{ProjectID: projectID, Limit: 50, Offset: 100, MaxBytes: core.ListPageBytesMax},
 			listMock: &daoMock[[]*dao.LayerListRow]{resp: []*dao.LayerListRow{
 				{Layer: *notesLayer(layerID1, 100), Total: 120},
 			}},
@@ -48,9 +48,11 @@ func TestLayerList(t *testing.T) {
 
 			request: &core.LayerListRequest{OwnerID: ownerID, ProjectID: projectID},
 
-			ownerMock:   &daoMock[bool]{resp: true},
-			listRequest: &dao.LayerListRequest{ProjectID: projectID, Limit: core.LayerListLimitDefault},
-			listMock:    &daoMock[[]*dao.LayerListRow]{},
+			ownerMock: &daoMock[bool]{resp: true},
+			listRequest: &dao.LayerListRequest{
+				ProjectID: projectID, Limit: core.LayerListLimitDefault, MaxBytes: core.ListPageBytesMax,
+			},
+			listMock: &daoMock[[]*dao.LayerListRow]{},
 
 			expect: &core.LayerPage{Layers: []*core.Layer{}},
 		},
@@ -98,9 +100,11 @@ func TestLayerList(t *testing.T) {
 
 			request: &core.LayerListRequest{OwnerID: ownerID, ProjectID: projectID},
 
-			ownerMock:   &daoMock[bool]{resp: true},
-			listRequest: &dao.LayerListRequest{ProjectID: projectID, Limit: core.LayerListLimitDefault},
-			listMock:    &daoMock[[]*dao.LayerListRow]{err: errFoo},
+			ownerMock: &daoMock[bool]{resp: true},
+			listRequest: &dao.LayerListRequest{
+				ProjectID: projectID, Limit: core.LayerListLimitDefault, MaxBytes: core.ListPageBytesMax,
+			},
+			listMock: &daoMock[[]*dao.LayerListRow]{err: errFoo},
 
 			expectErr: errFoo,
 		},

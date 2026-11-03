@@ -8,6 +8,9 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/a-novel-kit/golib/transaction"
+	"github.com/a-novel-kit/golib/transaction/transactiontest"
+
 	"github.com/a-novel/service-narrative-engine/internal/core"
 	coremocks "github.com/a-novel/service-narrative-engine/internal/core/mocks"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
@@ -35,8 +38,10 @@ func TestCellRecapWrite(t *testing.T) {
 
 		request *core.CellRecapWriteRequest
 
-		ownerMock *daoMock[bool]
-		daoMock   *daoMock[struct{}]
+		lockMock   *daoMock[bool]
+		daoMock    *daoMock[struct{}]
+		bytesMock  *daoMock[*dao.ProjectBytes]
+		transactor transaction.Transactor
 
 		expectErr error
 	}{
@@ -45,8 +50,9 @@ func TestCellRecapWrite(t *testing.T) {
 
 			request: request(recapOutput),
 
-			ownerMock: &daoMock[bool]{resp: true},
+			lockMock:  &daoMock[bool]{resp: true},
 			daoMock:   &daoMock[struct{}]{},
+			bytesMock: withinBudget,
 		},
 		{
 			name: "Error/NoStamp",
@@ -70,7 +76,7 @@ func TestCellRecapWrite(t *testing.T) {
 
 			request: request(recapOutput),
 
-			ownerMock: &daoMock[bool]{resp: false},
+			lockMock: &daoMock[bool]{resp: false},
 
 			expectErr: core.ErrProjectNotFound,
 		},
@@ -79,8 +85,8 @@ func TestCellRecapWrite(t *testing.T) {
 
 			request: request(recapOutput),
 
-			ownerMock: &daoMock[bool]{resp: true},
-			daoMock:   &daoMock[struct{}]{err: dao.ErrCellRecapUpdateNotFound},
+			lockMock: &daoMock[bool]{resp: true},
+			daoMock:  &daoMock[struct{}]{err: dao.ErrCellRecapUpdateNotFound},
 
 			expectErr: core.ErrCellNotFound,
 		},
@@ -89,8 +95,8 @@ func TestCellRecapWrite(t *testing.T) {
 
 			request: request(recapOutput),
 
-			ownerMock: &daoMock[bool]{resp: true},
-			daoMock:   &daoMock[struct{}]{err: dao.ErrCellRecapUpdateConflict},
+			lockMock: &daoMock[bool]{resp: true},
+			daoMock:  &daoMock[struct{}]{err: dao.ErrCellRecapUpdateConflict},
 
 			expectErr: core.ErrRecapConflict,
 		},
@@ -99,7 +105,7 @@ func TestCellRecapWrite(t *testing.T) {
 
 			request: request(recapOutput),
 
-			ownerMock: &daoMock[bool]{err: errFoo},
+			lockMock: &daoMock[bool]{err: errFoo},
 
 			expectErr: errFoo,
 		},
@@ -108,8 +114,39 @@ func TestCellRecapWrite(t *testing.T) {
 
 			request: request(recapOutput),
 
-			ownerMock: &daoMock[bool]{resp: true},
-			daoMock:   &daoMock[struct{}]{err: errFoo},
+			lockMock: &daoMock[bool]{resp: true},
+			daoMock:  &daoMock[struct{}]{err: errFoo},
+
+			expectErr: errFoo,
+		},
+		{
+			name: "Error/ProjectBudget",
+
+			request: request(recapOutput),
+
+			lockMock:  &daoMock[bool]{resp: true},
+			daoMock:   &daoMock[struct{}]{},
+			bytesMock: overBudget,
+
+			expectErr: core.ErrProjectBudget,
+		},
+		{
+			name: "Error/ProjectBytes",
+
+			request: request(recapOutput),
+
+			lockMock:  &daoMock[bool]{resp: true},
+			daoMock:   &daoMock[struct{}]{},
+			bytesMock: &daoMock[*dao.ProjectBytes]{err: errFoo},
+
+			expectErr: errFoo,
+		},
+		{
+			name: "Error/Transaction",
+
+			request: request(recapOutput),
+
+			transactor: transactiontest.NewFailingTransactor(errFoo),
 
 			expectErr: errFoo,
 		},
@@ -119,13 +156,14 @@ func TestCellRecapWrite(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockOwner := coremocks.NewMockCellRecapWriteDaoOwner(t)
+			mockLock := coremocks.NewMockCellRecapWriteDaoLock(t)
 			mockDao := coremocks.NewMockCellRecapWriteDao(t)
+			mockBytes := coremocks.NewMockCellRecapWriteDaoBytes(t)
 
-			if testCase.ownerMock != nil {
-				mockOwner.EXPECT().
-					Exec(mock.Anything, &dao.ProjectOwnedRequest{ID: projectID, OwnerID: ownerID}).
-					Return(testCase.ownerMock.resp, testCase.ownerMock.err)
+			if testCase.lockMock != nil {
+				mockLock.EXPECT().
+					Exec(mock.Anything, &dao.ProjectLockRequest{ID: projectID, OwnerID: ownerID}).
+					Return(testCase.lockMock.resp, testCase.lockMock.err)
 			}
 
 			if testCase.daoMock != nil {
@@ -137,13 +175,25 @@ func TestCellRecapWrite(t *testing.T) {
 					Return(testCase.daoMock.err)
 			}
 
-			service := core.NewCellRecapWrite(mockOwner, mockDao)
+			if testCase.bytesMock != nil {
+				mockBytes.EXPECT().
+					Exec(mock.Anything, &dao.ProjectBytesRequest{ID: projectID}).
+					Return(testCase.bytesMock.resp, testCase.bytesMock.err)
+			}
+
+			transactor := testCase.transactor
+			if transactor == nil {
+				transactor = transactiontest.NewTransactor()
+			}
+
+			service := core.NewCellRecapWrite(mockLock, mockDao, mockBytes, transactor)
 
 			err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 
-			mockOwner.AssertExpectations(t)
+			mockLock.AssertExpectations(t)
 			mockDao.AssertExpectations(t)
+			mockBytes.AssertExpectations(t)
 		})
 	}
 }

@@ -31,21 +31,37 @@ func TestPgLayerList(t *testing.T) {
 		{
 			name: "Success",
 
-			request: &dao.LayerListRequest{ProjectID: projectID, Limit: 10},
+			request: &dao.LayerListRequest{ProjectID: projectID, Limit: 10, MaxBytes: pageBytes},
 
 			expect: []*dao.LayerListRow{row(layers[0]), row(layers[1])},
 		},
 		{
 			name: "Success/Page",
 
-			request: &dao.LayerListRequest{ProjectID: projectID, Limit: 1, Offset: 1},
+			request: &dao.LayerListRequest{ProjectID: projectID, Limit: 1, Offset: 1, MaxBytes: pageBytes},
 
 			expect: []*dao.LayerListRow{row(layers[1])},
 		},
 		{
 			name: "Success/PastEnd",
 
-			request: &dao.LayerListRequest{ProjectID: projectID, Limit: 10, Offset: 2},
+			request: &dao.LayerListRequest{ProjectID: projectID, Limit: 10, Offset: 2, MaxBytes: pageBytes},
+		},
+		{
+			name: "Success/BytesBound",
+
+			// The first layer holds 10 bytes, and the second would bring the page to 31.
+			request: &dao.LayerListRequest{ProjectID: projectID, Limit: 10, MaxBytes: 30},
+
+			expect: []*dao.LayerListRow{row(layers[0])},
+		},
+		{
+			name: "Success/BytesBoundFirstRow",
+
+			// A page keeps its first layer, whatever its bytes.
+			request: &dao.LayerListRequest{ProjectID: projectID, Limit: 10, MaxBytes: 1},
+
+			expect: []*dao.LayerListRow{row(layers[0])},
 		},
 	}
 

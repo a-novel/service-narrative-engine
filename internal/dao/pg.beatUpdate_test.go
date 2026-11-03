@@ -70,6 +70,7 @@ func TestPgBeatUpdate(t *testing.T) {
 
 				result, err := daoBeatUpdate.Exec(ctx, testCase.request)
 				require.ErrorIs(t, err, testCase.expectErr)
+				requireStoredBytes(ctx, t)
 				require.Equal(t, testCase.expect, result)
 			})
 		})

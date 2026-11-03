@@ -78,7 +78,7 @@ func (handler *RestBeatRecapWrite) ServeHTTP(w http.ResponseWriter, r *http.Requ
 		}),
 	})
 	if err != nil {
-		httpf.HandleError(ctx, handler.logger, w, span, recapErrors, err)
+		httpf.HandleError(ctx, handler.logger, w, span, recapErrors, tagLimit(err))
 
 		return
 	}

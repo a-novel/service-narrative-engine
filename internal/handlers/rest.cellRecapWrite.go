@@ -75,7 +75,7 @@ func (handler *RestCellRecapWrite) ServeHTTP(w http.ResponseWriter, r *http.Requ
 		CellUpdatedAt: request.CellUpdatedAt,
 	})
 	if err != nil {
-		httpf.HandleError(ctx, handler.logger, w, span, recapErrors, err)
+		httpf.HandleError(ctx, handler.logger, w, span, recapErrors, tagLimit(err))
 
 		return
 	}

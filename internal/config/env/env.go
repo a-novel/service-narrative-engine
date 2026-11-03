@@ -1,8 +1,10 @@
 package env
 
 import (
+	"math"
 	"os"
 	"runtime"
+	"runtime/debug"
 	"strconv"
 	"time"
 
@@ -69,9 +71,10 @@ var (
 	// RestRateLimitGenerationDefault caps a user's generation submits. Each one reads the whole project and
 	// plans its calls before genai's per-user quota applies, so a burst costs this service first.
 	RestRateLimitGenerationDefault = config.Must(httpf.ParseRate("30/1m"))
-	// RestMaxConcurrentExportsDefault sizes the export gate to the CPUs: an export encodes a whole
-	// manuscript, and more exports at once add memory but no throughput.
-	RestMaxConcurrentExportsDefault = runtime.GOMAXPROCS(0)
+	// MaxConcurrentProjectReadsDefault lets the reads of a whole project take half of GOMEMLIMIT, at
+	// [projectReadBytes] each: 4 reads at 1 GiB, and 1 at least. Without a memory limit, it sizes them to the
+	// CPUs, which they keep busy decoding.
+	MaxConcurrentProjectReadsDefault = maxConcurrentProjectReadsDefault()
 )
 
 var (
@@ -138,9 +141,9 @@ var (
 	RestRateLimitGeneration = config.LoadEnv(
 		getEnv("REST_RATE_LIMIT_GENERATION"), RestRateLimitGenerationDefault, httpf.ParseRate,
 	)
-	// RestMaxConcurrentExports caps the manuscript exports an instance builds at once.
-	RestMaxConcurrentExports = config.LoadEnv(
-		getEnv("REST_MAX_CONCURRENT_EXPORTS"), RestMaxConcurrentExportsDefault, strconv.Atoi,
+	// MaxConcurrentProjectReads caps the reads of a whole project an instance runs at once.
+	MaxConcurrentProjectReads = config.LoadEnv(
+		getEnv("MAX_CONCURRENT_PROJECT_READS"), MaxConcurrentProjectReadsDefault, strconv.Atoi,
 	)
 
 	// ServiceTokenIssuer is the issuer of the service tokens the REST server accepts, as a token's "iss"
@@ -167,6 +170,27 @@ var (
 	// until it is removed, the service refuses work. Nil when none is planned.
 	DowntimeStart = config.LoadEnv(getEnv("DOWNTIME_START"), nil, downtime.ParseStart)
 )
+
+const (
+	// projectBytesMax is the 16 MiB a project stores at most, as core.ProjectBytesMax caps it.
+	projectBytesMax = 16 << 20
+	// projectReadAmplification is how many times over a read of a whole project holds the bytes it reads, once
+	// decoded and rendered.
+	projectReadAmplification = 8
+	// projectReadBytes is the memory one read of a whole project takes at most.
+	projectReadBytes = projectBytesMax * projectReadAmplification
+)
+
+// maxConcurrentProjectReadsDefault computes [MaxConcurrentProjectReadsDefault]. debug.SetMemoryLimit with a
+// negative limit reads the limit without changing it, and reports math.MaxInt64 when GOMEMLIMIT is unset.
+func maxConcurrentProjectReadsDefault() int {
+	limit := debug.SetMemoryLimit(-1)
+	if limit == math.MaxInt64 {
+		return runtime.GOMAXPROCS(0)
+	}
+
+	return int(max(limit/2/projectReadBytes, 1))
+}
 
 // restDefaults keeps golib's REST defaults but for the versioned ping path and the request size.
 func restDefaults() httpf.ServerConfig {

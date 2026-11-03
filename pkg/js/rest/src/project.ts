@@ -102,7 +102,10 @@ export const ProjectDeleteRequestSchema = z.object({
 /** The value {@link ProjectDeleteRequestSchema} validates. */
 export type ProjectDeleteRequest = z.infer<typeof ProjectDeleteRequestSchema>;
 
-/** Creates a project with its required layers, and returns it with them. */
+/**
+ * Creates a project with its required layers, and returns it with them. Throws on HTTP 409, with `projects` in
+ * the error's `tags.limit`, when the caller already owns 100 projects.
+ */
 export async function projectCreate(
   api: NarrativeEngineApi,
   accessToken: string,
@@ -151,7 +154,8 @@ export async function projectList(
 }
 
 /**
- * Replaces the title, premise and language of a project. Throws on HTTP 404 for an unknown project.
+ * Replaces the title, premise and language of a project. Throws on HTTP 404 for an unknown project, and 409 with
+ * `projectBytes` in the error's `tags.limit` when the project would pass its 16 MiB budget of stored bytes.
  */
 export async function projectUpdate(
   api: NarrativeEngineApi,

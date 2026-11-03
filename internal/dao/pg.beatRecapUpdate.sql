@@ -1,6 +1,7 @@
 -- The recap applies while it read a version of the beat no older than the stored recap's, and no newer
 -- than the beat's own. The parts of one WITH share a snapshot, so the outer read sees the beat either way:
--- a beat the project lacks returns no row, and a refused write returns false.
+-- a beat the project lacks returns no row, and a refused write returns false. The project's stored bytes
+-- take the difference between the beat's new bytes and its old ones.
 WITH
   updated AS (
     UPDATE beats
@@ -17,7 +18,17 @@ WITH
         OR recap_beat_updated_at <= ?3
       )
     RETURNING
-      1
+      project_id,
+      new.bytes - old.bytes AS delta
+  ),
+  counted AS (
+    UPDATE projects
+    SET
+      stored_bytes = projects.stored_bytes + updated.delta
+    FROM
+      updated
+    WHERE
+      projects.id = updated.project_id
   )
 SELECT
   EXISTS (

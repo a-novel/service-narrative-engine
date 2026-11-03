@@ -19,6 +19,16 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
+// ProjectCreateDaoLock makes the user's project creations run one at a time, until the transaction ends.
+type ProjectCreateDaoLock interface {
+	Exec(ctx context.Context, request *dao.OwnerLockRequest) error
+}
+
+// ProjectCreateDaoCount counts the user's projects.
+type ProjectCreateDaoCount interface {
+	Exec(ctx context.Context, request *dao.ProjectCountRequest) (*dao.ProjectCount, error)
+}
+
 // ProjectCreateDaoProject inserts the project.
 type ProjectCreateDaoProject interface {
 	Exec(ctx context.Context, request *dao.ProjectInsertRequest) (*dao.Project, error)
@@ -41,19 +51,26 @@ type ProjectCreateRequest struct {
 	Language string `validate:"required,language"`
 }
 
-// ProjectCreate creates a project with its required layers, in one transaction.
+// ProjectCreate creates a project with its required layers, in one transaction. It creates nothing when the
+// user already owns [ProjectsPerOwnerMax] projects.
 type ProjectCreate struct {
+	daoLock    ProjectCreateDaoLock
+	daoCount   ProjectCreateDaoCount
 	daoProject ProjectCreateDaoProject
 	daoLayers  ProjectCreateDaoLayers
 	transactor transaction.Transactor
 }
 
 func NewProjectCreate(
+	daoLock ProjectCreateDaoLock,
+	daoCount ProjectCreateDaoCount,
 	daoProject ProjectCreateDaoProject,
 	daoLayers ProjectCreateDaoLayers,
 	transactor transaction.Transactor,
 ) *ProjectCreate {
-	return &ProjectCreate{daoProject: daoProject, daoLayers: daoLayers, transactor: transactor}
+	return &ProjectCreate{
+		daoLock: daoLock, daoCount: daoCount, daoProject: daoProject, daoLayers: daoLayers, transactor: transactor,
+	}
 }
 
 func (service *ProjectCreate) Exec(ctx context.Context, request *ProjectCreateRequest) (*ProjectComposer, error) {
@@ -86,6 +103,21 @@ func (service *ProjectCreate) Exec(ctx context.Context, request *ProjectCreateRe
 	var composer *ProjectComposer
 
 	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
+		// The lock holds the count until the insert commits, so two creations cannot both pass it.
+		err := service.daoLock.Exec(ctx, &dao.OwnerLockRequest{OwnerID: request.OwnerID})
+		if err != nil {
+			return fmt.Errorf("lock owner: %w", err)
+		}
+
+		owned, err := service.daoCount.Exec(ctx, &dao.ProjectCountRequest{OwnerID: request.OwnerID})
+		if err != nil {
+			return fmt.Errorf("count projects: %w", err)
+		}
+
+		if owned.Count >= ProjectsPerOwnerMax {
+			return fmt.Errorf("%w: %d projects", ErrProjectsFull, owned.Count)
+		}
+
 		project, err := service.daoProject.Exec(ctx, &dao.ProjectInsertRequest{
 			ID:       ids[0],
 			OwnerID:  request.OwnerID,

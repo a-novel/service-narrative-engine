@@ -31,7 +31,7 @@ func TestPgSceneList(t *testing.T) {
 		{
 			name: "Success",
 
-			request: &dao.SceneListRequest{ProjectID: projectID, Limit: 10},
+			request: &dao.SceneListRequest{ProjectID: projectID, Limit: 10, MaxBytes: pageBytes},
 
 			// The second beat's scene comes after the first beat's, though its position in its beat is 0.
 			expect: []*dao.SceneListRow{row(scenes[0]), row(scenes[1]), row(scenes[2]), row(scenes[3])},
@@ -39,14 +39,30 @@ func TestPgSceneList(t *testing.T) {
 		{
 			name: "Success/Page",
 
-			request: &dao.SceneListRequest{ProjectID: projectID, Limit: 1, Offset: 1},
+			request: &dao.SceneListRequest{ProjectID: projectID, Limit: 1, Offset: 1, MaxBytes: pageBytes},
 
 			expect: []*dao.SceneListRow{row(scenes[1])},
 		},
 		{
 			name: "Success/PastEnd",
 
-			request: &dao.SceneListRequest{ProjectID: projectID, Limit: 10, Offset: 4},
+			request: &dao.SceneListRequest{ProjectID: projectID, Limit: 10, Offset: 4, MaxBytes: pageBytes},
+		},
+		{
+			name: "Success/BytesBound",
+
+			// The first two scenes hold 17 bytes, and the third would bring the page to 25.
+			request: &dao.SceneListRequest{ProjectID: projectID, Limit: 10, MaxBytes: 17},
+
+			expect: []*dao.SceneListRow{row(scenes[0]), row(scenes[1])},
+		},
+		{
+			name: "Success/BytesBoundFirstRow",
+
+			// A page keeps its first scene, whatever its bytes.
+			request: &dao.SceneListRequest{ProjectID: projectID, Limit: 10, Offset: 2, MaxBytes: 1},
+
+			expect: []*dao.SceneListRow{row(scenes[2])},
 		},
 	}
 

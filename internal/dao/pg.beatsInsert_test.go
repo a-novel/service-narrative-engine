@@ -127,6 +127,7 @@ func TestPgBeatsInsert(t *testing.T) {
 
 				result, err := daoBeatsInsert.Exec(ctx, testCase.request)
 				require.ErrorIs(t, err, testCase.expectErr)
+				requireStoredBytes(ctx, t)
 
 				slices.SortFunc(result, func(a, b *dao.Beat) int { return cmp.Compare(a.Position, b.Position) })
 				require.Equal(t, testCase.expect, result)

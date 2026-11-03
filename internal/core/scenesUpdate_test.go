@@ -10,6 +10,9 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/a-novel-kit/golib/transaction"
+	"github.com/a-novel-kit/golib/transaction/transactiontest"
+
 	"github.com/a-novel/service-narrative-engine/internal/core"
 	coremocks "github.com/a-novel/service-narrative-engine/internal/core/mocks"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
@@ -38,8 +41,10 @@ func TestScenesUpdate(t *testing.T) {
 
 		request *core.ScenesUpdateRequest
 
-		ownerMock  *daoMock[bool]
+		lockMock   *daoMock[bool]
 		updateMock *daoMock[[]*dao.Scene]
+		bytesMock  *daoMock[*dao.ProjectBytes]
+		transactor transaction.Transactor
 		// updateScenes are the scenes the update receives.
 		updateScenes []dao.ScenesUpdateItem
 
@@ -51,8 +56,9 @@ func TestScenesUpdate(t *testing.T) {
 
 			request: request(scene(sceneID2)),
 
-			ownerMock:    &daoMock[bool]{resp: true},
+			lockMock:     &daoMock[bool]{resp: true},
 			updateMock:   &daoMock[[]*dao.Scene]{resp: []*dao.Scene{daoScene(sceneID2, 1)}},
+			bytesMock:    withinBudget,
 			updateScenes: []dao.ScenesUpdateItem{updateScene(sceneID2)},
 
 			expect: []*core.Scene{coreScene(sceneID2, 1)},
@@ -64,9 +70,10 @@ func TestScenesUpdate(t *testing.T) {
 				ID: sceneID1, Title: "Le thème", Description: "Paul ment.", Prompt: "Lent.",
 			}),
 
-			ownerMock: &daoMock[bool]{resp: true},
+			lockMock: &daoMock[bool]{resp: true},
 			// The update returns its rows in no particular order.
 			updateMock: &daoMock[[]*dao.Scene]{resp: []*dao.Scene{daoScene(sceneID1, 0), daoScene(sceneID3, 2)}},
+			bytesMock:  withinBudget,
 			updateScenes: []dao.ScenesUpdateItem{
 				updateScene(sceneID3),
 				{ID: sceneID1, Title: "Le thème", Description: "Paul ment.", Prompt: "Lent."},
@@ -107,16 +114,16 @@ func TestScenesUpdate(t *testing.T) {
 
 			request: request(scene(sceneID2)),
 
-			ownerMock: &daoMock[bool]{resp: false},
+			lockMock: &daoMock[bool]{resp: false},
 
 			expectErr: core.ErrProjectNotFound,
 		},
 		{
-			name: "Error/CheckOwner",
+			name: "Error/Lock",
 
 			request: request(scene(sceneID2)),
 
-			ownerMock: &daoMock[bool]{err: errFoo},
+			lockMock: &daoMock[bool]{err: errFoo},
 
 			expectErr: errFoo,
 		},
@@ -125,7 +132,7 @@ func TestScenesUpdate(t *testing.T) {
 
 			request: request(scene(sceneID2), scene(sceneID3)),
 
-			ownerMock: &daoMock[bool]{resp: true},
+			lockMock: &daoMock[bool]{resp: true},
 			// One scene is missing, so the update writes none.
 			updateMock:   &daoMock[[]*dao.Scene]{resp: []*dao.Scene{daoScene(sceneID2, 1)}},
 			updateScenes: []dao.ScenesUpdateItem{updateScene(sceneID2), updateScene(sceneID3)},
@@ -137,9 +144,42 @@ func TestScenesUpdate(t *testing.T) {
 
 			request: request(scene(sceneID2)),
 
-			ownerMock:    &daoMock[bool]{resp: true},
+			lockMock:     &daoMock[bool]{resp: true},
 			updateMock:   &daoMock[[]*dao.Scene]{err: errFoo},
 			updateScenes: []dao.ScenesUpdateItem{updateScene(sceneID2)},
+
+			expectErr: errFoo,
+		},
+		{
+			name: "Error/ProjectBudget",
+
+			request: request(scene(sceneID2)),
+
+			lockMock:     &daoMock[bool]{resp: true},
+			updateMock:   &daoMock[[]*dao.Scene]{resp: []*dao.Scene{daoScene(sceneID2, 1)}},
+			bytesMock:    overBudget,
+			updateScenes: []dao.ScenesUpdateItem{updateScene(sceneID2)},
+
+			expectErr: core.ErrProjectBudget,
+		},
+		{
+			name: "Error/ProjectBytes",
+
+			request: request(scene(sceneID2)),
+
+			lockMock:     &daoMock[bool]{resp: true},
+			updateMock:   &daoMock[[]*dao.Scene]{resp: []*dao.Scene{daoScene(sceneID2, 1)}},
+			bytesMock:    &daoMock[*dao.ProjectBytes]{err: errFoo},
+			updateScenes: []dao.ScenesUpdateItem{updateScene(sceneID2)},
+
+			expectErr: errFoo,
+		},
+		{
+			name: "Error/Transaction",
+
+			request: request(scene(sceneID2)),
+
+			transactor: transactiontest.NewFailingTransactor(errFoo),
 
 			expectErr: errFoo,
 		},
@@ -149,13 +189,14 @@ func TestScenesUpdate(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockOwner := coremocks.NewMockScenesUpdateDaoOwner(t)
+			mockLock := coremocks.NewMockScenesUpdateDaoLock(t)
 			mockUpdate := coremocks.NewMockScenesUpdateDao(t)
+			mockBytes := coremocks.NewMockScenesUpdateDaoBytes(t)
 
-			if testCase.ownerMock != nil {
-				mockOwner.EXPECT().
-					Exec(mock.Anything, &dao.ProjectOwnedRequest{ID: projectID, OwnerID: ownerID}).
-					Return(testCase.ownerMock.resp, testCase.ownerMock.err)
+			if testCase.lockMock != nil {
+				mockLock.EXPECT().
+					Exec(mock.Anything, &dao.ProjectLockRequest{ID: projectID, OwnerID: ownerID}).
+					Return(testCase.lockMock.resp, testCase.lockMock.err)
 			}
 
 			if testCase.updateMock != nil {
@@ -166,14 +207,26 @@ func TestScenesUpdate(t *testing.T) {
 					Return(testCase.updateMock.resp, testCase.updateMock.err)
 			}
 
-			service := core.NewScenesUpdate(mockOwner, mockUpdate)
+			if testCase.bytesMock != nil {
+				mockBytes.EXPECT().
+					Exec(mock.Anything, &dao.ProjectBytesRequest{ID: projectID}).
+					Return(testCase.bytesMock.resp, testCase.bytesMock.err)
+			}
+
+			transactor := testCase.transactor
+			if transactor == nil {
+				transactor = transactiontest.NewTransactor()
+			}
+
+			service := core.NewScenesUpdate(mockLock, mockUpdate, mockBytes, transactor)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
 
-			mockOwner.AssertExpectations(t)
+			mockLock.AssertExpectations(t)
 			mockUpdate.AssertExpectations(t)
+			mockBytes.AssertExpectations(t)
 		})
 	}
 }

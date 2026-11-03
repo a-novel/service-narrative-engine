@@ -28,6 +28,11 @@ type LayersCreateDaoInsert interface {
 	Exec(ctx context.Context, request *dao.LayersInsertRequest) ([]*dao.Layer, error)
 }
 
+// LayersCreateDaoBytes reads how many bytes the project stores, the new layers included.
+type LayersCreateDaoBytes interface {
+	Exec(ctx context.Context, request *dao.ProjectBytesRequest) (*dao.ProjectBytes, error)
+}
+
 // LayersCreateItem is one layer of a [LayersCreateRequest].
 type LayersCreateItem struct {
 	// Kind names the content schema the layer's cells follow, such as manuscript or notes.
@@ -51,20 +56,22 @@ type LayersCreateRequest struct {
 	Layers []LayersCreateItem `validate:"required,min=1,max=100,dive"`
 }
 
-// LayersCreate adds layers to a project at the position the caller names. The layers from that
-// position on move down to make room.
+// LayersCreate adds layers to a project at the position the caller names. The layers from that position on
+// move down to make room. It writes nothing when the project would store more than [ProjectBytesMax] bytes.
 type LayersCreate struct {
 	daoLock    LayersCreateDaoLock
 	daoInsert  LayersCreateDaoInsert
+	daoBytes   LayersCreateDaoBytes
 	transactor transaction.Transactor
 }
 
 func NewLayersCreate(
 	daoLock LayersCreateDaoLock,
 	daoInsert LayersCreateDaoInsert,
+	daoBytes LayersCreateDaoBytes,
 	transactor transaction.Transactor,
 ) *LayersCreate {
-	return &LayersCreate{daoLock: daoLock, daoInsert: daoInsert, transactor: transactor}
+	return &LayersCreate{daoLock: daoLock, daoInsert: daoInsert, daoBytes: daoBytes, transactor: transactor}
 }
 
 func (service *LayersCreate) Exec(ctx context.Context, request *LayersCreateRequest) ([]*Layer, error) {
@@ -122,6 +129,11 @@ func (service *LayersCreate) Exec(ctx context.Context, request *LayersCreateRequ
 
 		if err != nil {
 			return fmt.Errorf("insert layers: %w", err)
+		}
+
+		err = keepProjectBudget(ctx, service.daoBytes, projectBudgetOpts{projectID: request.ProjectID})
+		if err != nil {
+			return fmt.Errorf("keep project budget: %w", err)
 		}
 
 		slices.SortFunc(inserted, func(a, b *dao.Layer) int { return cmp.Compare(a.Position, b.Position) })

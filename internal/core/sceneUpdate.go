@@ -10,18 +10,24 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/a-novel-kit/golib/otel"
+	"github.com/a-novel-kit/golib/transaction"
 
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// SceneUpdateDaoOwner checks that the user owns the project.
-type SceneUpdateDaoOwner interface {
-	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
+// SceneUpdateDaoLock locks the project its owner names, so the writes to its bytes run one at a time.
+type SceneUpdateDaoLock interface {
+	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
 }
 
 // SceneUpdateDao writes the scene's new fields.
 type SceneUpdateDao interface {
 	Exec(ctx context.Context, request *dao.SceneUpdateRequest) (*dao.Scene, error)
+}
+
+// SceneUpdateDaoBytes reads how many bytes the project stores, the write included.
+type SceneUpdateDaoBytes interface {
+	Exec(ctx context.Context, request *dao.ProjectBytesRequest) (*dao.ProjectBytes, error)
 }
 
 // SceneUpdateRequest carries a scene's new fields.
@@ -38,14 +44,22 @@ type SceneUpdateRequest struct {
 	Prompt string `validate:"max=20000"`
 }
 
-// SceneUpdate replaces a scene's title, description and prompt.
+// SceneUpdate replaces a scene's title, description and prompt. It writes nothing when the project would
+// store more than [ProjectBytesMax] bytes.
 type SceneUpdate struct {
-	daoOwner SceneUpdateDaoOwner
-	dao      SceneUpdateDao
+	daoLock    SceneUpdateDaoLock
+	dao        SceneUpdateDao
+	daoBytes   SceneUpdateDaoBytes
+	transactor transaction.Transactor
 }
 
-func NewSceneUpdate(daoOwner SceneUpdateDaoOwner, dao SceneUpdateDao) *SceneUpdate {
-	return &SceneUpdate{daoOwner: daoOwner, dao: dao}
+func NewSceneUpdate(
+	daoLock SceneUpdateDaoLock,
+	dao SceneUpdateDao,
+	daoBytes SceneUpdateDaoBytes,
+	transactor transaction.Transactor,
+) *SceneUpdate {
+	return &SceneUpdate{daoLock: daoLock, dao: dao, daoBytes: daoBytes, transactor: transactor}
 }
 
 func (service *SceneUpdate) Exec(ctx context.Context, request *SceneUpdateRequest) (*Scene, error) {
@@ -63,29 +77,45 @@ func (service *SceneUpdate) Exec(ctx context.Context, request *SceneUpdateReques
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	err = checkProjectOwnership(ctx, service.daoOwner, projectOwnershipOpts{
-		projectID: request.ProjectID,
-		ownerID:   request.OwnerID,
+	var scene *Scene
+
+	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
+		err := lockOwnedProject(ctx, service.daoLock, projectOwnershipOpts{
+			projectID: request.ProjectID,
+			ownerID:   request.OwnerID,
+		})
+		if err != nil {
+			return fmt.Errorf("lock project: %w", err)
+		}
+
+		entity, err := service.dao.Exec(ctx, &dao.SceneUpdateRequest{
+			ProjectID:   request.ProjectID,
+			ID:          request.ID,
+			Title:       request.Title,
+			Description: request.Description,
+			Prompt:      request.Prompt,
+			Now:         time.Now(),
+		})
+		if errors.Is(err, dao.ErrSceneUpdateNotFound) {
+			err = errors.Join(err, ErrSceneNotFound)
+		}
+
+		if err != nil {
+			return fmt.Errorf("update scene: %w", err)
+		}
+
+		err = keepProjectBudget(ctx, service.daoBytes, projectBudgetOpts{projectID: request.ProjectID})
+		if err != nil {
+			return fmt.Errorf("keep project budget: %w", err)
+		}
+
+		scene = newScene(entity)
+
+		return nil
 	})
 	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("check owner: %w", err))
+		return nil, otel.ReportError(span, fmt.Errorf("run transaction: %w", err))
 	}
 
-	entity, err := service.dao.Exec(ctx, &dao.SceneUpdateRequest{
-		ProjectID:   request.ProjectID,
-		ID:          request.ID,
-		Title:       request.Title,
-		Description: request.Description,
-		Prompt:      request.Prompt,
-		Now:         time.Now(),
-	})
-	if errors.Is(err, dao.ErrSceneUpdateNotFound) {
-		err = errors.Join(err, ErrSceneNotFound)
-	}
-
-	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("update scene: %w", err))
-	}
-
-	return newScene(entity), nil
+	return scene, nil
 }

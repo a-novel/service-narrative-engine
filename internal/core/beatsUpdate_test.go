@@ -10,6 +10,9 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/a-novel-kit/golib/transaction"
+	"github.com/a-novel-kit/golib/transaction/transactiontest"
+
 	"github.com/a-novel/service-narrative-engine/internal/core"
 	coremocks "github.com/a-novel/service-narrative-engine/internal/core/mocks"
 	"github.com/a-novel/service-narrative-engine/internal/dao"
@@ -38,8 +41,10 @@ func TestBeatsUpdate(t *testing.T) {
 
 		request *core.BeatsUpdateRequest
 
-		ownerMock  *daoMock[bool]
+		lockMock   *daoMock[bool]
 		updateMock *daoMock[[]*dao.Beat]
+		bytesMock  *daoMock[*dao.ProjectBytes]
+		transactor transaction.Transactor
 		// updateBeats are the beats the update receives.
 		updateBeats []dao.BeatsUpdateItem
 
@@ -51,8 +56,9 @@ func TestBeatsUpdate(t *testing.T) {
 
 			request: request(beat(beatID2)),
 
-			ownerMock:   &daoMock[bool]{resp: true},
+			lockMock:    &daoMock[bool]{resp: true},
 			updateMock:  &daoMock[[]*dao.Beat]{resp: []*dao.Beat{daoBeat(beatID2, 1)}},
+			bytesMock:   withinBudget,
 			updateBeats: []dao.BeatsUpdateItem{updateBeat(beatID2)},
 
 			expect: []*core.Beat{coreBeat(beatID2, 1)},
@@ -64,9 +70,10 @@ func TestBeatsUpdate(t *testing.T) {
 				ID: beatID1, Title: "Le thème", Color: "#E0457B", Description: "Paul ment.", Prompt: "Lent.",
 			}),
 
-			ownerMock: &daoMock[bool]{resp: true},
+			lockMock: &daoMock[bool]{resp: true},
 			// The update returns its rows in no particular order.
 			updateMock: &daoMock[[]*dao.Beat]{resp: []*dao.Beat{daoBeat(beatID1, 0), daoBeat(beatID3, 2)}},
+			bytesMock:  withinBudget,
 			updateBeats: []dao.BeatsUpdateItem{
 				updateBeat(beatID3),
 				{ID: beatID1, Title: "Le thème", Color: "#e0457b", Description: "Paul ment.", Prompt: "Lent."},
@@ -107,16 +114,16 @@ func TestBeatsUpdate(t *testing.T) {
 
 			request: request(beat(beatID2)),
 
-			ownerMock: &daoMock[bool]{resp: false},
+			lockMock: &daoMock[bool]{resp: false},
 
 			expectErr: core.ErrProjectNotFound,
 		},
 		{
-			name: "Error/CheckOwner",
+			name: "Error/Lock",
 
 			request: request(beat(beatID2)),
 
-			ownerMock: &daoMock[bool]{err: errFoo},
+			lockMock: &daoMock[bool]{err: errFoo},
 
 			expectErr: errFoo,
 		},
@@ -125,7 +132,7 @@ func TestBeatsUpdate(t *testing.T) {
 
 			request: request(beat(beatID2), beat(beatID3)),
 
-			ownerMock: &daoMock[bool]{resp: true},
+			lockMock: &daoMock[bool]{resp: true},
 			// One beat is missing, so the update writes none.
 			updateMock:  &daoMock[[]*dao.Beat]{resp: []*dao.Beat{daoBeat(beatID2, 1)}},
 			updateBeats: []dao.BeatsUpdateItem{updateBeat(beatID2), updateBeat(beatID3)},
@@ -137,9 +144,42 @@ func TestBeatsUpdate(t *testing.T) {
 
 			request: request(beat(beatID2)),
 
-			ownerMock:   &daoMock[bool]{resp: true},
+			lockMock:    &daoMock[bool]{resp: true},
 			updateMock:  &daoMock[[]*dao.Beat]{err: errFoo},
 			updateBeats: []dao.BeatsUpdateItem{updateBeat(beatID2)},
+
+			expectErr: errFoo,
+		},
+		{
+			name: "Error/ProjectBudget",
+
+			request: request(beat(beatID2)),
+
+			lockMock:    &daoMock[bool]{resp: true},
+			updateMock:  &daoMock[[]*dao.Beat]{resp: []*dao.Beat{daoBeat(beatID2, 1)}},
+			bytesMock:   overBudget,
+			updateBeats: []dao.BeatsUpdateItem{updateBeat(beatID2)},
+
+			expectErr: core.ErrProjectBudget,
+		},
+		{
+			name: "Error/ProjectBytes",
+
+			request: request(beat(beatID2)),
+
+			lockMock:    &daoMock[bool]{resp: true},
+			updateMock:  &daoMock[[]*dao.Beat]{resp: []*dao.Beat{daoBeat(beatID2, 1)}},
+			bytesMock:   &daoMock[*dao.ProjectBytes]{err: errFoo},
+			updateBeats: []dao.BeatsUpdateItem{updateBeat(beatID2)},
+
+			expectErr: errFoo,
+		},
+		{
+			name: "Error/Transaction",
+
+			request: request(beat(beatID2)),
+
+			transactor: transactiontest.NewFailingTransactor(errFoo),
 
 			expectErr: errFoo,
 		},
@@ -149,13 +189,14 @@ func TestBeatsUpdate(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockOwner := coremocks.NewMockBeatsUpdateDaoOwner(t)
+			mockLock := coremocks.NewMockBeatsUpdateDaoLock(t)
 			mockUpdate := coremocks.NewMockBeatsUpdateDao(t)
+			mockBytes := coremocks.NewMockBeatsUpdateDaoBytes(t)
 
-			if testCase.ownerMock != nil {
-				mockOwner.EXPECT().
-					Exec(mock.Anything, &dao.ProjectOwnedRequest{ID: projectID, OwnerID: ownerID}).
-					Return(testCase.ownerMock.resp, testCase.ownerMock.err)
+			if testCase.lockMock != nil {
+				mockLock.EXPECT().
+					Exec(mock.Anything, &dao.ProjectLockRequest{ID: projectID, OwnerID: ownerID}).
+					Return(testCase.lockMock.resp, testCase.lockMock.err)
 			}
 
 			if testCase.updateMock != nil {
@@ -166,14 +207,26 @@ func TestBeatsUpdate(t *testing.T) {
 					Return(testCase.updateMock.resp, testCase.updateMock.err)
 			}
 
-			service := core.NewBeatsUpdate(mockOwner, mockUpdate)
+			if testCase.bytesMock != nil {
+				mockBytes.EXPECT().
+					Exec(mock.Anything, &dao.ProjectBytesRequest{ID: projectID}).
+					Return(testCase.bytesMock.resp, testCase.bytesMock.err)
+			}
+
+			transactor := testCase.transactor
+			if transactor == nil {
+				transactor = transactiontest.NewTransactor()
+			}
+
+			service := core.NewBeatsUpdate(mockLock, mockUpdate, mockBytes, transactor)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
 
-			mockOwner.AssertExpectations(t)
+			mockLock.AssertExpectations(t)
 			mockUpdate.AssertExpectations(t)
+			mockBytes.AssertExpectations(t)
 		})
 	}
 }

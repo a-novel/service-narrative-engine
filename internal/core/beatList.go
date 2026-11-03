@@ -39,7 +39,8 @@ type BeatListRequest struct {
 }
 
 // BeatList reads a project's beats page by page, in narrative order. Each page carries the total,
-// so a client knows when it holds every beat.
+// so a client knows when it holds every beat. A page stops early once it holds [ListPageBytesMax] bytes,
+// and the next starts at the offset plus the beats received.
 type BeatList struct {
 	daoOwner BeatListDaoOwner
 	dao      BeatListDao
@@ -81,6 +82,7 @@ func (service *BeatList) Exec(ctx context.Context, request *BeatListRequest) (*B
 		ProjectID: request.ProjectID,
 		Limit:     request.Limit,
 		Offset:    request.Offset,
+		MaxBytes:  ListPageBytesMax,
 	})
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("list beats: %w", err))

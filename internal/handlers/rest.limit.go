@@ -17,8 +17,6 @@ type RestLimits struct {
 	Stream func(http.Handler) http.Handler
 	// Generation caps each caller's generation submits, which call a paid provider.
 	Generation func(http.Handler) http.Handler
-	// Export caps the manuscript exports an instance builds at once.
-	Export func(http.Handler) http.Handler
 }
 
 // NewRestLimits builds the configured policies. The REST config may turn the rates off for test stacks;
@@ -28,7 +26,6 @@ func NewRestLimits(rest httpf.ServerConfig, policies config.Limits) RestLimits {
 
 	streams := httpf.LimitConcurrencyBy(policies.MaxStreamsPerCaller, serviceauthentication.CallerKey)
 	generation := limits.By(policies.GenerationRate, serviceauthentication.CallerKey)
-	exports := httpf.LimitConcurrency(policies.ExportMaxConcurrent)
 
-	return RestLimits{Stream: streams, Generation: generation, Export: exports}
+	return RestLimits{Stream: streams, Generation: generation}
 }

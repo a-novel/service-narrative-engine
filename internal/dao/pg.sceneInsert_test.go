@@ -111,6 +111,7 @@ func TestPgSceneInsert(t *testing.T) {
 
 				result, err := daoSceneInsert.Exec(ctx, testCase.request)
 				require.ErrorIs(t, err, testCase.expectErr)
+				requireStoredBytes(ctx, t)
 				require.Equal(t, testCase.expect, result)
 
 				if testCase.expectScenes != nil {

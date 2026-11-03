@@ -23,6 +23,11 @@ type ProjectSnapshotReadDaoOwner interface {
 	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
 }
 
+// ProjectSnapshotReadDaoBytes reads how many bytes the project stores.
+type ProjectSnapshotReadDaoBytes interface {
+	Exec(ctx context.Context, request *dao.ProjectBytesRequest) (*dao.ProjectBytes, error)
+}
+
 // ProjectSnapshotReadDaoProject reads the project.
 type ProjectSnapshotReadDaoProject interface {
 	Exec(ctx context.Context, request *dao.ProjectSelectRequest) (*dao.Project, error)
@@ -55,9 +60,11 @@ type ProjectSnapshotReadRequest struct {
 }
 
 // ProjectSnapshotRead reads a project of the caller whole, as a generation plans from it: its beats,
-// scenes, layers and cells. The reads run outside a transaction, so a write between two pages may show.
+// scenes, layers and cells. The reads run outside a transaction, so a write between two pages may show. A
+// project past [ProjectBytesMax] stored bytes answers [ErrContextTooLarge] before any page is read.
 type ProjectSnapshotRead struct {
 	daoOwner   ProjectSnapshotReadDaoOwner
+	daoBytes   ProjectSnapshotReadDaoBytes
 	daoProject ProjectSnapshotReadDaoProject
 	daoBeats   ProjectSnapshotReadDaoBeats
 	daoScenes  ProjectSnapshotReadDaoScenes
@@ -67,6 +74,7 @@ type ProjectSnapshotRead struct {
 
 func NewProjectSnapshotRead(
 	daoOwner ProjectSnapshotReadDaoOwner,
+	daoBytes ProjectSnapshotReadDaoBytes,
 	daoProject ProjectSnapshotReadDaoProject,
 	daoBeats ProjectSnapshotReadDaoBeats,
 	daoScenes ProjectSnapshotReadDaoScenes,
@@ -74,7 +82,7 @@ func NewProjectSnapshotRead(
 	daoCells ProjectSnapshotReadDaoCells,
 ) *ProjectSnapshotRead {
 	return &ProjectSnapshotRead{
-		daoOwner: daoOwner, daoProject: daoProject, daoBeats: daoBeats, daoScenes: daoScenes,
+		daoOwner: daoOwner, daoBytes: daoBytes, daoProject: daoProject, daoBeats: daoBeats, daoScenes: daoScenes,
 		daoLayers: daoLayers, daoCells: daoCells,
 	}
 }
@@ -98,6 +106,16 @@ func (service *ProjectSnapshotRead) Exec(
 		return nil, otel.ReportError(span, fmt.Errorf("check owner: %w", err))
 	}
 
+	// A project past its budget would take a context past every call's limit.
+	err = keepProjectBudget(ctx, service.daoBytes, projectBudgetOpts{projectID: request.ProjectID})
+	if errors.Is(err, ErrProjectBudget) {
+		err = errors.Join(err, ErrContextTooLarge)
+	}
+
+	if err != nil {
+		return nil, otel.ReportError(span, fmt.Errorf("keep project budget: %w", err))
+	}
+
 	project, err := service.daoProject.Exec(ctx, &dao.ProjectSelectRequest{ID: request.ProjectID})
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("select project: %w", err))
@@ -107,7 +125,7 @@ func (service *ProjectSnapshotRead) Exec(
 
 	snapshot.Beats, err = readPages(func(offset int) ([]*dao.BeatListRow, error) {
 		return service.daoBeats.Exec(ctx, &dao.BeatListRequest{
-			ProjectID: request.ProjectID, Limit: snapshotPageSize, Offset: offset,
+			ProjectID: request.ProjectID, Limit: snapshotPageSize, Offset: offset, MaxBytes: ListPageBytesMax,
 		})
 	}, func(row *dao.BeatListRow) (*Beat, int) { return newBeat(&row.Beat), row.Total })
 	if err != nil {
@@ -116,7 +134,7 @@ func (service *ProjectSnapshotRead) Exec(
 
 	snapshot.Scenes, err = readPages(func(offset int) ([]*dao.SceneListRow, error) {
 		return service.daoScenes.Exec(ctx, &dao.SceneListRequest{
-			ProjectID: request.ProjectID, Limit: snapshotPageSize, Offset: offset,
+			ProjectID: request.ProjectID, Limit: snapshotPageSize, Offset: offset, MaxBytes: ListPageBytesMax,
 		})
 	}, func(row *dao.SceneListRow) (*Scene, int) { return newScene(&row.Scene), row.Total })
 	if err != nil {
@@ -125,7 +143,7 @@ func (service *ProjectSnapshotRead) Exec(
 
 	snapshot.Layers, err = readPages(func(offset int) ([]*dao.LayerListRow, error) {
 		return service.daoLayers.Exec(ctx, &dao.LayerListRequest{
-			ProjectID: request.ProjectID, Limit: snapshotPageSize, Offset: offset,
+			ProjectID: request.ProjectID, Limit: snapshotPageSize, Offset: offset, MaxBytes: ListPageBytesMax,
 		})
 	}, func(row *dao.LayerListRow) (*Layer, int) { return newLayer(&row.Layer), row.Total })
 	if err != nil {
@@ -134,7 +152,7 @@ func (service *ProjectSnapshotRead) Exec(
 
 	snapshot.Cells, err = readPages(func(offset int) ([]*dao.CellListRow, error) {
 		return service.daoCells.Exec(ctx, &dao.CellListRequest{
-			ProjectID: request.ProjectID, Limit: snapshotPageSize, Offset: offset,
+			ProjectID: request.ProjectID, Limit: snapshotPageSize, Offset: offset, MaxBytes: ListPageBytesMax,
 		})
 	}, func(row *dao.CellListRow) (*Cell, int) { return newCell(&row.Cell), row.Total })
 	if err != nil {
@@ -181,8 +199,9 @@ func readPages[Row, Item any](
 			items = append(items, item)
 		}
 
-		// A short page ends the list, and so does a page that reaches the total.
-		if len(rows) < snapshotPageSize || len(items) >= total {
+		// A page past the end comes back empty, and a page that reaches the total ends the list. A page may
+		// stop short of the limit, at its byte bound.
+		if len(rows) == 0 || len(items) >= total {
 			return items, nil
 		}
 	}

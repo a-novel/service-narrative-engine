@@ -40,7 +40,8 @@ type CellListRequest struct {
 }
 
 // CellList reads a project's cells page by page, by the narrative order of their scene, then the position
-// of their layer. Each page carries the total, so a client knows when it holds every cell.
+// of their layer. Each page carries the total, so a client knows when it holds every cell. A page stops
+// early once it holds [ListPageBytesMax] bytes, and the next starts at the offset plus the cells received.
 type CellList struct {
 	daoOwner CellListDaoOwner
 	dao      CellListDao
@@ -82,6 +83,7 @@ func (service *CellList) Exec(ctx context.Context, request *CellListRequest) (*C
 		ProjectID: request.ProjectID,
 		Limit:     request.Limit,
 		Offset:    request.Offset,
+		MaxBytes:  ListPageBytesMax,
 	})
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("list cells: %w", err))

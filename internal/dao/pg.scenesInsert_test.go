@@ -123,6 +123,7 @@ func TestPgScenesInsert(t *testing.T) {
 					ProjectID: projectID, Scenes: testCase.items, Now: now,
 				})
 				require.ErrorIs(t, err, testCase.expectErr)
+				requireStoredBytes(ctx, t)
 				require.ElementsMatch(t, testCase.expect, result)
 
 				// A failed batch inserts nothing and moves no scene.

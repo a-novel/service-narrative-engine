@@ -24,6 +24,9 @@ type BeatListRequest struct {
 	Limit int
 	// Offset is how many beats in narrative order come before the page.
 	Offset int
+	// MaxBytes bounds the bytes of the page: it stops before a row that would take it past the bound, and
+	// holds one row at least.
+	MaxBytes int64
 }
 
 // BeatListRow is one beat of a page.
@@ -53,7 +56,9 @@ func (dao *PgBeatList) Exec(ctx context.Context, request *BeatListRequest) ([]*B
 
 	var entities []*BeatListRow
 
-	err = db.NewRaw(beatListQuery, request.ProjectID, request.Limit, request.Offset).Scan(ctx, &entities)
+	err = db.NewRaw(
+		beatListQuery, request.ProjectID, request.Limit, request.Offset, request.MaxBytes,
+	).Scan(ctx, &entities)
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("execute query: %w", err))
 	}

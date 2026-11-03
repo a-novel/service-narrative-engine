@@ -1,6 +1,7 @@
 package core_test
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"testing"
@@ -31,8 +32,11 @@ func TestManuscriptExport(t *testing.T) {
 
 		ownerMock   *daoMock[bool]
 		kindMock    *daoMock[[]*dao.LayerKind]
+		bytesMock   *daoMock[*dao.ProjectBytes]
 		projectMock *daoMock[*dao.Project]
 		daoMock     *daoMock[[]*dao.ManuscriptRow]
+		// gateFull holds the only slot of the gate, and ends the context of the export.
+		gateFull bool
 
 		expect    *core.Manuscript
 		expectErr error
@@ -44,6 +48,7 @@ func TestManuscriptExport(t *testing.T) {
 
 			ownerMock:   &daoMock[bool]{resp: true},
 			kindMock:    &daoMock[[]*dao.LayerKind]{resp: []*dao.LayerKind{{ID: layerID1, Kind: "manuscript", Count: 2}}},
+			bytesMock:   withinBudget,
 			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
 			// The first beat holds two scenes, the second one with an empty cell, and the last none.
 			daoMock: &daoMock[[]*dao.ManuscriptRow]{resp: []*dao.ManuscriptRow{
@@ -81,6 +86,7 @@ func TestManuscriptExport(t *testing.T) {
 
 			ownerMock:   &daoMock[bool]{resp: true},
 			kindMock:    &daoMock[[]*dao.LayerKind]{resp: []*dao.LayerKind{{ID: layerID1, Kind: "manuscript", Count: 1}}},
+			bytesMock:   withinBudget,
 			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
 			daoMock:     &daoMock[[]*dao.ManuscriptRow]{resp: []*dao.ManuscriptRow{}},
 
@@ -144,12 +150,48 @@ func TestManuscriptExport(t *testing.T) {
 			expectErr: errFoo,
 		},
 		{
+			name: "Error/ProjectBudget",
+
+			request: request,
+
+			ownerMock: &daoMock[bool]{resp: true},
+			kindMock:  &daoMock[[]*dao.LayerKind]{resp: []*dao.LayerKind{{ID: layerID1, Kind: "manuscript", Count: 1}}},
+			bytesMock: overBudget,
+
+			expectErr: core.ErrProjectBudget,
+		},
+		{
+			name: "Error/ProjectBytes",
+
+			request: request,
+
+			ownerMock: &daoMock[bool]{resp: true},
+			kindMock:  &daoMock[[]*dao.LayerKind]{resp: []*dao.LayerKind{{ID: layerID1, Kind: "manuscript", Count: 1}}},
+			bytesMock: &daoMock[*dao.ProjectBytes]{err: errFoo},
+
+			expectErr: errFoo,
+		},
+		{
+			// Another read of a whole project holds the gate's only slot, and the export gives up once its
+			// context ends, before it reads anything.
+			name: "Error/GateFull",
+
+			request: request,
+
+			ownerMock: &daoMock[bool]{resp: true},
+			kindMock:  &daoMock[[]*dao.LayerKind]{resp: []*dao.LayerKind{{ID: layerID1, Kind: "manuscript", Count: 1}}},
+			gateFull:  true,
+
+			expectErr: context.Canceled,
+		},
+		{
 			name: "Error/SelectProject",
 
 			request: request,
 
 			ownerMock:   &daoMock[bool]{resp: true},
 			kindMock:    &daoMock[[]*dao.LayerKind]{resp: []*dao.LayerKind{{ID: layerID1, Kind: "manuscript", Count: 1}}},
+			bytesMock:   withinBudget,
 			projectMock: &daoMock[*dao.Project]{err: errFoo},
 
 			expectErr: errFoo,
@@ -161,6 +203,7 @@ func TestManuscriptExport(t *testing.T) {
 
 			ownerMock:   &daoMock[bool]{resp: true},
 			kindMock:    &daoMock[[]*dao.LayerKind]{resp: []*dao.LayerKind{{ID: layerID1, Kind: "manuscript", Count: 1}}},
+			bytesMock:   withinBudget,
 			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
 			daoMock:     &daoMock[[]*dao.ManuscriptRow]{err: errFoo},
 
@@ -176,6 +219,7 @@ func TestManuscriptExport(t *testing.T) {
 			mockKind := coremocks.NewMockManuscriptExportDaoKind(t)
 			mockProject := coremocks.NewMockManuscriptExportDaoProject(t)
 			mockDao := coremocks.NewMockManuscriptExportDao(t)
+			mockBytes := coremocks.NewMockManuscriptExportDaoBytes(t)
 
 			if testCase.ownerMock != nil {
 				mockOwner.EXPECT().
@@ -187,6 +231,12 @@ func TestManuscriptExport(t *testing.T) {
 				mockKind.EXPECT().
 					Exec(mock.Anything, &dao.LayerKindRequest{ProjectID: projectID, IDs: []uuid.UUID{layerID1}}).
 					Return(testCase.kindMock.resp, testCase.kindMock.err)
+			}
+
+			if testCase.bytesMock != nil {
+				mockBytes.EXPECT().
+					Exec(mock.Anything, &dao.ProjectBytesRequest{ID: projectID}).
+					Return(testCase.bytesMock.resp, testCase.bytesMock.err)
 			}
 
 			if testCase.projectMock != nil {
@@ -201,9 +251,21 @@ func TestManuscriptExport(t *testing.T) {
 					Return(testCase.daoMock.resp, testCase.daoMock.err)
 			}
 
-			service := core.NewManuscriptExport(mockOwner, mockKind, mockProject, mockDao)
+			gate := core.NewProjectReadGate(1)
+			ctx := t.Context()
 
-			result, err := service.Exec(t.Context(), testCase.request)
+			if testCase.gateFull {
+				defer holdGate(t, gate)()
+
+				var cancel context.CancelFunc
+
+				ctx, cancel = context.WithCancel(ctx)
+				cancel()
+			}
+
+			service := core.NewManuscriptExport(mockOwner, mockKind, mockBytes, mockProject, mockDao, gate)
+
+			result, err := service.Exec(ctx, testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
 
@@ -211,6 +273,7 @@ func TestManuscriptExport(t *testing.T) {
 			mockKind.AssertExpectations(t)
 			mockProject.AssertExpectations(t)
 			mockDao.AssertExpectations(t)
+			mockBytes.AssertExpectations(t)
 		})
 	}
 }

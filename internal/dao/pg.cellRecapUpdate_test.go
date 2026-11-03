@@ -151,6 +151,7 @@ func TestPgCellRecapUpdate(t *testing.T) {
 
 				err := daoCellRecapUpdate.Exec(ctx, testCase.request)
 				require.ErrorIs(t, err, testCase.expectErr)
+				requireStoredBytes(ctx, t)
 
 				requireCellsEqual(t, []*dao.Cell{testCase.expectCell(data.cells[0]), notes}, listCells(ctx, t, projectID))
 				requireCellsEqual(t, []*dao.Cell{otherCell}, listCells(ctx, t, otherProjectID))

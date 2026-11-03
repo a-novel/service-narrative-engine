@@ -62,11 +62,12 @@ export const BeatRecapWriteRequestSchema = z.object({
 export type BeatRecapWriteRequest = z.infer<typeof BeatRecapWriteRequestSchema>;
 
 /**
- * Stores the recap a succeeded consolidation wrote for a cell, stamped with the version of the cell it read,
- * and leaves the cell's `updatedAt` unchanged. The recap is fresh while the cell's `updatedAt` equals its
+ * Stores the recap a succeeded consolidation wrote for a cell, stamped with the version of the cell it read, and
+ * leaves the cell's `updatedAt` unchanged. The recap is fresh while the cell's `updatedAt` equals its
  * `recapCellUpdatedAt`. Throws on HTTP 400 when the recap breaks the consolidate output schema, 404 when the
- * caller owns no such project or it holds no such cell, and 409 when the recap read the cell at a version
- * older than the stored recap's, or newer than the cell's own.
+ * caller owns no such project or it holds no such cell, and 409 when the recap read the cell at a version older
+ * than the stored recap's, or newer than the cell's own, or with `projectBytes` in the error's `tags.limit` when
+ * the project would pass its 16 MiB budget of stored bytes.
  */
 export async function cellRecapWrite(
   api: NarrativeEngineApi,
@@ -81,11 +82,12 @@ export async function cellRecapWrite(
 }
 
 /**
- * Stores the recap a succeeded consolidation wrote for a beat, stamped with the versions of the beat and of
- * its scenes' manuscript cells it read, and leaves the beat's `updatedAt` unchanged. Throws on HTTP 400 when
- * the recap breaks the consolidate output schema, 404 when the caller owns no such project or it holds no
- * such beat, and 409 when the recap read the beat at a version older than the stored recap's, or newer than
- * the beat's own.
+ * Stores the recap a succeeded consolidation wrote for a beat, stamped with the versions of the beat and of its
+ * scenes' manuscript cells it read, and leaves the beat's `updatedAt` unchanged. Throws on HTTP 400 when the
+ * recap breaks the consolidate output schema, 404 when the caller owns no such project or it holds no such beat,
+ * and 409 when the recap read the beat at a version older than the stored recap's, or newer than the beat's own,
+ * or with `projectBytes` in the error's `tags.limit` when the project would pass its 16 MiB budget of stored
+ * bytes.
  */
 export async function beatRecapWrite(
   api: NarrativeEngineApi,

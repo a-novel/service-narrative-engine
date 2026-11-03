@@ -26,6 +26,11 @@ type BeatCreateDaoInsert interface {
 	Exec(ctx context.Context, request *dao.BeatInsertRequest) (*dao.Beat, error)
 }
 
+// BeatCreateDaoBytes reads how many bytes the project stores, the new beat included.
+type BeatCreateDaoBytes interface {
+	Exec(ctx context.Context, request *dao.ProjectBytesRequest) (*dao.ProjectBytes, error)
+}
+
 // BeatCreateRequest carries a new beat and its place in the project.
 type BeatCreateRequest struct {
 	OwnerID   uuid.UUID `validate:"required"`
@@ -44,20 +49,23 @@ type BeatCreateRequest struct {
 	Prompt string `validate:"max=20000"`
 }
 
-// BeatCreate adds one beat to a project at the position the caller names. The beats from that
-// position on move down by one. [BeatsCreate] adds several at once.
+// BeatCreate adds one beat to a project at the position the caller names. The beats from that position on
+// move down by one. [BeatsCreate] adds several at once. It writes nothing when the project would store more
+// than [ProjectBytesMax] bytes.
 type BeatCreate struct {
 	daoLock    BeatCreateDaoLock
 	daoInsert  BeatCreateDaoInsert
+	daoBytes   BeatCreateDaoBytes
 	transactor transaction.Transactor
 }
 
 func NewBeatCreate(
 	daoLock BeatCreateDaoLock,
 	daoInsert BeatCreateDaoInsert,
+	daoBytes BeatCreateDaoBytes,
 	transactor transaction.Transactor,
 ) *BeatCreate {
-	return &BeatCreate{daoLock: daoLock, daoInsert: daoInsert, transactor: transactor}
+	return &BeatCreate{daoLock: daoLock, daoInsert: daoInsert, daoBytes: daoBytes, transactor: transactor}
 }
 
 func (service *BeatCreate) Exec(ctx context.Context, request *BeatCreateRequest) (*Beat, error) {
@@ -107,6 +115,11 @@ func (service *BeatCreate) Exec(ctx context.Context, request *BeatCreateRequest)
 
 		if err != nil {
 			return fmt.Errorf("insert beat: %w", err)
+		}
+
+		err = keepProjectBudget(ctx, service.daoBytes, projectBudgetOpts{projectID: request.ProjectID})
+		if err != nil {
+			return fmt.Errorf("keep project budget: %w", err)
 		}
 
 		beat = newBeat(inserted)

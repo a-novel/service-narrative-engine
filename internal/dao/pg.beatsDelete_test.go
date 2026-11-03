@@ -110,6 +110,7 @@ func TestPgBeatsDelete(t *testing.T) {
 
 				result, err := daoBeatsDelete.Exec(ctx, testCase.request)
 				require.NoError(t, err)
+				requireStoredBytes(ctx, t)
 				require.ElementsMatch(t, testCase.expect, result)
 
 				// The beats after the deleted ones move up, and the deleted ones' scenes and cells go with them.

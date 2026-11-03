@@ -109,6 +109,7 @@ func TestPgLayersDelete(t *testing.T) {
 
 				result, err := daoLayersDelete.Exec(ctx, testCase.request)
 				require.NoError(t, err)
+				requireStoredBytes(ctx, t)
 				require.ElementsMatch(t, testCase.expect, result)
 
 				// The layers after the deleted ones move up, and their cells go with them.
