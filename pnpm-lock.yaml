@@ -216,13 +216,13 @@ importers:
     devDependencies:
       '@a-novel-kit/nodelib-browser':
         specifier: ^2.0.0
-        version: 2.4.3(@sentry/browser@11.10.0)(zod@4.6.7)
+        version: 2.5.0(@sentry/browser@11.10.0)(zod@4.6.7)
       '@a-novel-kit/nodelib-config':
         specifier: ^2.0.0
-        version: 2.4.3(351606354e550fcfb0ab9287d9452430)
+        version: 2.5.0(351606354e550fcfb0ab9287d9452430)
       '@a-novel-kit/nodelib-test':
         specifier: ^2.0.0
-        version: 2.4.3(@a-novel-kit/nodelib-browser@2.4.3(@sentry/browser@11.10.0)(zod@4.6.7))(jsdom@30.1.3)(playwright@1.64.1)
+        version: 2.5.0(@a-novel-kit/nodelib-browser@2.5.0(@sentry/browser@11.10.0)(zod@4.6.7))(jsdom@30.1.3)(playwright@1.64.1)
       '@eslint/js':
         specifier: ^10.0.1
         version: 10.0.1(eslint@10.14.0(jiti@2.7.0)(supports-color@7.2.0))
@@ -288,7 +288,7 @@ importers:
     devDependencies:
       '@a-novel-kit/nodelib-browser':
         specifier: ^2.0.0
-        version: 2.4.3(@sentry/browser@11.10.0)(zod@4.6.7)
+        version: 2.5.0(@sentry/browser@11.10.0)(zod@4.6.7)
       typescript:
         specifier: ^6.0.0
         version: 6.0.3
@@ -343,15 +343,15 @@ packages:
     peerDependencies:
       zod: ^4.6.7
 
-  '@a-novel-kit/nodelib-browser@2.4.3':
-    resolution: {integrity: sha512-LIqC6cdRJJzpznbA8EDFXkQmXrhxSVgFo55XdAIvoLatu5AK3znW4t0bnCE2K2FNCpX98IDqf+NBxjwcBPOjqw==, tarball: https://npm.pkg.github.com/download/@a-novel-kit/nodelib-browser/2.4.3/47ad8360d1db76ad11fc494ac4b4da236ea4bd9f}
+  '@a-novel-kit/nodelib-browser@2.5.0':
+    resolution: {integrity: sha512-ufEQt3J8XCFJdSapmct49lIX02ntMK8/sMjMV0ANAZ3PEDyp0BPah4bP0PTSZD7kc0e8r1PsAl+LSgew2wIGmA==, tarball: https://npm.pkg.github.com/download/@a-novel-kit/nodelib-browser/2.5.0/aa25ef7896ceb83592ab2f3d67888618a17f96f2}
     engines: {node: '>=24.0.0', npm: '>=10.9.2'}
     peerDependencies:
       '@sentry/browser': ^11.10.0
       zod: ^4.6.7
 
-  '@a-novel-kit/nodelib-config@2.4.3':
-    resolution: {integrity: sha512-UXb/FK0N+tiY1/+2gTqpwjCBwUq69TSNVcX4RnBoXDV5Q4+vifFQNpD+tErF/5UkhnYd+cdYjkEysIn+AeaITQ==, tarball: https://npm.pkg.github.com/download/@a-novel-kit/nodelib-config/2.4.3/47823aa918919c4c0e536253c7bb0719c60ac621}
+  '@a-novel-kit/nodelib-config@2.5.0':
+    resolution: {integrity: sha512-qmKrxveFz/YQ2Nb/NGi0OjqKdUiFM5FfFSzXvsxnGaaE2Pqw1ZAI5cSrwpsSkT84rM0iiyj6PuozPv8mwvmw/w==, tarball: https://npm.pkg.github.com/download/@a-novel-kit/nodelib-config/2.5.0/7f2a55f643c067d4712c1aba8bc0ebf48b526012}
     engines: {node: '>=24.0.0', npm: '>=10.9.2'}
     hasBin: true
     peerDependencies:
@@ -393,8 +393,8 @@ packages:
       jsdom: ^30.0.0
       playwright: ^1.63.0
 
-  '@a-novel-kit/nodelib-test@2.4.3':
-    resolution: {integrity: sha512-Ut1F2eFGdZjlVrx9DWixDQddKfe1RdE0qsW1+CCejh0rlV8TA7FKGgYotaPJiYSrxlEoHwBohx7R4LcI3GM7Jg==, tarball: https://npm.pkg.github.com/download/@a-novel-kit/nodelib-test/2.4.3/1c98c83f75e67ce8c01d02754756165f8a3aeb13}
+  '@a-novel-kit/nodelib-test@2.5.0':
+    resolution: {integrity: sha512-Udnw3vciyLDL3Fj1ckr0gOri2Ty5VJ1cV6mVyr3IhGepWVLW4SEbuc9Njf/3HSt3o7Qfk/jjh6VHnn0C7a8auA==, tarball: https://npm.pkg.github.com/download/@a-novel-kit/nodelib-test/2.5.0/d4576857ad1aaf756e054ed4b5b01bf2ebfe8461}
     engines: {node: '>=24.0.0', npm: '>=10.9.2'}
     peerDependencies:
       '@a-novel-kit/nodelib-browser': '*'
@@ -3265,12 +3265,12 @@ snapshots:
     dependencies:
       zod: 4.6.7
 
-  '@a-novel-kit/nodelib-browser@2.4.3(@sentry/browser@11.10.0)(zod@4.6.7)':
+  '@a-novel-kit/nodelib-browser@2.5.0(@sentry/browser@11.10.0)(zod@4.6.7)':
     dependencies:
       '@sentry/browser': 11.10.0
       zod: 4.6.7
 
-  '@a-novel-kit/nodelib-config@2.4.3(351606354e550fcfb0ab9287d9452430)':
+  '@a-novel-kit/nodelib-config@2.5.0(351606354e550fcfb0ab9287d9452430)':
     dependencies:
       '@eslint/compat': 2.1.1(eslint@10.14.0(jiti@2.7.0)(supports-color@7.2.0))
       '@eslint/config-helpers': 0.7.0
@@ -3309,9 +3309,9 @@ snapshots:
       jsdom: 28.1.0(supports-color@7.2.0)
       playwright: 1.64.1
 
-  '@a-novel-kit/nodelib-test@2.4.3(@a-novel-kit/nodelib-browser@2.4.3(@sentry/browser@11.10.0)(zod@4.6.7))(jsdom@30.1.3)(playwright@1.64.1)':
+  '@a-novel-kit/nodelib-test@2.5.0(@a-novel-kit/nodelib-browser@2.5.0(@sentry/browser@11.10.0)(zod@4.6.7))(jsdom@30.1.3)(playwright@1.64.1)':
     dependencies:
-      '@a-novel-kit/nodelib-browser': 2.4.3(@sentry/browser@11.10.0)(zod@4.6.7)
+      '@a-novel-kit/nodelib-browser': 2.5.0(@sentry/browser@11.10.0)(zod@4.6.7)
       jsdom: 30.1.3
       playwright: 1.64.1
 
