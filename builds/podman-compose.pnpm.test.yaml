@@ -8,7 +8,7 @@ x-postgres-healthcheck: &postgres-healthcheck
 
 services:
   postgres-json-keys:
-    image: ghcr.io/a-novel/service-json-keys/database:v2.15.4@sha256:06457d216da6416e58262893731c6caf4382d74e89baa13aa79eaffd629c771c
+    image: ghcr.io/a-novel/service-json-keys/database:v2.15.5@sha256:06457d216da6416e58262893731c6caf4382d74e89baa13aa79eaffd629c771c
     networks:
       - narrative-engine-integration-rest-test
     environment:
@@ -20,7 +20,7 @@ services:
     healthcheck: *postgres-healthcheck
 
   service-json-keys:
-    image: ghcr.io/a-novel/service-json-keys/standalone-grpc:v2.15.4@sha256:516206de191556aeaaecdc700ab0a0ec2cd551404573ecf5e0dee1d08943b4c3
+    image: ghcr.io/a-novel/service-json-keys/standalone-grpc:v2.15.5@sha256:3a16b2ba54bb403b38f8647160cc99d1150a13105a832bfeb18a2bdb07135fcc
     depends_on:
       postgres-json-keys:
         condition: service_healthy
