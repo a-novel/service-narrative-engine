@@ -68,8 +68,8 @@ const (
 )
 
 var (
-	// RestRateLimitGenerationDefault caps a user's generation submits. Each one reads the whole project and
-	// plans its calls before genai's per-user quota applies, so a burst costs this service first.
+	// RestRateLimitGenerationDefault caps a user's generation submits. Each one reads the project and plans
+	// its calls before genai's per-user quota applies, so a burst costs this service first.
 	RestRateLimitGenerationDefault = config.Must(httpf.ParseRate("30/1m"))
 	// MaxConcurrentProjectReadsDefault lets the reads of a whole project take half of GOMEMLIMIT, at
 	// [projectReadBytes] each: 4 reads at 1 GiB, and 1 at least. Without a memory limit, it sizes them to the
@@ -182,8 +182,9 @@ var (
 const (
 	// projectBytesMax is the 16 MiB a project stores at most, as core.ProjectBytesMax caps it.
 	projectBytesMax = 16 << 20
-	// projectReadAmplification is how many times over a read of a whole project holds the bytes it reads, once
-	// decoded and rendered.
+	// projectReadAmplification is how many times over a manuscript export holds the bytes it reads, once
+	// decoded and rendered. A generation plan reads a summary of each cell, then only the cells it may show,
+	// every one only for a check of every scene, and keeps no copy of them undecoded: the same bound covers it.
 	projectReadAmplification = 8
 	// projectReadBytes is the memory one read of a whole project takes at most.
 	projectReadBytes = projectBytesMax * projectReadAmplification

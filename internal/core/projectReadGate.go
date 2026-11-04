@@ -7,10 +7,10 @@ import (
 	"github.com/a-novel-kit/golib/otel"
 )
 
-// ProjectReadGate bounds the reads of a whole project an instance runs at once, such as a manuscript
-// export or the snapshot a generation plans from. Each holds up to [ProjectBytesMax] in memory, several
-// times over once decoded, so the gate sizes their sum to the memory the instance has. A read past the
-// bound waits for a slot.
+// ProjectReadGate bounds the reads of a whole project an instance runs at once: a manuscript export, or a
+// generation plan, which reads a summary of each cell and the cells it may show. Each holds up to
+// [ProjectBytesMax] in memory, several times over once decoded, a plan only for a check of every scene. The
+// gate sizes their sum to the memory the instance has, and a read past the bound waits for a slot.
 type ProjectReadGate struct {
 	slots chan struct{}
 }

@@ -28,8 +28,8 @@ type contextSplitter struct {
 	// templates and schema render every call in the project's language.
 	templates *template.Template
 	schema    json.RawMessage
-	// contents holds the content of each stored cell once read, for every call.
-	contents map[cellKey]*cellContent
+	// store reads the content and the recaps of stored cells once, for every call.
+	store *cellStore
 }
 
 // calls plans the generation as one call, or splits it when its kind allows. A suggest generation that fits
@@ -57,7 +57,7 @@ func (splitter *contextSplitter) calls() ([]*ContextCall, error) {
 func (splitter *contextSplitter) call(
 	request *GenerationPlanRequest, part *callPart,
 ) (*contextDraft, *ContextCall, error) {
-	draft, err := newContextDraft(request, part, splitter.contents)
+	draft, err := newContextDraft(request, part, splitter.store)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -161,8 +161,16 @@ func (draft *contextDraft) checkedWhole() bool {
 }
 
 // windows divides the scenes a check reads into consecutive windows whose whole renders each fit in share
-// characters. A scene past share takes a window of its own.
+// characters. A scene past share takes a window of its own. Each window shows its scenes whole, so the check
+// reads every one of them.
 func (draft *contextDraft) windows(templates *template.Template, share int) ([]*Range, error) {
+	focus := lo.Filter(draft.scenes, func(scene *draftScene, _ int) bool { return scene.focus })
+
+	err := draft.read(draft.unreadAt(focus, ContextLevelFull))
+	if err != nil {
+		return nil, err
+	}
+
 	var (
 		windows []*Range
 		size    int

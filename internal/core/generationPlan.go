@@ -14,6 +14,7 @@ import (
 
 	"github.com/a-novel/service-narrative-engine/internal/config"
 	"github.com/a-novel/service-narrative-engine/internal/config/prompts"
+	"github.com/a-novel/service-narrative-engine/internal/dao"
 	"github.com/a-novel/service-narrative-engine/internal/models/schemas"
 )
 
@@ -119,10 +120,15 @@ type CellOverride struct {
 	Content json.RawMessage `validate:"required,max=2097152"`
 }
 
+// GenerationPlanDaoCells reads the content and the recaps of cells of the project.
+type GenerationPlanDaoCells interface {
+	Exec(ctx context.Context, request *dao.CellsSelectRequest) ([]*dao.CellsSelectRow, error)
+}
+
 // GenerationPlanRequest asks for the context and the prompt of one generation of a project. Kind names
 // the generation, and only the fields of that kind are set.
 type GenerationPlanRequest struct {
-	// Snapshot is the project the generation reads, as stored.
+	// Snapshot is the project the generation reads, as stored, with a summary of each cell.
 	Snapshot *ProjectSnapshot `validate:"required"`
 	// Kind is the kind of the generation, one of [GenerationKinds].
 	Kind string `validate:"generationkind"`
@@ -150,16 +156,21 @@ type GenerationPlanRequest struct {
 // the model settings of its kind. Each scene enters at the richest level the budget of the kind allows, the
 // targets' scenes always whole. A generation that outgrows one regular call runs as long context, then as
 // several calls, as its kind allows. The same request always gives the same plan and the same prompts.
+//
+// The plan decides from the snapshot's summaries, and reads only what it may show: the content of a cell
+// shown whole, the one version of a recap a cell shows. Its memory then grows with its budget, not the
+// project.
 type GenerationPlan struct {
-	config config.Generations
+	config   config.Generations
+	daoCells GenerationPlanDaoCells
 }
 
-func NewGenerationPlan(config config.Generations) *GenerationPlan {
-	return &GenerationPlan{config: config}
+func NewGenerationPlan(config config.Generations, daoCells GenerationPlanDaoCells) *GenerationPlan {
+	return &GenerationPlan{config: config, daoCells: daoCells}
 }
 
 func (service *GenerationPlan) Exec(ctx context.Context, request *GenerationPlanRequest) (*ContextPlan, error) {
-	_, span := otel.Tracer().Start(ctx, "core.GenerationPlan")
+	ctx, span := otel.Tracer().Start(ctx, "core.GenerationPlan")
 	defer span.End()
 
 	err := validate.Struct(request)
@@ -187,9 +198,13 @@ func (service *GenerationPlan) Exec(ctx context.Context, request *GenerationPlan
 		return nil, otel.ReportError(span, fmt.Errorf("strict output schema: %w", err))
 	}
 
-	splitter := &contextSplitter{
-		request: request, kind: kind, templates: templates, schema: schema, contents: map[cellKey]*cellContent{},
+	store := &cellStore{
+		read: func(keys []*dao.CellsSelectKey) ([]*dao.CellsSelectRow, error) {
+			return service.daoCells.Exec(ctx, &dao.CellsSelectRequest{ProjectID: request.Snapshot.Project.ID, Cells: keys})
+		},
+		contents: map[cellKey]*cellContent{}, recaps: map[recapKey]string{},
 	}
+	splitter := &contextSplitter{request: request, kind: kind, templates: templates, schema: schema, store: store}
 
 	calls, err := splitter.calls()
 	if err != nil {

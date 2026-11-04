@@ -108,11 +108,15 @@ type draftLayer struct {
 
 // draftCell is a cell as a generation reads it, with the request's override applied.
 type draftCell struct {
-	layer   *draftLayer
+	key   cellKey
+	layer *draftLayer
+	// summary describes a stored cell, nil for an override or a cell never written. Content stays nil until
+	// the draft reads it.
+	summary *CellSummary
 	content *cellContent
 
-	// recap is the cell's fresh recap, nil when it has none.
-	recap *CellRecap
+	// recap is the cell's fresh recap, nil when it has none. The store reads its versions.
+	recap *RecapSummary
 	// target is the target that writes or recaps the cell, nil when none does.
 	target *draftTarget
 
@@ -158,6 +162,8 @@ type draftScene struct {
 	level   string
 	renders map[string]*sceneRender
 	score   float64
+	// shell is the size of the scene's outline with every cell emptied, its markup alone.
+	shell int
 
 	override bool
 }
@@ -204,8 +210,8 @@ type contextDraft struct {
 	request *GenerationPlanRequest
 	part    *callPart
 	project *Project
-	// contents holds the content of each stored cell once read, shared by every call of the generation.
-	contents map[cellKey]*cellContent
+	// store reads the content and the recaps of stored cells, once for every call of the generation.
+	store *cellStore
 
 	// beats lists every beat in order, scenes every scene in narrative order, and layers every layer in order.
 	beats  []*draftBeat
@@ -224,11 +230,9 @@ type contextDraft struct {
 }
 
 // newContextDraft reads the snapshot of a request as one call of the generation sees it, and ranks the
-// scenes the call does not write in. Contents keeps each stored cell's content once read.
-func newContextDraft(
-	request *GenerationPlanRequest, part *callPart, contents map[cellKey]*cellContent,
-) (*contextDraft, error) {
-	draft := &contextDraft{request: request, part: part, project: request.Snapshot.Project, contents: contents}
+// scenes the call does not write in. Store reads the cells the call shows, as it needs them.
+func newContextDraft(request *GenerationPlanRequest, part *callPart, store *cellStore) (*contextDraft, error) {
+	draft := &contextDraft{request: request, part: part, project: request.Snapshot.Project, store: store}
 	draft.layers, draft.layerByID = readLayers(request.Snapshot.Layers)
 	draft.beats = readBeats(request.Snapshot.Beats)
 
@@ -349,45 +353,32 @@ func (draft *contextDraft) applyOverrides() error {
 	return nil
 }
 
-// readCells reads the content of every cell, keyed by scene and layer, the request's overrides applied.
-// Each cell keeps its fresh recap.
+// readCells reads every cell from its summary, keyed by scene and layer, the request's overrides applied.
+// Each cell keeps its fresh recap, and the content an earlier call of the generation read.
 func (draft *contextDraft) readCells() (map[cellKey]*draftCell, error) {
 	cells := make(map[cellKey]*draftCell, len(draft.request.Snapshot.Cells))
 
-	for _, cell := range draft.request.Snapshot.Cells {
-		key := cellKey{cell.SceneID, cell.LayerID}
+	for _, summary := range draft.request.Snapshot.Cells {
+		key := cellKey{summary.SceneID, summary.LayerID}
 
-		content, ok := draft.contents[key]
-		if !ok {
-			var err error
-
-			content, err = readContent(cell.Content)
-			if err != nil {
-				return nil, err
-			}
-
-			draft.contents[key] = content
-		}
-
-		read, err := draft.newCell(cell.SceneID, cell.LayerID, content)
+		read, err := draft.newCell(summary.SceneID, summary.LayerID, draft.store.contents[key])
 		if err != nil {
 			return nil, err
 		}
 
-		read.updatedAt = cell.UpdatedAt
+		read.summary, read.updatedAt = summary, summary.UpdatedAt
+
+		if recap := summary.Recap; recap != nil && summary.UpdatedAt.Equal(recap.CellUpdatedAt) {
+			read.recap = recap
+		}
+
 		cells[key] = read
 	}
 
+	// An override replaces its cell, and the cell's recap with it.
 	err := draft.readCellOverrides(cells)
 	if err != nil {
 		return nil, err
-	}
-
-	for _, recap := range draft.request.Snapshot.Recaps {
-		cell, ok := cells[cellKey{recap.SceneID, recap.LayerID}]
-		if ok && !cell.override && cell.updatedAt.Equal(recap.CellUpdatedAt) {
-			cell.recap = recap
-		}
 	}
 
 	return cells, nil
@@ -448,7 +439,7 @@ func (draft *contextDraft) newCell(sceneID, layerID uuid.UUID, content *cellCont
 		return nil, fmt.Errorf("%w: cell of %s", ErrLayerNotFound, layerID)
 	}
 
-	return &draftCell{layer: layer, content: content}, nil
+	return &draftCell{key: cellKey{sceneID, layerID}, layer: layer, content: content}, nil
 }
 
 // readContent reads the JSON content of a cell.
@@ -469,7 +460,7 @@ func (draft *contextDraft) cell(scene *draftScene, layer *draftLayer) *draftCell
 
 	read, ok := draft.cells[key]
 	if !ok {
-		read = &draftCell{layer: layer, content: &cellContent{}}
+		read = &draftCell{key: key, layer: layer, content: &cellContent{}}
 		draft.cells[key] = read
 	}
 
@@ -493,6 +484,11 @@ func (draft *contextDraft) readTargets() ([]*draftTarget, error) {
 func (draft *contextDraft) suggestTargets() ([]*draftTarget, error) {
 	if len(draft.request.Targets) == 0 {
 		return nil, fmt.Errorf("%w: a suggest generation needs a target", ErrInvalidRequest)
+	}
+
+	err := draft.readTargetCells()
+	if err != nil {
+		return nil, err
 	}
 
 	targets := make([]*draftTarget, len(draft.request.Targets))
@@ -521,6 +517,23 @@ func (draft *contextDraft) suggestTargets() ([]*draftTarget, error) {
 	}
 
 	return targets, nil
+}
+
+// readTargetCells reads the content of the cells the targets of a suggest generation write, in one query. A
+// target that names a scene or a layer the project lacks fails after, as the draft reads it.
+func (draft *contextDraft) readTargetCells() error {
+	var cells []*draftCell
+
+	for _, target := range draft.request.Targets {
+		scene, sceneOK := draft.sceneByID[target.SceneID]
+		layer, layerOK := draft.layerByID[target.LayerID]
+
+		if sceneOK && layerOK && target.Field == "" {
+			cells = append(cells, draft.cell(scene, layer))
+		}
+	}
+
+	return draft.read(lo.Filter(cells, func(cell *draftCell, _ int) bool { return cell.content == nil }), nil)
 }
 
 // targetPrefix returns the prefix of a suggest target's handle. A handle names its target's shape, so the
@@ -710,11 +723,18 @@ func (draft *contextDraft) recapTarget() ([]*draftTarget, error) {
 	target.cell.target, layer.target = target, true
 	scene.pinned, scene.focus, scene.beat.pinned = true, true, true
 
+	if target.cell.content == nil {
+		err := draft.read([]*draftCell{target.cell}, nil)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return []*draftTarget{target}, nil
 }
 
 // recapBeatTarget reads the beat a consolidate generation recaps. Each scene of the beat pins, and its
-// manuscript cells show in the task.
+// manuscript cells show in the task: the compact version of a fresh recap, or the content.
 func (draft *contextDraft) recapBeatTarget() ([]*draftTarget, error) {
 	beat, ok := lo.Find(draft.beats, func(beat *draftBeat) bool { return beat.beat.ID == draft.request.BeatID })
 	if !ok {
@@ -723,6 +743,11 @@ func (draft *contextDraft) recapBeatTarget() ([]*draftTarget, error) {
 
 	target := &draftTarget{handle: handle(textTargetPrefix, 0), beat: beat}
 	beat.pinned = true
+
+	var (
+		contents []*draftCell
+		recaps   []recapKey
+	)
 
 	for _, scene := range beat.scenes {
 		scene.pinned, scene.focus = true, true
@@ -737,6 +762,13 @@ func (draft *contextDraft) recapBeatTarget() ([]*draftTarget, error) {
 			cell := draft.cell(scene, layer)
 			cell.target, layer.target = target, true
 
+			switch {
+			case cell.recap != nil:
+				recaps = append(recaps, recapKey{cell.key, ContextLevelCompact})
+			case cell.content == nil:
+				contents = append(contents, cell)
+			}
+
 			// The recap's freshness reads the scene's first manuscript cell, as readBeatRecaps does.
 			if !stamped {
 				source.CellUpdatedAt, stamped = cell.updatedAt, true
@@ -744,6 +776,11 @@ func (draft *contextDraft) recapBeatTarget() ([]*draftTarget, error) {
 		}
 
 		target.sources = append(target.sources, source)
+	}
+
+	err := draft.read(contents, recaps)
+	if err != nil {
+		return nil, err
 	}
 
 	return []*draftTarget{target}, nil
@@ -850,23 +887,12 @@ func (draft *contextDraft) beatRecapFresh(beat *draftBeat, recap *BeatRecap, man
 	return true
 }
 
-// empty reports whether a cell holds no content.
-func (cell *draftCell) empty() bool {
-	return cell.content.Text == "" && len(cell.content.Blocks) == 0
-}
-
 // addNames adds to names the folded names the cell shows the model: the speakers of its shown blocks and
 // the names of its fresh recap.
 func (cell *draftCell) addNames(names map[string]bool) {
-	blocks := cell.content.Blocks
-
-	if target := cell.target; target != nil && target.span != nil {
-		blocks = slices.Concat(blocks[:target.span.Start], target.inside(), blocks[target.span.End:])
-	}
-
-	for _, block := range blocks {
-		if block.Speaker != "" {
-			names[foldName(block.Speaker)] = true
+	for _, speaker := range cell.speakers() {
+		if speaker != "" {
+			names[foldName(speaker)] = true
 		}
 	}
 

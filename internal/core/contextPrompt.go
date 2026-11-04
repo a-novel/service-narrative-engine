@@ -266,14 +266,17 @@ func (draft *contextDraft) renderSections(
 	return err
 }
 
-// renderPinned renders the scenes of the targets, which always enter whole.
+// renderPinned renders the scenes of the targets, which always enter whole, once it reads them in one query.
 func (draft *contextDraft) renderPinned(templates *template.Template) error {
-	for _, scene := range draft.scenes {
-		if !scene.pinned {
-			continue
-		}
+	pinned := lo.Filter(draft.scenes, func(scene *draftScene, _ int) bool { return scene.pinned })
 
-		_, err := draft.renderScene(templates, scene, ContextLevelFull)
+	err := draft.read(draft.unreadAt(pinned, ContextLevelFull))
+	if err != nil {
+		return err
+	}
+
+	for _, scene := range pinned {
+		_, err = draft.renderScene(templates, scene, ContextLevelFull)
 		if err != nil {
 			return err
 		}
@@ -284,7 +287,8 @@ func (draft *contextDraft) renderPinned(templates *template.Template) error {
 	return nil
 }
 
-// renderScene renders a scene at a level once, and returns the same render after.
+// renderScene renders a scene at a level once, and returns the same render after. It reads what the scene
+// shows at the level first, when the draft lacks it.
 func (draft *contextDraft) renderScene(
 	templates *template.Template, scene *draftScene, level string,
 ) (*sceneRender, error) {
@@ -292,8 +296,15 @@ func (draft *contextDraft) renderScene(
 		return render, nil
 	}
 
+	err := draft.read(draft.unread(scene, level))
+	if err != nil {
+		return nil, err
+	}
+
 	// A check reads its scenes, so only a generation that writes or recaps shows the author's prompts.
-	text, err := execute(templates, "scene", scene.view(level, scene.pinned && draft.request.Kind != GenerationKindCheck))
+	view := scene.view(level, scene.pinned && draft.request.Kind != GenerationKindCheck, draft.store.recaps)
+
+	text, err := execute(templates, "scene", view)
 	if err != nil {
 		return nil, err
 	}
@@ -385,9 +396,24 @@ func (side *contextSide) next() *contentBlock {
 // allocate gives each ranked scene the richest level that fits in budget, in characters. Most relevant
 // first, every scene takes its outline while the budget allows; then, in the same order, each takes the
 // richest level that still fits. A scene too large for what remains is passed over, and a smaller one after
-// it may still fit, so a block is never cut.
+// it may still fit, so a block is never cut. A level renders, and reads the cells it shows, only when its
+// least size fits, so a large project reads few of its cells.
 func (draft *contextDraft) allocate(templates *template.Template, budget int) error {
-	for _, scene := range draft.ranked {
+	err := draft.renderShells(templates)
+	if err != nil {
+		return err
+	}
+
+	for index, scene := range draft.ranked {
+		if least, _ := scene.least(ContextLevelOutline); least > budget {
+			continue
+		}
+
+		err := draft.readAhead(draft.ranked[index:], outlineLevels, budget)
+		if err != nil {
+			return err
+		}
+
 		outline, err := draft.renderScene(templates, scene, ContextLevelOutline)
 		if err != nil {
 			return err
@@ -399,17 +425,38 @@ func (draft *contextDraft) allocate(templates *template.Template, budget int) er
 		}
 	}
 
-	for _, scene := range draft.ranked {
-		if scene.level != ContextLevelOutline {
-			continue
-		}
+	outlined := lo.Filter(draft.ranked, func(scene *draftScene, _ int) bool { return scene.level == ContextLevelOutline })
 
-		var err error
+	for index, scene := range outlined {
+		err := draft.readAhead(outlined[index:], upgradeLevels, budget)
+		if err != nil {
+			return err
+		}
 
 		budget, err = draft.upgrade(templates, scene, budget)
 		if err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+// renderShells measures the markup of each ranked scene's outline: the outline with every cell emptied,
+// which renders without a read.
+func (draft *contextDraft) renderShells(templates *template.Template) error {
+	for _, scene := range draft.ranked {
+		view := scene.view(ContextLevelOutline, scene.pinned && draft.request.Kind != GenerationKindCheck, nil)
+		for _, cell := range view.Cells {
+			cell.Content = &cellContent{}
+		}
+
+		text, err := execute(templates, "scene", view)
+		if err != nil {
+			return err
+		}
+
+		scene.shell = 1 + utf8.RuneCountInString(text)
 	}
 
 	return nil
@@ -421,7 +468,7 @@ func (draft *contextDraft) upgrade(templates *template.Template, scene *draftSce
 	outline := scene.renders[ContextLevelOutline].size
 
 	for _, level := range upgradeLevels {
-		least, ok := scene.adds(level)
+		least, ok := scene.least(level)
 		if !ok || least > budget {
 			continue
 		}
@@ -457,9 +504,9 @@ func (scene *draftScene) adds(level string) (int, bool) {
 
 		switch {
 		case level == ContextLevelFull:
-			size += cell.content.size()
+			size += cell.size()
 		case cell.recap != nil:
-			size += utf8.RuneCountInString(cell.recap.version(level))
+			size += cell.recap.size(level)
 			recaps = true
 		}
 	}
@@ -489,8 +536,8 @@ func (scene *draftScene) shows(level string) []*shownCell {
 }
 
 // view returns what the template renders for the scene at a level, with the author's prompts for its beat
-// and for itself when prompts is set.
-func (scene *draftScene) view(level string, prompts bool) *promptScene {
+// and for itself when prompts is set. Recaps holds the recap versions the scene shows.
+func (scene *draftScene) view(level string, prompts bool, recaps map[recapKey]string) *promptScene {
 	view := &promptScene{Handle: scene.handle, Level: level}
 	if prompts {
 		view.BeatPrompt, view.Prompt = scene.beat.beat.Prompt, scene.scene.Prompt
@@ -506,7 +553,7 @@ func (scene *draftScene) view(level string, prompts bool) *promptScene {
 		case shown.cell.target != nil:
 			cell.Target = shown.cell.target.handle
 		case shown.version != "":
-			cell.Recap = shown.cell.recap.version(shown.version)
+			cell.Recap = recaps[recapKey{shown.cell.key, shown.version}]
 		default:
 			cell.Content = shown.cell.content
 		}
@@ -676,7 +723,7 @@ func (draft *contextDraft) taskView() *promptTask {
 	case GenerationKindConsolidate:
 		target := draft.targets[0]
 		if target.beat != nil {
-			view.Beat = target.beatView()
+			view.Beat = target.beatView(draft.store.recaps)
 		} else {
 			view.Cell = &promptRecapCell{
 				Scene: target.scene.handle, Layer: target.cell.layer.handle, Content: target.cell.content,
@@ -720,8 +767,8 @@ func (target *draftTarget) view() *promptTarget {
 }
 
 // beatView returns what the template renders for the beat a consolidation recaps. Each scene shows its
-// manuscript as its fresh compact recap where one exists, or whole.
-func (target *draftTarget) beatView() *promptRecapBeat {
+// manuscript as its fresh compact recap where one exists, from recaps, or whole.
+func (target *draftTarget) beatView(recaps map[recapKey]string) *promptRecapBeat {
 	view := &promptRecapBeat{
 		Title: target.beat.beat.Title, Description: target.beat.beat.Description,
 		Scenes: make([]*promptRecapScene, len(target.beat.scenes)),
@@ -736,7 +783,7 @@ func (target *draftTarget) beatView() *promptRecapBeat {
 			}
 
 			if cell.recap != nil {
-				line.Recap = cell.recap.Compact
+				line.Recap = recaps[recapKey{cell.key, ContextLevelCompact}]
 			} else {
 				line.Content = cell.content
 			}
