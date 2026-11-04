@@ -23,11 +23,11 @@ inputs:
     description: JSON Keys gRPC image reference used by the CI topology.
   authentication_database_image:
     required: false
-    default: ghcr.io/a-novel/service-authentication/database:v2.25.0@sha256:e49463997f86041d1e146c6060cc19ab37992ea7ef929627584db6ff16832ffa
+    default: ghcr.io/a-novel/service-authentication/database:v2.25.1@sha256:e49463997f86041d1e146c6060cc19ab37992ea7ef929627584db6ff16832ffa
     description: Authentication database image reference used by the CI topology.
   authentication_rest_image:
     required: false
-    default: ghcr.io/a-novel/service-authentication/standalone-rest:v2.25.0@sha256:3fc393184b8f3644193a21a86faed1ebfa809f8290ee9a8a5ce64ee6cd4c326a
+    default: ghcr.io/a-novel/service-authentication/standalone-rest:v2.25.1@sha256:427b57ceba8ef8476b4677b4bb34f4dbb92e6d37c65496664ee451b3c814dfee
     description: Authentication REST image reference used by the CI topology.
   genai_database_image:
     required: false
