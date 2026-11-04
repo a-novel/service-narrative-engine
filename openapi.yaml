@@ -1436,7 +1436,12 @@ components:
             $ref: "#/components/schemas/healthReport"
           examples:
             healthy:
-              value: { "client:postgres": { "status": "up" }, "api:jsonKeys": { "status": "up" } }
+              value:
+                {
+                  "client:postgres": { "status": "up" },
+                  "api:jsonKeys": { "status": "up" },
+                  "api:genai": { "status": "up" },
+                }
 
     healthUnavailable:
       description: |
@@ -1451,7 +1456,12 @@ components:
             $ref: "#/components/schemas/healthReport"
           examples:
             degraded:
-              value: { "client:postgres": { "status": "up" }, "api:jsonKeys": { "status": "down" } }
+              value:
+                {
+                  "client:postgres": { "status": "up" },
+                  "api:jsonKeys": { "status": "down" },
+                  "api:genai": { "status": "up" },
+                }
 
     plannedDowntime:
       description: |
@@ -3263,7 +3273,9 @@ components:
               const: true
     healthReport:
       type: object
-      description: The status of each dependency. Every dependency must be up for HTTP 200.
+      description: |
+        The status of each dependency. Every dependency must be up for HTTP 200. genai appears only
+        on a server configured to call it.
       required: ["client:postgres", "api:jsonKeys"]
       additionalProperties:
         $ref: "#/components/schemas/healthStatus"
@@ -3271,6 +3283,8 @@ components:
         "client:postgres":
           $ref: "#/components/schemas/healthStatus"
         "api:jsonKeys":
+          $ref: "#/components/schemas/healthStatus"
+        "api:genai":
           $ref: "#/components/schemas/healthStatus"
     healthStatus:
       type: object

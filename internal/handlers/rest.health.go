@@ -7,6 +7,7 @@ import (
 	"github.com/samber/lo"
 	"google.golang.org/grpc"
 
+	servicegenai "github.com/a-novel/service-genai/pkg/go"
 	servicejsonkeys "github.com/a-novel/service-json-keys/v2/pkg/go"
 
 	"github.com/a-novel-kit/golib/httpf"
@@ -48,15 +49,27 @@ type RestHealthApiJsonKeys interface {
 	) (*servicejsonkeys.StatusResponse, error)
 }
 
+// RestHealthApiGenai is the genai client surface the health check probes.
+type RestHealthApiGenai interface {
+	Status(
+		ctx context.Context,
+		req *servicegenai.StatusRequest,
+		opts ...grpc.CallOption,
+	) (*servicegenai.StatusResponse, error)
+}
+
 // RestHealth is the HTTP handler for the health endpoint. It probes each
 // backing dependency and reports their individual status, with HTTP 503 when any
 // probe fails.
 type RestHealth struct {
 	apiJsonKeys RestHealthApiJsonKeys
+	apiGenai    RestHealthApiGenai
 }
 
-func NewRestHealth(apiJsonKeys RestHealthApiJsonKeys) *RestHealth {
-	return &RestHealth{apiJsonKeys: apiJsonKeys}
+// NewRestHealth probes JSON Keys, and genai unless apiGenai is nil, as it is while no genai host is
+// configured: the report then leaves genai out.
+func NewRestHealth(apiJsonKeys RestHealthApiJsonKeys, apiGenai RestHealthApiGenai) *RestHealth {
+	return &RestHealth{apiJsonKeys: apiJsonKeys, apiGenai: apiGenai}
 }
 
 func (handler *RestHealth) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -82,6 +95,16 @@ func (handler *RestHealth) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	report["api:jsonKeys"] = NewRestHealthStatus(err)
 
+	if handler.apiGenai != nil {
+		err = handler.reportGenai(ctx)
+		if err != nil {
+			_ = otel.ReportError(span, err)
+			statusCode = http.StatusServiceUnavailable
+		}
+
+		report["api:genai"] = NewRestHealthStatus(err)
+	}
+
 	httpf.SendJSONStatus(w, span, statusCode, report)
 }
 
@@ -104,6 +127,20 @@ func (handler *RestHealth) reportJsonKeys(ctx context.Context) error {
 	// JSON Keys fails Status with Unavailable when one of its own dependencies is down, so its
 	// success is the whole verdict.
 	_, err := handler.apiJsonKeys.Status(ctx, &servicejsonkeys.StatusRequest{})
+	if err != nil {
+		return otel.ReportError(span, err)
+	}
+
+	return nil
+}
+
+func (handler *RestHealth) reportGenai(ctx context.Context) error {
+	ctx, span := otel.Tracer().Start(ctx, "rest.Health(reportGenai)")
+	defer span.End()
+
+	// genai fails Status with Unavailable when its database is down, so its success is the whole
+	// verdict. It never calls a provider.
+	_, err := handler.apiGenai.Status(ctx, &servicegenai.StatusRequest{})
 	if err != nil {
 		return otel.ReportError(span, err)
 	}

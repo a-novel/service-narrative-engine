@@ -192,7 +192,7 @@ func main() {
 	// =================================================================================================================
 
 	handlerPing := handlers.NewRestPing()
-	handlerHealth := handlers.NewRestHealth(jsonKeysClient)
+	handlerHealth := handlers.NewRestHealth(jsonKeysClient, genaiHealth(genaiClient, cfg.Dependencies))
 	handlerProjectCreate := handlers.NewRestProjectCreate(serviceProjectCreate, cfg.Logger)
 	handlerProjectGet := handlers.NewRestProjectGet(serviceProjectGet, cfg.Logger)
 	handlerProjectList := handlers.NewRestProjectList(serviceProjectList, cfg.Logger)
