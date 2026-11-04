@@ -14,6 +14,7 @@ import (
 
 	"github.com/a-novel/service-narrative-engine/internal/config"
 	"github.com/a-novel/service-narrative-engine/internal/core"
+	"github.com/a-novel/service-narrative-engine/internal/handlers"
 )
 
 // genaiClient is what the generation services call on genai.
@@ -22,6 +23,7 @@ type genaiClient interface {
 	core.GenerationGetServiceGenai
 	core.GenerationCancelServiceGenai
 	core.GenerationStreamServiceGenai
+	handlers.RestHealthApiGenai
 
 	Close()
 }
@@ -40,6 +42,16 @@ func newGenaiClient(ctx context.Context, dependencies config.Dependencies) genai
 		net.JoinHostPort(dependencies.ServiceGenaiHost, strconv.Itoa(dependencies.ServiceGenaiPort)),
 		lo.Must(dependencies.ServiceGenaiCredentials.Options(ctx))...,
 	))
+}
+
+// genaiHealth is what the health check probes on genai: the client, or nil while no genai host is
+// configured, which leaves genai out of the report.
+func genaiHealth(client genaiClient, dependencies config.Dependencies) handlers.RestHealthApiGenai {
+	if dependencies.ServiceGenaiHost == "" {
+		return nil
+	}
+
+	return client
 }
 
 // unconfiguredGenai stands in for genai while no host is configured.
@@ -66,6 +78,12 @@ func (unconfiguredGenai) GenerationCancel(
 func (unconfiguredGenai) GenerationStream(
 	context.Context, *servicegenai.GenerationStreamRequest, ...grpc.CallOption,
 ) (grpc.ServerStreamingClient[servicegenai.GenerationStreamResponse], error) {
+	return nil, errGenaiUnconfigured
+}
+
+func (unconfiguredGenai) Status(
+	context.Context, *servicegenai.StatusRequest, ...grpc.CallOption,
+) (*servicegenai.StatusResponse, error) {
 	return nil, errGenaiUnconfigured
 }
 

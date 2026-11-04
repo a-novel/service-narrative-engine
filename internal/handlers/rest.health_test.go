@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	servicegenai "github.com/a-novel/service-genai/pkg/go"
 	servicejsonkeys "github.com/a-novel/service-json-keys/v2/pkg/go"
 
 	"github.com/a-novel/service-narrative-engine/internal/handlers"
@@ -25,10 +26,14 @@ func TestRestHealth(t *testing.T) {
 
 		setup       probeSetup
 		jsonKeysErr error
+		// withoutGenai runs the service with no genai host, which leaves genai out of the report.
+		withoutGenai bool
+		genaiErr     error
 
 		expectStatus   int
 		expectHealth   string
 		expectJsonKeys string
+		expectGenai    string
 	}{
 		{
 			name:           "Success",
@@ -36,6 +41,24 @@ func TestRestHealth(t *testing.T) {
 			expectStatus:   http.StatusOK,
 			expectHealth:   handlers.RestHealthStatusUp,
 			expectJsonKeys: handlers.RestHealthStatusUp,
+			expectGenai:    handlers.RestHealthStatusUp,
+		},
+		{
+			name:           "Success/WithoutGenai",
+			setup:          probeHealthy,
+			withoutGenai:   true,
+			expectStatus:   http.StatusOK,
+			expectHealth:   handlers.RestHealthStatusUp,
+			expectJsonKeys: handlers.RestHealthStatusUp,
+		},
+		{
+			name:           "Error/GenaiDown",
+			setup:          probeHealthy,
+			genaiErr:       errors.New("unavailable"),
+			expectStatus:   http.StatusServiceUnavailable,
+			expectHealth:   handlers.RestHealthStatusUp,
+			expectJsonKeys: handlers.RestHealthStatusUp,
+			expectGenai:    handlers.RestHealthStatusDown,
 		},
 		{
 			name:           "Error/JsonKeysDown",
@@ -44,6 +67,7 @@ func TestRestHealth(t *testing.T) {
 			expectStatus:   http.StatusServiceUnavailable,
 			expectHealth:   handlers.RestHealthStatusUp,
 			expectJsonKeys: handlers.RestHealthStatusDown,
+			expectGenai:    handlers.RestHealthStatusUp,
 		},
 		{
 			name:           "Error/MissingPostgres",
@@ -51,6 +75,7 @@ func TestRestHealth(t *testing.T) {
 			expectStatus:   http.StatusServiceUnavailable,
 			expectHealth:   handlers.RestHealthStatusDown,
 			expectJsonKeys: handlers.RestHealthStatusUp,
+			expectGenai:    handlers.RestHealthStatusUp,
 		},
 		{
 			name:           "Error/ClosedPostgres",
@@ -58,6 +83,7 @@ func TestRestHealth(t *testing.T) {
 			expectStatus:   http.StatusServiceUnavailable,
 			expectHealth:   handlers.RestHealthStatusDown,
 			expectJsonKeys: handlers.RestHealthStatusUp,
+			expectGenai:    handlers.RestHealthStatusUp,
 		},
 		{
 			name:           "Error/TransactionContext",
@@ -65,6 +91,7 @@ func TestRestHealth(t *testing.T) {
 			expectStatus:   http.StatusServiceUnavailable,
 			expectHealth:   handlers.RestHealthStatusDown,
 			expectJsonKeys: handlers.RestHealthStatusUp,
+			expectGenai:    handlers.RestHealthStatusUp,
 		},
 		{
 			name:           "Error/CancelledProbe",
@@ -72,6 +99,7 @@ func TestRestHealth(t *testing.T) {
 			expectStatus:   http.StatusServiceUnavailable,
 			expectHealth:   handlers.RestHealthStatusDown,
 			expectJsonKeys: handlers.RestHealthStatusUp,
+			expectGenai:    handlers.RestHealthStatusUp,
 		},
 	}
 
@@ -87,7 +115,19 @@ func TestRestHealth(t *testing.T) {
 				Status(mock.Anything, &servicejsonkeys.StatusRequest{}).
 				Return(&servicejsonkeys.StatusResponse{}, testCase.jsonKeysErr)
 
-			handlers.NewRestHealth(jsonKeys).ServeHTTP(
+			// A nil genai keeps its nil interface: a typed nil would read as configured.
+			var genai handlers.RestHealthApiGenai
+
+			if !testCase.withoutGenai {
+				genaiMock := handlersmocks.NewMockRestHealthApiGenai(t)
+				genaiMock.EXPECT().
+					Status(mock.Anything, &servicegenai.StatusRequest{}).
+					Return(&servicegenai.StatusResponse{}, testCase.genaiErr)
+
+				genai = genaiMock
+			}
+
+			handlers.NewRestHealth(jsonKeys, genai).ServeHTTP(
 				recorder, httptest.NewRequestWithContext(ctx, http.MethodGet, "/v1/healthcheck", nil),
 			)
 
@@ -101,10 +141,15 @@ func TestRestHealth(t *testing.T) {
 			var report any
 			require.NoError(t, json.Unmarshal(body, &report))
 			// Exact matching keeps raw dependency errors out of the public report.
-			require.Equal(t, map[string]any{
+			expectReport := map[string]any{
 				"client:postgres": map[string]any{"status": testCase.expectHealth},
 				"api:jsonKeys":    map[string]any{"status": testCase.expectJsonKeys},
-			}, report)
+			}
+			if !testCase.withoutGenai {
+				expectReport["api:genai"] = map[string]any{"status": testCase.expectGenai}
+			}
+
+			require.Equal(t, expectReport, report)
 
 			jsonKeys.AssertExpectations(t)
 		})
