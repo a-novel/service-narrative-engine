@@ -4,7 +4,7 @@ go 1.27.3
 
 require (
 	github.com/a-novel-kit/golib v0.63.0
-	github.com/a-novel/service-authentication/v2 v2.25.1
+	github.com/a-novel/service-authentication/v2 v2.25.2
 	github.com/a-novel/service-genai v0.8.8
 	github.com/a-novel/service-json-keys/v2 v2.15.6
 	github.com/go-chi/chi/v5 v5.5.0
