@@ -50,6 +50,16 @@ func submitPayload(task string) string {
 		`"text":{"format":{"type":"json_schema","name":"suggest","schema":{"type":"object"},"strict":true}}}`
 }
 
+// genaiAnswer is how genai answers one submit, of the call at a position of the plan, at a variant.
+type genaiAnswer struct {
+	call    int
+	variant uint32
+
+	created bool
+	resp    *servicegenai.Generation
+	err     error
+}
+
 func TestGenerationSubmit(t *testing.T) {
 	t.Parallel()
 
@@ -61,6 +71,21 @@ func TestGenerationSubmit(t *testing.T) {
 	snapshot := &core.ProjectSnapshot{Project: &core.Project{ID: projectID, OwnerID: ownerID, Language: "fr"}}
 
 	running := genaiGeneration(servicegenai.GenerationStatusRunning, "")
+	succeeded := genaiGeneration(
+		servicegenai.GenerationStatusSucceeded, openaiResponse(core.GenerationKindSuggest, outputText(suggestOutput)),
+	)
+
+	// genai holds these calls as succeeded, though their output reads as failed.
+	incomplete := genaiGeneration(
+		servicegenai.GenerationStatusSucceeded,
+		`{"status":"incomplete","incomplete_details":{"reason":"max_output_tokens"},"output":[]}`,
+	)
+	refused := genaiGeneration(
+		servicegenai.GenerationStatusSucceeded,
+		openaiResponse(core.GenerationKindSuggest,
+			map[string]string{"type": "refusal", "refusal": "I cannot help with that."}),
+	)
+	malformed := genaiGeneration(servicegenai.GenerationStatusSucceeded, "not json")
 
 	testCases := []struct {
 		name string
@@ -69,8 +94,8 @@ func TestGenerationSubmit(t *testing.T) {
 
 		snapshotMock *daoMock[*core.ProjectSnapshot]
 		planMock     *daoMock[*core.ContextPlan]
-		// genaiMocks answers each call genai receives, in order, and tier is the tier each names.
-		genaiMocks []*daoMock[*servicegenai.Generation]
+		// genaiMocks answers each submit genai receives, in order, and tier is the tier each names.
+		genaiMocks []*genaiAnswer
 		tier       string
 
 		expect    *core.Generation
@@ -88,7 +113,7 @@ func TestGenerationSubmit(t *testing.T) {
 			planMock: &daoMock[*core.ContextPlan]{resp: &core.ContextPlan{
 				Kind: core.GenerationKindSuggest, Calls: []*core.ContextCall{submitCall("task 1")},
 			}},
-			genaiMocks: []*daoMock[*servicegenai.Generation]{{resp: running}},
+			genaiMocks: []*genaiAnswer{{created: true, resp: running}},
 			tier:       "default",
 
 			expect: &core.Generation{Kind: core.GenerationKindSuggest, Calls: []*core.GenerationCall{{
@@ -108,7 +133,7 @@ func TestGenerationSubmit(t *testing.T) {
 			planMock: &daoMock[*core.ContextPlan]{resp: &core.ContextPlan{
 				Kind: core.GenerationKindSuggest, Calls: []*core.ContextCall{submitCall("task 1")},
 			}},
-			genaiMocks: []*daoMock[*servicegenai.Generation]{{resp: running}},
+			genaiMocks: []*genaiAnswer{{variant: 2, created: true, resp: running}},
 			tier:       "admin",
 
 			expect: &core.Generation{Kind: core.GenerationKindSuggest, Calls: []*core.GenerationCall{{
@@ -128,11 +153,8 @@ func TestGenerationSubmit(t *testing.T) {
 			planMock: &daoMock[*core.ContextPlan]{resp: &core.ContextPlan{
 				Kind: core.GenerationKindSuggest, Calls: []*core.ContextCall{submitCall("task 1")},
 			}},
-			genaiMocks: []*daoMock[*servicegenai.Generation]{{resp: genaiGeneration(
-				servicegenai.GenerationStatusSucceeded,
-				openaiResponse(core.GenerationKindSuggest, outputText(suggestOutput)),
-			)}},
-			tier: "default",
+			genaiMocks: []*genaiAnswer{{resp: succeeded}},
+			tier:       "default",
 
 			expect: &core.Generation{Kind: core.GenerationKindSuggest, Calls: []*core.GenerationCall{{
 				Result: &core.GenerationResult{
@@ -141,6 +163,93 @@ func TestGenerationSubmit(t *testing.T) {
 				},
 				Context: submitCall("task 1"),
 			}}},
+		},
+		{
+			// A resent request replays the call whose output held, and reruns the one whose output was cut
+			// short at the next variant.
+			name: "Success/RerunRejectedOutput",
+
+			request: &core.GenerationSubmitRequest{
+				OwnerID: ownerID, ProjectID: projectID, Kind: core.GenerationKindSuggest, Targets: targets,
+			},
+
+			snapshotMock: &daoMock[*core.ProjectSnapshot]{resp: snapshot},
+			planMock: &daoMock[*core.ContextPlan]{resp: &core.ContextPlan{
+				Kind: core.GenerationKindSuggest, Calls: []*core.ContextCall{submitCall("task 1"), submitCall("task 2")},
+			}},
+			genaiMocks: []*genaiAnswer{
+				{resp: succeeded},
+				{call: 1, resp: incomplete},
+				{call: 1, variant: 1, created: true, resp: running},
+			},
+			tier: "default",
+
+			expect: &core.Generation{Kind: core.GenerationKindSuggest, Calls: []*core.GenerationCall{
+				{
+					Result: &core.GenerationResult{
+						ID: genaiID, Status: core.GenerationStatusSucceeded, Output: json.RawMessage(suggestOutput),
+						Model: openaiModel,
+					},
+					Context: submitCall("task 1"),
+				},
+				{
+					Result:  &core.GenerationResult{ID: genaiID, Status: core.GenerationStatusRunning},
+					Context: submitCall("task 2"),
+				},
+			}},
+		},
+		{
+			// The variants a call already ran replay, so the walk starts from the request's variant and passes
+			// each rejected output until genai runs a new one.
+			name: "Success/RerunWalksVariants",
+
+			request: &core.GenerationSubmitRequest{
+				OwnerID: ownerID, ProjectID: projectID, Kind: core.GenerationKindSuggest, Targets: targets,
+				Variant: 3,
+			},
+
+			snapshotMock: &daoMock[*core.ProjectSnapshot]{resp: snapshot},
+			planMock: &daoMock[*core.ContextPlan]{resp: &core.ContextPlan{
+				Kind: core.GenerationKindSuggest, Calls: []*core.ContextCall{submitCall("task 1")},
+			}},
+			genaiMocks: []*genaiAnswer{
+				{variant: 3, resp: refused},
+				{variant: 4, resp: malformed},
+				{variant: 5, created: true, resp: running},
+			},
+			tier: "default",
+
+			expect: &core.Generation{Kind: core.GenerationKindSuggest, Calls: []*core.GenerationCall{{
+				Result:  &core.GenerationResult{ID: genaiID, Status: core.GenerationStatusRunning},
+				Context: submitCall("task 1"),
+			}}},
+		},
+		{
+			// A cap that refuses the rerun leaves the call waiting, as it would a first submit.
+			name: "Success/RerunWaiting",
+
+			request: &core.GenerationSubmitRequest{
+				OwnerID: ownerID, ProjectID: projectID, Kind: core.GenerationKindSuggest, Targets: targets,
+			},
+
+			snapshotMock: &daoMock[*core.ProjectSnapshot]{resp: snapshot},
+			planMock: &daoMock[*core.ContextPlan]{resp: &core.ContextPlan{
+				Kind: core.GenerationKindSuggest, Calls: []*core.ContextCall{submitCall("task 1"), submitCall("task 2")},
+			}},
+			genaiMocks: []*genaiAnswer{
+				{created: true, resp: running},
+				{call: 1, resp: incomplete},
+				{call: 1, variant: 1, err: status.Error(codes.ResourceExhausted, concurrencyCap)},
+			},
+			tier: "default",
+
+			expect: &core.Generation{Kind: core.GenerationKindSuggest, Calls: []*core.GenerationCall{
+				{
+					Result:  &core.GenerationResult{ID: genaiID, Status: core.GenerationStatusRunning},
+					Context: submitCall("task 1"),
+				},
+				{Waiting: concurrencyCap, Context: submitCall("task 2")},
+			}},
 		},
 		{
 			// genai refuses the second call, so it waits, and the third waits without a submit.
@@ -157,9 +266,9 @@ func TestGenerationSubmit(t *testing.T) {
 					submitCall("task 1"), submitCall("task 2"), submitCall("task 3"),
 				},
 			}},
-			genaiMocks: []*daoMock[*servicegenai.Generation]{
-				{resp: running},
-				{err: status.Error(codes.ResourceExhausted, concurrencyCap)},
+			genaiMocks: []*genaiAnswer{
+				{created: true, resp: running},
+				{call: 1, err: status.Error(codes.ResourceExhausted, concurrencyCap)},
 			},
 			tier: "default",
 
@@ -183,7 +292,7 @@ func TestGenerationSubmit(t *testing.T) {
 			planMock: &daoMock[*core.ContextPlan]{resp: &core.ContextPlan{
 				Kind: core.GenerationKindSuggest, Calls: []*core.ContextCall{submitCall("task 1"), submitCall("task 2")},
 			}},
-			genaiMocks: []*daoMock[*servicegenai.Generation]{
+			genaiMocks: []*genaiAnswer{
 				{err: status.Error(codes.ResourceExhausted, concurrencyCap)},
 			},
 			tier: "default",
@@ -234,7 +343,7 @@ func TestGenerationSubmit(t *testing.T) {
 			planMock: &daoMock[*core.ContextPlan]{resp: &core.ContextPlan{
 				Kind: core.GenerationKindSuggest, Calls: []*core.ContextCall{submitCall("task 1")},
 			}},
-			genaiMocks: []*daoMock[*servicegenai.Generation]{{err: status.Error(codes.Unavailable, "planned downtime")}},
+			genaiMocks: []*genaiAnswer{{err: status.Error(codes.Unavailable, "planned downtime")}},
 			tier:       "default",
 
 			expectErr: core.ErrGenaiUnavailable,
@@ -250,7 +359,7 @@ func TestGenerationSubmit(t *testing.T) {
 			planMock: &daoMock[*core.ContextPlan]{resp: &core.ContextPlan{
 				Kind: core.GenerationKindSuggest, Calls: []*core.ContextCall{submitCall("task 1")},
 			}},
-			genaiMocks: []*daoMock[*servicegenai.Generation]{{err: errFoo}},
+			genaiMocks: []*genaiAnswer{{err: errFoo}},
 			tier:       "default",
 
 			expectErr: errFoo,
@@ -281,15 +390,15 @@ func TestGenerationSubmit(t *testing.T) {
 					Return(testCase.planMock.resp, testCase.planMock.err)
 			}
 
-			for index, answer := range testCase.genaiMocks {
-				task := testCase.planMock.resp.Calls[index].Prompt.Task
+			for _, answer := range testCase.genaiMocks {
+				task := testCase.planMock.resp.Calls[answer.call].Prompt.Task
 
 				mockGenai.EXPECT().
 					GenerationSubmit(mock.Anything, mock.MatchedBy(func(request *servicegenai.GenerationSubmitRequest) bool {
 						return bytes.Equal(request.GetPayload(), []byte(submitPayload(task))) &&
 							request.GetOwnerId() == ownerID.String() && request.GetPurpose() == "studio.generation" &&
 							request.GetProvider() == "openai" && request.GetUserTier() == testCase.tier &&
-							request.GetVariant() == testCase.request.Variant && request.GetStream() == testCase.request.Stream
+							request.GetVariant() == answer.variant && request.GetStream() == testCase.request.Stream
 					})).
 					// The read and the plan free their slot of the gate before genai answers, which may take long.
 					Run(func(ctx context.Context, _ *servicegenai.GenerationSubmitRequest, _ ...grpc.CallOption) {
@@ -298,7 +407,7 @@ func TestGenerationSubmit(t *testing.T) {
 
 						require.NoError(t, gate.Run(waitCtx, func(context.Context) error { return nil }))
 					}).
-					Return(&servicegenai.GenerationSubmitResponse{Generation: answer.resp}, answer.err).
+					Return(&servicegenai.GenerationSubmitResponse{Generation: answer.resp, Created: answer.created}, answer.err).
 					Once()
 			}
 

@@ -1288,9 +1288,10 @@ paths:
 
         Resending the same request while the project holds still admits the calls that wait: genai replays
         the calls it admitted and those that succeeded, at no cost for 6 hours, and runs those that failed or
-        were cancelled again. Read each call through generationGet, and map its output through the handles
-        of its context. When genai admits no call, the route answers 429 naming the cap. A caller submits 30
-        generations a minute at most; one more answers 429 with `Retry-After`.
+        were cancelled again. A call whose output read as failed runs again too, under a new id. Read each
+        call through generationGet, and map its output through the handles of its context. When genai
+        admits no call, the route answers 429 naming the cap. A caller submits 30 generations a minute at
+        most; one more answers 429 with `Retry-After`.
       tags: [generation]
       requestBody:
         required: true

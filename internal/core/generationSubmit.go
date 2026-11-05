@@ -71,9 +71,9 @@ type GenerationSubmitRequest struct {
 // GenerationSubmit plans a generation and submits each of its calls to genai, as the caller. A call
 // genai refuses for a cap waits, and so do the calls after it. Resending the same request admits the
 // calls that wait: genai replays the calls it admitted and those that succeeded, and runs again those that
-// failed or were cancelled. A generation whose every call waits returns a [GenerationQuotaError]. The read
-// of the project and the plan wait for a slot of the gate, which they share with every other read of a
-// whole project, and free it before the first call to genai.
+// failed or were cancelled, a call whose output reads as failed included. A generation whose every call
+// waits returns a [GenerationQuotaError]. The read of the project and the plan wait for a slot of the gate,
+// which they share with every other read of a whole project, and free it before the first call to genai.
 type GenerationSubmit struct {
 	snapshot GenerationSubmitServiceSnapshot
 	plan     GenerationSubmitServicePlan
@@ -159,6 +159,10 @@ func (service *GenerationSubmit) Exec(ctx context.Context, request *GenerationSu
 
 // submit submits the call at a position of the generation to genai. It returns the genai generation that
 // runs the call, or the cap genai refused it for.
+//
+// genai replays a call it already ran, so a replay whose output reads as failed would fail again on every
+// resend. Such a call runs again at the next variant instead. Variants already run replay at no cost, so the
+// walk stops at the first variant genai creates, still runs, or holds a valid output for.
 func (service *GenerationSubmit) submit(
 	ctx context.Context, request *GenerationSubmitRequest, kind string, call *ContextCall, position int,
 ) (*GenerationResult, string, error) {
@@ -172,10 +176,7 @@ func (service *GenerationSubmit) submit(
 		return nil, "", otel.ReportError(span, err)
 	}
 
-	genaiCtx, cancel := context.WithTimeout(ctx, genaiTimeout)
-	defer cancel()
-
-	response, err := service.genai.GenerationSubmit(genaiCtx, &servicegenai.GenerationSubmitRequest{
+	genaiRequest := &servicegenai.GenerationSubmitRequest{
 		OwnerId:  request.OwnerID.String(),
 		Purpose:  generationPurpose,
 		Provider: generationProvider,
@@ -183,21 +184,36 @@ func (service *GenerationSubmit) submit(
 		UserTier: lo.Ternary(request.Admin, genaiTierAdmin, genaiTierDefault),
 		Variant:  request.Variant,
 		Stream:   request.Stream,
-	})
-	if status.Code(err) == codes.ResourceExhausted {
-		span.SetAttributes(attribute.Bool("generation.waiting", true))
-
-		return nil, status.Convert(err).Message(), nil
 	}
 
-	if err != nil {
-		return nil, "", otel.ReportError(span, fmt.Errorf("genai submit: %w", genaiError(err, nil)))
-	}
+	for ; ; genaiRequest.Variant++ {
+		genaiCtx, cancel := context.WithTimeout(ctx, genaiTimeout)
+		response, err := service.genai.GenerationSubmit(genaiCtx, genaiRequest)
 
-	result, err := newGenerationResult(response.GetGeneration())
-	if err != nil {
-		return nil, "", otel.ReportError(span, fmt.Errorf("read generation: %w", err))
-	}
+		cancel()
 
-	return result, "", nil
+		if status.Code(err) == codes.ResourceExhausted {
+			span.SetAttributes(attribute.Bool("generation.waiting", true))
+
+			return nil, status.Convert(err).Message(), nil
+		}
+
+		if err != nil {
+			return nil, "", otel.ReportError(span, fmt.Errorf("genai submit: %w", genaiError(err, nil)))
+		}
+
+		result, err := newGenerationResult(response.GetGeneration())
+		if err != nil {
+			return nil, "", otel.ReportError(span, fmt.Errorf("read generation: %w", err))
+		}
+
+		// genai holds a replayed call as succeeded once the provider finished it, whatever its output.
+		rejected := !response.GetCreated() && result.Status == GenerationStatusFailed &&
+			response.GetGeneration().GetStatus() == servicegenai.GenerationStatusSucceeded
+		if !rejected {
+			span.SetAttributes(attribute.Int64("generation.variant", int64(genaiRequest.GetVariant())))
+
+			return result, "", nil
+		}
+	}
 }
