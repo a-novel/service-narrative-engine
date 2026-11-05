@@ -127,6 +127,7 @@ func main() {
 	daoManuscriptSelect := dao.NewPgManuscriptSelect()
 	transactor := postgres.NewTransactor(nil)
 	projectReadGate := core.NewProjectReadGate(cfg.Limits.ProjectReadMaxConcurrent)
+	generationCaps := lo.Must(core.NewGenerationCapsPolicy(cfg.Permissions, cfg.Caps))
 
 	// =================================================================================================================
 	// SERVICES
@@ -180,7 +181,7 @@ func main() {
 	)
 	serviceGenerationPlan := core.NewGenerationPlan(cfg.Generations, daoCellsSelect)
 	serviceGenerationSubmit := core.NewGenerationSubmit(
-		serviceProjectSnapshotRead, serviceGenerationPlan, genaiClient, projectReadGate,
+		serviceProjectSnapshotRead, serviceGenerationPlan, genaiClient, projectReadGate, generationCaps,
 	)
 	serviceGenerationGet := core.NewGenerationGet(genaiClient)
 	serviceGenerationStream := core.NewGenerationStream(genaiClient, serviceGenerationGet)
@@ -230,7 +231,7 @@ func main() {
 	handlerCellRecapWrite := handlers.NewRestCellRecapWrite(serviceCellRecapWrite, cfg.Logger)
 	handlerBeatRecapWrite := handlers.NewRestBeatRecapWrite(serviceBeatRecapWrite, cfg.Logger)
 	handlerManuscriptExport := handlers.NewRestManuscriptExport(serviceManuscriptExport, cfg.Logger)
-	handlerGenerationSubmit := handlers.NewRestGenerationSubmit(serviceGenerationSubmit, cfg.Permissions, cfg.Logger)
+	handlerGenerationSubmit := handlers.NewRestGenerationSubmit(serviceGenerationSubmit, cfg.Logger)
 	handlerGenerationGet := handlers.NewRestGenerationGet(serviceGenerationGet, cfg.Logger)
 	handlerGenerationStream := handlers.NewRestGenerationStream(serviceGenerationStream, cfg.Logger)
 	handlerGenerationCancel := handlers.NewRestGenerationCancel(serviceGenerationCancel, cfg.Logger)

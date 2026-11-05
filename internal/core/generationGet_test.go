@@ -79,13 +79,30 @@ func TestGenerationGet(t *testing.T) {
 			genaiMock: &daoMock[*servicegenai.Generation]{resp: func() *servicegenai.Generation {
 				generation := genaiGeneration(servicegenai.GenerationStatusFailed, "")
 				generation.Error = "provider unreachable"
+				generation.FailureClass = servicegenai.GenerationFailureNotStarted
 
 				return generation
 			}()},
 
 			expect: &core.GenerationResult{
 				ID: genaiID, Status: core.GenerationStatusFailed, Error: "provider unreachable",
+				FailureClass: core.GenerationFailureNotStarted,
 			},
+		},
+		{
+			// genai gives no class to a failure it settled before it classified them.
+			name: "Success/FailedUnclassified",
+
+			request: &core.GenerationGetRequest{OwnerID: ownerID, ID: genaiID},
+
+			genaiMock: &daoMock[*servicegenai.Generation]{resp: func() *servicegenai.Generation {
+				generation := genaiGeneration(servicegenai.GenerationStatusFailed, "")
+				generation.Error = "provider failed"
+
+				return generation
+			}()},
+
+			expect: &core.GenerationResult{ID: genaiID, Status: core.GenerationStatusFailed, Error: "provider failed"},
 		},
 		{
 			name: "Success/Cancelled",
@@ -128,6 +145,7 @@ func TestGenerationGet(t *testing.T) {
 
 			expect: &core.GenerationResult{
 				ID: genaiID, Status: core.GenerationStatusFailed, Error: "refused: I cannot help with that.",
+				FailureClass: core.GenerationFailureInvalidOutput,
 			},
 		},
 		{
@@ -142,6 +160,7 @@ func TestGenerationGet(t *testing.T) {
 
 			expect: &core.GenerationResult{
 				ID: genaiID, Status: core.GenerationStatusFailed, Error: "incomplete output: max_output_tokens",
+				FailureClass: core.GenerationFailureInvalidOutput,
 			},
 		},
 		{
@@ -155,7 +174,8 @@ func TestGenerationGet(t *testing.T) {
 
 			expect: &core.GenerationResult{
 				ID: genaiID, Status: core.GenerationStatusFailed,
-				Error: "malformed response: invalid character 'o' in literal null (expecting 'u')",
+				Error:        "malformed response: invalid character 'o' in literal null (expecting 'u')",
+				FailureClass: core.GenerationFailureInvalidOutput,
 			},
 		},
 		{
@@ -184,6 +204,7 @@ func TestGenerationGet(t *testing.T) {
 
 			expect: &core.GenerationResult{
 				ID: genaiID, Status: core.GenerationStatusFailed, Error: "unknown output format: poem",
+				FailureClass: core.GenerationFailureInvalidOutput,
 			},
 		},
 		{
@@ -195,7 +216,10 @@ func TestGenerationGet(t *testing.T) {
 				resp: genaiGeneration(servicegenai.GenerationStatusSucceeded, ""),
 			},
 
-			expect: &core.GenerationResult{ID: genaiID, Status: core.GenerationStatusFailed, Error: "no response"},
+			expect: &core.GenerationResult{
+				ID: genaiID, Status: core.GenerationStatusFailed, Error: "no response",
+				FailureClass: core.GenerationFailureInvalidOutput,
+			},
 		},
 		{
 			name: "Error/MissingID",
@@ -255,6 +279,7 @@ func TestGenerationGet(t *testing.T) {
 			if testCase.expectFailure != "" {
 				require.Equal(t, core.GenerationStatusFailed, result.Status)
 				require.True(t, strings.HasPrefix(result.Error, testCase.expectFailure), result.Error)
+				require.Equal(t, core.GenerationFailureInvalidOutput, result.FailureClass)
 				require.Empty(t, result.Output)
 			} else {
 				require.Equal(t, testCase.expect, result)

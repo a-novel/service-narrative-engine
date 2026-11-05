@@ -1,0 +1,9 @@
+# Starting values, to be set from measured usage. genai sets no limit of its own: the caps a submit carries
+# alone bound what a user spends. A caller takes the caps of their highest-priority role named here, and a
+# role that grants narrative:generation:uncapped sends empty caps, which limit nothing.
+roles:
+  "auth:user":
+    concurrency: 2 # Calls one user may have in flight at once.
+    windows: # Rolling windows, as Go durations. A limit left out does not apply.
+      5h: { inputTokens: 2000000, outputTokens: 200000 }
+      720h: { inputTokens: 50000000, outputTokens: 5000000 }

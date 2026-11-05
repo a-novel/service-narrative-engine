@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"go.opentelemetry.io/otel/attribute"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -39,8 +40,8 @@ type GenerationSubmitServiceGenai interface {
 type GenerationSubmitRequest struct {
 	OwnerID   uuid.UUID `validate:"required"`
 	ProjectID uuid.UUID `validate:"required"`
-	// Admin runs the generation on genai's admin tier, which no cap limits.
-	Admin bool
+	// Roles are the caller's roles, which set the caps genai counts the generation against.
+	Roles []string
 
 	// Kind is the kind of the generation, one of [GenerationKinds].
 	Kind string `validate:"generationkind"`
@@ -68,17 +69,19 @@ type GenerationSubmitRequest struct {
 	Stream bool
 }
 
-// GenerationSubmit plans a generation and submits each of its calls to genai, as the caller. A call
-// genai refuses for a cap waits, and so do the calls after it. Resending the same request admits the
-// calls that wait: genai replays the calls it admitted and those that succeeded, and runs again those that
-// failed or were cancelled, a call whose output reads as failed included. A generation whose every call
-// waits returns a [GenerationQuotaError]. The read of the project and the plan wait for a slot of the gate,
-// which they share with every other read of a whole project, and free it before the first call to genai.
+// GenerationSubmit plans a generation and submits each of its calls to genai, as the caller, under the caps
+// of the caller's roles. A call genai refuses for a cap waits, and so do the calls after it. Resending the
+// same request admits the calls that wait: genai replays the calls it admitted and those that succeeded,
+// and runs again those that failed or were cancelled, a call whose output reads as failed included. A
+// generation whose every call waits returns a [GenerationQuotaError]. The read of the project and the plan
+// wait for a slot of the gate, which they share with every other read of a whole project, and free it before
+// the first call to genai.
 type GenerationSubmit struct {
 	snapshot GenerationSubmitServiceSnapshot
 	plan     GenerationSubmitServicePlan
 	genai    GenerationSubmitServiceGenai
 	gate     *ProjectReadGate
+	caps     *GenerationCapsPolicy
 }
 
 func NewGenerationSubmit(
@@ -86,8 +89,9 @@ func NewGenerationSubmit(
 	plan GenerationSubmitServicePlan,
 	genai GenerationSubmitServiceGenai,
 	gate *ProjectReadGate,
+	caps *GenerationCapsPolicy,
 ) *GenerationSubmit {
-	return &GenerationSubmit{snapshot: snapshot, plan: plan, genai: genai, gate: gate}
+	return &GenerationSubmit{snapshot: snapshot, plan: plan, genai: genai, gate: gate, caps: caps}
 }
 
 func (service *GenerationSubmit) Exec(ctx context.Context, request *GenerationSubmitRequest) (*Generation, error) {
@@ -103,6 +107,11 @@ func (service *GenerationSubmit) Exec(ctx context.Context, request *GenerationSu
 	err := validate.Struct(request)
 	if err != nil {
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
+	}
+
+	caps, err := service.caps.Resolve(request.Roles)
+	if err != nil {
+		return nil, otel.ReportError(span, err)
 	}
 
 	var plan *ContextPlan
@@ -130,42 +139,44 @@ func (service *GenerationSubmit) Exec(ctx context.Context, request *GenerationSu
 	}
 
 	generation := &Generation{Kind: plan.Kind, Calls: make([]*GenerationCall, len(plan.Calls))}
+	genaiCaps := caps.genai()
 
-	var waiting string
+	var refusal *GenerationQuotaError
 
 	for position, call := range plan.Calls {
-		submitted := &GenerationCall{Context: call, Waiting: waiting}
+		submitted := &GenerationCall{Context: call}
 		generation.Calls[position] = submitted
 
 		// A cap that refused a call refuses the calls after it as well, until a call settles.
-		if waiting != "" {
-			continue
+		if refusal == nil {
+			submitted.Result, refusal, err = service.submit(ctx, request, genaiCaps, plan.Kind, call, position)
+			if err != nil {
+				return nil, otel.ReportError(span, fmt.Errorf("submit call: %w", err))
+			}
 		}
 
-		submitted.Result, submitted.Waiting, err = service.submit(ctx, request, plan.Kind, call, position)
-		if err != nil {
-			return nil, otel.ReportError(span, fmt.Errorf("submit call: %w", err))
+		if refusal != nil {
+			submitted.Waiting = refusal.Cap
 		}
-
-		waiting = submitted.Waiting
 	}
 
-	if lo.EveryBy(generation.Calls, func(call *GenerationCall) bool { return call.Waiting != "" }) {
-		return nil, otel.ReportError(span, &GenerationQuotaError{Cap: waiting})
+	if refusal != nil && lo.EveryBy(generation.Calls, func(call *GenerationCall) bool { return call.Waiting != "" }) {
+		return nil, otel.ReportError(span, refusal)
 	}
 
 	return generation, nil
 }
 
 // submit submits the call at a position of the generation to genai. It returns the genai generation that
-// runs the call, or the cap genai refused it for.
+// runs the call, or genai's refusal for a cap.
 //
 // genai replays a call it already ran, so a replay whose output reads as failed would fail again on every
 // resend. Such a call runs again at the next variant instead. Variants already run replay at no cost, so the
 // walk stops at the first variant genai creates, still runs, or holds a valid output for.
 func (service *GenerationSubmit) submit(
-	ctx context.Context, request *GenerationSubmitRequest, kind string, call *ContextCall, position int,
-) (*GenerationResult, string, error) {
+	ctx context.Context, request *GenerationSubmitRequest, caps *servicegenai.GenerationCaps, kind string,
+	call *ContextCall, position int,
+) (*GenerationResult, *GenerationQuotaError, error) {
 	ctx, span := otel.Tracer().Start(ctx, "core.GenerationSubmit(call)")
 	defer span.End()
 
@@ -173,7 +184,7 @@ func (service *GenerationSubmit) submit(
 
 	payload, err := newPayload(kind, request.ProjectID.String(), call.Prompt)
 	if err != nil {
-		return nil, "", otel.ReportError(span, err)
+		return nil, nil, otel.ReportError(span, err)
 	}
 
 	genaiRequest := &servicegenai.GenerationSubmitRequest{
@@ -181,7 +192,7 @@ func (service *GenerationSubmit) submit(
 		Purpose:  generationPurpose,
 		Provider: generationProvider,
 		Payload:  payload,
-		UserTier: lo.Ternary(request.Admin, genaiTierAdmin, genaiTierDefault),
+		Caps:     caps,
 		Variant:  request.Variant,
 		Stream:   request.Stream,
 	}
@@ -195,16 +206,16 @@ func (service *GenerationSubmit) submit(
 		if status.Code(err) == codes.ResourceExhausted {
 			span.SetAttributes(attribute.Bool("generation.waiting", true))
 
-			return nil, status.Convert(err).Message(), nil
+			return nil, newGenerationQuotaError(err), nil
 		}
 
 		if err != nil {
-			return nil, "", otel.ReportError(span, fmt.Errorf("genai submit: %w", genaiError(err, nil)))
+			return nil, nil, otel.ReportError(span, fmt.Errorf("genai submit: %w", genaiError(err, nil)))
 		}
 
 		result, err := newGenerationResult(response.GetGeneration())
 		if err != nil {
-			return nil, "", otel.ReportError(span, fmt.Errorf("read generation: %w", err))
+			return nil, nil, otel.ReportError(span, fmt.Errorf("read generation: %w", err))
 		}
 
 		// genai holds a replayed call as succeeded once the provider finished it, whatever its output.
@@ -213,7 +224,22 @@ func (service *GenerationSubmit) submit(
 		if !rejected {
 			span.SetAttributes(attribute.Int64("generation.variant", int64(genaiRequest.GetVariant())))
 
-			return result, "", nil
+			return result, nil, nil
 		}
 	}
+}
+
+// newGenerationQuotaError reads genai's refusal of a call for a cap: its message names the cap, and its
+// RetryInfo, when a window refused, says when the window frees usage.
+func newGenerationQuotaError(err error) *GenerationQuotaError {
+	refusal := status.Convert(err)
+	quota := &GenerationQuotaError{Cap: refusal.Message()}
+
+	for _, detail := range refusal.Details() {
+		if info, ok := detail.(*errdetails.RetryInfo); ok {
+			quota.RetryAfter = info.GetRetryDelay().AsDuration()
+		}
+	}
+
+	return quota
 }

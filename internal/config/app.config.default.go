@@ -54,6 +54,7 @@ var AppPresetDefault = App{
 		ServiceGenaiCredentials:    newCredentials(env.ServiceGenaiTokenPath, env.ServiceGenaiTLS),
 	},
 	Permissions: PermissionsConfigDefault,
+	Caps:        CapsConfigDefault,
 	Rest:        env.Rest,
 	ServiceToken: servicetoken.Config{
 		Issuer:   env.ServiceTokenIssuer,

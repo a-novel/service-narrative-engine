@@ -17,7 +17,7 @@ import (
 	handlersmocks "github.com/a-novel/service-narrative-engine/internal/handlers/mocks"
 )
 
-// concurrencyCap is the message genai refuses a call with once the user runs as many as their tier allows.
+// concurrencyCap is the message genai refuses a call with once the user runs as many as their caps allow.
 const concurrencyCap = `usage cap reached: purpose "studio.generation" concurrency: 2 generations already in flight`
 
 // asRoles returns the request as the auth middleware hands it over for the project owner, granted roles.
@@ -82,8 +82,8 @@ func TestRestGenerationSubmit(t *testing.T) {
 
 		request func(t *testing.T) *http.Request
 
-		// admin is whether the service runs the generation on genai's admin tier.
-		admin       bool
+		// roles are the caller's roles the service receives, which set their caps.
+		roles       []string
 		serviceMock *serviceMock[*core.Generation]
 
 		expectStatus   int
@@ -114,14 +114,13 @@ func TestRestGenerationSubmit(t *testing.T) {
 				return asRoles(validRequest(t), "auth:admin")
 			},
 
-			admin:       true,
+			roles:       []string{"auth:admin"},
 			serviceMock: &serviceMock[*core.Generation]{resp: &core.Generation{Kind: core.GenerationKindSuggest}},
 
 			expectStatus:   http.StatusAccepted,
 			expectResponse: map[string]any{"kind": "suggest", "calls": []any{}},
 		},
 		{
-			// A superadmin inherits the admin's permission.
 			name: "Success/Superadmin",
 
 			request: func(t *testing.T) *http.Request {
@@ -130,7 +129,7 @@ func TestRestGenerationSubmit(t *testing.T) {
 				return asRoles(validRequest(t), "auth:superadmin")
 			},
 
-			admin:       true,
+			roles:       []string{"auth:superadmin"},
 			serviceMock: &serviceMock[*core.Generation]{resp: &core.Generation{Kind: core.GenerationKindSuggest}},
 
 			expectStatus: http.StatusAccepted,
@@ -144,6 +143,7 @@ func TestRestGenerationSubmit(t *testing.T) {
 				return asRoles(validRequest(t), "auth:user")
 			},
 
+			roles:       []string{"auth:user"},
 			serviceMock: &serviceMock[*core.Generation]{resp: &core.Generation{Kind: core.GenerationKindSuggest}},
 
 			expectStatus: http.StatusAccepted,
@@ -241,7 +241,7 @@ func TestRestGenerationSubmit(t *testing.T) {
 					Exec(mock.Anything, &core.GenerationSubmitRequest{
 						OwnerID:   ownerID,
 						ProjectID: projectID,
-						Admin:     testCase.admin,
+						Roles:     testCase.roles,
 						Kind:      core.GenerationKindSuggest,
 						Targets: []*core.GenerationTarget{
 							{SceneID: sceneID, Field: core.SceneFieldTitle, Mode: core.TargetModeRevise},
@@ -254,7 +254,7 @@ func TestRestGenerationSubmit(t *testing.T) {
 			}
 
 			w := httptest.NewRecorder()
-			handlers.NewRestGenerationSubmit(service, config.PermissionsConfigDefault, config.LoggerDev).
+			handlers.NewRestGenerationSubmit(service, config.LoggerDev).
 				ServeHTTP(w, testCase.request(t))
 
 			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
