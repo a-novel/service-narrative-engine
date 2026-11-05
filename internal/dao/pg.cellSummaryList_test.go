@@ -73,10 +73,25 @@ func TestPgCellSummaryList(t *testing.T) {
 		summary.Total = len(summaries)
 	}
 
+	// The summaries once the manuscript of the second scene and the recap of the first are rewritten.
+	rewritten := []*dao.CellSummaryListRow{
+		{
+			SceneID: sceneID1, LayerID: manuscriptLayerID, UpdatedAt: updatedAt, Size: 38,
+			Speakers:   []string{"Marie", "Paul"},
+			RecapNames: []string{"Paul"}, RecapCondensedSize: lo.ToPtr(10), RecapCompactSize: lo.ToPtr(5),
+			RecapEssentialsSize: lo.ToPtr(3), RecapCellUpdatedAt: &updatedAt, Total: 4,
+		},
+		{SceneID: sceneID2, LayerID: manuscriptLayerID, UpdatedAt: now, Size: 6, Speakers: []string{"Léa"}, Total: 4},
+		summaries[2],
+		summaries[3],
+	}
+
 	testCases := []struct {
 		name string
 
 		request *dao.CellSummaryListRequest
+		// rewrite writes cells through the write DAOs before the page is read.
+		rewrite func(ctx context.Context, t *testing.T)
 
 		expect []*dao.CellSummaryListRow
 	}{
@@ -104,6 +119,29 @@ func TestPgCellSummaryList(t *testing.T) {
 
 			request: &dao.CellSummaryListRequest{ProjectID: absentID, Limit: 10},
 		},
+		{
+			// A write of the content or of the recap refreshes the summary in the statement that writes.
+			name: "Success/Rewritten",
+
+			request: &dao.CellSummaryListRequest{ProjectID: projectID, Limit: 10},
+			rewrite: func(ctx context.Context, t *testing.T) {
+				t.Helper()
+
+				_, err := dao.NewPgCellUpsert().Exec(ctx, &dao.CellUpsertRequest{
+					ProjectID: projectID, SceneID: sceneID2, LayerID: manuscriptLayerID, Now: now,
+					Content: json.RawMessage(`{"blocks": [{"kind": "dialogue", "speaker": "Léa", "parts": [{"text": "Là."}]}]}`),
+				})
+				require.NoError(t, err)
+
+				err = dao.NewPgCellRecapUpdate().Exec(ctx, &dao.CellRecapUpdateRequest{
+					ProjectID: projectID, SceneID: sceneID1, LayerID: manuscriptLayerID, CellUpdatedAt: updatedAt,
+					Recap: json.RawMessage(`{"condensed": "Paul part.", "compact": "Part.", "essentials": "Va.", "names": ["Paul"]}`),
+				})
+				require.NoError(t, err)
+			},
+
+			expect: rewritten,
+		},
 	}
 
 	daoCellSummaryList := dao.NewPgCellSummaryList()
@@ -119,6 +157,10 @@ func TestPgCellSummaryList(t *testing.T) {
 				data.cells = summaryCells()
 
 				insertFixtures(ctx, t, data)
+
+				if testCase.rewrite != nil {
+					testCase.rewrite(ctx, t)
+				}
 
 				result, err := daoCellSummaryList.Exec(ctx, testCase.request)
 				require.NoError(t, err)

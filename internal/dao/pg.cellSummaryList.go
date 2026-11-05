@@ -27,7 +27,8 @@ type CellSummaryListRequest struct {
 	Offset int
 }
 
-// CellSummaryListRow summarizes one cell of a page: what its documents hold, measured without their text.
+// CellSummaryListRow summarizes one cell of a page: what its documents hold, as the columns each write of
+// the cell keeps measure it.
 type CellSummaryListRow struct {
 	// SceneID is the scene whose column holds the cell.
 	SceneID uuid.UUID `bun:"scene_id,type:uuid"`
@@ -37,11 +38,11 @@ type CellSummaryListRow struct {
 	UpdatedAt time.Time `bun:"updated_at"`
 
 	// Empty marks a content that holds no text and no block.
-	Empty bool `bun:"empty"`
+	Empty bool `bun:"content_empty"`
 	// Size counts the characters of every text, speaker and tone the content holds.
-	Size int `bun:"size"`
+	Size int `bun:"content_size"`
 	// Speakers lists the speakers of the content's blocks, each once.
-	Speakers []string `bun:"speakers,array"`
+	Speakers []string `bun:"content_speakers,array"`
 
 	// RecapNames lists the names of the cell's recap. The recap fields are nil until a recap is written.
 	RecapNames []string `bun:"recap_names,type:jsonb"`
