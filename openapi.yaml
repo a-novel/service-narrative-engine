@@ -1251,7 +1251,7 @@ paths:
         blocks. A project may hold several manuscript layers, such as a branch of the story, so the request
         names the one to export. A layer of another kind answers 404, and a project past its 16 MiB budget of
         stored bytes 409. An instance builds a bounded number of whole-project reads at once, exports and
-        generation snapshots together: a request past the bound waits for a slot rather than failing.
+        generation plans together: a request past the bound waits for a slot rather than failing.
       tags: [manuscript]
       parameters:
         - $ref: "#/components/parameters/parentProjectID"

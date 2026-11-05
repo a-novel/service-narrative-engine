@@ -4,12 +4,13 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// ProjectSnapshot is a project with every beat, scene, layer, cell and recap it holds, read at one instant.
-// A generation reads its context from it.
+// ProjectSnapshot is what a generation plans from first: a project with every beat, scene and layer it
+// holds, and a summary of each cell. The plan then reads the content and the recaps of the cells it shows.
 type ProjectSnapshot struct {
 	Project *Project `validate:"required"`
 
@@ -19,12 +20,77 @@ type ProjectSnapshot struct {
 	Scenes []*Scene
 	// Layers lists every layer of the project.
 	Layers []*Layer
-	// Cells lists every cell of the project that holds content.
-	Cells []*Cell
-	// Recaps lists the recaps of the project's cells.
-	Recaps []*CellRecap
+	// Cells summarizes every cell of the project.
+	Cells []*CellSummary
 	// BeatRecaps lists the recaps of the project's beats.
 	BeatRecaps []*BeatRecap
+}
+
+// CellSummary is what a plan decides on before it reads a cell: whether the cell holds content, how much,
+// the speakers it names, and its recap without the versions.
+type CellSummary struct {
+	// SceneID is the scene whose column holds the cell.
+	SceneID uuid.UUID
+	// LayerID is the layer whose row holds the cell.
+	LayerID uuid.UUID
+
+	UpdatedAt time.Time
+
+	// Empty marks a cell that holds no text and no block.
+	Empty bool
+	// Size counts the characters of every text, speaker and tone of the cell, as a context shows them
+	// before any markup.
+	Size int
+	// Speakers lists the speakers of the cell's blocks, each once.
+	Speakers []string
+
+	// Recap summarizes the cell's latest recap, nil until one is written.
+	Recap *RecapSummary
+}
+
+func newCellSummary(entity *dao.CellSummaryListRow) *CellSummary {
+	summary := &CellSummary{
+		SceneID: entity.SceneID, LayerID: entity.LayerID, UpdatedAt: entity.UpdatedAt,
+		Empty: entity.Empty, Size: entity.Size, Speakers: entity.Speakers,
+	}
+
+	if entity.RecapCellUpdatedAt != nil {
+		summary.Recap = &RecapSummary{
+			Names:          entity.RecapNames,
+			CondensedSize:  lo.FromPtr(entity.RecapCondensedSize),
+			CompactSize:    lo.FromPtr(entity.RecapCompactSize),
+			EssentialsSize: lo.FromPtr(entity.RecapEssentialsSize),
+			CellUpdatedAt:  *entity.RecapCellUpdatedAt,
+		}
+	}
+
+	return summary
+}
+
+// RecapSummary is a cell's recap without its versions. The recap is fresh while CellUpdatedAt equals the
+// cell's UpdatedAt.
+type RecapSummary struct {
+	// Names lists the characters, places and objects the source names.
+	Names []string
+	// CondensedSize, CompactSize and EssentialsSize count the characters of each version.
+	CondensedSize  int
+	CompactSize    int
+	EssentialsSize int
+
+	// CellUpdatedAt is the cell's UpdatedAt when the recap read it.
+	CellUpdatedAt time.Time
+}
+
+// size returns the characters of the recap's version at a level, as [Recap.version] picks it.
+func (recap *RecapSummary) size(level string) int {
+	switch level {
+	case ContextLevelCondensed:
+		return recap.CondensedSize
+	case ContextLevelCompact:
+		return recap.CompactSize
+	default:
+		return recap.EssentialsSize
+	}
 }
 
 // Recap condenses a source at three levels of detail, richest first, as a game keeps simpler models for far
@@ -63,20 +129,6 @@ func (recap *Recap) version(level string) string {
 	default:
 		return recap.Essentials
 	}
-}
-
-// CellRecap recaps the content of one cell. A context that cannot hold a manuscript cell whole shows one of
-// its versions instead, while the recap is fresh.
-type CellRecap struct {
-	Recap
-
-	// SceneID is the scene whose column holds the cell.
-	SceneID uuid.UUID
-	// LayerID is the layer whose row holds the cell.
-	LayerID uuid.UUID
-
-	// CellUpdatedAt is the cell's UpdatedAt when the recap read it. The recap is stale once they differ.
-	CellUpdatedAt time.Time
 }
 
 // BeatRecap recaps a beat: its description and the manuscript of its scenes. A frame that cannot list a

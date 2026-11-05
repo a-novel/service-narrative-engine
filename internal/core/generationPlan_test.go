@@ -1,25 +1,36 @@
 package core_test
 
 import (
+	"context"
+	"crypto/sha256"
 	"embed"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/goccy/go-yaml"
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/a-novel/service-narrative-engine/internal/config"
 	"github.com/a-novel/service-narrative-engine/internal/core"
+	coremocks "github.com/a-novel/service-narrative-engine/internal/core/mocks"
+	"github.com/a-novel/service-narrative-engine/internal/dao"
 	"github.com/a-novel/service-narrative-engine/internal/models/schemas"
 )
 
@@ -137,8 +148,178 @@ func fixtureLayerID(position int) uuid.UUID {
 	return uuid.MustParse(fmt.Sprintf("00000000-0000-0000-0000-00000002%04d", position))
 }
 
-// loadPromptProject reads the fixture of a language, and returns its snapshot and budgets.
-func loadPromptProject(t *testing.T, language string) (*promptProject, *core.ProjectSnapshot) {
+// storedProject is a project as a planner test stores it: what the snapshot of a generation holds but the
+// cell summaries, and every cell whole, with its recap. [planOf] summarizes the cells.
+type storedProject struct {
+	*core.ProjectSnapshot
+
+	cells []*core.Cell
+}
+
+// recap gives the cell of a scene in a layer a recap, which read the cell at an instant.
+func (project *storedProject) recap(sceneID, layerID uuid.UUID, recap core.Recap, read time.Time) {
+	cell, ok := lo.Find(project.cells, func(cell *core.Cell) bool {
+		return cell.SceneID == sceneID && cell.LayerID == layerID
+	})
+	if !ok {
+		panic("recap of a cell the fixture does not hold")
+	}
+
+	cell.Recap, cell.RecapCellUpdatedAt = &recap, read
+}
+
+// planRequest is a request of [TestGenerationPlan], with the cells of its project, which the planner reads
+// through a fake of its DAO.
+type planRequest struct {
+	*core.GenerationPlanRequest
+
+	cells []*core.Cell
+}
+
+// planOf returns a request on a stored project, whose snapshot summarizes the project's cells as
+// [dao.PgCellSummaryList] does.
+func planOf(project *storedProject, request *core.GenerationPlanRequest) *planRequest {
+	snapshot := *project.ProjectSnapshot
+	snapshot.Cells = lo.Map(project.cells, func(cell *core.Cell, _ int) *core.CellSummary { return summarize(cell) })
+	request.Snapshot = &snapshot
+
+	return &planRequest{GenerationPlanRequest: request, cells: project.cells}
+}
+
+// summarize returns the summary of a stored cell, as [dao.PgCellSummaryList] measures it: every text,
+// speaker and tone counts, and every speaker appears once, in order.
+func summarize(cell *core.Cell) *core.CellSummary {
+	var content struct {
+		Text   string `json:"text"`
+		Blocks []struct {
+			Text    string `json:"text"`
+			Speaker string `json:"speaker"`
+			Parts   []struct {
+				Text string `json:"text"`
+				Tone string `json:"tone"`
+			} `json:"parts"`
+		} `json:"blocks"`
+	}
+
+	err := json.Unmarshal(cell.Content, &content)
+	if err != nil {
+		panic(err)
+	}
+
+	summary := &core.CellSummary{
+		SceneID: cell.SceneID, LayerID: cell.LayerID, UpdatedAt: cell.UpdatedAt,
+		Empty: content.Text == "" && len(content.Blocks) == 0, Size: utf8.RuneCountInString(content.Text),
+		Speakers: []string{},
+	}
+
+	for _, block := range content.Blocks {
+		summary.Size += utf8.RuneCountInString(block.Text) + utf8.RuneCountInString(block.Speaker)
+
+		for _, part := range block.Parts {
+			summary.Size += utf8.RuneCountInString(part.Text) + utf8.RuneCountInString(part.Tone)
+		}
+
+		if block.Speaker != "" && !slices.Contains(summary.Speakers, block.Speaker) {
+			summary.Speakers = append(summary.Speakers, block.Speaker)
+		}
+	}
+
+	slices.Sort(summary.Speakers)
+
+	if recap := cell.Recap; recap != nil {
+		summary.Recap = &core.RecapSummary{
+			Names: recap.Names, CondensedSize: utf8.RuneCountInString(recap.Condensed),
+			CompactSize: utf8.RuneCountInString(recap.Compact), EssentialsSize: utf8.RuneCountInString(recap.Essentials),
+			CellUpdatedAt: cell.RecapCellUpdatedAt,
+		}
+	}
+
+	return summary
+}
+
+// storedKey names a stored cell by its scene and its layer.
+type storedKey struct {
+	sceneID uuid.UUID
+	layerID uuid.UUID
+}
+
+// cellReads records what a planner read through its DAO: the cells whose content it read, the recap
+// versions it read, and how many queries it ran.
+type cellReads struct {
+	mu       sync.Mutex
+	contents []storedKey
+	recaps   []string
+	queries  int
+}
+
+// plan plans the request on the settings of its kind. The planner reads the request's cells through a fake
+// of its DAO, which records the reads.
+func (request *planRequest) plan(t *testing.T, settings config.GenerationKind) (*core.ContextPlan, *cellReads, error) {
+	t.Helper()
+
+	stored := lo.KeyBy(request.cells, func(cell *core.Cell) storedKey { return storedKey{cell.SceneID, cell.LayerID} })
+	reads := &cellReads{}
+
+	daoCells := coremocks.NewMockGenerationPlanDaoCells(t)
+	daoCells.EXPECT().
+		Exec(mock.Anything, mock.MatchedBy(func(read *dao.CellsSelectRequest) bool { return read.ProjectID == projectID })).
+		RunAndReturn(func(_ context.Context, read *dao.CellsSelectRequest) ([]*dao.CellsSelectRow, error) {
+			return reads.serve(stored, read), nil
+		}).
+		Maybe()
+
+	service := core.NewGenerationPlan(
+		config.Generations{Kinds: map[string]config.GenerationKind{request.Kind: settings}}, daoCells,
+	)
+
+	plan, err := service.Exec(t.Context(), request.GenerationPlanRequest)
+
+	return plan, reads, err
+}
+
+// serve answers a read of stored cells as [dao.PgCellsSelect] does, and records it.
+func (reads *cellReads) serve(stored map[storedKey]*core.Cell, read *dao.CellsSelectRequest) []*dao.CellsSelectRow {
+	reads.mu.Lock()
+	defer reads.mu.Unlock()
+
+	reads.queries++
+
+	var rows []*dao.CellsSelectRow
+
+	for _, key := range read.Cells {
+		cell, ok := stored[storedKey{key.SceneID, key.LayerID}]
+		if !ok {
+			continue
+		}
+
+		row := &dao.CellsSelectRow{SceneID: cell.SceneID, LayerID: cell.LayerID}
+
+		if key.Content {
+			row.Content = cell.Content
+			reads.contents = append(reads.contents, storedKey{cell.SceneID, cell.LayerID})
+		}
+
+		if key.Recap != "" {
+			row.RecapVersion = key.Recap
+			reads.recaps = append(reads.recaps, key.Recap)
+
+			if cell.Recap != nil {
+				version := map[string]string{
+					core.ContextLevelCondensed: cell.Recap.Condensed, core.ContextLevelCompact: cell.Recap.Compact,
+					core.ContextLevelEssentials: cell.Recap.Essentials,
+				}[key.Recap]
+				row.Recap = &version
+			}
+		}
+
+		rows = append(rows, row)
+	}
+
+	return rows
+}
+
+// loadPromptProject reads the fixture of a language, and returns its project and budgets.
+func loadPromptProject(t *testing.T, language string) (*promptProject, *storedProject) {
 	t.Helper()
 
 	data, err := promptFixtures.ReadFile("testdata/prompts/project." + language + ".yaml")
@@ -147,10 +328,10 @@ func loadPromptProject(t *testing.T, language string) (*promptProject, *core.Pro
 	fixture := &promptProject{}
 	require.NoError(t, yaml.Unmarshal(data, fixture))
 
-	snapshot := &core.ProjectSnapshot{Project: &core.Project{
+	snapshot := &storedProject{ProjectSnapshot: &core.ProjectSnapshot{Project: &core.Project{
 		ID: projectID, OwnerID: ownerID, Title: fixture.Project.Title, Premise: fixture.Project.Premise,
 		Language: fixture.Project.Language, CreatedAt: createdAt, UpdatedAt: updatedAt,
-	}}
+	}}}
 
 	for position, layer := range fixture.Layers {
 		snapshot.Layers = append(snapshot.Layers, &core.Layer{
@@ -195,7 +376,7 @@ func loadPromptProject(t *testing.T, language string) (*promptProject, *core.Pro
 // addPromptScene adds a fixture scene, at a position in its beat, to the snapshot, with its cells and recaps.
 // Narrative is the scene's position in narrative order, which names it.
 func addPromptScene(
-	t *testing.T, snapshot *core.ProjectSnapshot, scene *promptScene, beatID uuid.UUID, position, narrative int,
+	t *testing.T, snapshot *storedProject, scene *promptScene, beatID uuid.UUID, position, narrative int,
 ) {
 	t.Helper()
 
@@ -210,16 +391,14 @@ func addPromptScene(
 		content, err := json.Marshal(cell.Content)
 		require.NoError(t, err)
 
-		snapshot.Cells = append(snapshot.Cells, &core.Cell{
+		snapshot.cells = append(snapshot.cells, &core.Cell{
 			ProjectID: projectID, SceneID: sceneID, LayerID: fixtureLayerID(cell.Layer), Content: content,
 			UpdatedAt: updatedAt,
 		})
 
 		if cell.Recap != nil {
 			recap, read := cell.Recap.recap()
-			snapshot.Recaps = append(snapshot.Recaps, &core.CellRecap{
-				Recap: recap, SceneID: sceneID, LayerID: fixtureLayerID(cell.Layer), CellUpdatedAt: read,
-			})
+			snapshot.recap(sceneID, fixtureLayerID(cell.Layer), recap, read)
 		}
 	}
 }
@@ -236,10 +415,8 @@ var goldenVariants = []struct {
 }
 
 // promptRequest returns the request of a golden variant the fixture holds.
-func (fixture *promptProject) promptRequest(
-	variant, kind string, snapshot *core.ProjectSnapshot,
-) *core.GenerationPlanRequest {
-	request := &core.GenerationPlanRequest{Snapshot: snapshot, Kind: kind}
+func (fixture *promptProject) promptRequest(variant, kind string, project *storedProject) *planRequest {
+	request := planOf(project, &core.GenerationPlanRequest{Kind: kind})
 
 	switch variant {
 	case core.GenerationKindSuggest:
@@ -427,9 +604,70 @@ func sections(prompt *core.Prompt) string {
 	return prompt.Frame + "\n" + prompt.Neighborhood + "\n" + prompt.Task
 }
 
-// planService returns the planner of one generation kind with its settings.
-func planService(kind string, settings config.GenerationKind) *core.GenerationPlan {
-	return core.NewGenerationPlan(config.Generations{Kinds: map[string]config.GenerationKind{kind: settings}})
+// planGoldensPath holds the SHA-256 of every plan [TestGenerationPlan] makes, one line per subtest.
+const planGoldensPath = "testdata/plans.golden"
+
+// planGoldens pins each plan of [TestGenerationPlan] whole, its contexts and its prompts, by the SHA-256 of
+// its JSON. With -update, the test records the plans it makes instead.
+type planGoldens struct {
+	mu     sync.Mutex
+	hashes map[string]string
+}
+
+// loadPlanGoldens reads [planGoldensPath]. With -update, it rewrites the file once the test ends, keeping the
+// lines of the subtests a filter skipped.
+func loadPlanGoldens(t *testing.T) *planGoldens {
+	t.Helper()
+
+	goldens := &planGoldens{hashes: map[string]string{}}
+
+	data, err := os.ReadFile(planGoldensPath)
+	require.NoError(t, err)
+
+	for line := range strings.Lines(string(data)) {
+		hash, name, ok := strings.Cut(strings.TrimSpace(line), "  ")
+		require.True(t, ok, line)
+
+		goldens.hashes[name] = hash
+	}
+
+	if *updateGolden {
+		t.Cleanup(func() {
+			names := slices.Sorted(maps.Keys(goldens.hashes))
+
+			var builder strings.Builder
+
+			for _, name := range names {
+				builder.WriteString(goldens.hashes[name] + "  " + name + "\n")
+			}
+
+			require.NoError(t, os.WriteFile(planGoldensPath, []byte(builder.String()), 0o600))
+		})
+	}
+
+	return goldens
+}
+
+// check fails unless the plan a subtest made matches its golden, or records it with -update.
+func (goldens *planGoldens) check(t *testing.T, name string, plan *core.ContextPlan) {
+	t.Helper()
+
+	data, err := json.Marshal(plan) //nolint:musttag // a test fingerprint, not a wire format
+	require.NoError(t, err)
+
+	sum := sha256.Sum256(data)
+	hash := hex.EncodeToString(sum[:])
+
+	goldens.mu.Lock()
+	defer goldens.mu.Unlock()
+
+	if *updateGolden {
+		goldens.hashes[name] = hash
+
+		return
+	}
+
+	require.Equal(t, goldens.hashes[name], hash, "the plan of %s changed", name)
 }
 
 // longContextTokens is the input size past which OpenAI bills long context at twice the rate.
@@ -438,14 +676,131 @@ const longContextTokens = 272000
 func TestGenerationPlan(t *testing.T) {
 	t.Parallel()
 
+	goldens := loadPlanGoldens(t)
+
 	t.Run("Error/KindNotConfigured", func(t *testing.T) {
 		t.Parallel()
 
-		plan, err := core.NewGenerationPlan(config.Generations{}).Exec(t.Context(),
-			suggestRequest(planProject(1), cellTarget(0, 0, core.TargetModeRevise)))
+		plan, err := core.NewGenerationPlan(config.Generations{}, coremocks.NewMockGenerationPlanDaoCells(t)).
+			Exec(t.Context(), suggestRequest(planProject(1), cellTarget(0, 0, core.TargetModeRevise)).GenerationPlanRequest)
 		require.Error(t, err)
 		require.Nil(t, plan)
 	})
+
+	t.Run("Error/ReadCells", func(t *testing.T) {
+		t.Parallel()
+
+		errFoo := errors.New("foo")
+
+		daoCells := coremocks.NewMockGenerationPlanDaoCells(t)
+		daoCells.EXPECT().Exec(mock.Anything, mock.Anything).Return(nil, errFoo)
+
+		request := suggestRequest(planProject(2), cellTarget(0, 0, core.TargetModeRevise))
+		service := core.NewGenerationPlan(
+			config.Generations{Kinds: map[string]config.GenerationKind{request.Kind: splitSettings()}}, daoCells,
+		)
+
+		plan, err := service.Exec(t.Context(), request.GenerationPlanRequest)
+		require.ErrorIs(t, err, errFoo)
+		require.Nil(t, plan)
+	})
+
+	// A cell deleted after the snapshot reads as empty, whatever the plan asked of it, as a read outside a
+	// transaction may see a write: the content of a scene shown whole, the recap version of a scene shown
+	// condensed, or the recap of a scene of a beat to consolidate. A recap version stored empty shows as an
+	// empty recap too.
+	readCases := []struct {
+		name    string
+		request *planRequest
+		// gone deletes the manuscript of the second scene from the store, which the snapshot still summarizes.
+		gone bool
+		// extra is the budget the case gives beyond what the request takes without context.
+		extra int
+		// section returns the part of the prompt that shows the second scene's manuscript.
+		section func(prompt *core.Prompt) string
+		expect  string
+	}{
+		{
+			name:    "Gone/Content",
+			request: suggestRequest(planProject(2), cellTarget(0, 0, core.TargetModeRevise)),
+			gone:    true,
+			extra:   1 << 20,
+			section: func(prompt *core.Prompt) string { return prompt.Neighborhood },
+			expect:  `<scene handle="S2" level="full">` + "\n" + `<cell layer="L1"></cell>`,
+		},
+		{
+			name:    "Gone/Recap",
+			request: suggestRequest(sizedRecap(planProject(2)), cellTarget(0, 0, core.TargetModeRevise)),
+			gone:    true,
+			extra:   outlineCost + 600,
+			section: func(prompt *core.Prompt) string { return prompt.Neighborhood },
+			expect:  `<scene handle="S2" level="condensed">` + "\n" + `<recap layer="L1"></recap>`,
+		},
+		{
+			name: "Gone/BeatRecap",
+			request: planOf(sizedRecap(inOneBeat(planProject(3))), &core.GenerationPlanRequest{
+				Kind: core.GenerationKindConsolidate, BeatID: fixtureBeatID(0),
+			}),
+			gone:    true,
+			extra:   1 << 20,
+			section: func(prompt *core.Prompt) string { return prompt.Task },
+			expect:  `<scene handle="S2"><recap></recap></scene>`,
+		},
+		{
+			name:    "EmptyRecap",
+			request: suggestRequest(emptyRecap(planProject(2)), cellTarget(0, 0, core.TargetModeRevise)),
+			extra:   outlineCost + 100,
+			section: func(prompt *core.Prompt) string { return prompt.Neighborhood },
+			expect:  `<scene handle="S2" level="condensed">` + "\n" + `<recap layer="L1"></recap>`,
+		},
+		{
+			name: "EmptyBeatRecap",
+			request: planOf(emptyRecap(inOneBeat(planProject(3))), &core.GenerationPlanRequest{
+				Kind: core.GenerationKindConsolidate, BeatID: fixtureBeatID(0),
+			}),
+			extra:   1 << 20,
+			section: func(prompt *core.Prompt) string { return prompt.Task },
+			expect:  `<scene handle="S2"><recap></recap></scene>`,
+		},
+	}
+
+	for _, testCase := range readCases {
+		t.Run("Success/Read/"+testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			if testCase.gone {
+				testCase.request.cells = lo.Reject(testCase.request.cells, func(cell *core.Cell, _ int) bool {
+					return cell.SceneID == fixtureSceneID(1) && cell.LayerID == fixtureLayerID(0)
+				})
+			}
+
+			settings := splitSettings()
+
+			fixed, _, err := testCase.request.plan(t, settings)
+			require.NoError(t, err)
+
+			settings.Budget = fixed.Calls[0].Estimate + testCase.extra
+
+			plan, _, err := testCase.request.plan(t, settings)
+			require.NoError(t, err)
+			require.Contains(t, testCase.section(plan.Calls[0].Prompt), testCase.expect)
+		})
+	}
+
+	// Scenes of many short dialogue blocks, each with a recap, on the default settings: a scene's text fits
+	// what the budget leaves while its render does not, so the allocator falls back to a recap version it
+	// read ahead with the content.
+	for _, count := range []int{40, 200} {
+		t.Run("Success/DialogueScenes/"+strconv.Itoa(count), func(t *testing.T) {
+			t.Parallel()
+
+			request := suggestRequest(dialogueProject(300, count), cellTarget(150, 0, core.TargetModeRevise))
+
+			_, reads, err := request.plan(t, config.GenerationsConfigDefault.Kinds[request.Kind])
+			require.NoError(t, err)
+			require.LessOrEqual(t, reads.queries, 10)
+		})
+	}
 
 	// A project at the store's scene limit, with a paragraph per scene, plans every kind within its default
 	// budget: far beats collapse in the frame.
@@ -460,22 +815,33 @@ func TestGenerationPlan(t *testing.T) {
 
 		snapshot.Beats = snapshot.Beats[:200]
 
-		requests := []*core.GenerationPlanRequest{
+		requests := []*planRequest{
 			suggestRequest(snapshot, cellTarget(1000, 0, core.TargetModeRevise)),
-			{Snapshot: snapshot, Kind: core.GenerationKindConsolidate, Cell: &core.GenerationCell{
+			planOf(snapshot, &core.GenerationPlanRequest{Kind: core.GenerationKindConsolidate, Cell: &core.GenerationCell{
 				SceneID: fixtureSceneID(1000), LayerID: fixtureLayerID(0),
-			}},
-			{Snapshot: snapshot, Kind: core.GenerationKindCheck},
+			}}),
+			planOf(snapshot, &core.GenerationPlanRequest{Kind: core.GenerationKindCheck}),
 		}
 
-		for _, request := range requests {
+		for index, request := range requests {
 			settings := config.GenerationsConfigDefault.Kinds[request.Kind]
 
-			plan, err := planService(request.Kind, settings).Exec(t.Context(), request)
+			plan, reads, err := request.plan(t, settings)
 			require.NoError(t, err, request.Kind)
+			goldens.check(t, t.Name()+"/"+strconv.Itoa(index), plan)
 
 			for _, call := range plan.Calls {
 				require.LessOrEqual(t, call.Estimate, settings.Budget, request.Kind)
+			}
+
+			// A plan reads a few of the 4,000 cells in a few queries, but a check of every scene, which
+			// shows each scene whole in one of its calls.
+			require.LessOrEqual(t, reads.queries, 10, request.Kind)
+
+			if request.Kind == core.GenerationKindCheck {
+				require.Len(t, lo.Uniq(reads.contents), len(request.cells))
+			} else {
+				require.Less(t, len(reads.contents), len(request.cells)/10, request.Kind)
 			}
 		}
 	})
@@ -505,27 +871,27 @@ func TestGenerationPlan(t *testing.T) {
 		})...))
 
 		for scene := 1010; scene < 1020; scene++ {
-			snapshot.Recaps = append(snapshot.Recaps, &core.CellRecap{
-				Recap:   core.Recap{Condensed: "Wind.", Compact: strings.Repeat("Wind. ", 6666), Essentials: "Wind."},
-				SceneID: fixtureSceneID(scene), LayerID: fixtureLayerID(0), CellUpdatedAt: updatedAt,
-			})
+			snapshot.recap(fixtureSceneID(scene), fixtureLayerID(0), core.Recap{
+				Condensed: "Wind.", Compact: strings.Repeat("Wind. ", 6666), Essentials: "Wind.",
+			}, updatedAt)
 		}
 
-		requests := []*core.GenerationPlanRequest{
+		requests := []*planRequest{
 			suggestRequest(snapshot, targets...),
-			{Snapshot: snapshot, Kind: core.GenerationKindConsolidate, Cell: &core.GenerationCell{
+			planOf(snapshot, &core.GenerationPlanRequest{Kind: core.GenerationKindConsolidate, Cell: &core.GenerationCell{
 				SceneID: fixtureSceneID(1005), LayerID: fixtureLayerID(0),
-			}},
-			{Snapshot: snapshot, Kind: core.GenerationKindConsolidate, BeatID: fixtureBeatID(101)},
-			{Snapshot: snapshot, Kind: core.GenerationKindCheck},
+			}}),
+			planOf(snapshot, &core.GenerationPlanRequest{Kind: core.GenerationKindConsolidate, BeatID: fixtureBeatID(101)}),
+			planOf(snapshot, &core.GenerationPlanRequest{Kind: core.GenerationKindCheck}),
 		}
 
-		for _, request := range requests {
+		for index, request := range requests {
 			settings := config.GenerationsConfigDefault.Kinds[request.Kind]
 
-			plan, err := planService(request.Kind, settings).Exec(t.Context(), request)
+			plan, _, err := request.plan(t, settings)
 			require.NoError(t, err, request.Kind)
 			requireHandles(t, plan)
+			goldens.check(t, t.Name()+"/"+strconv.Itoa(index), plan)
 
 			for _, call := range plan.Calls {
 				require.LessOrEqual(t, call.Estimate, settings.LongLimit, request.Kind)
@@ -533,16 +899,50 @@ func TestGenerationPlan(t *testing.T) {
 		}
 	})
 
+	// A story of many scenes, recaps and layers plans each kind on its default settings, within a budget that
+	// leaves a mix of levels.
+	for _, story := range storyRequests() {
+		t.Run("Success/Story/"+story.name, func(t *testing.T) {
+			t.Parallel()
+
+			settings := config.GenerationsConfigDefault.Kinds[story.request.Kind]
+			settings.Budget = story.budget
+
+			plan, reads, err := story.request.plan(t, settings)
+			require.NoError(t, err)
+			requireHandles(t, plan)
+			goldens.check(t, t.Name(), plan)
+
+			for _, call := range plan.Calls {
+				require.LessOrEqual(t, call.Estimate, plan.Budget)
+			}
+
+			// The allocator reads ahead, so the scenes past the edge of the budget share a few queries.
+			require.LessOrEqual(t, reads.queries, 10)
+
+			if story.request.Scenes == nil && story.request.Kind == core.GenerationKindCheck {
+				return
+			}
+
+			// A plan that shows part of the story reads less than half of its content.
+			stored := lo.KeyBy(story.request.cells, func(cell *core.Cell) storedKey {
+				return storedKey{cell.SceneID, cell.LayerID}
+			})
+			read := lo.SumBy(lo.Uniq(reads.contents), func(key storedKey) int { return len(stored[key].Content) })
+			total := lo.SumBy(story.request.cells, func(cell *core.Cell) int { return len(cell.Content) })
+			require.Less(t, read, total/2)
+		})
+	}
+
 	for _, testCase := range generationPlanSplitCases() {
 		t.Run("Split/"+testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			single, err := planService(testCase.request.Kind, splitSettings()).Exec(t.Context(), testCase.request)
+			single, _, err := testCase.request.plan(t, splitSettings())
 			require.NoError(t, err)
 			require.Len(t, single.Calls, 1)
 
-			plan, err := planService(testCase.request.Kind, testCase.settings(single.Calls[0].Estimate)).
-				Exec(t.Context(), testCase.request)
+			plan, _, err := testCase.request.plan(t, testCase.settings(single.Calls[0].Estimate))
 			if testCase.expectErr != nil {
 				require.ErrorIs(t, err, testCase.expectErr)
 				require.Nil(t, plan)
@@ -552,6 +952,7 @@ func TestGenerationPlan(t *testing.T) {
 
 			require.NoError(t, err)
 			requireHandles(t, plan)
+			goldens.check(t, t.Name(), plan)
 			testCase.expect(t, plan)
 		})
 	}
@@ -565,7 +966,7 @@ func TestGenerationPlan(t *testing.T) {
 				settings.Limit = testCase.limit
 			}
 
-			fixed, err := planService(testCase.request.Kind, settings).Exec(t.Context(), testCase.request)
+			fixed, _, err := testCase.request.plan(t, settings)
 			if testCase.expectErr != nil {
 				require.ErrorIs(t, err, testCase.expectErr)
 				require.Nil(t, fixed)
@@ -578,18 +979,18 @@ func TestGenerationPlan(t *testing.T) {
 			require.Len(t, fixed.Calls, 1)
 
 			settings.Budget = lo.Ternary(testCase.unbounded, 1<<30, fixed.Calls[0].Estimate+testCase.extra)
-			service := planService(testCase.request.Kind, settings)
 
-			plan, err := service.Exec(t.Context(), testCase.request)
+			plan, _, err := testCase.request.plan(t, settings)
 			require.NoError(t, err)
 			require.Len(t, plan.Calls, 1)
 
 			call := plan.Calls[0]
 			require.LessOrEqual(t, call.Estimate, plan.Budget)
 
-			again, err := service.Exec(t.Context(), testCase.request)
+			again, _, err := testCase.request.plan(t, settings)
 			require.NoError(t, err)
 			require.Equal(t, plan, again, "the same request gives the same plan")
+			goldens.check(t, t.Name(), plan)
 
 			if testCase.expectLevels != nil {
 				require.Equal(t, testCase.expectLevels, lo.Map(call.Scenes, func(scene *core.ContextScene, _ int) string {
@@ -632,9 +1033,10 @@ func TestGenerationPlan(t *testing.T) {
 
 				request := fixture.promptRequest(variant.name, kind, snapshot)
 
-				plan, err := planService(kind, settings).Exec(t.Context(), request)
+				plan, _, err := request.plan(t, settings)
 				require.NoError(t, err)
 				require.Len(t, plan.Calls, 1)
+				goldens.check(t, t.Name(), plan)
 
 				call := plan.Calls[0]
 
@@ -652,7 +1054,7 @@ func TestGenerationPlan(t *testing.T) {
 
 				output, err := promptFixtures.ReadFile("testdata/prompts/" + kind + ".output.json")
 				require.NoError(t, err)
-				requireOutput(t, kind, call, snapshot, output)
+				requireOutput(t, kind, call, snapshot.ProjectSnapshot, output)
 			})
 		}
 	}

@@ -32,13 +32,19 @@ func TestProjectSnapshotRead(t *testing.T) {
 
 	errFoo := errors.New("foo")
 
-	cellRows := lo.Times(snapshotCells, func(index int) *dao.CellListRow {
-		return &dao.CellListRow{Cell: *snapshotCell(index), Total: snapshotCells}
+	cellRows := lo.Times(snapshotCells, func(index int) *dao.CellSummaryListRow {
+		return &dao.CellSummaryListRow{
+			SceneID: sceneID1, LayerID: snapshotCell(index).LayerID, UpdatedAt: updatedAt, Size: 6, Speakers: []string{},
+			Total: snapshotCells,
+		}
 	})
 
-	// The first cell and the beat hold recaps, which the snapshot also lists apart for the planner.
+	// The first cell holds a recap, and the beat too, which the snapshot also lists apart for the planner.
+	cellRows[0].RecapNames, cellRows[0].RecapCellUpdatedAt = []string{"Marie"}, &createdAt
+	cellRows[0].RecapCondensedSize, cellRows[0].RecapCompactSize, cellRows[0].RecapEssentialsSize = lo.ToPtr(9),
+		lo.ToPtr(7), lo.ToPtr(5)
+
 	recap := &dao.Recap{Condensed: "Notes.", Compact: "Notes.", Essentials: "Notes.", Names: []string{"Marie"}}
-	cellRows[0].Recap, cellRows[0].RecapCellUpdatedAt = recap, &createdAt
 
 	recappedBeat := daoBeat(beatID1, 0)
 	recappedBeat.Recap, recappedBeat.RecapBeatUpdatedAt = recap, &createdAt
@@ -57,22 +63,18 @@ func TestProjectSnapshotRead(t *testing.T) {
 		})},
 		Scenes: []*core.Scene{coreScene(sceneID1, 0), coreScene(sceneID2, 1)},
 		Layers: []*core.Layer{coreLayer(layerID1, 0)},
-		Cells: lo.Times(snapshotCells, func(index int) *core.Cell {
-			cell := snapshotCell(index)
-
-			loaded := &core.Cell{
-				ProjectID: projectID, SceneID: sceneID1, LayerID: cell.LayerID, Content: cell.Content,
-				UpdatedAt: updatedAt,
+		Cells: lo.Times(snapshotCells, func(index int) *core.CellSummary {
+			summary := &core.CellSummary{
+				SceneID: sceneID1, LayerID: snapshotCell(index).LayerID, UpdatedAt: updatedAt, Size: 6, Speakers: []string{},
 			}
 			if index == 0 {
-				loaded.Recap, loaded.RecapCellUpdatedAt = &coreRecap, createdAt
+				summary.Recap = &core.RecapSummary{
+					Names: []string{"Marie"}, CondensedSize: 9, CompactSize: 7, EssentialsSize: 5, CellUpdatedAt: createdAt,
+				}
 			}
 
-			return loaded
+			return summary
 		}),
-		Recaps: []*core.CellRecap{{
-			Recap: coreRecap, SceneID: sceneID1, LayerID: snapshotCell(0).LayerID, CellUpdatedAt: createdAt,
-		}},
 		BeatRecaps: []*core.BeatRecap{{
 			Recap: coreRecap, BeatID: beatID1, BeatUpdatedAt: createdAt, Sources: sources,
 		}},
@@ -108,9 +110,9 @@ func TestProjectSnapshotRead(t *testing.T) {
 			expect: snapshot,
 		},
 		{
-			// A page that stops short of its limit at its byte bound still asks for the next one, until the
-			// pages hold the total.
-			name: "Success/ByteBound",
+			// A page that stops short of its limit, as a byte bound stops a page, still asks for the next one,
+			// until the pages hold the total.
+			name: "Success/ShortPages",
 
 			request: &core.ProjectSnapshotReadRequest{OwnerID: ownerID, ProjectID: projectID},
 
@@ -217,9 +219,7 @@ func TestProjectSnapshotRead(t *testing.T) {
 
 			for _, size := range testCase.cellPages {
 				mockCells.EXPECT().
-					Exec(mock.Anything, &dao.CellListRequest{
-						ProjectID: projectID, Limit: 2000, Offset: offset, MaxBytes: core.ListPageBytesMax,
-					}).
+					Exec(mock.Anything, &dao.CellSummaryListRequest{ProjectID: projectID, Limit: 2000, Offset: offset}).
 					Return(cellRows[offset:offset+size], nil).
 					Once()
 
@@ -228,7 +228,7 @@ func TestProjectSnapshotRead(t *testing.T) {
 
 			if testCase.cellsErr != nil {
 				mockCells.EXPECT().
-					Exec(mock.Anything, &dao.CellListRequest{ProjectID: projectID, Limit: 2000, MaxBytes: core.ListPageBytesMax}).
+					Exec(mock.Anything, &dao.CellSummaryListRequest{ProjectID: projectID, Limit: 2000}).
 					Return(nil, testCase.cellsErr)
 			}
 

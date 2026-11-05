@@ -15,7 +15,7 @@ import (
 )
 
 // snapshotPageSize is how many rows a [ProjectSnapshotRead] reads per query. It holds a project's beats,
-// scenes and layers in one page each, and its cells in a few.
+// scenes and layers in one page each, and the summaries of its cells in a few.
 const snapshotPageSize = 2000
 
 // ProjectSnapshotReadDaoOwner checks that the caller owns the project.
@@ -48,9 +48,9 @@ type ProjectSnapshotReadDaoLayers interface {
 	Exec(ctx context.Context, request *dao.LayerListRequest) ([]*dao.LayerListRow, error)
 }
 
-// ProjectSnapshotReadDaoCells reads a page of the project's cells.
+// ProjectSnapshotReadDaoCells reads a page of the summaries of the project's cells.
 type ProjectSnapshotReadDaoCells interface {
-	Exec(ctx context.Context, request *dao.CellListRequest) ([]*dao.CellListRow, error)
+	Exec(ctx context.Context, request *dao.CellSummaryListRequest) ([]*dao.CellSummaryListRow, error)
 }
 
 // ProjectSnapshotReadRequest names the project to read, and its caller.
@@ -59,9 +59,10 @@ type ProjectSnapshotReadRequest struct {
 	ProjectID uuid.UUID `validate:"required"`
 }
 
-// ProjectSnapshotRead reads a project of the caller whole, as a generation plans from it: its beats,
-// scenes, layers and cells. The reads run outside a transaction, so a write between two pages may show. A
-// project past [ProjectBytesMax] stored bytes answers [ErrContextTooLarge] before any page is read.
+// ProjectSnapshotRead reads what a generation plans from first: the beats, scenes and layers of a project of
+// the caller, and a summary of each cell, without its content or the versions of its recap. The reads run
+// outside a transaction, so a write between two pages may show. A project past [ProjectBytesMax] stored
+// bytes answers [ErrContextTooLarge] before any page is read.
 type ProjectSnapshotRead struct {
 	daoOwner   ProjectSnapshotReadDaoOwner
 	daoBytes   ProjectSnapshotReadDaoBytes
@@ -150,21 +151,15 @@ func (service *ProjectSnapshotRead) Exec(
 		return nil, otel.ReportError(span, fmt.Errorf("list layers: %w", err))
 	}
 
-	snapshot.Cells, err = readPages(func(offset int) ([]*dao.CellListRow, error) {
-		return service.daoCells.Exec(ctx, &dao.CellListRequest{
-			ProjectID: request.ProjectID, Limit: snapshotPageSize, Offset: offset, MaxBytes: ListPageBytesMax,
+	snapshot.Cells, err = readPages(func(offset int) ([]*dao.CellSummaryListRow, error) {
+		return service.daoCells.Exec(ctx, &dao.CellSummaryListRequest{
+			ProjectID: request.ProjectID, Limit: snapshotPageSize, Offset: offset,
 		})
-	}, func(row *dao.CellListRow) (*Cell, int) { return newCell(&row.Cell), row.Total })
+	}, func(row *dao.CellSummaryListRow) (*CellSummary, int) { return newCellSummary(row), row.Total })
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("list cells: %w", err))
 	}
 
-	snapshot.Recaps = lo.FilterMap(snapshot.Cells, func(cell *Cell, _ int) (*CellRecap, bool) {
-		return &CellRecap{
-			Recap: lo.FromPtr(cell.Recap), SceneID: cell.SceneID, LayerID: cell.LayerID,
-			CellUpdatedAt: cell.RecapCellUpdatedAt,
-		}, cell.Recap != nil
-	})
 	snapshot.BeatRecaps = lo.FilterMap(snapshot.Beats, func(beat *Beat, _ int) (*BeatRecap, bool) {
 		return &BeatRecap{
 			Recap: lo.FromPtr(beat.Recap), BeatID: beat.ID, BeatUpdatedAt: beat.RecapBeatUpdatedAt,

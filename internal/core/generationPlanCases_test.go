@@ -20,7 +20,7 @@ import (
 type generationPlanCase struct {
 	name string
 
-	request *core.GenerationPlanRequest
+	request *planRequest
 	// extra is the budget the case gives beyond what the frame, the task and the scenes of targets take.
 	// Unbounded gives the case all the budget it needs instead.
 	extra     int
@@ -54,14 +54,14 @@ const (
 
 // planProject returns an English project of count scenes, each in a beat of its own. Each scene has a
 // manuscript cell of one long narration block, and a notes cell.
-func planProject(count int) *core.ProjectSnapshot {
-	snapshot := &core.ProjectSnapshot{
+func planProject(count int) *storedProject {
+	snapshot := &storedProject{ProjectSnapshot: &core.ProjectSnapshot{
 		Project: &core.Project{ID: projectID, OwnerID: ownerID, Title: "Tides", Language: "en"},
 		Layers: []*core.Layer{
 			{ID: fixtureLayerID(0), ProjectID: projectID, Position: 0, Kind: core.LayerKindManuscript, Name: "Text"},
 			{ID: fixtureLayerID(1), ProjectID: projectID, Position: 1, Kind: core.LayerKindNotes, Name: "Notes"},
 		},
-	}
+	}}
 
 	for position := range count {
 		snapshot.Beats = append(snapshot.Beats, &core.Beat{
@@ -72,7 +72,7 @@ func planProject(count int) *core.ProjectSnapshot {
 			ID: fixtureSceneID(position), ProjectID: projectID, BeatID: fixtureBeatID(position),
 			Title: "Scene " + strconv.Itoa(position+1), UpdatedAt: updatedAt,
 		})
-		snapshot.Cells = append(snapshot.Cells,
+		snapshot.cells = append(snapshot.cells,
 			planCell(position, 0, blocks(narration(longText))),
 			planCell(position, 1, mustJSON(map[string]string{"text": "Notes " + strconv.Itoa(position+1) + ". " + longNotes})),
 		)
@@ -83,7 +83,7 @@ func planProject(count int) *core.ProjectSnapshot {
 
 // inOneBeat moves the scenes of the snapshot into its first beat, keeping their order, and removes the
 // other beats.
-func inOneBeat(snapshot *core.ProjectSnapshot) *core.ProjectSnapshot {
+func inOneBeat(snapshot *storedProject) *storedProject {
 	for position, scene := range snapshot.Scenes {
 		scene.BeatID, scene.Position = fixtureBeatID(0), position
 	}
@@ -126,8 +126,8 @@ func mustJSON(value any) string {
 }
 
 // setManuscript replaces the manuscript of the scene at position.
-func setManuscript(snapshot *core.ProjectSnapshot, scene int, content string) *core.ProjectSnapshot {
-	for _, cell := range snapshot.Cells {
+func setManuscript(snapshot *storedProject, scene int, content string) *storedProject {
+	for _, cell := range snapshot.cells {
 		if cell.SceneID == fixtureSceneID(scene) && cell.LayerID == fixtureLayerID(0) {
 			cell.Content = json.RawMessage(content)
 		}
@@ -138,11 +138,8 @@ func setManuscript(snapshot *core.ProjectSnapshot, scene int, content string) *c
 
 // addRecap gives the manuscript cell of the second scene a recap, which read the cell shift away from its
 // UpdatedAt. A recap is fresh only when shift is zero.
-func addRecap(snapshot *core.ProjectSnapshot, shift time.Duration) *core.ProjectSnapshot {
-	snapshot.Recaps = append(snapshot.Recaps, &core.CellRecap{
-		Recap:   recapOf("The tide takes the boat."),
-		SceneID: fixtureSceneID(1), LayerID: fixtureLayerID(0), CellUpdatedAt: updatedAt.Add(shift),
-	})
+func addRecap(snapshot *storedProject, shift time.Duration) *storedProject {
+	snapshot.recap(fixtureSceneID(1), fixtureLayerID(0), recapOf("The tide takes the boat."), updatedAt.Add(shift))
 
 	return snapshot
 }
@@ -159,22 +156,27 @@ func recapOf(text string) core.Recap {
 }
 
 // sizedRecap gives the manuscript of the second scene a fresh recap of about 500, 200 and 20 tokens.
-func sizedRecap(snapshot *core.ProjectSnapshot) *core.ProjectSnapshot {
-	snapshot.Recaps = append(snapshot.Recaps, &core.CellRecap{
-		Recap: core.Recap{
-			Condensed:  strings.Repeat("Waves. ", 285),
-			Compact:    strings.Repeat("Tide. ", 133),
-			Essentials: strings.Repeat("Gull. ", 13),
-		},
-		SceneID: fixtureSceneID(1), LayerID: fixtureLayerID(0), CellUpdatedAt: updatedAt,
-	})
+func sizedRecap(snapshot *storedProject) *storedProject {
+	snapshot.recap(fixtureSceneID(1), fixtureLayerID(0), core.Recap{
+		Condensed:  strings.Repeat("Waves. ", 285),
+		Compact:    strings.Repeat("Tide. ", 133),
+		Essentials: strings.Repeat("Gull. ", 13),
+	}, updatedAt)
+
+	return snapshot
+}
+
+// emptyRecap gives the manuscript of the second scene a fresh recap whose versions are empty, as the
+// consolidate output schema allows.
+func emptyRecap(snapshot *storedProject) *storedProject {
+	snapshot.recap(fixtureSceneID(1), fixtureLayerID(0), core.Recap{}, updatedAt)
 
 	return snapshot
 }
 
 // longBeats gives every beat but the first a description of about 1,500 tokens and a fresh recap whose
 // compact version takes about 300. The beat at stale holds a recap that read the beat before a change.
-func longBeats(snapshot *core.ProjectSnapshot, stale int) *core.ProjectSnapshot {
+func longBeats(snapshot *storedProject, stale int) *storedProject {
 	for position, beat := range snapshot.Beats[1:] {
 		beat.Description = strings.Repeat("The harbor wakes. ", 333)
 
@@ -203,7 +205,7 @@ func longBeats(snapshot *core.ProjectSnapshot, stale int) *core.ProjectSnapshot 
 }
 
 // shortScenes gives every scene a manuscript of one short block.
-func shortScenes(snapshot *core.ProjectSnapshot) *core.ProjectSnapshot {
+func shortScenes(snapshot *storedProject) *storedProject {
 	for position := range snapshot.Scenes {
 		setManuscript(snapshot, position, blocks(narration("Dawn.")))
 	}
@@ -216,8 +218,8 @@ func beatLevels(call *core.ContextCall) []string {
 	return lo.Map(call.Beats, func(beat *core.ContextBeat, _ int) string { return beat.Level })
 }
 
-func suggestRequest(snapshot *core.ProjectSnapshot, targets ...*core.GenerationTarget) *core.GenerationPlanRequest {
-	return &core.GenerationPlanRequest{Snapshot: snapshot, Kind: core.GenerationKindSuggest, Targets: targets}
+func suggestRequest(snapshot *storedProject, targets ...*core.GenerationTarget) *planRequest {
+	return planOf(snapshot, &core.GenerationPlanRequest{Kind: core.GenerationKindSuggest, Targets: targets})
 }
 
 func cellTarget(scene, layer int, mode string) *core.GenerationTarget {
@@ -389,7 +391,7 @@ func generationPlanCases() []*generationPlanCase {
 		{
 			name: "Success/OverrideStalesRecap",
 			request: with(suggestRequest(addRecap(planProject(4), 0), cellTarget(0, 0, revise)),
-				func(request *core.GenerationPlanRequest) {
+				func(request *planRequest) {
 					request.Overrides = &core.GenerationOverrides{Cells: []*core.CellOverride{{
 						SceneID: fixtureSceneID(1), LayerID: fixtureLayerID(0),
 						Content: json.RawMessage(blocks(narration(longText))),
@@ -401,7 +403,7 @@ func generationPlanCases() []*generationPlanCase {
 		},
 		{
 			name: "Success/ExcludedLayer",
-			request: with(suggestRequest(planProject(3), cellTarget(0, 0, revise)), func(request *core.GenerationPlanRequest) {
+			request: with(suggestRequest(planProject(3), cellTarget(0, 0, revise)), func(request *planRequest) {
 				request.Exclude = []uuid.UUID{fixtureLayerID(1)}
 			}),
 			unbounded:    true,
@@ -414,7 +416,7 @@ func generationPlanCases() []*generationPlanCase {
 		},
 		{
 			name: "Success/ExcludedTargetLayer",
-			request: with(suggestRequest(planProject(3), cellTarget(0, 1, revise)), func(request *core.GenerationPlanRequest) {
+			request: with(suggestRequest(planProject(3), cellTarget(0, 1, revise)), func(request *planRequest) {
 				request.Exclude = []uuid.UUID{fixtureLayerID(1)}
 			}),
 			unbounded: true,
@@ -451,7 +453,7 @@ func generationPlanCases() []*generationPlanCase {
 		},
 		{
 			name: "Success/Overrides",
-			request: with(suggestRequest(planProject(3), cellTarget(0, 0, revise)), func(request *core.GenerationPlanRequest) {
+			request: with(suggestRequest(planProject(3), cellTarget(0, 0, revise)), func(request *planRequest) {
 				request.Overrides = &core.GenerationOverrides{
 					Scenes: []*core.SceneOverride{{ID: fixtureSceneID(1), Title: "Unsaved title", Description: "Unsaved"}},
 					Cells: []*core.CellOverride{{
@@ -586,10 +588,10 @@ func generationPlanCases() []*generationPlanCase {
 		},
 		{
 			name: "Success/Consolidate",
-			request: &core.GenerationPlanRequest{
-				Snapshot: planProject(3), Kind: core.GenerationKindConsolidate,
+			request: planOf(planProject(3), &core.GenerationPlanRequest{
+				Kind: core.GenerationKindConsolidate,
 				Cell: &core.GenerationCell{SceneID: fixtureSceneID(1), LayerID: fixtureLayerID(0)},
-			},
+			}),
 			unbounded:    true,
 			expectLevels: []string{full, full, full},
 			expectContains: []string{
@@ -604,10 +606,10 @@ func generationPlanCases() []*generationPlanCase {
 		},
 		{
 			name: "Success/ConsolidateBeat",
-			request: &core.GenerationPlanRequest{
-				Snapshot: sizedRecap(inOneBeat(planProject(3))), Kind: core.GenerationKindConsolidate,
+			request: planOf(sizedRecap(inOneBeat(planProject(3))), &core.GenerationPlanRequest{
+				Kind:   core.GenerationKindConsolidate,
 				BeatID: fixtureBeatID(0),
-			},
+			}),
 			unbounded:    true,
 			expectLevels: []string{full, full, full},
 			expectContains: []string{
@@ -630,17 +632,17 @@ func generationPlanCases() []*generationPlanCase {
 		},
 		{
 			name: "Success/Check",
-			request: &core.GenerationPlanRequest{
-				Snapshot: planProject(4), Kind: core.GenerationKindCheck, Scenes: &core.Range{Start: 1, End: 3},
+			request: planOf(planProject(4), &core.GenerationPlanRequest{
+				Kind: core.GenerationKindCheck, Scenes: &core.Range{Start: 1, End: 3},
 				Instruction: "Look at the tides.",
-			},
+			}),
 			extra:          4*outlineCost + 2*manuscriptCost,
 			expectLevels:   []string{outline, full, full, outline},
 			expectContains: []string{`<check from="S2" to="S3"/>`, "<instruction>Look at the tides.</instruction>"},
 		},
 		{
 			name:           "Success/CheckAll",
-			request:        &core.GenerationPlanRequest{Snapshot: planProject(2), Kind: core.GenerationKindCheck},
+			request:        planOf(planProject(2), &core.GenerationPlanRequest{Kind: core.GenerationKindCheck}),
 			unbounded:      true,
 			expectLevels:   []string{full, full},
 			expectContains: []string{`<check scenes="all"/>`},
@@ -661,7 +663,7 @@ func generationPlanCases() []*generationPlanCase {
 		{
 			// Beats come in slice order 1, 0, and the first beat holds two scenes listed out of order.
 			name: "Success/NarrativeOrder",
-			request: suggestRequest(with(inOneBeat(planProject(3)), func(snapshot *core.ProjectSnapshot) {
+			request: suggestRequest(with(inOneBeat(planProject(3)), func(snapshot *storedProject) {
 				snapshot.Beats = []*core.Beat{
 					{ID: fixtureBeatID(1), ProjectID: projectID, Position: 1, Title: "Second", Color: beatColor},
 					{ID: fixtureBeatID(0), ProjectID: projectID, Position: 0, Title: "First", Color: beatColor},
@@ -683,7 +685,7 @@ func generationPlanCases() []*generationPlanCase {
 		},
 		{
 			name: "Success/BeatPrompts",
-			request: suggestRequest(with(planProject(2), func(snapshot *core.ProjectSnapshot) {
+			request: suggestRequest(with(planProject(2), func(snapshot *storedProject) {
 				snapshot.Beats[0].Description, snapshot.Beats[0].Prompt = "Ana returns.", "Keep it quiet."
 				snapshot.Scenes[0].Prompt = "Ana speaks first."
 			}), cellTarget(0, 0, revise)),
@@ -696,7 +698,7 @@ func generationPlanCases() []*generationPlanCase {
 		},
 		{
 			name: "Error/SceneBeatNotFound",
-			request: suggestRequest(with(planProject(2), func(snapshot *core.ProjectSnapshot) {
+			request: suggestRequest(with(planProject(2), func(snapshot *storedProject) {
 				snapshot.Beats = snapshot.Beats[:1]
 			}), cellTarget(0, 0, revise)),
 			expectErr: core.ErrBeatNotFound,
@@ -708,58 +710,58 @@ func generationPlanCases() []*generationPlanCase {
 		},
 		{
 			name:      "Error/UnknownKind",
-			request:   &core.GenerationPlanRequest{Snapshot: planProject(2), Kind: "rewrite"},
+			request:   planOf(planProject(2), &core.GenerationPlanRequest{Kind: "rewrite"}),
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
 			name: "Error/TargetsOfCheck",
-			request: with(suggestRequest(planProject(2), cellTarget(0, 0, revise)), func(request *core.GenerationPlanRequest) {
+			request: with(suggestRequest(planProject(2), cellTarget(0, 0, revise)), func(request *planRequest) {
 				request.Kind = core.GenerationKindCheck
 			}),
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
 			name: "Error/ConsolidateInstruction",
-			request: &core.GenerationPlanRequest{
-				Snapshot: planProject(2), Kind: core.GenerationKindConsolidate, Instruction: "Shorter.",
+			request: planOf(planProject(2), &core.GenerationPlanRequest{
+				Kind: core.GenerationKindConsolidate, Instruction: "Shorter.",
 				Cell: &core.GenerationCell{SceneID: fixtureSceneID(1), LayerID: fixtureLayerID(0)},
-			},
+			}),
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
 			name: "Error/ConsolidateOverrides",
-			request: &core.GenerationPlanRequest{
-				Snapshot: planProject(2), Kind: core.GenerationKindConsolidate, Overrides: &core.GenerationOverrides{},
+			request: planOf(planProject(2), &core.GenerationPlanRequest{
+				Kind: core.GenerationKindConsolidate, Overrides: &core.GenerationOverrides{},
 				Cell: &core.GenerationCell{SceneID: fixtureSceneID(1), LayerID: fixtureLayerID(0)},
-			},
+			}),
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
 			name: "Error/ConsolidateCellAndBeat",
-			request: &core.GenerationPlanRequest{
-				Snapshot: planProject(2), Kind: core.GenerationKindConsolidate, BeatID: fixtureBeatID(0),
+			request: planOf(planProject(2), &core.GenerationPlanRequest{
+				Kind: core.GenerationKindConsolidate, BeatID: fixtureBeatID(0),
 				Cell: &core.GenerationCell{SceneID: fixtureSceneID(1), LayerID: fixtureLayerID(0)},
-			},
+			}),
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
 			name:      "Error/ConsolidateNothing",
-			request:   &core.GenerationPlanRequest{Snapshot: planProject(2), Kind: core.GenerationKindConsolidate},
+			request:   planOf(planProject(2), &core.GenerationPlanRequest{Kind: core.GenerationKindConsolidate}),
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
 			name: "Error/ConsolidateBeatNotFound",
-			request: &core.GenerationPlanRequest{
-				Snapshot: planProject(2), Kind: core.GenerationKindConsolidate, BeatID: fixtureBeatID(7),
-			},
+			request: planOf(planProject(2), &core.GenerationPlanRequest{
+				Kind: core.GenerationKindConsolidate, BeatID: fixtureBeatID(7),
+			}),
 			expectErr: core.ErrBeatNotFound,
 		},
 		{
 			name: "Error/ConsolidateSceneNotFound",
-			request: &core.GenerationPlanRequest{
-				Snapshot: planProject(2), Kind: core.GenerationKindConsolidate,
+			request: planOf(planProject(2), &core.GenerationPlanRequest{
+				Kind: core.GenerationKindConsolidate,
 				Cell: &core.GenerationCell{SceneID: fixtureSceneID(5), LayerID: fixtureLayerID(0)},
-			},
+			}),
 			expectErr: core.ErrSceneNotFound,
 		},
 		{
@@ -813,21 +815,21 @@ func generationPlanCases() []*generationPlanCase {
 		},
 		{
 			name: "Error/ExcludedLayerNotFound",
-			request: with(suggestRequest(planProject(2), cellTarget(0, 0, revise)), func(request *core.GenerationPlanRequest) {
+			request: with(suggestRequest(planProject(2), cellTarget(0, 0, revise)), func(request *planRequest) {
 				request.Exclude = []uuid.UUID{fixtureLayerID(5)}
 			}),
 			expectErr: core.ErrLayerNotFound,
 		},
 		{
 			name: "Error/OverrideSceneNotFound",
-			request: with(suggestRequest(planProject(2), cellTarget(0, 0, revise)), func(request *core.GenerationPlanRequest) {
+			request: with(suggestRequest(planProject(2), cellTarget(0, 0, revise)), func(request *planRequest) {
 				request.Overrides = &core.GenerationOverrides{Scenes: []*core.SceneOverride{{ID: fixtureSceneID(5), Title: "Lost"}}}
 			}),
 			expectErr: core.ErrSceneNotFound,
 		},
 		{
 			name: "Error/OverrideInvalidContent",
-			request: with(suggestRequest(planProject(2), cellTarget(0, 1, revise)), func(request *core.GenerationPlanRequest) {
+			request: with(suggestRequest(planProject(2), cellTarget(0, 1, revise)), func(request *planRequest) {
 				request.Overrides = &core.GenerationOverrides{Cells: []*core.CellOverride{{
 					SceneID: fixtureSceneID(1), LayerID: fixtureLayerID(0), Content: json.RawMessage(`{"text":"Not blocks"}`),
 				}}}
@@ -836,7 +838,7 @@ func generationPlanCases() []*generationPlanCase {
 		},
 		{
 			name: "Error/RepeatedCellOverride",
-			request: with(suggestRequest(planProject(2), cellTarget(0, 0, revise)), func(request *core.GenerationPlanRequest) {
+			request: with(suggestRequest(planProject(2), cellTarget(0, 0, revise)), func(request *planRequest) {
 				override := &core.CellOverride{
 					SceneID: fixtureSceneID(1), LayerID: fixtureLayerID(1), Content: json.RawMessage(`{"text":"Twice"}`),
 				}
@@ -846,16 +848,16 @@ func generationPlanCases() []*generationPlanCase {
 		},
 		{
 			name: "Error/CheckPastEnd",
-			request: &core.GenerationPlanRequest{
-				Snapshot: planProject(2), Kind: core.GenerationKindCheck, Scenes: &core.Range{Start: 1, End: 3},
-			},
+			request: planOf(planProject(2), &core.GenerationPlanRequest{
+				Kind: core.GenerationKindCheck, Scenes: &core.Range{Start: 1, End: 3},
+			}),
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
 			name: "Error/CheckEmptyRange",
-			request: &core.GenerationPlanRequest{
-				Snapshot: planProject(2), Kind: core.GenerationKindCheck, Scenes: &core.Range{Start: 1, End: 1},
-			},
+			request: planOf(planProject(2), &core.GenerationPlanRequest{
+				Kind: core.GenerationKindCheck, Scenes: &core.Range{Start: 1, End: 1},
+			}),
 			expectErr: core.ErrInvalidRequest,
 		},
 	}
@@ -866,7 +868,7 @@ func generationPlanCases() []*generationPlanCase {
 type generationSplitCase struct {
 	name string
 
-	request *core.GenerationPlanRequest
+	request *planRequest
 	// settings returns the settings of the case's kind from single, the estimate of the request as one call
 	// with its frame collapsed and no context.
 	settings func(single int) config.GenerationKind
@@ -885,14 +887,14 @@ func splitSettings() config.GenerationKind {
 
 // spansProject is a [planProject] of three scenes. The first holds [contextBlocks], and the third two
 // short blocks.
-func spansProject() *core.ProjectSnapshot {
+func spansProject() *storedProject {
 	return setManuscript(setManuscript(planProject(3), 0, contextBlocks), 2,
 		blocks(narration("Dawn."), narration("Dusk.")))
 }
 
 // spansRequest revises the manuscript of each scene of [spansProject], keeping the fourth block of the
 // first, and the title of the second.
-func spansRequest() *core.GenerationPlanRequest {
+func spansRequest() *planRequest {
 	return suggestRequest(spansProject(),
 		with(cellTarget(0, 0, core.TargetModeRevise), func(target *core.GenerationTarget) { target.Kept = []int{3} }),
 		fieldTarget(1, core.SceneFieldTitle, core.TargetModeRevise),
@@ -901,8 +903,8 @@ func spansRequest() *core.GenerationPlanRequest {
 }
 
 // checkRequest checks every scene of a project of six.
-func checkRequest() *core.GenerationPlanRequest {
-	return &core.GenerationPlanRequest{Snapshot: planProject(6), Kind: core.GenerationKindCheck}
+func checkRequest() *planRequest {
+	return planOf(planProject(6), &core.GenerationPlanRequest{Kind: core.GenerationKindCheck})
 }
 
 // checkSettings gives a check a budget whose window share holds two scenes whole, and the budget not all
@@ -1109,10 +1111,10 @@ func generationPlanSplitCases() []*generationSplitCase {
 		},
 		{
 			name: "Error/ConsolidateNeverSplits",
-			request: &core.GenerationPlanRequest{
-				Snapshot: planProject(2), Kind: core.GenerationKindConsolidate,
+			request: planOf(planProject(2), &core.GenerationPlanRequest{
+				Kind: core.GenerationKindConsolidate,
 				Cell: &core.GenerationCell{SceneID: fixtureSceneID(0), LayerID: fixtureLayerID(0)},
-			},
+			}),
 			settings: func(single int) config.GenerationKind {
 				settings := splitSettings()
 				settings.Limit, settings.Split = single-1, true
@@ -1120,6 +1122,187 @@ func generationPlanSplitCases() []*generationSplitCase {
 				return settings
 			},
 			expectErr: core.ErrContextTooLarge,
+		},
+	}
+}
+
+// storyNames are the characters of [storyProject], who speak in turn across its scenes.
+var storyNames = []string{"Ana", "Léo", "Marta", "Inès", "Paul"}
+
+// storyProject returns a project of 12 beats of 5 scenes, with a manuscript layer and two notes layers. The
+// scenes grow longer through the story, and their speakers come back every few scenes. Most manuscript cells
+// hold a recap, every seventh one stale, and so does every other beat, the seventh stale. A few notes are
+// empty, and the frame of every beat whole takes more than half of the budgets [storyRequests] give.
+func storyProject() *storedProject {
+	snapshot := &storedProject{ProjectSnapshot: &core.ProjectSnapshot{
+		Project: &core.Project{
+			ID: projectID, OwnerID: ownerID, Title: "Tides", Premise: "A harbor town waits for its boats.", Language: "en",
+		},
+		Layers: []*core.Layer{
+			{ID: fixtureLayerID(0), ProjectID: projectID, Position: 0, Kind: core.LayerKindManuscript, Name: "Text"},
+			{ID: fixtureLayerID(1), ProjectID: projectID, Position: 1, Kind: core.LayerKindNotes, Name: "Characters"},
+			{ID: fixtureLayerID(2), ProjectID: projectID, Position: 2, Kind: core.LayerKindNotes, Name: "Plot"},
+		},
+	}}
+
+	for beat := range 12 {
+		snapshot.Beats = append(snapshot.Beats, &core.Beat{
+			ID: fixtureBeatID(beat), ProjectID: projectID, Position: beat, Title: "Beat " + strconv.Itoa(beat+1),
+			Color: beatColor, Description: strings.Repeat("The harbor wakes. ", 5*(beat%3+1)), UpdatedAt: updatedAt,
+		})
+
+		var sources []*core.BeatRecapSource
+
+		for position := range 5 {
+			scene := beat*5 + position
+			addStoryScene(snapshot, beat, position, scene)
+			sources = append(sources, &core.BeatRecapSource{SceneID: fixtureSceneID(scene), CellUpdatedAt: updatedAt})
+		}
+
+		if beat%2 == 0 {
+			read := lo.Ternary(beat == 6, updatedAt.Add(-time.Hour), updatedAt)
+			snapshot.BeatRecaps = append(snapshot.BeatRecaps, &core.BeatRecap{
+				Recap:  core.Recap{Compact: strings.Repeat("The boats come back. ", 4+beat), Essentials: "The boats return."},
+				BeatID: fixtureBeatID(beat), BeatUpdatedAt: read, Sources: sources,
+			})
+		}
+	}
+
+	return snapshot
+}
+
+// addStoryScene adds the scene at a position of a beat of [storyProject], scene in narrative order, with its
+// cells and the recap of its manuscript.
+func addStoryScene(snapshot *storedProject, beat, position, scene int) {
+	speaker, other := storyNames[scene%len(storyNames)], storyNames[(scene*3+1)%len(storyNames)]
+
+	snapshot.Scenes = append(snapshot.Scenes, &core.Scene{
+		ID: fixtureSceneID(scene), ProjectID: projectID, BeatID: fixtureBeatID(beat), Position: position,
+		Title: "Scene " + strconv.Itoa(scene+1), Description: speaker + " " + strings.Repeat("walks the quay. ", 6+scene%5),
+		UpdatedAt: updatedAt,
+	})
+
+	snapshot.cells = append(snapshot.cells, planCell(scene, 0, blocks(
+		narration(strings.Repeat("The sea rolled in. ", 10+scene*3)),
+		dialogue(speaker, "Look, "+other+"."),
+		narration(strings.Repeat("Gulls & \"wind\". ", 3+scene%4)),
+		dialogue(other, strings.Repeat("Not yet. ", 1+scene%6)),
+	)))
+
+	switch scene % 4 {
+	case 3:
+		snapshot.cells = append(snapshot.cells, planCell(scene, 1, `{"text":""}`))
+	default:
+		snapshot.cells = append(snapshot.cells, planCell(scene, 1, mustJSON(map[string]string{
+			"text": speaker + " and " + other + ". " + strings.Repeat("They <never> say it. ", 1+scene%3),
+		})))
+	}
+
+	if scene%3 == 0 {
+		snapshot.cells = append(snapshot.cells, planCell(scene, 2, mustJSON(map[string]string{
+			"text": strings.Repeat("The storm comes closer. ", 2+scene%5),
+		})))
+	}
+
+	if scene%3 != 2 {
+		read := lo.Ternary(scene%7 == 0, updatedAt.Add(-time.Hour), updatedAt)
+		snapshot.recap(fixtureSceneID(scene), fixtureLayerID(0), core.Recap{
+			Condensed:  strings.Repeat("The sea rolls in. ", 4+scene),
+			Compact:    strings.Repeat("Tide. ", 2+scene/4),
+			Essentials: speaker + " waits.",
+			Names:      []string{speaker, other},
+		}, read)
+	}
+}
+
+// dialogueProject returns a [planProject] of count scenes in beats of 10, whose manuscripts each hold blocks
+// short lines of dialogue and a fresh recap, and whose notes are empty.
+func dialogueProject(count, blocksPerScene int) *storedProject {
+	snapshot := planProject(count)
+	for index, scene := range snapshot.Scenes {
+		scene.BeatID, scene.Position = fixtureBeatID(index/10), index%10
+	}
+
+	snapshot.Beats = snapshot.Beats[:count/10]
+	lines := blocks(lo.Times(blocksPerScene, func(int) string { return dialogue("Ana", "Yes.") })...)
+
+	for _, cell := range snapshot.cells {
+		if cell.LayerID != fixtureLayerID(0) {
+			cell.Content = json.RawMessage(`{"text":""}`)
+
+			continue
+		}
+
+		cell.Content = json.RawMessage(lines)
+		snapshot.recap(cell.SceneID, cell.LayerID, core.Recap{
+			Condensed: strings.Repeat("Talk. ", 20), Compact: "Talk talk.", Essentials: "Talk.",
+		}, updatedAt)
+	}
+
+	return snapshot
+}
+
+// storyRequest is a request of [TestGenerationPlan] on [storyProject], with the budget its kind fills.
+type storyRequest struct {
+	name    string
+	request *planRequest
+	budget  int
+}
+
+// storySuggest revises a range of a manuscript cell of [storyProject], keeping a block, and writes a title
+// and a notes cell of other scenes.
+func storySuggest() *planRequest {
+	request := suggestRequest(storyProject(),
+		with(cellTarget(30, 0, core.TargetModeRevise), func(target *core.GenerationTarget) {
+			target.Range, target.Kept = &core.Range{Start: 1, End: 3}, []int{2}
+		}),
+		fieldTarget(31, core.SceneFieldTitle, core.TargetModeWrite),
+		cellTarget(12, 2, core.TargetModeRevise),
+	)
+	request.Instruction = "Make it tenser."
+
+	return request
+}
+
+// storyRequests lists a request of each kind on a [storyProject], each with a budget that leaves a mix of
+// levels in the frame and the neighborhood.
+func storyRequests() []*storyRequest {
+	return []*storyRequest{
+		{name: "Suggest", request: storySuggest(), budget: 14000},
+		// A tighter budget collapses the far beats of the frame.
+		{name: "SuggestTight", request: storySuggest(), budget: 8000},
+		{
+			name: "SuggestExcluded",
+			request: with(suggestRequest(storyProject(), cellTarget(45, 0, core.TargetModeWrite)),
+				func(request *planRequest) { request.Exclude = []uuid.UUID{fixtureLayerID(1)} }),
+			budget: 5000,
+		},
+		{
+			name: "Consolidate",
+			request: planOf(storyProject(), &core.GenerationPlanRequest{
+				Kind: core.GenerationKindConsolidate,
+				Cell: &core.GenerationCell{SceneID: fixtureSceneID(20), LayerID: fixtureLayerID(0)},
+			}),
+			budget: 3000,
+		},
+		{
+			name: "ConsolidateBeat",
+			request: planOf(storyProject(), &core.GenerationPlanRequest{
+				Kind: core.GenerationKindConsolidate, BeatID: fixtureBeatID(4),
+			}),
+			budget: 4000,
+		},
+		{
+			name: "CheckRange",
+			request: planOf(storyProject(), &core.GenerationPlanRequest{
+				Kind: core.GenerationKindCheck, Scenes: &core.Range{Start: 10, End: 14},
+			}),
+			budget: 9000,
+		},
+		{
+			name:    "CheckAll",
+			request: planOf(storyProject(), &core.GenerationPlanRequest{Kind: core.GenerationKindCheck}),
+			budget:  12000,
 		},
 	}
 }

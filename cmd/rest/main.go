@@ -120,6 +120,8 @@ func main() {
 	daoCellUpsert := dao.NewPgCellUpsert()
 	daoCellsUpsert := dao.NewPgCellsUpsert()
 	daoCellList := dao.NewPgCellList()
+	daoCellSummaryList := dao.NewPgCellSummaryList()
+	daoCellsSelect := dao.NewPgCellsSelect()
 	daoCellRecapUpdate := dao.NewPgCellRecapUpdate()
 	daoBeatRecapUpdate := dao.NewPgBeatRecapUpdate()
 	daoManuscriptSelect := dao.NewPgManuscriptSelect()
@@ -174,9 +176,9 @@ func main() {
 		daoProjectOwned, daoLayerKind, daoProjectBytes, daoProjectSelect, daoManuscriptSelect, projectReadGate,
 	)
 	serviceProjectSnapshotRead := core.NewProjectSnapshotRead(
-		daoProjectOwned, daoProjectBytes, daoProjectSelect, daoBeatList, daoSceneList, daoLayerList, daoCellList,
+		daoProjectOwned, daoProjectBytes, daoProjectSelect, daoBeatList, daoSceneList, daoLayerList, daoCellSummaryList,
 	)
-	serviceGenerationPlan := core.NewGenerationPlan(cfg.Generations)
+	serviceGenerationPlan := core.NewGenerationPlan(cfg.Generations, daoCellsSelect)
 	serviceGenerationSubmit := core.NewGenerationSubmit(
 		serviceProjectSnapshotRead, serviceGenerationPlan, genaiClient, projectReadGate,
 	)
