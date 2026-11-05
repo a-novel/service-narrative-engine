@@ -9,13 +9,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 
-	serviceauthentication "github.com/a-novel/service-authentication/v2/pkg/go"
-
 	"github.com/a-novel-kit/golib/httpf"
 	"github.com/a-novel-kit/golib/logging"
 	"github.com/a-novel-kit/golib/otel"
 
-	"github.com/a-novel/service-narrative-engine/internal/config"
 	"github.com/a-novel/service-narrative-engine/internal/core"
 )
 
@@ -102,23 +99,15 @@ type RestCellOverride struct {
 }
 
 // RestGenerationSubmit is the HTTP handler for the submit-generation endpoint. It responds 202 with each
-// call of the generation, and 429 with the cap genai refused it for when genai admits no call. A caller
-// granted [config.PermissionGenerationUncapped] runs on genai's admin tier.
+// call of the generation, and 429 with the cap genai refused it for when genai admits no call. The caller's
+// roles set the caps genai counts the generation against.
 type RestGenerationSubmit struct {
 	service RestGenerationSubmitService
-	// uncapped holds the roles that grant [config.PermissionGenerationUncapped].
-	uncapped map[string]bool
-	logger   logging.Log
+	logger  logging.Log
 }
 
-func NewRestGenerationSubmit(
-	service RestGenerationSubmitService, permissions serviceauthentication.Permissions, logger logging.Log,
-) *RestGenerationSubmit {
-	return &RestGenerationSubmit{
-		service:  service,
-		uncapped: rolesGranting(permissions, config.PermissionGenerationUncapped),
-		logger:   logger,
-	}
+func NewRestGenerationSubmit(service RestGenerationSubmitService, logger logging.Log) *RestGenerationSubmit {
+	return &RestGenerationSubmit{service: service, logger: logger}
 }
 
 func (handler *RestGenerationSubmit) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -144,7 +133,7 @@ func (handler *RestGenerationSubmit) ServeHTTP(w http.ResponseWriter, r *http.Re
 	serviceRequest := &core.GenerationSubmitRequest{
 		OwnerID:   ownerID,
 		ProjectID: request.ProjectID,
-		Admin:     requestGranted(r, handler.uncapped),
+		Roles:     requestRoles(r),
 		Kind:      request.Kind,
 		Targets:   saveGenerationTargets(request.Targets),
 		Cell:      saveGenerationCell(request.Cell),

@@ -8,20 +8,49 @@ import (
 	"testing"
 	"time"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/durationpb"
 
 	servicegenai "github.com/a-novel/service-genai/pkg/go"
 
+	"github.com/a-novel/service-narrative-engine/internal/config"
 	"github.com/a-novel/service-narrative-engine/internal/core"
 	coremocks "github.com/a-novel/service-narrative-engine/internal/core/mocks"
 )
 
-// concurrencyCap is the message genai refuses a call with once the user runs as many as their tier allows.
-const concurrencyCap = `usage cap reached: purpose "studio.generation" concurrency: 2 generations already in flight`
+const (
+	// concurrencyCap is the message genai refuses a call with once the user runs as many as their caps allow.
+	concurrencyCap = `usage cap reached: purpose "studio.generation" concurrency: 2 generations already in flight`
+	// windowCap is the message genai refuses a call with once the user consumed what a window allows.
+	windowCap = `usage cap reached: purpose "studio.generation" over 5h0m0s`
+)
+
+// userCaps are the caps genai receives for a user of the default caps.
+var userCaps = &servicegenai.GenerationCaps{
+	Concurrency: lo.ToPtr[int32](2),
+	Windows: []*servicegenai.GenerationCapWindow{
+		{
+			Duration:     durationpb.New(5 * time.Hour),
+			InputTokens:  lo.ToPtr[int64](2_000_000),
+			OutputTokens: lo.ToPtr[int64](200_000),
+		},
+		{
+			Duration:     durationpb.New(720 * time.Hour),
+			InputTokens:  lo.ToPtr[int64](50_000_000),
+			OutputTokens: lo.ToPtr[int64](5_000_000),
+		},
+	},
+}
+
+// userRoles are the roles of a user under the default permissions.
+var userRoles = []string{"auth:user"}
 
 // submitCall returns a call of a planned generation, whose task names it.
 func submitCall(task string) *core.ContextCall {
@@ -87,6 +116,11 @@ func TestGenerationSubmit(t *testing.T) {
 	)
 	malformed := genaiGeneration(servicegenai.GenerationStatusSucceeded, "not json")
 
+	// A window's refusal says when the window frees usage.
+	windowRefusal := lo.Must(status.New(codes.ResourceExhausted, windowCap).WithDetails(
+		&errdetails.RetryInfo{RetryDelay: durationpb.New(90 * time.Second)},
+	)).Err()
+
 	testCases := []struct {
 		name string
 
@@ -94,18 +128,20 @@ func TestGenerationSubmit(t *testing.T) {
 
 		snapshotMock *daoMock[*core.ProjectSnapshot]
 		planMock     *daoMock[*core.ContextPlan]
-		// genaiMocks answers each submit genai receives, in order, and tier is the tier each names.
+		// genaiMocks answers each submit genai receives, in order, and caps are the caps each carries.
 		genaiMocks []*genaiAnswer
-		tier       string
+		caps       *servicegenai.GenerationCaps
 
 		expect    *core.Generation
 		expectErr error
+		// expectQuota is the refusal a generation genai admits no call of returns.
+		expectQuota *core.GenerationQuotaError
 	}{
 		{
 			name: "Success",
 
 			request: &core.GenerationSubmitRequest{
-				OwnerID: ownerID, ProjectID: projectID, Kind: core.GenerationKindSuggest, Targets: targets,
+				OwnerID: ownerID, ProjectID: projectID, Roles: userRoles, Kind: core.GenerationKindSuggest, Targets: targets,
 				Instruction: "Plus court.",
 			},
 
@@ -114,7 +150,7 @@ func TestGenerationSubmit(t *testing.T) {
 				Kind: core.GenerationKindSuggest, Calls: []*core.ContextCall{submitCall("task 1")},
 			}},
 			genaiMocks: []*genaiAnswer{{created: true, resp: running}},
-			tier:       "default",
+			caps:       userCaps,
 
 			expect: &core.Generation{Kind: core.GenerationKindSuggest, Calls: []*core.GenerationCall{{
 				Result:  &core.GenerationResult{ID: genaiID, Status: core.GenerationStatusRunning},
@@ -122,11 +158,12 @@ func TestGenerationSubmit(t *testing.T) {
 			}}},
 		},
 		{
-			name: "Success/Admin",
+			// An admin's empty caps limit nothing.
+			name: "Success/Uncapped",
 
 			request: &core.GenerationSubmitRequest{
-				OwnerID: ownerID, ProjectID: projectID, Kind: core.GenerationKindSuggest, Targets: targets,
-				Admin: true, Variant: 2, Stream: true,
+				OwnerID: ownerID, ProjectID: projectID, Roles: []string{"auth:admin"}, Kind: core.GenerationKindSuggest,
+				Targets: targets, Variant: 2, Stream: true,
 			},
 
 			snapshotMock: &daoMock[*core.ProjectSnapshot]{resp: snapshot},
@@ -134,7 +171,7 @@ func TestGenerationSubmit(t *testing.T) {
 				Kind: core.GenerationKindSuggest, Calls: []*core.ContextCall{submitCall("task 1")},
 			}},
 			genaiMocks: []*genaiAnswer{{variant: 2, created: true, resp: running}},
-			tier:       "admin",
+			caps:       &servicegenai.GenerationCaps{},
 
 			expect: &core.Generation{Kind: core.GenerationKindSuggest, Calls: []*core.GenerationCall{{
 				Result:  &core.GenerationResult{ID: genaiID, Status: core.GenerationStatusRunning},
@@ -146,7 +183,7 @@ func TestGenerationSubmit(t *testing.T) {
 			name: "Success/Replay",
 
 			request: &core.GenerationSubmitRequest{
-				OwnerID: ownerID, ProjectID: projectID, Kind: core.GenerationKindSuggest, Targets: targets,
+				OwnerID: ownerID, ProjectID: projectID, Roles: userRoles, Kind: core.GenerationKindSuggest, Targets: targets,
 			},
 
 			snapshotMock: &daoMock[*core.ProjectSnapshot]{resp: snapshot},
@@ -154,7 +191,7 @@ func TestGenerationSubmit(t *testing.T) {
 				Kind: core.GenerationKindSuggest, Calls: []*core.ContextCall{submitCall("task 1")},
 			}},
 			genaiMocks: []*genaiAnswer{{resp: succeeded}},
-			tier:       "default",
+			caps:       userCaps,
 
 			expect: &core.Generation{Kind: core.GenerationKindSuggest, Calls: []*core.GenerationCall{{
 				Result: &core.GenerationResult{
@@ -170,7 +207,7 @@ func TestGenerationSubmit(t *testing.T) {
 			name: "Success/RerunRejectedOutput",
 
 			request: &core.GenerationSubmitRequest{
-				OwnerID: ownerID, ProjectID: projectID, Kind: core.GenerationKindSuggest, Targets: targets,
+				OwnerID: ownerID, ProjectID: projectID, Roles: userRoles, Kind: core.GenerationKindSuggest, Targets: targets,
 			},
 
 			snapshotMock: &daoMock[*core.ProjectSnapshot]{resp: snapshot},
@@ -182,7 +219,7 @@ func TestGenerationSubmit(t *testing.T) {
 				{call: 1, resp: incomplete},
 				{call: 1, variant: 1, created: true, resp: running},
 			},
-			tier: "default",
+			caps: userCaps,
 
 			expect: &core.Generation{Kind: core.GenerationKindSuggest, Calls: []*core.GenerationCall{
 				{
@@ -204,7 +241,7 @@ func TestGenerationSubmit(t *testing.T) {
 			name: "Success/RerunWalksVariants",
 
 			request: &core.GenerationSubmitRequest{
-				OwnerID: ownerID, ProjectID: projectID, Kind: core.GenerationKindSuggest, Targets: targets,
+				OwnerID: ownerID, ProjectID: projectID, Roles: userRoles, Kind: core.GenerationKindSuggest, Targets: targets,
 				Variant: 3,
 			},
 
@@ -217,7 +254,7 @@ func TestGenerationSubmit(t *testing.T) {
 				{variant: 4, resp: malformed},
 				{variant: 5, created: true, resp: running},
 			},
-			tier: "default",
+			caps: userCaps,
 
 			expect: &core.Generation{Kind: core.GenerationKindSuggest, Calls: []*core.GenerationCall{{
 				Result:  &core.GenerationResult{ID: genaiID, Status: core.GenerationStatusRunning},
@@ -229,7 +266,7 @@ func TestGenerationSubmit(t *testing.T) {
 			name: "Success/RerunWaiting",
 
 			request: &core.GenerationSubmitRequest{
-				OwnerID: ownerID, ProjectID: projectID, Kind: core.GenerationKindSuggest, Targets: targets,
+				OwnerID: ownerID, ProjectID: projectID, Roles: userRoles, Kind: core.GenerationKindSuggest, Targets: targets,
 			},
 
 			snapshotMock: &daoMock[*core.ProjectSnapshot]{resp: snapshot},
@@ -241,7 +278,7 @@ func TestGenerationSubmit(t *testing.T) {
 				{call: 1, resp: incomplete},
 				{call: 1, variant: 1, err: status.Error(codes.ResourceExhausted, concurrencyCap)},
 			},
-			tier: "default",
+			caps: userCaps,
 
 			expect: &core.Generation{Kind: core.GenerationKindSuggest, Calls: []*core.GenerationCall{
 				{
@@ -256,7 +293,7 @@ func TestGenerationSubmit(t *testing.T) {
 			name: "Success/Waiting",
 
 			request: &core.GenerationSubmitRequest{
-				OwnerID: ownerID, ProjectID: projectID, Kind: core.GenerationKindSuggest, Targets: targets,
+				OwnerID: ownerID, ProjectID: projectID, Roles: userRoles, Kind: core.GenerationKindSuggest, Targets: targets,
 			},
 
 			snapshotMock: &daoMock[*core.ProjectSnapshot]{resp: snapshot},
@@ -270,7 +307,7 @@ func TestGenerationSubmit(t *testing.T) {
 				{created: true, resp: running},
 				{call: 1, err: status.Error(codes.ResourceExhausted, concurrencyCap)},
 			},
-			tier: "default",
+			caps: userCaps,
 
 			expect: &core.Generation{Kind: core.GenerationKindSuggest, Calls: []*core.GenerationCall{
 				{
@@ -285,7 +322,7 @@ func TestGenerationSubmit(t *testing.T) {
 			name: "Error/Quota",
 
 			request: &core.GenerationSubmitRequest{
-				OwnerID: ownerID, ProjectID: projectID, Kind: core.GenerationKindSuggest, Targets: targets,
+				OwnerID: ownerID, ProjectID: projectID, Roles: userRoles, Kind: core.GenerationKindSuggest, Targets: targets,
 			},
 
 			snapshotMock: &daoMock[*core.ProjectSnapshot]{resp: snapshot},
@@ -295,16 +332,47 @@ func TestGenerationSubmit(t *testing.T) {
 			genaiMocks: []*genaiAnswer{
 				{err: status.Error(codes.ResourceExhausted, concurrencyCap)},
 			},
-			tier: "default",
+			caps: userCaps,
 
-			expectErr: core.ErrGenerationQuota,
+			expectErr:   core.ErrGenerationQuota,
+			expectQuota: &core.GenerationQuotaError{Cap: concurrencyCap},
+		},
+		{
+			// A refusal for a window carries the delay until the window frees usage.
+			name: "Error/QuotaWindow",
+
+			request: &core.GenerationSubmitRequest{
+				OwnerID: ownerID, ProjectID: projectID, Roles: userRoles, Kind: core.GenerationKindSuggest,
+				Targets: targets,
+			},
+
+			snapshotMock: &daoMock[*core.ProjectSnapshot]{resp: snapshot},
+			planMock: &daoMock[*core.ContextPlan]{resp: &core.ContextPlan{
+				Kind: core.GenerationKindSuggest, Calls: []*core.ContextCall{submitCall("task 1")},
+			}},
+			genaiMocks: []*genaiAnswer{{err: windowRefusal}},
+			caps:       userCaps,
+
+			expectErr:   core.ErrGenerationQuota,
+			expectQuota: &core.GenerationQuotaError{Cap: windowCap, RetryAfter: 90 * time.Second},
+		},
+		{
+			// A caller whose roles set no caps submits nothing.
+			name: "Error/NoCaps",
+
+			request: &core.GenerationSubmitRequest{
+				OwnerID: ownerID, ProjectID: projectID, Roles: []string{"auth:anon"}, Kind: core.GenerationKindSuggest,
+				Targets: targets,
+			},
+
+			expectErr: core.ErrNoGenerationCaps,
 		},
 		{
 			// Only a suggest generation takes targets.
 			name: "Error/TargetsOnConsolidate",
 
 			request: &core.GenerationSubmitRequest{
-				OwnerID: ownerID, ProjectID: projectID, Kind: core.GenerationKindConsolidate, Targets: targets,
+				OwnerID: ownerID, ProjectID: projectID, Roles: userRoles, Kind: core.GenerationKindConsolidate, Targets: targets,
 			},
 
 			expectErr: core.ErrInvalidRequest,
@@ -313,7 +381,7 @@ func TestGenerationSubmit(t *testing.T) {
 			name: "Error/Snapshot",
 
 			request: &core.GenerationSubmitRequest{
-				OwnerID: ownerID, ProjectID: projectID, Kind: core.GenerationKindSuggest, Targets: targets,
+				OwnerID: ownerID, ProjectID: projectID, Roles: userRoles, Kind: core.GenerationKindSuggest, Targets: targets,
 			},
 
 			snapshotMock: &daoMock[*core.ProjectSnapshot]{err: core.ErrProjectNotFound},
@@ -324,7 +392,7 @@ func TestGenerationSubmit(t *testing.T) {
 			name: "Error/Plan",
 
 			request: &core.GenerationSubmitRequest{
-				OwnerID: ownerID, ProjectID: projectID, Kind: core.GenerationKindSuggest, Targets: targets,
+				OwnerID: ownerID, ProjectID: projectID, Roles: userRoles, Kind: core.GenerationKindSuggest, Targets: targets,
 			},
 
 			snapshotMock: &daoMock[*core.ProjectSnapshot]{resp: snapshot},
@@ -336,7 +404,7 @@ func TestGenerationSubmit(t *testing.T) {
 			name: "Error/Unavailable",
 
 			request: &core.GenerationSubmitRequest{
-				OwnerID: ownerID, ProjectID: projectID, Kind: core.GenerationKindSuggest, Targets: targets,
+				OwnerID: ownerID, ProjectID: projectID, Roles: userRoles, Kind: core.GenerationKindSuggest, Targets: targets,
 			},
 
 			snapshotMock: &daoMock[*core.ProjectSnapshot]{resp: snapshot},
@@ -344,7 +412,7 @@ func TestGenerationSubmit(t *testing.T) {
 				Kind: core.GenerationKindSuggest, Calls: []*core.ContextCall{submitCall("task 1")},
 			}},
 			genaiMocks: []*genaiAnswer{{err: status.Error(codes.Unavailable, "planned downtime")}},
-			tier:       "default",
+			caps:       userCaps,
 
 			expectErr: core.ErrGenaiUnavailable,
 		},
@@ -352,7 +420,7 @@ func TestGenerationSubmit(t *testing.T) {
 			name: "Error/Genai",
 
 			request: &core.GenerationSubmitRequest{
-				OwnerID: ownerID, ProjectID: projectID, Kind: core.GenerationKindSuggest, Targets: targets,
+				OwnerID: ownerID, ProjectID: projectID, Roles: userRoles, Kind: core.GenerationKindSuggest, Targets: targets,
 			},
 
 			snapshotMock: &daoMock[*core.ProjectSnapshot]{resp: snapshot},
@@ -360,7 +428,7 @@ func TestGenerationSubmit(t *testing.T) {
 				Kind: core.GenerationKindSuggest, Calls: []*core.ContextCall{submitCall("task 1")},
 			}},
 			genaiMocks: []*genaiAnswer{{err: errFoo}},
-			tier:       "default",
+			caps:       userCaps,
 
 			expectErr: errFoo,
 		},
@@ -397,7 +465,8 @@ func TestGenerationSubmit(t *testing.T) {
 					GenerationSubmit(mock.Anything, mock.MatchedBy(func(request *servicegenai.GenerationSubmitRequest) bool {
 						return bytes.Equal(request.GetPayload(), []byte(submitPayload(task))) &&
 							request.GetOwnerId() == ownerID.String() && request.GetPurpose() == "studio.generation" &&
-							request.GetProvider() == "openai" && request.GetUserTier() == testCase.tier &&
+							request.GetProvider() == "openai" && request.GetUserTier() == "" &&
+							proto.Equal(request.GetCaps(), testCase.caps) &&
 							request.GetVariant() == answer.variant && request.GetStream() == testCase.request.Stream
 					})).
 					// The read and the plan free their slot of the gate before genai answers, which may take long.
@@ -411,18 +480,21 @@ func TestGenerationSubmit(t *testing.T) {
 					Once()
 			}
 
-			service := core.NewGenerationSubmit(mockSnapshot, mockPlan, mockGenai, gate)
+			caps, err := core.NewGenerationCapsPolicy(config.PermissionsConfigDefault, config.CapsConfigDefault)
+			require.NoError(t, err)
+
+			service := core.NewGenerationSubmit(mockSnapshot, mockPlan, mockGenai, gate, caps)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
 
 			// A quota refusal names the cap genai refused the first call for.
-			if errors.Is(err, core.ErrGenerationQuota) {
+			if testCase.expectQuota != nil {
 				var quota *core.GenerationQuotaError
 
 				require.ErrorAs(t, err, &quota)
-				require.Equal(t, concurrencyCap, quota.Cap)
+				require.Equal(t, testCase.expectQuota, quota)
 			}
 
 			mockSnapshot.AssertExpectations(t)

@@ -33,8 +33,8 @@ const RECAP: Recap = {
   names: ["Marie", "Paul"],
 };
 
-// genai never reaches a provider in this stack, so a consolidation stays pending, and the suite writes the
-// recap a client would write once it succeeded, with the stamps its context reports.
+// genai never reaches a provider in this stack, so a consolidation fails before it starts, and the suite
+// writes the recap a client would write once it succeeded, with the stamps its context reports.
 const accessToken = await superAdminAccessToken();
 const userToken = await userAccessToken();
 

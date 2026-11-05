@@ -2,7 +2,6 @@ import { anonymousAccessToken, superAdminAccessToken, userAccessToken } from "./
 
 import { afterAll, describe, expect, it, onTestFinished } from "vitest";
 
-import { isHttpError, isHttpStatusError } from "@a-novel-kit/nodelib-browser/http";
 import { expectStatus } from "@a-novel-kit/nodelib-test/http";
 import {
   type Generation,
@@ -38,7 +37,7 @@ async function collect<T>(stream: AsyncIterable<T>): Promise<T[]> {
   return items;
 }
 
-// genai never reaches a provider in this stack, so every admitted call stays pending until cancelled.
+// genai never reaches a provider in this stack, so every admitted call fails before it starts.
 const accessToken = await superAdminAccessToken();
 const userToken = await userAccessToken();
 
@@ -125,7 +124,7 @@ describe("generationSubmit", () => {
 
     const [call] = generation.calls;
     expect(call.waiting).toBeUndefined();
-    expect(call.generation).toEqual({ id: expect.any(String), status: GenerationStatus.Pending });
+    expect(call.generation).toMatchObject({ id: expect.any(String), status: GenerationStatus.Failed });
     expect(call.context.targets).toEqual([
       {
         handle: expect.stringMatching(/^M[0-9]+$/),
@@ -161,11 +160,10 @@ describe("generationSubmit", () => {
     expect(call.context.estimate).toBeGreaterThan(0);
   });
 
-  it("replays a resent request, and runs another variant", async () => {
-    const id = onlyCallID(await submit(accessToken, titleRequest("Replay")));
+  it("runs a call that failed to start again when resent", async () => {
+    const id = onlyCallID(await submit(accessToken, titleRequest("Rerun failed")));
 
-    expect(onlyCallID(await submit(accessToken, titleRequest("Replay")))).toBe(id);
-    expect(onlyCallID(await submit(accessToken, titleRequest("Replay", 1)))).not.toBe(id);
+    expect(onlyCallID(await submit(accessToken, titleRequest("Rerun failed")))).not.toBe(id);
   });
 
   it("runs a cancelled call again when resent", async () => {
@@ -263,29 +261,10 @@ describe("generationSubmit", () => {
     await expectStatus(generationSubmit(api, accessToken, request as GenerationSubmitRequest), 400);
   });
 
-  it("runs an admin's calls past the default tier's concurrency", async () => {
+  it("runs an admin's calls past a user's concurrency", async () => {
     for (const variant of [0, 1, 2]) {
       onlyCallID(await submit(accessToken, titleRequest("Uncapped", variant)));
     }
-  });
-
-  it("returns 429 naming the cap once genai admits no call", async () => {
-    const [own, ownScene] = await projectWithScene(userToken, "La Ligne");
-    onTestFinished(() => projectDelete(api, userToken, own).then(() => undefined));
-    const request = (variant: number): GenerationSubmitRequest => ({
-      projectID: own.id,
-      kind: GenerationKind.Suggest,
-      targets: [{ sceneID: ownScene.id, field: SceneField.Title, mode: TargetMode.Write }],
-      variant,
-    });
-
-    // The default tier holds 2 calls in flight per user.
-    onlyCallID(await submit(userToken, request(0)));
-    onlyCallID(await submit(userToken, request(1)));
-
-    const refusal = await generationSubmit(api, userToken, request(2)).catch((error: unknown) => error);
-    expect(isHttpStatusError(refusal, 429)).toBe(true);
-    expect(isHttpError(refusal) && refusal.tags.cap).toContain("concurrency");
   });
 
   it("returns 400 for a range past the end of the cell", async () => {
@@ -318,7 +297,10 @@ describe("generationGet", () => {
   it("reads a call as genai holds it", async () => {
     const id = onlyCallID(await submit(accessToken, titleRequest("Read")));
 
-    await expect(generationGet(api, accessToken, { id })).resolves.toEqual({ id, status: GenerationStatus.Pending });
+    await expect(generationGet(api, accessToken, { id })).resolves.toMatchObject({
+      id,
+      status: GenerationStatus.Failed,
+    });
   });
 
   it("returns 404 for a call of another user", async () => {
@@ -337,12 +319,12 @@ describe("generationGet", () => {
 });
 
 describe("generationCancel", () => {
-  it("cancels a call, and returns it as it stands when cancelled again", async () => {
+  it("returns a settled call as it stands, however often cancelled", async () => {
     const id = onlyCallID(await submit(accessToken, titleRequest("Cancel")));
-    const cancelled = { id, status: GenerationStatus.Cancelled };
+    const settled = await generationGet(api, accessToken, { id });
 
-    await expect(generationCancel(api, accessToken, { id })).resolves.toEqual(cancelled);
-    await expect(generationCancel(api, accessToken, { id })).resolves.toEqual(cancelled);
+    await expect(generationCancel(api, accessToken, { id })).resolves.toEqual(settled);
+    await expect(generationCancel(api, accessToken, { id })).resolves.toEqual(settled);
   });
 
   it("returns 404 for a call of another user", async () => {

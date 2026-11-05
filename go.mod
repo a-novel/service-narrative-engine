@@ -5,7 +5,7 @@ go 1.27.3
 require (
 	github.com/a-novel-kit/golib v0.63.0
 	github.com/a-novel/service-authentication/v2 v2.25.2
-	github.com/a-novel/service-genai v0.8.10
+	github.com/a-novel/service-genai v0.9.0
 	github.com/a-novel/service-json-keys/v2 v2.15.7
 	github.com/go-chi/chi/v5 v5.5.0
 	github.com/go-playground/validator/v10 v10.30.6
@@ -20,7 +20,9 @@ require (
 	go.opentelemetry.io/otel v1.47.0
 	go.opentelemetry.io/otel/trace v1.47.0
 	golang.org/x/text v0.43.0
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20261026165753-2ffab32bce7e
 	google.golang.org/grpc v1.85.0
+	google.golang.org/protobuf v1.36.12
 )
 
 require (
@@ -84,7 +86,5 @@ require (
 	golang.org/x/sync v0.24.0 // indirect
 	golang.org/x/sys v0.49.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20261012220534-4341edf3f941 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20261026165753-2ffab32bce7e // indirect
-	google.golang.org/protobuf v1.36.12 // indirect
 	mellium.im/sasl v0.3.2 // indirect
 )

@@ -66,6 +66,8 @@ type App struct {
 	Dependencies Dependencies `json:"dependencies" yaml:"dependencies"`
 	// Permissions maps each role to the permissions it grants.
 	Permissions serviceauthentication.Permissions `json:"permissions" yaml:"permissions"`
+	// Caps maps roles to the caps genai counts their users' generations against.
+	Caps Caps `json:"caps" yaml:"caps"`
 	// Rest configures the REST server.
 	Rest httpf.ServerConfig `json:"rest" yaml:"rest"`
 	// ServiceToken names the service tokens the REST server accepts.

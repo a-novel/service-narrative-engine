@@ -27,6 +27,9 @@ const (
 type GenerationQuotaError struct {
 	// Cap is genai's message naming the cap, such as its concurrency or a token window.
 	Cap string
+	// RetryAfter is how long until the refusing window frees usage, as genai gives it. It is zero when genai
+	// gives none, as for the concurrency.
+	RetryAfter time.Duration
 }
 
 func (err *GenerationQuotaError) Error() string {
@@ -56,13 +59,6 @@ func genaiError(err, notFound error) error {
 }
 
 const (
-	// genaiTierDefault is the tier genai caps a user's generations by.
-	genaiTierDefault = "default"
-	// genaiTierAdmin is the tier of an admin, which genai does not cap.
-	genaiTierAdmin = "admin"
-)
-
-const (
 	// GenerationStatusPending is a generation genai holds and has not started yet.
 	GenerationStatusPending = "pending"
 	// GenerationStatusRunning is a generation the provider runs.
@@ -79,6 +75,29 @@ const (
 var GenerationStatuses = []string{
 	GenerationStatusPending, GenerationStatusRunning, GenerationStatusSucceeded, GenerationStatusFailed,
 	GenerationStatusCancelled,
+}
+
+const (
+	// GenerationFailureRejected is a call the provider refused, such as for an unknown model. The same call
+	// fails again.
+	GenerationFailureRejected = "rejected"
+	// GenerationFailureProviderFailed is a call the provider accepted, then failed or did not finish in time.
+	// A resend may succeed.
+	GenerationFailureProviderFailed = "provider_failed"
+	// GenerationFailureNotStarted is a call the provider never ran. A resend may succeed, at no extra cost.
+	GenerationFailureNotStarted = "not_started"
+	// GenerationFailureOutcomeUnknown is a call the provider may still run, untracked. It counts toward the
+	// user's concurrency for 15 minutes, so a resend in that time may wait.
+	GenerationFailureOutcomeUnknown = "outcome_unknown"
+	// GenerationFailureInvalidOutput is a call the provider finished with an output that failed its kind's
+	// output schema, or was cut short or refused. A resend runs it again at the next variant.
+	GenerationFailureInvalidOutput = "invalid_output"
+)
+
+// GenerationFailures lists why a generation may fail, so a client decides whether to resend it.
+var GenerationFailures = []string{
+	GenerationFailureRejected, GenerationFailureProviderFailed, GenerationFailureNotStarted,
+	GenerationFailureOutcomeUnknown, GenerationFailureInvalidOutput,
 }
 
 // Generation is a generation as submit leaves it: each of its calls with its genai generation, or with
@@ -108,6 +127,9 @@ type GenerationResult struct {
 
 	// Error says why a failed generation failed: genai's reason, or why its output was refused.
 	Error string
+	// FailureClass says why a failed generation failed, one of [GenerationFailures]. It is empty unless the
+	// generation failed, and for a failure genai did not classify.
+	FailureClass string
 	// Output is the model's output, which passed the full output schema of its kind. It is empty unless
 	// the generation succeeded.
 	Output json.RawMessage
@@ -133,6 +155,14 @@ var genaiStatuses = map[servicegenai.GenerationStatus]string{
 	servicegenai.GenerationStatusCancelled: GenerationStatusCancelled,
 }
 
+// genaiFailures maps each failure class genai gives to why a generation failed.
+var genaiFailures = map[servicegenai.GenerationFailure]string{
+	servicegenai.GenerationFailureRejected:       GenerationFailureRejected,
+	servicegenai.GenerationFailureProviderFailed: GenerationFailureProviderFailed,
+	servicegenai.GenerationFailureNotStarted:     GenerationFailureNotStarted,
+	servicegenai.GenerationFailureOutcomeUnknown: GenerationFailureOutcomeUnknown,
+}
+
 // newGenerationResult reads a genai generation. A generation genai reports succeeded fails here when the
 // provider's response holds no valid output.
 func newGenerationResult(generation *servicegenai.Generation) (*GenerationResult, error) {
@@ -149,7 +179,7 @@ func newGenerationResult(generation *servicegenai.Generation) (*GenerationResult
 	// genai also says why a cancelled generation stopped, which its status already tells.
 	result := &GenerationResult{ID: id, Status: status}
 	if status == GenerationStatusFailed {
-		result.Error = generation.GetError()
+		result.Error, result.FailureClass = generation.GetError(), genaiFailures[generation.GetFailureClass()]
 	}
 
 	if status != GenerationStatusSucceeded {
@@ -158,17 +188,24 @@ func newGenerationResult(generation *servicegenai.Generation) (*GenerationResult
 
 	attempts := generation.GetAttempts()
 	if len(attempts) == 0 {
-		return &GenerationResult{ID: id, Status: GenerationStatusFailed, Error: "no response"}, nil
+		return invalidOutput(id, "no response"), nil
 	}
 
 	output, reason := readOutput(attempts[len(attempts)-1].GetResponse())
 	if reason != "" {
-		return &GenerationResult{ID: id, Status: GenerationStatusFailed, Error: reason}, nil
+		return invalidOutput(id, reason), nil
 	}
 
 	result.Output, result.Model = output.text, output.model
 
 	return result, nil
+}
+
+// invalidOutput returns a generation genai holds as succeeded, failed for the reason its output was refused.
+func invalidOutput(id uuid.UUID, reason string) *GenerationResult {
+	return &GenerationResult{
+		ID: id, Status: GenerationStatusFailed, Error: reason, FailureClass: GenerationFailureInvalidOutput,
+	}
 }
 
 // openaiResponse is the part of an OpenAI Responses object a read checks: whether the model finished,

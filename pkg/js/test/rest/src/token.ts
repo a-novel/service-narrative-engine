@@ -52,7 +52,7 @@ export async function superAdminAccessToken(): Promise<string> {
 
 /**
  * Registers a new account through the super-admin's invitation, and returns its access token. The account
- * holds the user role, which genai runs on its default tier.
+ * holds the user role, whose caps limit its generations.
  */
 export async function userAccessToken(): Promise<string> {
   const api = new AuthenticationApi(process.env.SERVICE_AUTHENTICATION_URL!);
