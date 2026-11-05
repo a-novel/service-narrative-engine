@@ -67,6 +67,35 @@ export const GenerationStatusSchema = z.enum([
   GenerationStatus.Cancelled,
 ]);
 
+/** Why a genai generation failed, so a client decides whether to resend its request. */
+export enum GenerationFailureClass {
+  /** The provider refused the call, such as for an unknown model. The same request fails again. */
+  Rejected = "rejected",
+  /** The provider accepted the call, then failed it or did not finish it in time. A resend may succeed. */
+  ProviderFailed = "provider_failed",
+  /** The provider never ran the call. A resend may succeed, at no extra cost. */
+  NotStarted = "not_started",
+  /**
+   * The provider may still run the call, untracked. The call counts toward the caller's concurrency for 15
+   * minutes, so a resend in that time may wait.
+   */
+  OutcomeUnknown = "outcome_unknown",
+  /**
+   * The provider finished the call, but its output was refused, cut short or broke the output schema of its
+   * kind. A resend runs the call again, under a new id.
+   */
+  InvalidOutput = "invalid_output",
+}
+
+/** Validates a {@link GenerationFailureClass}. */
+export const GenerationFailureClassSchema = z.enum([
+  GenerationFailureClass.Rejected,
+  GenerationFailureClass.ProviderFailed,
+  GenerationFailureClass.NotStarted,
+  GenerationFailureClass.OutcomeUnknown,
+  GenerationFailureClass.InvalidOutput,
+]);
+
 /**
  * How much of a scene a call shows, richest first. Later releases may add levels, so a scene's level stays
  * a string.
@@ -192,14 +221,17 @@ export const GenerationSubmitRequestSchema = z.discriminatedUnion("kind", [
 export type GenerationSubmitRequest = z.infer<typeof GenerationSubmitRequestSchema>;
 
 /**
- * One genai generation, which runs one model call. A failed generation says why, and a succeeded one carries
- * the output, which passed the output schema of its kind: parse a suggest output with `SuggestOutputSchema`.
- * A succeeded one also names the model that wrote the output, which `suggestionsMap` takes.
+ * One genai generation, which runs one model call. A failed generation says why, and its
+ * {@link GenerationFailureClass} says whether a resend may succeed, unless genai settled it before it classified
+ * failures. A succeeded one carries the output, which passed the output schema of its kind: parse a suggest
+ * output with `SuggestOutputSchema`. A succeeded one also names the model that wrote the output, which
+ * `suggestionsMap` takes.
  */
 export const GenerationResultSchema = z.object({
   id: z.uuid(),
   status: GenerationStatusSchema,
   error: z.string().optional(),
+  failureClass: GenerationFailureClassSchema.optional(),
   output: z.record(z.string(), z.unknown()).optional(),
   model: z.string().optional(),
 });
@@ -293,6 +325,51 @@ export const GenerationSchema = z.object({
 /** The value {@link GenerationSchema} validates. */
 export type Generation = z.infer<typeof GenerationSchema>;
 
+/** The tokens a caller's calls may consume over one rolling window. A limit left out does not apply. */
+export const GenerationCapWindowSchema = z.object({
+  durationSeconds: z.int().min(1),
+  inputTokens: z.int().min(0).optional(),
+  outputTokens: z.int().min(0).optional(),
+});
+
+/** The value {@link GenerationCapWindowSchema} validates. */
+export type GenerationCapWindow = z.infer<typeof GenerationCapWindowSchema>;
+
+/**
+ * The limits genai counts a caller's generation calls against: the calls in flight at once, and the tokens
+ * consumed over rolling windows, shortest first. A limit left out does not apply, so empty caps limit nothing.
+ */
+export const GenerationCapsSchema = z.object({
+  concurrency: z.int().min(0).optional(),
+  windows: z.array(GenerationCapWindowSchema).optional(),
+});
+
+/** The value {@link GenerationCapsSchema} validates. */
+export type GenerationCaps = z.infer<typeof GenerationCapsSchema>;
+
+/** The tokens a caller's calls consumed over one rolling window, cached input and reasoning output included. */
+export const GenerationUsageWindowSchema = z.object({
+  durationSeconds: z.int().min(1),
+  inputTokens: z.int().min(0),
+  outputTokens: z.int().min(0),
+});
+
+/** The value {@link GenerationUsageWindowSchema} validates. */
+export type GenerationUsageWindow = z.infer<typeof GenerationUsageWindowSchema>;
+
+/**
+ * A caller's caps, and what the caller consumed under them: the calls in flight, which count against the
+ * concurrency, and the tokens consumed over each window of the caps, in their order.
+ */
+export const GenerationUsageSchema = z.object({
+  caps: GenerationCapsSchema,
+  inFlight: z.int().min(0),
+  windows: z.array(GenerationUsageWindowSchema),
+});
+
+/** The value {@link GenerationUsageSchema} validates. */
+export type GenerationUsage = z.infer<typeof GenerationUsageSchema>;
+
 /** The call of a generation to read or cancel, by the ID of its genai generation. */
 export const GenerationGetRequestSchema = z.object({
   id: z.uuid(),
@@ -305,12 +382,14 @@ export type GenerationGetRequest = z.infer<typeof GenerationGetRequestSchema>;
  * Plans a generation on a project of the caller, and submits each of its model calls to genai. Each call
  * returns with its genai generation, or with the cap it waits on, and with the context its output maps back
  * through: `suggestionsMap` for a suggestion, `findingsVerify` for a check, and the recap writes for a
- * consolidation. genai admits 2 calls per user at a time on the default tier: resend the same request as
- * calls settle, and genai admits the calls that wait, replays those it admitted or that succeeded, and runs
- * again those that failed or were cancelled. A call whose output read as failed runs again too, under a new
- * id. Throws on HTTP 400 when the request is invalid, 404 when the caller owns no such project or it lacks a
- * target's scene, layer or beat, 422 when the generation outgrows every call its kind allows, 429 when genai
- * admitted none of its calls, with the cap in the error's `tags.cap`, and 503 when genai is unavailable.
+ * consolidation. genai counts the calls against the caps of the caller's roles, which `generationUsage`
+ * reports: resend the same request as calls settle, and genai admits the calls that wait, replays those it
+ * admitted or that succeeded, and runs again those that failed or were cancelled. A call whose output read as
+ * failed runs again too, under a new id. Throws on HTTP 400 when the request is invalid, 403 when the caller's
+ * roles set no caps, 404 when the caller owns no such project or it lacks a target's scene, layer or beat, 422
+ * when the generation outgrows every call its kind allows, 429 when genai admitted none of its calls, with the
+ * cap in the error's `tags.cap` and `Retry-After` when a token window frees usage at a known time, and 503 when
+ * genai is unavailable.
  */
 export async function generationSubmit(
   api: NarrativeEngineApi,
@@ -325,9 +404,9 @@ export async function generationSubmit(
 }
 
 /**
- * Reads one call of a generation through genai, as it stands. A caller reads it again until it settles. genai
- * keeps a settled generation 6 hours. Throws on HTTP 404 when the caller has no such generation, and 503 when
- * genai is unavailable.
+ * Reads one call of a generation through genai, as it stands. A caller reads it again until it settles, 2
+ * reads a second at most. genai keeps a settled generation 6 hours. Throws on HTTP 404 when the caller has no
+ * such generation, 429 past 2 reads a second, and 503 when genai is unavailable.
  */
 export async function generationGet(
   api: NarrativeEngineApi,
@@ -358,6 +437,18 @@ export async function generationCancel(
   });
 }
 
+/**
+ * Reads the caps of the caller's roles, and what the caller consumed under them, so a client shows the room left
+ * before a submit waits. An uncapped caller has empty caps and no window. Throws on HTTP 403 for an anonymous
+ * session, and 503 when genai is unavailable.
+ */
+export async function generationUsage(api: NarrativeEngineApi, accessToken: string): Promise<GenerationUsage> {
+  return await api.fetch("/v1/generation/usage", GenerationUsageSchema, {
+    method: "GET",
+    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
+  });
+}
+
 /** The statuses of a call that has not settled yet. */
 const UNSETTLED = new Set<GenerationStatus>([GenerationStatus.Pending, GenerationStatus.Running]);
 
@@ -380,8 +471,8 @@ export type GenerationStreamOptions = {
  * to its output, which is the JSON the call's kind defines, then a `result` event with the settled call, as
  * `generationGet` returns it. A cut stream resumes after the last event received. A call that cannot stream, such as
  * one submitted without `stream` or past the provider's 5-minute window, is read until it settles, so the stream
- * always ends with its result. Throws on HTTP 404 when the caller has no such generation, and 503 when genai is
- * unavailable.
+ * always ends with its result. Throws on HTTP 404 when the caller has no such generation, 429 past 2 streams a
+ * second or 8 open ones, and 503 when genai is unavailable.
  */
 export async function* generationStream(
   api: NarrativeEngineApi,
