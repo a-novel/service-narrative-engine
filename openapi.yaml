@@ -1284,14 +1284,17 @@ paths:
         Plans a generation of a kind on a project of the caller and submits each of its model calls to genai,
         as the caller, then returns every call with its context. A call genai admits returns its genai
         generation; a call genai refuses for a cap, such as its concurrency or a token window, waits, and
-        so do the calls after it. A caller with the uncapped permission runs on genai's admin tier.
+        so do the calls after it. The caller's roles set the caps genai counts the calls against, which
+        `GET /v1/generation/usage` reports with what the caller consumed under each. A caller with the
+        uncapped permission sends empty caps, which limit nothing.
 
         Resending the same request while the project holds still admits the calls that wait: genai replays
         the calls it admitted and those that succeeded, at no cost for 6 hours, and runs those that failed or
         were cancelled again. A call whose output read as failed runs again too, under a new id. Read each
         call through generationGet, and map its output through the handles of its context. When genai
-        admits no call, the route answers 429 naming the cap. A caller submits 30 generations a minute at
-        most; one more answers 429 with `Retry-After`.
+        admits no call, the route answers 429 naming the cap, with `Retry-After` when a token window refused
+        and genai knows when the window frees usage. A caller submits 30 generations a minute at most; one
+        more answers 429 with `Retry-After`.
       tags: [generation]
       requestBody:
         required: true
@@ -1325,7 +1328,11 @@ paths:
       description: |
         Reads one model call of a generation through genai, as the caller. Once it succeeded, the response
         carries the model's output, which passed the output schema of its kind. A refused, truncated or
-        malformed output reads as failed, with a reason. genai keeps a settled generation 6 hours.
+        malformed output reads as failed, with a reason. A failed call carries its `failureClass`, which says
+        whether resending its request may succeed. genai keeps a settled generation 6 hours.
+
+        Each read of an unsettled call checks it with the provider. A caller reads 2 calls a second at most;
+        one more answers 429 with `Retry-After`.
       tags: [generation]
       parameters:
         - $ref: "#/components/parameters/generationID"
@@ -1392,7 +1399,8 @@ paths:
         The provider streams a call for 5 minutes after it starts. A call submitted without `stream`, or past
         that window, answers 303 See Other to `GET /v1/generation`, which returns the call: poll it until it
         settles. A comment line keeps an idle stream open every 15 seconds. A caller holds 8 streams open at most,
-        across this route and `GET /v1/project/stream`: one more answers 429.
+        across this route and `GET /v1/project/stream`: one more answers 429. A caller opens 2 streams a second
+        at most, counted apart from the reads of `GET /v1/generation`: one more answers 429 with `Retry-After`.
       tags: [generation]
       parameters:
         - $ref: "#/components/parameters/generationID"
@@ -1412,6 +1420,30 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/generationUnavailable"
+        default:
+          $ref: "#/components/responses/internalError"
+
+  /v1/generation/usage:
+    get:
+      operationId: generationUsage
+      summary: Read the caller's generation caps and usage.
+      description: |
+        Returns the caps the caller's roles set, which genai counts every call of the caller's generations
+        against, and what the caller consumed under them: the calls in flight, and the tokens consumed over
+        each window of the caps. A client shows the room left before a submit waits. A caller with the
+        uncapped permission has empty caps, which limit nothing, and no window.
+      tags: [generation]
+      responses:
+        "200":
+          $ref: "#/components/responses/generationUsage"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -1631,6 +1663,35 @@ components:
           schema:
             $ref: "#/components/schemas/generationResult"
 
+    generationUsage:
+      description: The caller's caps, and what the caller consumed under them.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/generationUsage"
+          examples:
+            user:
+              value:
+                {
+                  "caps":
+                    {
+                      "concurrency": 2,
+                      "windows":
+                        [
+                          { "durationSeconds": 18000, "inputTokens": 2000000, "outputTokens": 200000 },
+                          { "durationSeconds": 2592000, "inputTokens": 50000000, "outputTokens": 5000000 },
+                        ],
+                    },
+                  "inFlight": 1,
+                  "windows":
+                    [
+                      { "durationSeconds": 18000, "inputTokens": 48000, "outputTokens": 6200 },
+                      { "durationSeconds": 2592000, "inputTokens": 910000, "outputTokens": 104000 },
+                    ],
+                }
+            uncapped:
+              value: { "caps": {}, "inFlight": 3, "windows": [] }
+
     badRequest:
       description: |
         The request could not be parsed, or failed validation. A field that breaks its rule answers a
@@ -1815,7 +1876,9 @@ components:
         such as genai's concurrency or a token window: resend once a call settles or the window frees.
       headers:
         Retry-After:
-          description: Seconds to wait before retrying, on a rate limit.
+          description: |
+            Seconds to wait before retrying: on a rate limit, and on a quota refusal for a token window when genai
+            knows when the window frees usage.
           schema:
             type: integer
       content:
@@ -2987,6 +3050,23 @@ components:
           type: string
           description: Why a failed generation failed, for an operator. Absent unless it failed.
           examples: ["incomplete output: max_output_tokens"]
+        failureClass:
+          type: string
+          description: |
+            Why a failed generation failed, so a client decides whether to resend its request. Absent unless it
+            failed, and for a failure genai settled before it classified failures.
+
+            - `rejected`: the provider refused the call, such as for an unknown model. The same request fails
+              again.
+            - `provider_failed`: the provider accepted the call, then failed it or did not finish it in time. A
+              resend may succeed.
+            - `not_started`: the provider never ran the call. A resend may succeed, at no extra cost.
+            - `outcome_unknown`: the provider may still run the call, untracked. The call counts toward the
+              caller's concurrency for 15 minutes, so a resend in that time may wait.
+            - `invalid_output`: the provider finished the call, but its output was refused, cut short or broke the
+              output schema of its kind. A resend runs the call again, under a new id.
+          enum: [rejected, provider_failed, not_started, outcome_unknown, invalid_output]
+          examples: [not_started]
         output:
           description: The model's output once the generation succeeded, which passed the output schema of its kind.
           anyOf:
@@ -3185,6 +3265,89 @@ components:
           description: The model calls of the generation, in order.
           items:
             $ref: "#/components/schemas/generationCall"
+
+    generationUsage:
+      type: object
+      description: A caller's caps, and what the caller consumed under them.
+      required: [caps, inFlight, windows]
+      additionalProperties: false
+      properties:
+        caps:
+          $ref: "#/components/schemas/generationCaps"
+        inFlight:
+          type: integer
+          description: |
+            How many of the caller's calls count against the concurrency: pending, running, or failed with an
+            unknown outcome within the last 15 minutes.
+          minimum: 0
+          examples: [1]
+        windows:
+          type: array
+          description: The tokens the caller's calls consumed over each window of the caps, in their order.
+          items:
+            $ref: "#/components/schemas/generationUsageWindow"
+
+    generationCaps:
+      type: object
+      description: |
+        The limits genai counts a caller's generation calls against. A limit left out does not apply, so empty
+        caps limit nothing.
+      additionalProperties: false
+      properties:
+        concurrency:
+          type: integer
+          description: How many calls the caller may have in flight at once.
+          minimum: 0
+          examples: [2]
+        windows:
+          type: array
+          description: The tokens the caller's calls may consume over rolling windows, shortest first.
+          items:
+            $ref: "#/components/schemas/generationCapWindow"
+
+    generationCapWindow:
+      type: object
+      description: The tokens a caller's calls may consume over one rolling window.
+      required: [durationSeconds]
+      additionalProperties: false
+      properties:
+        durationSeconds:
+          type: integer
+          description: How far back the window reaches, in seconds.
+          minimum: 1
+          examples: [18000]
+        inputTokens:
+          type: integer
+          description: The input tokens the window allows, cached ones included. Absent, it sets no limit.
+          minimum: 0
+          examples: [2000000]
+        outputTokens:
+          type: integer
+          description: The output tokens the window allows, reasoning ones included. Absent, it sets no limit.
+          minimum: 0
+          examples: [200000]
+
+    generationUsageWindow:
+      type: object
+      description: What a caller's calls consumed over one rolling window.
+      required: [durationSeconds, inputTokens, outputTokens]
+      additionalProperties: false
+      properties:
+        durationSeconds:
+          type: integer
+          description: How far back the window reaches, in seconds.
+          minimum: 1
+          examples: [18000]
+        inputTokens:
+          type: integer
+          description: The input tokens consumed in the window, cached ones included.
+          minimum: 0
+          examples: [48000]
+        outputTokens:
+          type: integer
+          description: The output tokens consumed in the window, reasoning ones included.
+          minimum: 0
+          examples: [6200]
 
     generationQuotaProblem:
       type: object

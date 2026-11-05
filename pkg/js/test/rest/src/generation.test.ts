@@ -5,6 +5,7 @@ import { afterAll, describe, expect, it, onTestFinished } from "vitest";
 import { expectStatus } from "@a-novel-kit/nodelib-test/http";
 import {
   type Generation,
+  GenerationFailureClass,
   GenerationKind,
   GenerationStatus,
   type GenerationSubmitRequest,
@@ -20,6 +21,7 @@ import {
   generationGet,
   generationStream,
   generationSubmit,
+  generationUsage,
   projectCreate,
   projectDelete,
   sceneCreate,
@@ -124,7 +126,12 @@ describe("generationSubmit", () => {
 
     const [call] = generation.calls;
     expect(call.waiting).toBeUndefined();
-    expect(call.generation).toMatchObject({ id: expect.any(String), status: GenerationStatus.Failed });
+    expect(call.generation).toEqual({
+      id: expect.any(String),
+      status: GenerationStatus.Failed,
+      error: expect.any(String),
+      failureClass: GenerationFailureClass.NotStarted,
+    });
     expect(call.context.targets).toEqual([
       {
         handle: expect.stringMatching(/^M[0-9]+$/),
@@ -297,9 +304,11 @@ describe("generationGet", () => {
   it("reads a call as genai holds it", async () => {
     const id = onlyCallID(await submit(accessToken, titleRequest("Read")));
 
-    await expect(generationGet(api, accessToken, { id })).resolves.toMatchObject({
+    await expect(generationGet(api, accessToken, { id })).resolves.toEqual({
       id,
       status: GenerationStatus.Failed,
+      error: expect.any(String),
+      failureClass: GenerationFailureClass.NotStarted,
     });
   });
 
@@ -353,5 +362,40 @@ describe("generationStream", () => {
 
   it("returns 404 for an absent generation", async () => {
     await expectStatus(collect(generationStream(api, accessToken, { id: ABSENT_ID })), 404);
+  });
+});
+
+describe("generationUsage", () => {
+  it("reads a user's caps, and what the user consumed under each", async () => {
+    await expect(generationUsage(api, userToken)).resolves.toEqual({
+      caps: {
+        concurrency: 2,
+        windows: [
+          { durationSeconds: 18_000, inputTokens: 2_000_000, outputTokens: 200_000 },
+          { durationSeconds: 2_592_000, inputTokens: 50_000_000, outputTokens: 5_000_000 },
+        ],
+      },
+      inFlight: 0,
+      windows: [
+        { durationSeconds: 18_000, inputTokens: 0, outputTokens: 0 },
+        { durationSeconds: 2_592_000, inputTokens: 0, outputTokens: 0 },
+      ],
+    });
+  });
+
+  it("reads the empty caps of an uncapped caller", async () => {
+    await expect(generationUsage(api, accessToken)).resolves.toEqual({
+      caps: {},
+      inFlight: expect.any(Number),
+      windows: [],
+    });
+  });
+
+  it("returns 401 without a session", async () => {
+    await expectStatus(generationUsage(api, ""), 401);
+  });
+
+  it("returns 403 for an anonymous session", async () => {
+    await expectStatus(generationUsage(api, await anonymousAccessToken()), 403);
   });
 });
