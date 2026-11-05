@@ -39,7 +39,7 @@ Pin every image to the same release tag. A production deployment runs `database`
 ```yaml
 services:
   postgres-narrative-engine:
-    image: ghcr.io/a-novel/service-narrative-engine/database:v1.2.3
+    image: ghcr.io/a-novel/service-narrative-engine/database:v1.3.0
     networks: [api]
     environment:
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
@@ -57,7 +57,7 @@ services:
       retries: 10
 
   migrations-narrative-engine:
-    image: ghcr.io/a-novel/service-narrative-engine/jobs/migrations:v1.2.3
+    image: ghcr.io/a-novel/service-narrative-engine/jobs/migrations:v1.3.0
     depends_on:
       postgres-narrative-engine: { condition: service_healthy }
     environment:
@@ -70,7 +70,7 @@ services:
     networks: [api]
 
   service-narrative-engine:
-    image: ghcr.io/a-novel/service-narrative-engine/rest:v1.2.3
+    image: ghcr.io/a-novel/service-narrative-engine/rest:v1.3.0
     ports: ["${REST_PORT}:8080"] # the container always listens on 8080
     depends_on:
       postgres-narrative-engine: { condition: service_healthy }
@@ -225,7 +225,7 @@ The **standalone** images bundle a server with the migrations, which they apply 
 ```yaml
 services:
   postgres-narrative-engine:
-    image: ghcr.io/a-novel/service-narrative-engine/database:v1.2.3
+    image: ghcr.io/a-novel/service-narrative-engine/database:v1.3.0
     networks: [api]
     environment:
       POSTGRES_PASSWORD: postgres
@@ -241,7 +241,7 @@ services:
       retries: 10
 
   service-narrative-engine:
-    image: ghcr.io/a-novel/service-narrative-engine/standalone-rest:v1.2.3
+    image: ghcr.io/a-novel/service-narrative-engine/standalone-rest:v1.3.0
     ports: ["${REST_PORT}:8080"]
     depends_on:
       postgres-narrative-engine: { condition: service_healthy }
