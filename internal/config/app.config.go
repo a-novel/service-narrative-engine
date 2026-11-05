@@ -53,6 +53,9 @@ type Limits struct {
 	// GenerationRate caps each signed-in user's generation submits, on top of the router's rate. A submit
 	// past it answers 429.
 	GenerationRate httpf.Rate `json:"generationRate" yaml:"generationRate"`
+	// GenerationReadRate caps each signed-in user's reads of a call, on top of the router's rate. A read and a
+	// stream each count on a budget of their own. A read past it answers 429.
+	GenerationReadRate httpf.Rate `json:"generationReadRate" yaml:"generationReadRate"`
 	// ProjectReadMaxConcurrent caps the reads of a whole project an instance runs at once: manuscript exports
 	// and the snapshots generations plan from. A read past it waits for a slot.
 	ProjectReadMaxConcurrent int `json:"projectReadMaxConcurrent" yaml:"projectReadMaxConcurrent"`

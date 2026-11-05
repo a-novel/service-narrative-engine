@@ -3,6 +3,8 @@ package handlers
 import (
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
+
 	serviceauthentication "github.com/a-novel/service-authentication/v2/pkg/go"
 
 	"github.com/a-novel-kit/golib/httpf"
@@ -17,6 +19,11 @@ type RestLimits struct {
 	Stream func(http.Handler) http.Handler
 	// Generation caps each caller's generation submits, which call a paid provider.
 	Generation func(http.Handler) http.Handler
+	// GenerationRead caps each caller's reads of a call, each of which may check it with the provider.
+	GenerationRead func(http.Handler) http.Handler
+	// GenerationStream rates each caller's streams of a call as GenerationRead rates reads, on a budget of its
+	// own, then counts them against Stream's cap.
+	GenerationStream func(http.Handler) http.Handler
 }
 
 // NewRestLimits builds the configured policies. The REST config may turn the rates off for test stacks;
@@ -26,6 +33,12 @@ func NewRestLimits(rest httpf.ServerConfig, policies config.Limits) RestLimits {
 
 	streams := httpf.LimitConcurrencyBy(policies.MaxStreamsPerCaller, serviceauthentication.CallerKey)
 	generation := limits.By(policies.GenerationRate, serviceauthentication.CallerKey)
+	generationRead := limits.By(policies.GenerationReadRate, serviceauthentication.CallerKey)
 
-	return RestLimits{Stream: streams, Generation: generation}
+	return RestLimits{
+		Stream:           streams,
+		Generation:       generation,
+		GenerationRead:   generationRead,
+		GenerationStream: chi.Chain(generationRead, streams).Handler,
+	}
 }

@@ -67,6 +67,7 @@ var AppPresetDefault = App{
 		MaxStreamDuration:        env.RestMaxStreamDuration,
 		MaxStreamsPerCaller:      env.RestMaxStreamsPerCaller,
 		GenerationRate:           env.RestRateLimitGeneration,
+		GenerationReadRate:       env.RestRateLimitGenerationRead,
 		ProjectReadMaxConcurrent: env.MaxConcurrentProjectReads,
 	},
 	Generations: GenerationsConfigDefault,

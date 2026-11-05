@@ -56,12 +56,27 @@ func TestRestGenerationGet(t *testing.T) {
 
 			serviceMock: &serviceMock[*core.GenerationResult]{resp: &core.GenerationResult{
 				ID: genaiID, Status: core.GenerationStatusFailed, Error: "incomplete output: max_output_tokens",
+				FailureClass: core.GenerationFailureInvalidOutput,
 			}},
 
 			expectStatus: http.StatusOK,
 			expectResponse: map[string]any{
 				"id": genaiID.String(), "status": "failed", "error": "incomplete output: max_output_tokens",
+				"failureClass": "invalid_output",
 			},
+		},
+		{
+			// genai gives no class to a failure it settled before it classified them.
+			name: "Success/FailedUnclassified",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[*core.GenerationResult]{resp: &core.GenerationResult{
+				ID: genaiID, Status: core.GenerationStatusFailed, Error: "provider failed",
+			}},
+
+			expectStatus:   http.StatusOK,
+			expectResponse: map[string]any{"id": genaiID.String(), "status": "failed", "error": "provider failed"},
 		},
 		{
 			name: "Error/Anonymous",

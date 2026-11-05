@@ -5,9 +5,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 
 	serviceauthentication "github.com/a-novel/service-authentication/v2/pkg/go"
 
@@ -17,8 +19,12 @@ import (
 	handlersmocks "github.com/a-novel/service-narrative-engine/internal/handlers/mocks"
 )
 
-// concurrencyCap is the message genai refuses a call with once the user runs as many as their caps allow.
-const concurrencyCap = `usage cap reached: purpose "studio.generation" concurrency: 2 generations already in flight`
+const (
+	// concurrencyCap is the message genai refuses a call with once the user runs as many as their caps allow.
+	concurrencyCap = `usage cap reached: purpose "studio.generation" concurrency: 2 generations already in flight`
+	// windowCap is the message genai refuses a call with once the user consumed what a window allows.
+	windowCap = `usage cap reached: purpose "studio.generation" over 5h0m0s`
+)
 
 // asRoles returns the request as the auth middleware hands it over for the project owner, granted roles.
 func asRoles(request *http.Request, roles ...string) *http.Request {
@@ -88,6 +94,8 @@ func TestRestGenerationSubmit(t *testing.T) {
 
 		expectStatus   int
 		expectResponse any
+		// expectRetryAfter is the Retry-After header of a refusal, empty when it sends none.
+		expectRetryAfter string
 	}{
 		{
 			name: "Success",
@@ -211,6 +219,32 @@ func TestRestGenerationSubmit(t *testing.T) {
 			},
 		},
 		{
+			// A window's refusal says when the window frees usage, in whole seconds rounded up.
+			name: "Error/QuotaWindow",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[*core.Generation]{err: &core.GenerationQuotaError{
+				Cap: windowCap, RetryAfter: 89500 * time.Millisecond,
+			}},
+
+			expectStatus: http.StatusTooManyRequests,
+			expectResponse: map[string]any{
+				"type": "about:blank", "title": "Too Many Requests", "status": 429.0,
+				"tags": map[string]any{"cap": windowCap},
+			},
+			expectRetryAfter: "90",
+		},
+		{
+			name: "Error/NoCaps",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[*core.Generation]{err: core.ErrNoGenerationCaps},
+
+			expectStatus: http.StatusForbidden,
+		},
+		{
 			name: "Error/GenaiUnavailable",
 
 			request: validRequest,
@@ -258,6 +292,7 @@ func TestRestGenerationSubmit(t *testing.T) {
 				ServeHTTP(w, testCase.request(t))
 
 			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
+			require.Equal(t, testCase.expectRetryAfter, w.Result().Header.Get("Retry-After"))
 			service.AssertExpectations(t)
 		})
 	}

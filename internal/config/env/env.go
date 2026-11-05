@@ -71,6 +71,9 @@ var (
 	// RestRateLimitGenerationDefault caps a user's generation submits. Each one reads the project and plans
 	// its calls before genai's per-user quota applies, so a burst costs this service first.
 	RestRateLimitGenerationDefault = config.Must(httpf.ParseRate("30/1m"))
+	// RestRateLimitGenerationReadDefault caps a user's reads of a call. Each unsettled read asks the provider
+	// for the call's state through genai, and a client polling twice a second sees a finished call at once.
+	RestRateLimitGenerationReadDefault = config.Must(httpf.ParseRate("2/1s"))
 	// MaxConcurrentProjectReadsDefault lets the reads of a whole project take half of GOMEMLIMIT, at
 	// [projectReadBytes] each: 4 reads at 1 GiB, and 1 at least. Without a memory limit, it sizes them to the
 	// CPUs, which they keep busy decoding.
@@ -148,6 +151,10 @@ var (
 	// RestRateLimitGeneration caps each signed-in user's generation submits.
 	RestRateLimitGeneration = config.LoadEnv(
 		getEnv("REST_RATE_LIMIT_GENERATION"), RestRateLimitGenerationDefault, httpf.ParseRate,
+	)
+	// RestRateLimitGenerationRead caps each signed-in user's reads of a call, on each read route.
+	RestRateLimitGenerationRead = config.LoadEnv(
+		getEnv("REST_RATE_LIMIT_GENERATION_READ"), RestRateLimitGenerationReadDefault, httpf.ParseRate,
 	)
 	// MaxConcurrentProjectReads caps the reads of a whole project an instance runs at once.
 	MaxConcurrentProjectReads = config.LoadEnv(

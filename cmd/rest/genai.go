@@ -23,6 +23,7 @@ type genaiClient interface {
 	core.GenerationGetServiceGenai
 	core.GenerationCancelServiceGenai
 	core.GenerationStreamServiceGenai
+	core.GenerationUsageServiceGenai
 	handlers.RestHealthApiGenai
 
 	Close()
@@ -78,6 +79,12 @@ func (unconfiguredGenai) GenerationCancel(
 func (unconfiguredGenai) GenerationStream(
 	context.Context, *servicegenai.GenerationStreamRequest, ...grpc.CallOption,
 ) (grpc.ServerStreamingClient[servicegenai.GenerationStreamResponse], error) {
+	return nil, errGenaiUnconfigured
+}
+
+func (unconfiguredGenai) UsageSummary(
+	context.Context, *servicegenai.UsageSummaryRequest, ...grpc.CallOption,
+) (*servicegenai.UsageSummaryResponse, error) {
 	return nil, errGenaiUnconfigured
 }
 
