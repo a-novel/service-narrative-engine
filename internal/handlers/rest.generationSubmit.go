@@ -99,8 +99,9 @@ type RestCellOverride struct {
 }
 
 // RestGenerationSubmit is the HTTP handler for the submit-generation endpoint. It responds 202 with each
-// call of the generation, and 429 with the cap genai refused it for when genai admits no call. The caller's
-// roles set the caps genai counts the generation against.
+// call of the generation, and 429 with the cap genai refused it for when genai admits no call, with
+// Retry-After when genai says when the cap frees usage. The caller's roles set the caps genai counts the
+// generation against.
 type RestGenerationSubmit struct {
 	service RestGenerationSubmitService
 	logger  logging.Log
@@ -152,6 +153,10 @@ func (handler *RestGenerationSubmit) ServeHTTP(w http.ResponseWriter, r *http.Re
 	var quota *core.GenerationQuotaError
 	if errors.As(err, &quota) {
 		err = httpf.WithTag(err, "cap", quota.Cap)
+	}
+
+	if quota != nil && quota.RetryAfter > 0 {
+		err = httpf.WithRetryAfter(err, quota.RetryAfter)
 	}
 
 	if err != nil {

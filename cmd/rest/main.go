@@ -186,6 +186,7 @@ func main() {
 	serviceGenerationGet := core.NewGenerationGet(genaiClient)
 	serviceGenerationStream := core.NewGenerationStream(genaiClient, serviceGenerationGet)
 	serviceGenerationCancel := core.NewGenerationCancel(genaiClient)
+	serviceGenerationUsage := core.NewGenerationUsage(genaiClient, generationCaps)
 	serviceProjectStream := core.NewProjectStream(
 		daoProjectOwned, daoProjectSelect, daoBeatList, daoSceneList, daoLayerList, daoCellList,
 	)
@@ -235,6 +236,7 @@ func main() {
 	handlerGenerationGet := handlers.NewRestGenerationGet(serviceGenerationGet, cfg.Logger)
 	handlerGenerationStream := handlers.NewRestGenerationStream(serviceGenerationStream, cfg.Logger)
 	handlerGenerationCancel := handlers.NewRestGenerationCancel(serviceGenerationCancel, cfg.Logger)
+	handlerGenerationUsage := handlers.NewRestGenerationUsage(serviceGenerationUsage, cfg.Logger)
 	handlerProjectStream := handlers.NewRestProjectStream(serviceProjectStream, cfg.Logger)
 
 	// =================================================================================================================
@@ -304,10 +306,12 @@ func main() {
 		// A submit carries its overrides, so it takes a batch's body limit.
 		withAuth(api, config.PermissionProjectWrite).With(limit.Generation).
 			Post("/generation", handlerGenerationSubmit.ServeHTTP)
-		withAuth(api, config.PermissionProjectRead).Get("/generation", handlerGenerationGet.ServeHTTP)
-		withAuth(stream, config.PermissionProjectRead).With(limit.Stream).
+		withAuth(api, config.PermissionProjectRead).With(limit.GenerationRead).
+			Get("/generation", handlerGenerationGet.ServeHTTP)
+		withAuth(stream, config.PermissionProjectRead).With(limit.GenerationStream).
 			Get("/generation/stream", handlerGenerationStream.ServeHTTP)
 		withAuth(api, config.PermissionProjectWrite).Delete("/generation", handlerGenerationCancel.ServeHTTP)
+		withAuth(api, config.PermissionProjectRead).Get("/generation/usage", handlerGenerationUsage.ServeHTTP)
 	})
 
 	// =================================================================================================================

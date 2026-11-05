@@ -53,11 +53,12 @@ func tagLimit(err error) error {
 	}
 }
 
-// generationErrors maps the refusals of the generation operations to their status. A 422 answers a
-// generation that outgrows every call its kind allows, a 429 one genai admits no call of, and a 503 one
-// genai cannot take.
+// generationErrors maps the refusals of the generation operations to their status. A 403 answers a caller
+// whose roles set no caps, a 422 a generation that outgrows every call its kind allows, a 429 one genai
+// admits no call of, and a 503 one genai cannot take.
 var generationErrors = httpf.ErrMap{
 	core.ErrInvalidRequest:     http.StatusBadRequest,
+	core.ErrNoGenerationCaps:   http.StatusForbidden,
 	core.ErrProjectNotFound:    http.StatusNotFound,
 	core.ErrBeatNotFound:       http.StatusNotFound,
 	core.ErrSceneNotFound:      http.StatusNotFound,
