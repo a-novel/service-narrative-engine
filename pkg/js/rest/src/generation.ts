@@ -307,10 +307,10 @@ export type GenerationGetRequest = z.infer<typeof GenerationGetRequestSchema>;
  * through: `suggestionsMap` for a suggestion, `findingsVerify` for a check, and the recap writes for a
  * consolidation. genai admits 2 calls per user at a time on the default tier: resend the same request as
  * calls settle, and genai admits the calls that wait, replays those it admitted or that succeeded, and runs
- * again those that failed or were cancelled. Throws on HTTP 400 when the request is invalid, 404 when the
- * caller owns no such project or it lacks a target's scene, layer or beat, 422 when the generation outgrows
- * every call its kind allows, 429 when genai admitted none of its calls, with the cap in the error's
- * `tags.cap`, and 503 when genai is unavailable.
+ * again those that failed or were cancelled. A call whose output read as failed runs again too, under a new
+ * id. Throws on HTTP 400 when the request is invalid, 404 when the caller owns no such project or it lacks a
+ * target's scene, layer or beat, 422 when the generation outgrows every call its kind allows, 429 when genai
+ * admitted none of its calls, with the cap in the error's `tags.cap`, and 503 when genai is unavailable.
  */
 export async function generationSubmit(
   api: NarrativeEngineApi,
