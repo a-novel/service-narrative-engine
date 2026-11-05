@@ -36,7 +36,8 @@ type cellStore struct {
 }
 
 // fetch reads what the store lacks: the content of the cells contents names, and the recap versions recaps
-// names. A cell gone since the snapshot reads as empty.
+// names. A cell gone since the snapshot reads as empty content, whatever was asked of it, and an empty
+// version of its recap.
 func (store *cellStore) fetch(contents []cellKey, recaps []recapKey) error {
 	var keys []*dao.CellsSelectKey
 
@@ -54,8 +55,10 @@ func (store *cellStore) fetch(contents []cellKey, recaps []recapKey) error {
 		}
 	}
 
+	found := map[cellKey]bool{}
+
 	for chunk := range slices.Chunk(keys, cellReadSize) {
-		err := store.readChunk(chunk)
+		err := store.readChunk(chunk, found)
 		if err != nil {
 			return err
 		}
@@ -63,12 +66,13 @@ func (store *cellStore) fetch(contents []cellKey, recaps []recapKey) error {
 
 	for _, asked := range keys {
 		key := cellKey{asked.SceneID, asked.LayerID}
-
-		if asked.Content && store.contents[key] == nil {
-			store.contents[key] = &cellContent{}
+		if found[key] {
+			continue
 		}
 
-		if _, ok := store.recaps[recapKey{key, asked.Recap}]; asked.Recap != "" && !ok {
+		store.contents[key] = &cellContent{}
+
+		if asked.Recap != "" {
 			store.recaps[recapKey{key, asked.Recap}] = ""
 		}
 	}
@@ -76,8 +80,8 @@ func (store *cellStore) fetch(contents []cellKey, recaps []recapKey) error {
 	return nil
 }
 
-// readChunk reads one query of cells into the store.
-func (store *cellStore) readChunk(keys []*dao.CellsSelectKey) error {
+// readChunk reads one query of cells into the store, and marks in found each cell it read.
+func (store *cellStore) readChunk(keys []*dao.CellsSelectKey, found map[cellKey]bool) error {
 	rows, err := store.read(keys)
 	if err != nil {
 		return fmt.Errorf("read cells: %w", err)
@@ -85,6 +89,7 @@ func (store *cellStore) readChunk(keys []*dao.CellsSelectKey) error {
 
 	for _, row := range rows {
 		key := cellKey{row.SceneID, row.LayerID}
+		found[key] = true
 
 		if row.Content != nil {
 			store.contents[key], err = readContent(row.Content)
@@ -102,7 +107,7 @@ func (store *cellStore) readChunk(keys []*dao.CellsSelectKey) error {
 }
 
 // read gives the cells of contents their content, and reads the recap versions recaps names, in one query
-// for what the store lacks.
+// for what the store lacks. A cell of recaps gone since the snapshot takes its empty content.
 func (draft *contextDraft) read(contents []*draftCell, recaps []recapKey) error {
 	err := draft.store.fetch(lo.Map(contents, func(cell *draftCell, _ int) cellKey { return cell.key }), recaps)
 	if err != nil {
@@ -111,6 +116,12 @@ func (draft *contextDraft) read(contents []*draftCell, recaps []recapKey) error 
 
 	for _, cell := range contents {
 		cell.content = draft.store.contents[cell.key]
+	}
+
+	for _, key := range recaps {
+		if cell := draft.cells[key.cell]; cell.content == nil {
+			cell.content = draft.store.contents[key.cell]
+		}
 	}
 
 	return nil
@@ -149,8 +160,8 @@ func (draft *contextDraft) readAhead(scenes []*draftScene, levels []string, budg
 }
 
 // ahead returns what a scene lacks at the first of levels that fits budget, with that level's least size.
-// A recap level brings the shorter versions that fit after it, which a render past its least size falls
-// back to. It reports false when no level fits.
+// It brings the recap versions that fit after it too, which a render past its least size falls back to. It
+// reports false when no level fits.
 func (draft *contextDraft) ahead(
 	scene *draftScene, levels []string, budget int,
 ) ([]*draftCell, []recapKey, int, bool) {
@@ -162,12 +173,10 @@ func (draft *contextDraft) ahead(
 
 		contents, recaps := draft.unread(scene, level)
 
-		if slices.Contains(recapLevels, level) {
-			for _, next := range levels[index+1:] {
-				if size, ok := scene.least(next); ok && size <= budget {
-					_, nextRecaps := draft.unread(scene, next)
-					recaps = append(recaps, nextRecaps...)
-				}
+		for _, next := range levels[index+1:] {
+			if size, ok := scene.least(next); ok && size <= budget {
+				_, nextRecaps := draft.unread(scene, next)
+				recaps = append(recaps, nextRecaps...)
 			}
 		}
 

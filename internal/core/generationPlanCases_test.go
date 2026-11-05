@@ -1207,6 +1207,33 @@ func addStoryScene(snapshot *storedProject, beat, position, scene int) {
 	}
 }
 
+// dialogueProject returns a [planProject] of count scenes in beats of 10, whose manuscripts each hold blocks
+// short lines of dialogue and a fresh recap, and whose notes are empty.
+func dialogueProject(count, blocksPerScene int) *storedProject {
+	snapshot := planProject(count)
+	for index, scene := range snapshot.Scenes {
+		scene.BeatID, scene.Position = fixtureBeatID(index/10), index%10
+	}
+
+	snapshot.Beats = snapshot.Beats[:count/10]
+	lines := blocks(lo.Times(blocksPerScene, func(int) string { return dialogue("Ana", "Yes.") })...)
+
+	for _, cell := range snapshot.cells {
+		if cell.LayerID != fixtureLayerID(0) {
+			cell.Content = json.RawMessage(`{"text":""}`)
+
+			continue
+		}
+
+		cell.Content = json.RawMessage(lines)
+		snapshot.recap(cell.SceneID, cell.LayerID, core.Recap{
+			Condensed: strings.Repeat("Talk. ", 20), Compact: "Talk talk.", Essentials: "Talk.",
+		}, updatedAt)
+	}
+
+	return snapshot
+}
+
 // storyRequest is a request of [TestGenerationPlan] on [storyProject], with the budget its kind fills.
 type storyRequest struct {
 	name    string

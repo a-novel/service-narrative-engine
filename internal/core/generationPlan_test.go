@@ -705,24 +705,80 @@ func TestGenerationPlan(t *testing.T) {
 		require.Nil(t, plan)
 	})
 
-	// A cell deleted after the snapshot reads as empty, as a read outside a transaction may see a write.
-	t.Run("Success/CellGone", func(t *testing.T) {
-		t.Parallel()
+	// A cell deleted after the snapshot reads as empty content, whatever the plan asked of it, as a read
+	// outside a transaction may see a write: the content of a scene shown whole, the recap version of a scene
+	// the budget would show condensed, which then fits whole, or the recap of a scene of a beat to
+	// consolidate.
+	goneCases := []struct {
+		name    string
+		request *planRequest
+		// extra is the budget the case gives beyond what the request takes without context.
+		extra int
+		// section returns the part of the prompt that shows the gone cell.
+		section func(prompt *core.Prompt) string
+		expect  string
+	}{
+		{
+			name:    "Content",
+			request: suggestRequest(planProject(2), cellTarget(0, 0, core.TargetModeRevise)),
+			extra:   1 << 20,
+			section: func(prompt *core.Prompt) string { return prompt.Neighborhood },
+			expect:  `<scene handle="S2" level="full">` + "\n" + `<cell layer="L1"></cell>`,
+		},
+		{
+			name:    "Recap",
+			request: suggestRequest(sizedRecap(planProject(2)), cellTarget(0, 0, core.TargetModeRevise)),
+			extra:   outlineCost + 600,
+			section: func(prompt *core.Prompt) string { return prompt.Neighborhood },
+			expect:  `<scene handle="S2" level="full">` + "\n" + `<cell layer="L1"></cell>`,
+		},
+		{
+			name: "BeatRecap",
+			request: planOf(sizedRecap(inOneBeat(planProject(3))), &core.GenerationPlanRequest{
+				Kind: core.GenerationKindConsolidate, BeatID: fixtureBeatID(0),
+			}),
+			extra:   1 << 20,
+			section: func(prompt *core.Prompt) string { return prompt.Task },
+			expect:  `<scene handle="S2"></scene>`,
+		},
+	}
 
-		request := suggestRequest(planProject(2), cellTarget(0, 0, core.TargetModeRevise))
-		request.cells = lo.Reject(request.cells, func(cell *core.Cell, _ int) bool {
-			return cell.SceneID == fixtureSceneID(1) && cell.LayerID == fixtureLayerID(0)
+	for _, testCase := range goneCases {
+		t.Run("Success/CellGone/"+testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			// The store lost the manuscript of the second scene, which the snapshot still summarizes.
+			testCase.request.cells = lo.Reject(testCase.request.cells, func(cell *core.Cell, _ int) bool {
+				return cell.SceneID == fixtureSceneID(1) && cell.LayerID == fixtureLayerID(0)
+			})
+
+			settings := splitSettings()
+
+			fixed, _, err := testCase.request.plan(t, settings)
+			require.NoError(t, err)
+
+			settings.Budget = fixed.Calls[0].Estimate + testCase.extra
+
+			plan, _, err := testCase.request.plan(t, settings)
+			require.NoError(t, err)
+			require.Contains(t, testCase.section(plan.Calls[0].Prompt), testCase.expect)
 		})
+	}
 
-		settings := splitSettings()
-		settings.Budget = 1 << 30
+	// Scenes of many short dialogue blocks, each with a recap, on the default settings: a scene's text fits
+	// what the budget leaves while its render does not, so the allocator falls back to a recap version it
+	// read ahead with the content.
+	for _, count := range []int{40, 200} {
+		t.Run("Success/DialogueScenes/"+strconv.Itoa(count), func(t *testing.T) {
+			t.Parallel()
 
-		plan, _, err := request.plan(t, settings)
-		require.NoError(t, err)
+			request := suggestRequest(dialogueProject(300, count), cellTarget(150, 0, core.TargetModeRevise))
 
-		gone := `<scene handle="S2" level="full">` + "\n" + `<cell layer="L1"></cell>`
-		require.Contains(t, plan.Calls[0].Prompt.Neighborhood, gone)
-	})
+			_, reads, err := request.plan(t, config.GenerationsConfigDefault.Kinds[request.Kind])
+			require.NoError(t, err)
+			require.LessOrEqual(t, reads.queries, 10)
+		})
+	}
 
 	// A project at the store's scene limit, with a paragraph per scene, plans every kind within its default
 	// budget: far beats collapse in the frame.
