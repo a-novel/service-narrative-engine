@@ -107,7 +107,7 @@ func (store *cellStore) readChunk(keys []*dao.CellsSelectKey, found map[cellKey]
 }
 
 // read gives the cells of contents their content, and reads the recap versions recaps names, in one query
-// for what the store lacks. A cell of recaps gone since the snapshot takes its empty content.
+// for what the store lacks.
 func (draft *contextDraft) read(contents []*draftCell, recaps []recapKey) error {
 	err := draft.store.fetch(lo.Map(contents, func(cell *draftCell, _ int) cellKey { return cell.key }), recaps)
 	if err != nil {
@@ -116,12 +116,6 @@ func (draft *contextDraft) read(contents []*draftCell, recaps []recapKey) error 
 
 	for _, cell := range contents {
 		cell.content = draft.store.contents[cell.key]
-	}
-
-	for _, key := range recaps {
-		if cell := draft.cells[key.cell]; cell.content == nil {
-			cell.content = draft.store.contents[key.cell]
-		}
 	}
 
 	return nil

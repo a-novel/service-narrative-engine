@@ -166,6 +166,14 @@ func sizedRecap(snapshot *storedProject) *storedProject {
 	return snapshot
 }
 
+// emptyRecap gives the manuscript of the second scene a fresh recap whose versions are empty, as the
+// consolidate output schema allows.
+func emptyRecap(snapshot *storedProject) *storedProject {
+	snapshot.recap(fixtureSceneID(1), fixtureLayerID(0), core.Recap{}, updatedAt)
+
+	return snapshot
+}
+
 // longBeats gives every beat but the first a description of about 1,500 tokens and a fresh recap whose
 // compact version takes about 300. The beat at stale holds a recap that read the beat before a change.
 func longBeats(snapshot *storedProject, stale int) *storedProject {

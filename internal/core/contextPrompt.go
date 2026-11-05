@@ -88,11 +88,11 @@ type (
 	}
 
 	// promptCell is one cell of a neighborhood scene: its content, its recap, or the handle of the target
-	// that shows it in the task.
+	// that shows it in the task. Recap is nil for a cell shown whole, so an empty version still shows.
 	promptCell struct {
 		Layer   string
 		Target  string
-		Recap   string
+		Recap   *string
 		Content *cellContent
 	}
 
@@ -140,9 +140,11 @@ type (
 		Scenes      []*promptRecapScene
 	}
 
+	// promptRecapScene is a scene of a beat to recap. Recap is nil for a scene shown whole, so an empty
+	// version still shows.
 	promptRecapScene struct {
 		Handle  string
-		Recap   string
+		Recap   *string
 		Content *cellContent
 	}
 
@@ -547,15 +549,15 @@ func (scene *draftScene) view(level string, prompts bool, recaps map[recapKey]st
 	view.Cells = make([]*promptCell, len(cells))
 
 	for index, shown := range cells {
-		// The template shows the content in place of an empty recap version, as for a cell gone since the
-		// snapshot.
-		cell := &promptCell{Layer: shown.cell.layer.handle, Content: shown.cell.content}
+		cell := &promptCell{Layer: shown.cell.layer.handle}
 
 		switch {
 		case shown.cell.target != nil:
 			cell.Target = shown.cell.target.handle
 		case shown.version != "":
-			cell.Recap = recaps[recapKey{shown.cell.key, shown.version}]
+			cell.Recap = lo.ToPtr(recaps[recapKey{shown.cell.key, shown.version}])
+		default:
+			cell.Content = shown.cell.content
 		}
 
 		view.Cells[index] = cell
@@ -782,11 +784,10 @@ func (target *draftTarget) beatView(recaps map[recapKey]string) *promptRecapBeat
 				continue
 			}
 
-			// The template shows the content in place of an empty recap version, as for a cell gone since the
-			// snapshot.
-			line.Content = cell.content
 			if cell.recap != nil {
-				line.Recap = recaps[recapKey{cell.key, ContextLevelCompact}]
+				line.Recap = lo.ToPtr(recaps[recapKey{cell.key, ContextLevelCompact}])
+			} else {
+				line.Content = cell.content
 			}
 		}
 

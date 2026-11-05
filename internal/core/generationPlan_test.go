@@ -705,52 +705,74 @@ func TestGenerationPlan(t *testing.T) {
 		require.Nil(t, plan)
 	})
 
-	// A cell deleted after the snapshot reads as empty content, whatever the plan asked of it, as a read
-	// outside a transaction may see a write: the content of a scene shown whole, the recap version of a scene
-	// the budget would show condensed, which then fits whole, or the recap of a scene of a beat to
-	// consolidate.
-	goneCases := []struct {
+	// A cell deleted after the snapshot reads as empty, whatever the plan asked of it, as a read outside a
+	// transaction may see a write: the content of a scene shown whole, the recap version of a scene shown
+	// condensed, or the recap of a scene of a beat to consolidate. A recap version stored empty shows as an
+	// empty recap too.
+	readCases := []struct {
 		name    string
 		request *planRequest
+		// gone deletes the manuscript of the second scene from the store, which the snapshot still summarizes.
+		gone bool
 		// extra is the budget the case gives beyond what the request takes without context.
 		extra int
-		// section returns the part of the prompt that shows the gone cell.
+		// section returns the part of the prompt that shows the second scene's manuscript.
 		section func(prompt *core.Prompt) string
 		expect  string
 	}{
 		{
-			name:    "Content",
+			name:    "Gone/Content",
 			request: suggestRequest(planProject(2), cellTarget(0, 0, core.TargetModeRevise)),
+			gone:    true,
 			extra:   1 << 20,
 			section: func(prompt *core.Prompt) string { return prompt.Neighborhood },
 			expect:  `<scene handle="S2" level="full">` + "\n" + `<cell layer="L1"></cell>`,
 		},
 		{
-			name:    "Recap",
+			name:    "Gone/Recap",
 			request: suggestRequest(sizedRecap(planProject(2)), cellTarget(0, 0, core.TargetModeRevise)),
+			gone:    true,
 			extra:   outlineCost + 600,
 			section: func(prompt *core.Prompt) string { return prompt.Neighborhood },
-			expect:  `<scene handle="S2" level="full">` + "\n" + `<cell layer="L1"></cell>`,
+			expect:  `<scene handle="S2" level="condensed">` + "\n" + `<recap layer="L1"></recap>`,
 		},
 		{
-			name: "BeatRecap",
+			name: "Gone/BeatRecap",
 			request: planOf(sizedRecap(inOneBeat(planProject(3))), &core.GenerationPlanRequest{
+				Kind: core.GenerationKindConsolidate, BeatID: fixtureBeatID(0),
+			}),
+			gone:    true,
+			extra:   1 << 20,
+			section: func(prompt *core.Prompt) string { return prompt.Task },
+			expect:  `<scene handle="S2"><recap></recap></scene>`,
+		},
+		{
+			name:    "EmptyRecap",
+			request: suggestRequest(emptyRecap(planProject(2)), cellTarget(0, 0, core.TargetModeRevise)),
+			extra:   outlineCost + 100,
+			section: func(prompt *core.Prompt) string { return prompt.Neighborhood },
+			expect:  `<scene handle="S2" level="condensed">` + "\n" + `<recap layer="L1"></recap>`,
+		},
+		{
+			name: "EmptyBeatRecap",
+			request: planOf(emptyRecap(inOneBeat(planProject(3))), &core.GenerationPlanRequest{
 				Kind: core.GenerationKindConsolidate, BeatID: fixtureBeatID(0),
 			}),
 			extra:   1 << 20,
 			section: func(prompt *core.Prompt) string { return prompt.Task },
-			expect:  `<scene handle="S2"></scene>`,
+			expect:  `<scene handle="S2"><recap></recap></scene>`,
 		},
 	}
 
-	for _, testCase := range goneCases {
-		t.Run("Success/CellGone/"+testCase.name, func(t *testing.T) {
+	for _, testCase := range readCases {
+		t.Run("Success/Read/"+testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			// The store lost the manuscript of the second scene, which the snapshot still summarizes.
-			testCase.request.cells = lo.Reject(testCase.request.cells, func(cell *core.Cell, _ int) bool {
-				return cell.SceneID == fixtureSceneID(1) && cell.LayerID == fixtureLayerID(0)
-			})
+			if testCase.gone {
+				testCase.request.cells = lo.Reject(testCase.request.cells, func(cell *core.Cell, _ int) bool {
+					return cell.SceneID == fixtureSceneID(1) && cell.LayerID == fixtureLayerID(0)
+				})
+			}
 
 			settings := splitSettings()
 
