@@ -24,7 +24,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     go build -ldflags="-s -w" -trimpath -o /rest ./cmd/rest/ && \
     go build -ldflags="-s -w" -trimpath -o /migrations ./cmd/migrations/
 
-FROM docker.io/library/alpine:3.24.3
+FROM docker.io/library/alpine:3.24.4
 
 COPY --from=builder /rest /rest
 COPY --from=builder /migrations /migrations
