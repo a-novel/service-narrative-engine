@@ -1,6 +1,7 @@
 package core
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -229,15 +230,20 @@ func (service *GenerationSubmit) submit(
 	}
 }
 
-// newGenerationQuotaError reads genai's refusal of a call for a cap: its message names the cap, and its
-// RetryInfo, when a window refused, says when the window frees usage.
+// newGenerationQuotaError reads genai's refusal of a call for a cap. Its QuotaFailure names the limit that
+// refused, and its RetryInfo, when a window refused, says when the window frees usage. A refusal without a
+// QuotaFailure names the cap in its message alone.
 func newGenerationQuotaError(err error) *GenerationQuotaError {
 	refusal := status.Convert(err)
 	quota := &GenerationQuotaError{Cap: refusal.Message()}
 
 	for _, detail := range refusal.Details() {
-		if info, ok := detail.(*errdetails.RetryInfo); ok {
-			quota.RetryAfter = info.GetRetryDelay().AsDuration()
+		switch detail := detail.(type) {
+		case *errdetails.QuotaFailure:
+			// genai describes the limit in the one violation it sends.
+			quota.Cap = cmp.Or(lo.FirstOrEmpty(detail.GetViolations()).GetDescription(), quota.Cap)
+		case *errdetails.RetryInfo:
+			quota.RetryAfter = detail.GetRetryDelay().AsDuration()
 		}
 	}
 

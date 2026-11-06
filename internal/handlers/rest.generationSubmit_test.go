@@ -20,10 +20,10 @@ import (
 )
 
 const (
-	// concurrencyCap is the message genai refuses a call with once the user runs as many as their caps allow.
-	concurrencyCap = `usage cap reached: purpose "studio.generation" concurrency: 2 generations already in flight`
-	// windowCap is the message genai refuses a call with once the user consumed what a window allows.
-	windowCap = `usage cap reached: purpose "studio.generation" over 5h0m0s`
+	// concurrencyCap is the limit genai refuses a call for once the user runs as many as their caps allow.
+	concurrencyCap = "concurrency 2"
+	// windowCap is the limit genai refuses a call for once the user consumed what a window allows.
+	windowCap = "input tokens over 5h"
 )
 
 // asRoles returns the request as the auth middleware hands it over for the project owner, granted roles.

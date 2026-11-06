@@ -3245,7 +3245,7 @@ components:
         waiting:
           type: string
           description: The cap genai refused the call for, while it waits. Absent once genai admitted the call.
-          examples: ['usage cap reached: purpose "studio.generation" concurrency: 2 generations already in flight']
+          examples: [concurrency 2, input tokens over 5h]
         context:
           $ref: "#/components/schemas/generationContext"
 
@@ -3375,8 +3375,8 @@ components:
           properties:
             cap:
               type: string
-              description: genai's message naming the cap that refused the generation's first call.
-              examples: ['usage cap reached: purpose "studio.generation" concurrency: 2 generations already in flight']
+              description: The limit genai refused the generation's first call for.
+              examples: [concurrency 2, input tokens over 5h]
 
     limitProblem:
       type: object

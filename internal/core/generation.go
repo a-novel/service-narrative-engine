@@ -25,7 +25,8 @@ const (
 // GenerationQuotaError is returned by [GenerationSubmit] when genai admits none of a generation's calls. It
 // is [ErrGenerationQuota], and names the cap genai refused the first call for.
 type GenerationQuotaError struct {
-	// Cap is genai's message naming the cap, such as its concurrency or a token window.
+	// Cap names the limit genai refused the call for, such as `concurrency 2` or `input tokens over 5h`. Cap
+	// holds genai's message for a refusal without a QuotaFailure.
 	Cap string
 	// RetryAfter is how long until the refusing window frees usage, as genai gives it. It is zero when genai
 	// gives none, as for the concurrency.
@@ -42,7 +43,7 @@ func (err *GenerationQuotaError) Is(target error) bool {
 }
 
 // genaiTimeout bounds each call to genai. genai answers a streamed submit once the provider begins the
-// call, within 30 seconds, and a read of a streamed generation may submit its call again.
+// call, within 30 seconds. A read of an unsettled call waits while genai checks it with the provider.
 const genaiTimeout = 35 * time.Second
 
 // genaiError joins a sentinel to an error genai returned: [ErrGenaiUnavailable] when genai could not take
