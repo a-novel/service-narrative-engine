@@ -28,8 +28,12 @@ import (
 const (
 	// concurrencyCap is the message genai refuses a call with once the user runs as many as their caps allow.
 	concurrencyCap = `usage cap reached: purpose "studio.generation" concurrency: 2 generations already in flight`
+	// concurrencyLimit is the limit the QuotaFailure of that refusal names.
+	concurrencyLimit = "concurrency 2"
 	// windowCap is the message genai refuses a call with once the user consumed what a window allows.
 	windowCap = `usage cap reached: purpose "studio.generation" over 5h0m0s`
+	// windowLimit is the limit the QuotaFailure of that refusal names.
+	windowLimit = "input tokens over 5h"
 )
 
 // userCaps are the caps genai receives for a user of the default caps.
@@ -116,8 +120,17 @@ func TestGenerationSubmit(t *testing.T) {
 	)
 	malformed := genaiGeneration(servicegenai.GenerationStatusSucceeded, "not json")
 
-	// A window's refusal says when the window frees usage.
+	// genai's refusal names the limit in its QuotaFailure. A window's refusal also says when the window frees
+	// usage.
+	concurrencyRefusal := lo.Must(status.New(codes.ResourceExhausted, concurrencyCap).WithDetails(
+		&errdetails.QuotaFailure{Violations: []*errdetails.QuotaFailure_Violation{
+			{Subject: `purpose "studio.generation"`, Description: concurrencyLimit},
+		}},
+	)).Err()
 	windowRefusal := lo.Must(status.New(codes.ResourceExhausted, windowCap).WithDetails(
+		&errdetails.QuotaFailure{Violations: []*errdetails.QuotaFailure_Violation{
+			{Subject: `purpose "studio.generation"`, Description: windowLimit},
+		}},
 		&errdetails.RetryInfo{RetryDelay: durationpb.New(90 * time.Second)},
 	)).Err()
 
@@ -276,7 +289,7 @@ func TestGenerationSubmit(t *testing.T) {
 			genaiMocks: []*genaiAnswer{
 				{created: true, resp: running},
 				{call: 1, resp: incomplete},
-				{call: 1, variant: 1, err: status.Error(codes.ResourceExhausted, concurrencyCap)},
+				{call: 1, variant: 1, err: concurrencyRefusal},
 			},
 			caps: userCaps,
 
@@ -285,7 +298,7 @@ func TestGenerationSubmit(t *testing.T) {
 					Result:  &core.GenerationResult{ID: genaiID, Status: core.GenerationStatusRunning},
 					Context: submitCall("task 1"),
 				},
-				{Waiting: concurrencyCap, Context: submitCall("task 2")},
+				{Waiting: concurrencyLimit, Context: submitCall("task 2")},
 			}},
 		},
 		{
@@ -305,7 +318,7 @@ func TestGenerationSubmit(t *testing.T) {
 			}},
 			genaiMocks: []*genaiAnswer{
 				{created: true, resp: running},
-				{call: 1, err: status.Error(codes.ResourceExhausted, concurrencyCap)},
+				{call: 1, err: concurrencyRefusal},
 			},
 			caps: userCaps,
 
@@ -314,8 +327,8 @@ func TestGenerationSubmit(t *testing.T) {
 					Result:  &core.GenerationResult{ID: genaiID, Status: core.GenerationStatusRunning},
 					Context: submitCall("task 1"),
 				},
-				{Waiting: concurrencyCap, Context: submitCall("task 2")},
-				{Waiting: concurrencyCap, Context: submitCall("task 3")},
+				{Waiting: concurrencyLimit, Context: submitCall("task 2")},
+				{Waiting: concurrencyLimit, Context: submitCall("task 3")},
 			}},
 		},
 		{
@@ -328,6 +341,26 @@ func TestGenerationSubmit(t *testing.T) {
 			snapshotMock: &daoMock[*core.ProjectSnapshot]{resp: snapshot},
 			planMock: &daoMock[*core.ContextPlan]{resp: &core.ContextPlan{
 				Kind: core.GenerationKindSuggest, Calls: []*core.ContextCall{submitCall("task 1"), submitCall("task 2")},
+			}},
+			genaiMocks: []*genaiAnswer{
+				{err: concurrencyRefusal},
+			},
+			caps: userCaps,
+
+			expectErr:   core.ErrGenerationQuota,
+			expectQuota: &core.GenerationQuotaError{Cap: concurrencyLimit},
+		},
+		{
+			// A refusal without a QuotaFailure names the cap in its message alone.
+			name: "Error/QuotaWithoutQuotaFailure",
+
+			request: &core.GenerationSubmitRequest{
+				OwnerID: ownerID, ProjectID: projectID, Roles: userRoles, Kind: core.GenerationKindSuggest, Targets: targets,
+			},
+
+			snapshotMock: &daoMock[*core.ProjectSnapshot]{resp: snapshot},
+			planMock: &daoMock[*core.ContextPlan]{resp: &core.ContextPlan{
+				Kind: core.GenerationKindSuggest, Calls: []*core.ContextCall{submitCall("task 1")},
 			}},
 			genaiMocks: []*genaiAnswer{
 				{err: status.Error(codes.ResourceExhausted, concurrencyCap)},
@@ -354,7 +387,7 @@ func TestGenerationSubmit(t *testing.T) {
 			caps:       userCaps,
 
 			expectErr:   core.ErrGenerationQuota,
-			expectQuota: &core.GenerationQuotaError{Cap: windowCap, RetryAfter: 90 * time.Second},
+			expectQuota: &core.GenerationQuotaError{Cap: windowLimit, RetryAfter: 90 * time.Second},
 		},
 		{
 			// A caller whose roles set no caps submits nothing.
