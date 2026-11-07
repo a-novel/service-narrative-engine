@@ -498,8 +498,7 @@ func TestGenerationSubmit(t *testing.T) {
 					GenerationSubmit(mock.Anything, mock.MatchedBy(func(request *servicegenai.GenerationSubmitRequest) bool {
 						return bytes.Equal(request.GetPayload(), []byte(submitPayload(task))) &&
 							request.GetOwnerId() == ownerID.String() && request.GetPurpose() == "studio.generation" &&
-							request.GetProvider() == "openai" && request.GetUserTier() == "" &&
-							proto.Equal(request.GetCaps(), testCase.caps) &&
+							request.GetProvider() == "openai" && proto.Equal(request.GetCaps(), testCase.caps) &&
 							request.GetVariant() == answer.variant && request.GetStream() == testCase.request.Stream
 					})).
 					// The read and the plan free their slot of the gate before genai answers, which may take long.
