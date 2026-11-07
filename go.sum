@@ -6,8 +6,8 @@ github.com/a-novel-kit/jwt/v2 v2.6.1 h1:8iQ8ZcvU4L2CKReYeCX8ctK9ABgYEvAOycrggKgl
 github.com/a-novel-kit/jwt/v2 v2.6.1/go.mod h1:pkDVhDrwshhk8U2FJiZciPHVh8zq5WYDJCMBKOmd1PQ=
 github.com/a-novel/service-authentication/v2 v2.25.3 h1:93a3CV4B5SzXF6wOpzZfF29cc/ISNy+RAofMc+EVhIk=
 github.com/a-novel/service-authentication/v2 v2.25.3/go.mod h1:0DTlYl8K4JmIapMuQfu4wEENq/wET3NtEUup+Ry67b4=
-github.com/a-novel/service-genai v0.9.0 h1:hwCOBqLO2SWpf9L4Lnhq1X6wBSRfqu/bFl4h53WrPEA=
-github.com/a-novel/service-genai v0.9.0/go.mod h1:ahT/UsmxDTS2PKBmJdce7Xl7lDLNypZeuNJcIS/dmfU=
+github.com/a-novel/service-genai v0.11.1 h1:xgYeglfy+bgAQ0Dy+UadULTRnUBAaakHK0tByd2dohc=
+github.com/a-novel/service-genai v0.11.1/go.mod h1:HPk+bMCjisbIYli/Yoroy7xKni+Kl84wMtsmeEcUTws=
 github.com/a-novel/service-json-keys/v2 v2.15.7 h1:qnFJi7FrIQ0YzT03RUslGanZjQJ+NhdF0XCIeRmFnvo=
 github.com/a-novel/service-json-keys/v2 v2.15.7/go.mod h1:chgAZa704Vh2CQCLHeQ2+KFmxdlXnbhbRjocaqI/60Y=
 github.com/alicebob/miniredis/v2 v2.40.0 h1:6IgTQbvm2JiMYZ8yur/acNJzVjtSOWCelxXbk/LUBXc=
