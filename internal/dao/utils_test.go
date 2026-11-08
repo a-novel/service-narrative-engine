@@ -143,13 +143,30 @@ func composerFixtures() fixtures {
 	}
 }
 
-// pictureFixtures returns the composer fixtures with a logo on the test project.
+// pictureFixtures returns the composer fixtures with a logo on the test project. The project carries the
+// logo's version, as a read returns it.
 func pictureFixtures() fixtures {
 	data := composerFixtures()
 	data.projects[0].LogoUpdatedAt = lo.ToPtr(updatedAt)
 	data.pictures = []*dao.ProjectPicture{
-		{ProjectID: projectID, Picture: "logo", Data: []byte("stored logo"), MediaType: "image/webp"},
+		{
+			ProjectID: projectID, Picture: "logo", Data: []byte("stored logo"), MediaType: "image/webp",
+			UpdatedAt: updatedAt,
+		},
 	}
+
+	return data
+}
+
+// twoPictureFixtures returns the picture fixtures with a background beside the logo. The background holds an
+// older version, so a read that swaps the two versions fails.
+func twoPictureFixtures() fixtures {
+	data := pictureFixtures()
+	data.projects[0].BackgroundUpdatedAt = lo.ToPtr(createdAt)
+	data.pictures = append(data.pictures, &dao.ProjectPicture{
+		ProjectID: projectID, Picture: "background", Data: []byte("stored background"), MediaType: "image/jpeg",
+		UpdatedAt: createdAt,
+	})
 
 	return data
 }

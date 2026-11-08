@@ -7,11 +7,7 @@
 -- ordered by ID. No platform creates projects before this release, so the table is small enough to backfill
 -- and index in plain statements.
 ALTER TABLE projects
-ADD COLUMN edited_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
-/* When the logo last changed, null without a logo. Picture URLs carry it as the logo's version. */
-ADD COLUMN logo_updated_at timestamp with time zone,
-/* When the background last changed, null without a background. Picture URLs carry it as its version. */
-ADD COLUMN background_updated_at timestamp with time zone;
+ADD COLUMN edited_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
 UPDATE projects
 SET
@@ -59,8 +55,8 @@ CREATE INDEX projects_owner_id_edited_at_idx ON projects (owner_id, edited_at DE
 -- The pictures a project may hold, one of each.
 CREATE TYPE project_picture AS ENUM('logo', 'background');
 
--- The bytes stay out of the projects row, which every project read selects whole, so a list never reads them.
--- The versions stay in the projects row, which a picture write updates in the statement that writes the bytes.
+-- A picture keeps its bytes and its version in its own row, so a picture write never writes the projects row.
+-- A project read joins each picture's version through the primary key and never selects the bytes.
 CREATE TABLE project_pictures (
   project_id uuid NOT NULL CONSTRAINT project_pictures_project_id_fkey REFERENCES projects (id) ON DELETE CASCADE,
   picture project_picture NOT NULL,
@@ -68,6 +64,8 @@ CREATE TABLE project_pictures (
   data bytea NOT NULL,
   /* The media type the picture is encoded in. */
   media_type text NOT NULL CONSTRAINT project_pictures_media_type_check CHECK (media_type IN ('image/webp', 'image/jpeg')),
+  /* When the picture last changed. Picture URLs carry it as the picture's version. */
+  updated_at timestamp with time zone NOT NULL,
   -- One picture of each kind per project: a logo and a background may coexist. A new picture replaces the
   -- stored one of its kind through this key.
   PRIMARY KEY (project_id, picture),

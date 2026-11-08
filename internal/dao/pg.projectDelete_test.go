@@ -19,27 +19,43 @@ func TestPgProjectDelete(t *testing.T) {
 	testCases := []struct {
 		name string
 
-		request *dao.ProjectDeleteRequest
+		fixtures fixtures
+		request  *dao.ProjectDeleteRequest
 
 		expect       *dao.Project
 		expectScenes []*dao.Scene
-		expectErr    error
+		// expectPictures are the logo and the background of the test project after the delete.
+		expectPictures [2]*dao.ProjectPicture
+		expectErr      error
 	}{
 		{
 			name: "Success",
 
-			request: &dao.ProjectDeleteRequest{ID: projectID},
+			fixtures: composerFixtures(),
+			request:  &dao.ProjectDeleteRequest{ID: projectID},
 
 			expect:       composerFixtures().projects[0],
 			expectScenes: []*dao.Scene{},
 		},
 		{
+			// The project returns the versions it held, and its pictures go with it.
+			name: "Success/Pictures",
+
+			fixtures: twoPictureFixtures(),
+			request:  &dao.ProjectDeleteRequest{ID: projectID},
+
+			expect:       twoPictureFixtures().projects[0],
+			expectScenes: []*dao.Scene{},
+		},
+		{
 			name: "Error/NotFound",
 
-			request: &dao.ProjectDeleteRequest{ID: absentID},
+			fixtures: twoPictureFixtures(),
+			request:  &dao.ProjectDeleteRequest{ID: absentID},
 
-			expectScenes: composerFixtures().scenes[:4],
-			expectErr:    dao.ErrProjectDeleteNotFound,
+			expectScenes:   composerFixtures().scenes[:4],
+			expectPictures: [2]*dao.ProjectPicture{twoPictureFixtures().pictures[0], twoPictureFixtures().pictures[1]},
+			expectErr:      dao.ErrProjectDeleteNotFound,
 		},
 	}
 
@@ -52,7 +68,7 @@ func TestPgProjectDelete(t *testing.T) {
 			postgrestest.RunDBTest(t, configtest.PostgresPreset, migrations.Migrations, func(ctx context.Context, t *testing.T) {
 				t.Helper()
 
-				insertFixtures(ctx, t, composerFixtures())
+				insertFixtures(ctx, t, testCase.fixtures)
 
 				result, err := daoProjectDelete.Exec(ctx, testCase.request)
 				require.ErrorIs(t, err, testCase.expectErr)
@@ -60,6 +76,7 @@ func TestPgProjectDelete(t *testing.T) {
 
 				// Deleting a project deletes its scenes with it.
 				require.Equal(t, testCase.expectScenes, listScenes(ctx, t, projectID))
+				require.Equal(t, testCase.expectPictures, projectPictures(ctx, t))
 			})
 		})
 	}

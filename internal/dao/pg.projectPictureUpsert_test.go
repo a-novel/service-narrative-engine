@@ -167,7 +167,7 @@ func TestPgProjectPictureUpsert(t *testing.T) {
 			require.NoError(t, err)
 
 			_, err = db.NewInsert().Model(&dao.ProjectPicture{
-				ProjectID: projectID, Picture: "logo", Data: newLogo.Data, MediaType: newLogo.MediaType,
+				ProjectID: projectID, Picture: "logo", Data: newLogo.Data, MediaType: newLogo.MediaType, UpdatedAt: now,
 			}).Exec(ctx)
 
 			var pgErr pgdriver.Error

@@ -3,7 +3,9 @@ package dao_test
 import (
 	"context"
 	"testing"
+	"time"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
 	"github.com/a-novel-kit/golib/postgres/postgrestest"
@@ -16,10 +18,24 @@ import (
 func TestPgProjectUpdate(t *testing.T) {
 	t.Parallel()
 
+	update := &dao.ProjectUpdateRequest{
+		ID: projectID, Title: "Clear Hours", Premise: "Marie waits.", Language: "en", Now: now,
+	}
+
+	// updated returns the test project after the update, with the versions of its logo and its background.
+	updated := func(logo, background *time.Time) *dao.Project {
+		return &dao.Project{
+			ID: projectID, OwnerID: ownerID, Title: "Clear Hours", Premise: "Marie waits.", Language: "en",
+			CreatedAt: createdAt, UpdatedAt: now, EditedAt: updatedAt, LogoUpdatedAt: logo,
+			BackgroundUpdatedAt: background,
+		}
+	}
+
 	testCases := []struct {
 		name string
 
-		request *dao.ProjectUpdateRequest
+		fixtures fixtures
+		request  *dao.ProjectUpdateRequest
 
 		expect    *dao.Project
 		expectErr error
@@ -27,19 +43,23 @@ func TestPgProjectUpdate(t *testing.T) {
 		{
 			name: "Success",
 
-			request: &dao.ProjectUpdateRequest{
-				ID:    projectID,
-				Title: "Clear Hours", Premise: "Marie waits.", Language: "en", Now: now,
-			},
+			fixtures: composerFixtures(),
+			request:  update,
 
-			expect: &dao.Project{
-				ID: projectID, OwnerID: ownerID, Title: "Clear Hours", Premise: "Marie waits.", Language: "en",
-				CreatedAt: createdAt, UpdatedAt: now, EditedAt: updatedAt,
-			},
+			expect: updated(nil, nil),
+		},
+		{
+			name: "Success/Pictures",
+
+			fixtures: twoPictureFixtures(),
+			request:  update,
+
+			expect: updated(lo.ToPtr(updatedAt), lo.ToPtr(createdAt)),
 		},
 		{
 			name: "Error/NotFound",
 
+			fixtures: twoPictureFixtures(),
 			request: &dao.ProjectUpdateRequest{
 				ID: absentID, Title: "Clear Hours", Language: "en", Now: now,
 			},
@@ -57,7 +77,7 @@ func TestPgProjectUpdate(t *testing.T) {
 			postgrestest.RunDBTest(t, configtest.PostgresPreset, migrations.Migrations, func(ctx context.Context, t *testing.T) {
 				t.Helper()
 
-				insertFixtures(ctx, t, composerFixtures())
+				insertFixtures(ctx, t, testCase.fixtures)
 
 				result, err := daoProjectUpdate.Exec(ctx, testCase.request)
 				require.ErrorIs(t, err, testCase.expectErr)

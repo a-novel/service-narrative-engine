@@ -1,4 +1,4 @@
-migration-history	sha256:917901d58de240b359115ed26aabc4a392b5f444c1e22961f54c4262d0e2e176
+migration-history	sha256:e82b6fc5b601bd776fe86cf0472646482c090d26d8c2b206f9ce631476f614e0
 column	beats.bytes	bigint DEFAULT ((((octet_length(title) + octet_length(description)) + octet_length(prompt)) + COALESCE(octet_length((recap)::text), 0)) + COALESCE(octet_length((recap_sources)::text), 0)) GENERATED s
 column	beats.color	text NOT NULL
 column	beats.description	text NOT NULL DEFAULT ''::text
@@ -38,13 +38,12 @@ column	project_pictures.data	bytea NOT NULL
 column	project_pictures.media_type	text NOT NULL
 column	project_pictures.picture	project_picture NOT NULL
 column	project_pictures.project_id	uuid NOT NULL
-column	projects.background_updated_at	timestamp with time zone
+column	project_pictures.updated_at	timestamp with time zone NOT NULL
 column	projects.bytes	bigint DEFAULT (octet_length(title) + octet_length(premise)) GENERATED s
 column	projects.created_at	timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
 column	projects.edited_at	timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
 column	projects.id	uuid NOT NULL DEFAULT uuidv7()
 column	projects.language	project_language NOT NULL
-column	projects.logo_updated_at	timestamp with time zone
 column	projects.owner_id	uuid NOT NULL
 column	projects.premise	text NOT NULL DEFAULT ''::text
 column	projects.stored_bytes	bigint NOT NULL DEFAULT 0
@@ -105,6 +104,7 @@ constraint	project_pictures.project_pictures_picture_not_null	NOT NULL picture
 constraint	project_pictures.project_pictures_pkey	PRIMARY KEY (project_id, picture)
 constraint	project_pictures.project_pictures_project_id_fkey	FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 constraint	project_pictures.project_pictures_project_id_not_null	NOT NULL project_id
+constraint	project_pictures.project_pictures_updated_at_not_null	NOT NULL updated_at
 constraint	projects.projects_created_at_not_null	NOT NULL created_at
 constraint	projects.projects_edited_at_not_null	NOT NULL edited_at
 constraint	projects.projects_id_not_null	NOT NULL id

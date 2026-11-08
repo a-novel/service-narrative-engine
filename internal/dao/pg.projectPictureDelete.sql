@@ -1,22 +1,29 @@
--- The picture and its version go in one statement, so a read never finds one without the other.
+-- The picture and its version go in one row. A statement reads the tables as they stood before it, so the
+-- versions leave out the removed picture.
 WITH
   deleted AS (
     DELETE FROM project_pictures
     WHERE
       project_id = ?0
       AND picture = ?1
+  ),
+  versions AS (
+    SELECT
+      picture,
+      updated_at
+    FROM
+      project_pictures
+    WHERE
+      project_id = ?0
+      AND picture <> ?1
   )
-UPDATE projects
-SET
-  logo_updated_at = CASE
-    WHEN ?1 = 'logo' THEN NULL
-    ELSE logo_updated_at
-  END,
-  background_updated_at = CASE
-    WHEN ?1 = 'background' THEN NULL
-    ELSE background_updated_at
-  END
+SELECT
+  projects.*,
+  logo.updated_at AS logo_updated_at,
+  background.updated_at AS background_updated_at
+FROM
+  projects
+  LEFT JOIN versions AS logo ON logo.picture = 'logo'
+  LEFT JOIN versions AS background ON background.picture = 'background'
 WHERE
-  id = ?0
-RETURNING
-  *;
+  projects.id = ?0;

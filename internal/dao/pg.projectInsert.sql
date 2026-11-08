@@ -1,3 +1,4 @@
+-- A new project holds no picture, so it returns no picture version.
 INSERT INTO
   projects (
     id,

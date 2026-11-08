@@ -29,8 +29,10 @@ type Project struct {
 	// project. A picture write leaves it as it was.
 	EditedAt time.Time `bun:"edited_at"`
 
-	// LogoUpdatedAt is when the logo last changed, nil while the project has no logo.
-	LogoUpdatedAt *time.Time `bun:"logo_updated_at"`
-	// BackgroundUpdatedAt is when the background last changed, nil while the project has no background.
-	BackgroundUpdatedAt *time.Time `bun:"background_updated_at"`
+	// LogoUpdatedAt is when the logo last changed, nil while the project has no logo. A read joins it from the
+	// logo's row, and an insert of the model leaves it out.
+	LogoUpdatedAt *time.Time `bun:"logo_updated_at,scanonly"`
+	// BackgroundUpdatedAt is when the background last changed, nil while the project has no background. A read
+	// joins it from the background's row, and an insert of the model leaves it out.
+	BackgroundUpdatedAt *time.Time `bun:"background_updated_at,scanonly"`
 }

@@ -302,6 +302,27 @@ describe("projectPictureUpdate", () => {
     expect(project.backgroundVersion).toEqual(expect.any(String));
   });
 
+  it("keeps the versions on every read and write of the project", async () => {
+    const created = await createProject({ title: "Pictured", language: Language.En });
+    await projectPictureUpdate(api, accessToken, { projectID: created.id, picture: ProjectPicture.Logo }, logo);
+    const pictured = await projectPictureUpdate(
+      api,
+      accessToken,
+      { projectID: created.id, picture: ProjectPicture.Background },
+      background
+    );
+    const versions = { logoVersion: pictured.logoVersion, backgroundVersion: pictured.backgroundVersion };
+
+    expect(await projectGet(api, accessToken, { id: created.id })).toMatchObject(versions);
+    const listed = (await projectList(api, accessToken, { limit: 100 })).projects.find(
+      (project) => project.id === created.id
+    );
+    expect(listed).toMatchObject(versions);
+    const updated = await projectUpdate(api, accessToken, { id: created.id, title: "Renamed", language: Language.En });
+    expect(updated).toMatchObject(versions);
+    expect(await projectDelete(api, accessToken, created)).toMatchObject(versions);
+  });
+
   it("replaces a picture with a new version", async () => {
     const created = await createProject({ title: "Pictured", language: Language.En });
     const request = { projectID: created.id, picture: ProjectPicture.Logo };
@@ -412,6 +433,7 @@ describe("projectPictureDelete", () => {
     const project = await projectPictureDelete(api, accessToken, request);
     expect(project.logoVersion).toBeUndefined();
     expect(project.editedAt).toEqual(created.editedAt);
+    expect(project.updatedAt).toEqual(created.updatedAt);
     await expectStatus(projectPictureGet(api, accessToken, request), 404);
   });
 
