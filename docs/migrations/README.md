@@ -2,5 +2,6 @@
 
 | Release             | Consumer action                                                         |
 | ------------------- | ----------------------------------------------------------------------- |
+| [v1.4.0](v1.4.0.md) | Sort projects by creation yourself if a client relied on that order.    |
 | [v1.3.0](v1.3.0.md) | Read a generation call at most twice a second, and upgrade GenAI first. |
 | [v1.0.0](v1.0.0.md) | None: v1 is a rebuild, and nothing consumed v0.                         |
