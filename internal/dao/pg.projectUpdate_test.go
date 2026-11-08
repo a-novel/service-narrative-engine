@@ -34,7 +34,7 @@ func TestPgProjectUpdate(t *testing.T) {
 
 			expect: &dao.Project{
 				ID: projectID, OwnerID: ownerID, Title: "Clear Hours", Premise: "Marie waits.", Language: "en",
-				CreatedAt: createdAt, UpdatedAt: now,
+				CreatedAt: createdAt, UpdatedAt: now, EditedAt: updatedAt,
 			},
 		},
 		{

@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/a-novel-kit/golib/httpf"
+	"github.com/a-novel-kit/golib/picture"
 
 	"github.com/a-novel/service-narrative-engine/internal/core"
 )
@@ -25,6 +26,15 @@ var composerErrors = httpf.ErrMap{
 	core.ErrProjectBudget:   http.StatusConflict,
 	core.ErrProjectsFull:    http.StatusConflict,
 	core.ErrRequiredLayer:   http.StatusConflict,
+}
+
+// pictureErrors maps the refusals of the picture operations to their status. A 422 answers a picture the
+// contract refuses, with its reason as the problem's reason tag.
+var pictureErrors = httpf.ErrMap{
+	core.ErrInvalidRequest:  http.StatusBadRequest,
+	core.ErrProjectNotFound: http.StatusNotFound,
+	core.ErrPictureNotFound: http.StatusNotFound,
+	picture.ErrRefused:      http.StatusUnprocessableEntity,
 }
 
 // recapErrors maps the refusals of the recap writes to their status. A 409 answers a recap that read its

@@ -3,7 +3,9 @@ package dao_test
 import (
 	"context"
 	"testing"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
 	"github.com/a-novel-kit/golib/postgres/postgrestest"
@@ -22,31 +24,37 @@ func TestPgProjectLock(t *testing.T) {
 		request *dao.ProjectLockRequest
 
 		expect bool
+		// expectEditedAt is the edited_at of each fixture project after the lock.
+		expectEditedAt map[uuid.UUID]time.Time
 	}{
 		{
 			name: "Success",
 
-			request: &dao.ProjectLockRequest{ID: projectID, OwnerID: ownerID},
+			request: &dao.ProjectLockRequest{ID: projectID, OwnerID: ownerID, Now: now},
 
-			expect: true,
+			expect:         true,
+			expectEditedAt: map[uuid.UUID]time.Time{projectID: now, otherProjectID: updatedAt},
 		},
 		{
 			name: "Success/OtherOwner",
 
-			request: &dao.ProjectLockRequest{ID: otherProjectID, OwnerID: ownerID},
+			request: &dao.ProjectLockRequest{ID: otherProjectID, OwnerID: ownerID, Now: now},
 
-			expect: false,
+			expect:         false,
+			expectEditedAt: map[uuid.UUID]time.Time{projectID: updatedAt, otherProjectID: updatedAt},
 		},
 		{
 			name: "Success/NotFound",
 
-			request: &dao.ProjectLockRequest{ID: absentID, OwnerID: ownerID},
+			request: &dao.ProjectLockRequest{ID: absentID, OwnerID: ownerID, Now: now},
 
-			expect: false,
+			expect:         false,
+			expectEditedAt: map[uuid.UUID]time.Time{projectID: updatedAt, otherProjectID: updatedAt},
 		},
 	}
 
 	daoProjectLock := dao.NewPgProjectLock()
+	daoProjectSelect := dao.NewPgProjectSelect()
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -60,6 +68,17 @@ func TestPgProjectLock(t *testing.T) {
 				result, err := daoProjectLock.Exec(ctx, testCase.request)
 				require.NoError(t, err)
 				require.Equal(t, testCase.expect, result)
+
+				editedAt := map[uuid.UUID]time.Time{}
+
+				for id := range testCase.expectEditedAt {
+					project, err := daoProjectSelect.Exec(ctx, &dao.ProjectSelectRequest{ID: id})
+					require.NoError(t, err)
+
+					editedAt[id] = project.EditedAt
+				}
+
+				require.Equal(t, testCase.expectEditedAt, editedAt)
 			})
 		})
 	}

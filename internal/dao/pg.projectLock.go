@@ -4,6 +4,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -19,10 +20,13 @@ type ProjectLockRequest struct {
 	ID uuid.UUID
 	// OwnerID is the user who claims the project.
 	OwnerID uuid.UUID
+
+	// Now is the instant stored as edited_at.
+	Now time.Time
 }
 
-// PgProjectLock locks a project its owner names until the transaction ends, so changes to the order of
-// its scenes and layers run one at a time. It reports whether the user owns the project, and locks
+// PgProjectLock locks a project its owner names until the transaction ends, so the writes to it run one at
+// a time, and stamps its edited_at. It reports whether the user owns the project, and locks and stamps
 // nothing when they do not. A missing project yields false with a nil error.
 type PgProjectLock struct{}
 
@@ -39,7 +43,7 @@ func (dao *PgProjectLock) Exec(ctx context.Context, request *ProjectLockRequest)
 		return false, otel.ReportError(span, fmt.Errorf("get postgres context: %w", err))
 	}
 
-	res, err := db.NewRaw(projectLockQuery, request.ID, request.OwnerID).Exec(ctx)
+	res, err := db.NewRaw(projectLockQuery, request.ID, request.OwnerID, request.Now).Exec(ctx)
 	if err != nil {
 		return false, otel.ReportError(span, fmt.Errorf("execute query: %w", err))
 	}

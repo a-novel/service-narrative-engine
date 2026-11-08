@@ -57,7 +57,7 @@ func TestProjectCreate(t *testing.T) {
 			expect: &core.ProjectComposer{
 				Project: &core.Project{
 					ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr",
-					CreatedAt: createdAt, UpdatedAt: updatedAt,
+					CreatedAt: createdAt, UpdatedAt: updatedAt, EditedAt: editedAt, LogoVersion: lo.ToPtr(editedAt),
 				},
 				Layers: []*core.Layer{
 					{

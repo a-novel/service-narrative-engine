@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -34,6 +35,8 @@ var (
 	ErrSceneNotFound = errors.New("scene not found")
 	// ErrLayerNotFound is returned when the project holds no layer with the ID.
 	ErrLayerNotFound = errors.New("layer not found")
+	// ErrPictureNotFound is returned when the project holds no such picture.
+	ErrPictureNotFound = errors.New("picture not found")
 	// ErrProjectFull is returned when a project already holds as many beats or layers as it may, a beat as
 	// many scenes, or a write would bring a scene past [SceneContentMax] characters.
 	ErrProjectFull = errors.New("project full")
@@ -95,19 +98,25 @@ func checkProjectOwnership(ctx context.Context, daoOwner projectOwnerDao, opts p
 	return nil
 }
 
-// projectLockDao locks a project its owner names until the transaction ends. Each service names its own
-// interface, and every one satisfies this.
+// projectLockDao locks a project its owner names until the transaction ends, and stamps its edit. Each service
+// names its own interface, and every one satisfies this.
 type projectLockDao interface {
 	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
 }
 
-// lockOwnedProject locks the project for the rest of the transaction, so changes to its order run one at a
-// time, and returns [ErrProjectNotFound] unless the user owns it. One query does both.
+// lockOwnedProject locks the project for the rest of the transaction, so its writes run one at a time,
+// stamps the edit as the project's EditedAt, and returns [ErrProjectNotFound] unless the user owns it. One
+// query does all three, and a write that fails later rolls the stamp back with it.
+//
+// The stamp is the instant the write asks for the lock. The write stamps its own records once it holds the
+// lock, so a write that waited still stamps them later than the write before it did.
 func lockOwnedProject(ctx context.Context, daoLock projectLockDao, opts projectOwnershipOpts) error {
 	ctx, span := otel.Tracer().Start(ctx, "core.lockOwnedProject")
 	defer span.End()
 
-	owned, err := daoLock.Exec(ctx, &dao.ProjectLockRequest{ID: opts.projectID, OwnerID: opts.ownerID})
+	request := &dao.ProjectLockRequest{ID: opts.projectID, OwnerID: opts.ownerID, Now: time.Now()}
+
+	owned, err := daoLock.Exec(ctx, request)
 	if err != nil {
 		return otel.ReportError(span, err)
 	}

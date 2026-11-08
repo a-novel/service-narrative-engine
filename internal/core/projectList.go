@@ -28,11 +28,12 @@ type ProjectListRequest struct {
 
 	// Limit caps the page at 100 projects. It defaults to [ProjectListLimitDefault] when zero.
 	Limit int `validate:"min=0,max=100"`
-	// Offset is how many projects come before the page, newest first.
+	// Offset is how many projects come before the page, most recently edited first.
 	Offset int `validate:"min=0"`
 }
 
-// ProjectList reads the caller's projects page by page, newest first. Each page carries the total.
+// ProjectList reads the caller's projects page by page, most recently edited first. Each page carries the
+// total.
 type ProjectList struct {
 	dao ProjectListDao
 }

@@ -20,16 +20,27 @@ type Project struct {
 	Language string `json:"language"`
 
 	CreatedAt time.Time `json:"createdAt"`
+	// UpdatedAt is when the project's own fields last changed.
 	UpdatedAt time.Time `json:"updatedAt"`
+	// EditedAt is when anything in the project last changed.
+	EditedAt time.Time `json:"editedAt"`
+
+	// LogoVersion is when the logo last changed, absent while the project has no logo.
+	LogoVersion *time.Time `json:"logoVersion,omitempty"`
+	// BackgroundVersion is when the background last changed, absent while the project has no background.
+	BackgroundVersion *time.Time `json:"backgroundVersion,omitempty"`
 }
 
 func loadProject(project *core.Project) Project {
 	return Project{
-		ID:        project.ID,
-		Title:     project.Title,
-		Premise:   project.Premise,
-		Language:  project.Language,
-		CreatedAt: project.CreatedAt,
-		UpdatedAt: project.UpdatedAt,
+		ID:                project.ID,
+		Title:             project.Title,
+		Premise:           project.Premise,
+		Language:          project.Language,
+		CreatedAt:         project.CreatedAt,
+		UpdatedAt:         project.UpdatedAt,
+		EditedAt:          project.EditedAt,
+		LogoVersion:       project.LogoVersion,
+		BackgroundVersion: project.BackgroundVersion,
 	}
 }
