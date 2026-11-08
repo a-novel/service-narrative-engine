@@ -268,7 +268,7 @@ describe("projectStream", () => {
 });
 
 describe("projectPictureUpdate", () => {
-  it("sets the logo, with a version, as an edit of the project", async () => {
+  it("sets the logo, with a version, and keeps the project's edit date", async () => {
     const created = await createProject({ title: "Pictured", language: Language.En });
 
     const project = await projectPictureUpdate(
@@ -279,7 +279,7 @@ describe("projectPictureUpdate", () => {
     );
     expect(project.logoVersion).toEqual(expect.any(String));
     expect(project.backgroundVersion).toBeUndefined();
-    expect(project.editedAt.getTime()).toBeGreaterThan(created.editedAt.getTime());
+    expect(project.editedAt).toEqual(created.editedAt);
     expect(project.updatedAt).toEqual(created.updatedAt);
   });
 
@@ -404,14 +404,14 @@ describe("projectPictureGet", () => {
 });
 
 describe("projectPictureDelete", () => {
-  it("removes the picture, as an edit of the project", async () => {
+  it("removes the picture and keeps the project's edit date", async () => {
     const created = await createProject({ title: "Pictured", language: Language.En });
     const request = { projectID: created.id, picture: ProjectPicture.Logo };
-    const pictured = await projectPictureUpdate(api, accessToken, request, logo);
+    await projectPictureUpdate(api, accessToken, request, logo);
 
     const project = await projectPictureDelete(api, accessToken, request);
     expect(project.logoVersion).toBeUndefined();
-    expect(project.editedAt.getTime()).toBeGreaterThan(pictured.editedAt.getTime());
+    expect(project.editedAt).toEqual(created.editedAt);
     await expectStatus(projectPictureGet(api, accessToken, request), 404);
   });
 

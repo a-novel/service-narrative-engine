@@ -22,7 +22,7 @@ type Project struct {
 	CreatedAt time.Time `json:"createdAt"`
 	// UpdatedAt is when the project's own fields last changed.
 	UpdatedAt time.Time `json:"updatedAt"`
-	// EditedAt is when anything in the project last changed.
+	// EditedAt is when the project's content last changed, its pictures aside.
 	EditedAt time.Time `json:"editedAt"`
 
 	// LogoVersion is when the logo last changed, absent while the project has no logo.

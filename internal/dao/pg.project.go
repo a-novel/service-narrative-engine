@@ -25,8 +25,8 @@ type Project struct {
 	CreatedAt time.Time `bun:"created_at"`
 	// UpdatedAt is when the project's own fields last changed.
 	UpdatedAt time.Time `bun:"updated_at"`
-	// EditedAt is when anything in the project last changed: the instant the write that changed it locked
-	// the project.
+	// EditedAt is when the project's content last changed: the instant the write that changed it locked the
+	// project. A picture write leaves it as it was.
 	EditedAt time.Time `bun:"edited_at"`
 
 	// LogoUpdatedAt is when the logo last changed, nil while the project has no logo.

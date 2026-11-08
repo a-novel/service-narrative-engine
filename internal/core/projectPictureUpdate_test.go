@@ -9,8 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/a-novel-kit/golib/picture"
-	"github.com/a-novel-kit/golib/transaction"
-	"github.com/a-novel-kit/golib/transaction/transactiontest"
 
 	"github.com/a-novel/service-narrative-engine/internal/core"
 	coremocks "github.com/a-novel/service-narrative-engine/internal/core/mocks"
@@ -33,11 +31,10 @@ func TestProjectPictureUpdate(t *testing.T) {
 
 		request *core.ProjectPictureUpdateRequest
 
-		lockMock *daoMock[bool]
+		ownerMock *daoMock[bool]
 		// mediaType is the media type the upsert stores.
 		mediaType  string
 		upsertMock *daoMock[*dao.Project]
-		transactor transaction.Transactor
 
 		expect    *core.Project
 		expectErr error
@@ -47,7 +44,7 @@ func TestProjectPictureUpdate(t *testing.T) {
 
 			request: request(core.ProjectPictureLogo, logo),
 
-			lockMock:   &daoMock[bool]{resp: true},
+			ownerMock:  &daoMock[bool]{resp: true},
 			mediaType:  "image/jpeg",
 			upsertMock: &daoMock[*dao.Project]{resp: daoProject()},
 
@@ -58,7 +55,7 @@ func TestProjectPictureUpdate(t *testing.T) {
 
 			request: request(core.ProjectPictureLogo, newJPEG(512, 512)),
 
-			lockMock:   &daoMock[bool]{resp: true},
+			ownerMock:  &daoMock[bool]{resp: true},
 			mediaType:  "image/jpeg",
 			upsertMock: &daoMock[*dao.Project]{resp: daoProject()},
 
@@ -69,7 +66,7 @@ func TestProjectPictureUpdate(t *testing.T) {
 
 			request: request(core.ProjectPictureBackground, newJPEG(1280, 720)),
 
-			lockMock:   &daoMock[bool]{resp: true},
+			ownerMock:  &daoMock[bool]{resp: true},
 			mediaType:  "image/jpeg",
 			upsertMock: &daoMock[*dao.Project]{resp: daoProject()},
 
@@ -151,16 +148,16 @@ func TestProjectPictureUpdate(t *testing.T) {
 
 			request: request(core.ProjectPictureLogo, logo),
 
-			lockMock: &daoMock[bool]{resp: false},
+			ownerMock: &daoMock[bool]{resp: false},
 
 			expectErr: core.ErrProjectNotFound,
 		},
 		{
-			name: "Error/Lock",
+			name: "Error/Owner",
 
 			request: request(core.ProjectPictureLogo, logo),
 
-			lockMock: &daoMock[bool]{err: errFoo},
+			ownerMock: &daoMock[bool]{err: errFoo},
 
 			expectErr: errFoo,
 		},
@@ -169,18 +166,9 @@ func TestProjectPictureUpdate(t *testing.T) {
 
 			request: request(core.ProjectPictureLogo, logo),
 
-			lockMock:   &daoMock[bool]{resp: true},
+			ownerMock:  &daoMock[bool]{resp: true},
 			mediaType:  "image/jpeg",
 			upsertMock: &daoMock[*dao.Project]{err: errFoo},
-
-			expectErr: errFoo,
-		},
-		{
-			name: "Error/Transaction",
-
-			request: request(core.ProjectPictureLogo, logo),
-
-			transactor: transactiontest.NewFailingTransactor(errFoo),
 
 			expectErr: errFoo,
 		},
@@ -190,13 +178,13 @@ func TestProjectPictureUpdate(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockLock := coremocks.NewMockProjectPictureUpdateDaoLock(t)
+			mockOwner := coremocks.NewMockProjectPictureUpdateDaoOwner(t)
 			mockUpsert := coremocks.NewMockProjectPictureUpdateDao(t)
 
-			if testCase.lockMock != nil {
-				mockLock.EXPECT().
-					Exec(mock.Anything, lockRequest).
-					Return(testCase.lockMock.resp, testCase.lockMock.err)
+			if testCase.ownerMock != nil {
+				mockOwner.EXPECT().
+					Exec(mock.Anything, &dao.ProjectOwnedRequest{ID: projectID, OwnerID: ownerID}).
+					Return(testCase.ownerMock.resp, testCase.ownerMock.err)
 			}
 
 			if testCase.upsertMock != nil {
@@ -209,18 +197,13 @@ func TestProjectPictureUpdate(t *testing.T) {
 					Return(testCase.upsertMock.resp, testCase.upsertMock.err)
 			}
 
-			transactor := testCase.transactor
-			if transactor == nil {
-				transactor = transactiontest.NewTransactor()
-			}
-
-			service := core.NewProjectPictureUpdate(mockLock, mockUpsert, transactor)
+			service := core.NewProjectPictureUpdate(mockOwner, mockUpsert)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
 
-			mockLock.AssertExpectations(t)
+			mockOwner.AssertExpectations(t)
 			mockUpsert.AssertExpectations(t)
 		})
 	}

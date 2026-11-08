@@ -288,8 +288,8 @@ paths:
         - a `background` is exactly 16:9, 16 to 1280 pixels wide, 512 KiB at most.
 
         It refuses any other picture with 422, naming the rule it broke, and a body past the picture's byte cap
-        with 400. The write moves the project's `editedAt`, and the picture does not count in the project's
-        stored bytes.
+        with 400. A picture is cosmetic: the write leaves the project's `editedAt` as it was, and the picture
+        does not count in the project's stored bytes.
       tags: [project]
       parameters:
         - $ref: "#/components/parameters/parentProjectID"
@@ -331,8 +331,8 @@ paths:
       operationId: projectPictureDelete
       summary: Remove a picture of a project.
       description: |
-        Removes a picture of a project, and returns the project. A project without the picture keeps none. The
-        removal moves the project's `editedAt`.
+        Removes a picture of a project, and returns the project. A project without the picture keeps none. A
+        picture is cosmetic, so the removal leaves the project's `editedAt` as it was.
       tags: [project]
       parameters:
         - $ref: "#/components/parameters/parentProjectID"
@@ -2178,8 +2178,8 @@ components:
         editedAt:
           type: string
           description: |
-            When anything in the project last changed: its own fields, its beats, scenes, layers, cells, recaps
-            or pictures. Lists order projects by it.
+            When the project's content last changed: its own fields, its beats, scenes, layers, cells or recaps.
+            Its pictures are cosmetic and leave it as it was. Lists order projects by it.
           format: date-time
           examples: ["2021-01-03T00:00:00Z"]
         logoVersion:
