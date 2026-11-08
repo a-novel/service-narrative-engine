@@ -26,17 +26,30 @@ type Project struct {
 	Language string
 
 	CreatedAt time.Time
+	// UpdatedAt is when the project's own fields last changed: its title, premise or language.
 	UpdatedAt time.Time
+	// EditedAt is when anything in the project last changed: its own fields, its beats, scenes, layers, cells,
+	// recaps or pictures.
+	EditedAt time.Time
+
+	// LogoVersion is when the logo last changed, nil while the project has no logo. Picture URLs carry it,
+	// so a cache keeps each version for good.
+	LogoVersion *time.Time
+	// BackgroundVersion is when the background last changed, nil while the project has no background.
+	BackgroundVersion *time.Time
 }
 
 func newProject(entity *dao.Project) *Project {
 	return &Project{
-		ID:        entity.ID,
-		OwnerID:   entity.OwnerID,
-		Title:     entity.Title,
-		Premise:   entity.Premise,
-		Language:  entity.Language,
-		CreatedAt: entity.CreatedAt,
-		UpdatedAt: entity.UpdatedAt,
+		ID:                entity.ID,
+		OwnerID:           entity.OwnerID,
+		Title:             entity.Title,
+		Premise:           entity.Premise,
+		Language:          entity.Language,
+		CreatedAt:         entity.CreatedAt,
+		UpdatedAt:         entity.UpdatedAt,
+		EditedAt:          entity.EditedAt,
+		LogoVersion:       entity.LogoUpdatedAt,
+		BackgroundVersion: entity.BackgroundUpdatedAt,
 	}
 }

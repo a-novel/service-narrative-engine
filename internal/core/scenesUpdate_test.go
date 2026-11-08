@@ -195,7 +195,7 @@ func TestScenesUpdate(t *testing.T) {
 
 			if testCase.lockMock != nil {
 				mockLock.EXPECT().
-					Exec(mock.Anything, &dao.ProjectLockRequest{ID: projectID, OwnerID: ownerID}).
+					Exec(mock.Anything, lockRequest).
 					Return(testCase.lockMock.resp, testCase.lockMock.err)
 			}
 

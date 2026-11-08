@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -38,7 +39,7 @@ func TestProjectGet(t *testing.T) {
 
 			expect: &core.Project{
 				ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr",
-				CreatedAt: createdAt, UpdatedAt: updatedAt,
+				CreatedAt: createdAt, UpdatedAt: updatedAt, EditedAt: editedAt, LogoVersion: lo.ToPtr(editedAt),
 			},
 		},
 		{

@@ -56,7 +56,7 @@ func TestProjectSnapshotRead(t *testing.T) {
 	snapshot := &core.ProjectSnapshot{
 		Project: &core.Project{
 			ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr",
-			CreatedAt: createdAt, UpdatedAt: updatedAt,
+			CreatedAt: createdAt, UpdatedAt: updatedAt, EditedAt: editedAt, LogoVersion: lo.ToPtr(editedAt),
 		},
 		Beats: []*core.Beat{with(coreBeat(beatID1, 0), func(beat *core.Beat) {
 			beat.Recap, beat.RecapBeatUpdatedAt, beat.RecapSources = &coreRecap, createdAt, sources

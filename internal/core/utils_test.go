@@ -1,13 +1,18 @@
 package core_test
 
 import (
+	"bytes"
 	"context"
+	"image"
+	"image/color"
+	"image/jpeg"
 	"slices"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/samber/lo"
+	"github.com/stretchr/testify/mock"
 
 	servicegenai "github.com/a-novel/service-genai/pkg/go"
 
@@ -33,6 +38,7 @@ var (
 
 	createdAt = time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
 	updatedAt = time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC)
+	editedAt  = time.Date(2021, 1, 3, 0, 0, 0, 0, time.UTC)
 )
 
 // daoMock is the answer a DAO mock gives. Go allows no generic type inside a function, so the
@@ -46,6 +52,12 @@ type daoMock[Resp any] struct {
 func recent(instant time.Time) bool {
 	return time.Since(instant) < time.Minute
 }
+
+// lockRequest matches the lock of the test project by its owner, which stamps the edit at an instant the
+// service captures.
+var lockRequest = mock.MatchedBy(func(request *dao.ProjectLockRequest) bool {
+	return request.ID == projectID && request.OwnerID == ownerID && recent(request.Now)
+})
 
 // freshIDs reports whether each ID is set and appears once, as the IDs a service generates.
 func freshIDs(ids []uuid.UUID) bool {
@@ -78,8 +90,36 @@ func notesLayer(id uuid.UUID, position int) *dao.Layer {
 func daoProject() *dao.Project {
 	return &dao.Project{
 		ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr",
-		CreatedAt: createdAt, UpdatedAt: updatedAt,
+		CreatedAt: createdAt, UpdatedAt: updatedAt, EditedAt: editedAt, LogoUpdatedAt: lo.ToPtr(editedAt),
 	}
+}
+
+// coreProject returns the project [daoProject] reads.
+func coreProject() *core.Project {
+	return &core.Project{
+		ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr",
+		CreatedAt: createdAt, UpdatedAt: updatedAt, EditedAt: editedAt, LogoVersion: lo.ToPtr(editedAt),
+	}
+}
+
+// newJPEG encodes a gray gradient of the given size as a JPEG.
+func newJPEG(width, height int) []byte {
+	img := image.NewGray(image.Rect(0, 0, width, height))
+
+	for x := range width {
+		for y := range height {
+			img.SetGray(x, y, color.Gray{Y: uint8((x + y) % 256)})
+		}
+	}
+
+	var buf bytes.Buffer
+
+	err := jpeg.Encode(&buf, img, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	return buf.Bytes()
 }
 
 func coreBeat(id uuid.UUID, position int) *core.Beat {

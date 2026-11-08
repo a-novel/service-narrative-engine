@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -46,7 +47,7 @@ func TestProjectUpdate(t *testing.T) {
 
 			expect: &core.Project{
 				ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr",
-				CreatedAt: createdAt, UpdatedAt: updatedAt,
+				CreatedAt: createdAt, UpdatedAt: updatedAt, EditedAt: editedAt, LogoVersion: lo.ToPtr(editedAt),
 			},
 		},
 		{
@@ -144,7 +145,7 @@ func TestProjectUpdate(t *testing.T) {
 
 			if testCase.lockMock != nil {
 				mockLock.EXPECT().
-					Exec(mock.Anything, &dao.ProjectLockRequest{ID: projectID, OwnerID: ownerID}).
+					Exec(mock.Anything, lockRequest).
 					Return(testCase.lockMock.resp, testCase.lockMock.err)
 			}
 
