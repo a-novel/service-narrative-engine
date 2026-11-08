@@ -44,6 +44,13 @@ export class NarrativeEngineApi {
       .then(validator ? decodeHttpResponse(validator) : (response): Promise<T> => response.json());
   }
 
+  /** Sends a request and reads the body as a Blob, typed with the response's Content-Type. */
+  async fetchBlob(input: string, init?: RequestInit): Promise<Blob> {
+    return await fetch(`${this._baseUrl}${input}`, init)
+      .then(handleHttpResponse)
+      .then((response) => response.blob());
+  }
+
   /**
    * Reads a server-sent event stream, and yields its events until `isLast` accepts one. A stream cut before then
    * reconnects with the last event ID it received, after a pause that doubles with each attempt that receives no

@@ -20,6 +20,36 @@ export enum Language {
 /** Validates a {@link Language}. */
 export const LanguageSchema = z.enum([Language.En, Language.Fr]);
 
+/** The pictures a project may hold. */
+export enum ProjectPicture {
+  /** A square of 1 to 512 pixels, 256 KiB at most. */
+  Logo = "logo",
+  /** Exactly 16:9, 16 to 1280 pixels wide, 512 KiB at most. */
+  Background = "background",
+}
+
+/** Validates a {@link ProjectPicture}. */
+export const ProjectPictureSchema = z.enum([ProjectPicture.Logo, ProjectPicture.Background]);
+
+/**
+ * What each {@link ProjectPicture} accepts: an exact aspect ratio of `ratioWidth` by `ratioHeight`, at most
+ * `maxWidth` pixels wide, and at most `maxBytes` encoded.
+ */
+export const PROJECT_PICTURE_RULES = {
+  [ProjectPicture.Logo]: { ratioWidth: 1, ratioHeight: 1, maxWidth: 512, maxBytes: 262144 },
+  [ProjectPicture.Background]: { ratioWidth: 16, ratioHeight: 9, maxWidth: 1280, maxBytes: 524288 },
+} as const;
+
+/** The rules a picture breaks when the server refuses it, as a 422 error's `tags.reason` names them. */
+export enum PictureRefusal {
+  /** The bytes are neither a still WebP nor a JPEG, or do not decode whole. */
+  Format = "format",
+  /** The picture is off its aspect ratio. */
+  Ratio = "ratio",
+  /** The picture's width is under 1 or over its widest. */
+  Dimensions = "dimensions",
+}
+
 /** One narrative, written in one language, that its owner composes scene by scene. */
 export const ProjectSchema = z.object({
   id: z.uuid(),
@@ -27,7 +57,17 @@ export const ProjectSchema = z.object({
   premise: z.string(),
   language: LanguageSchema,
   createdAt: z.iso.datetime().transform((value) => new Date(value)),
+  /** When the project's own fields, its title, premise and language, last changed. */
   updatedAt: z.iso.datetime().transform((value) => new Date(value)),
+  /** When anything in the project last changed. {@link projectList} orders projects by it. */
+  editedAt: z.iso.datetime().transform((value) => new Date(value)),
+  /**
+   * When the logo last changed, absent while the project has no logo. A picture URL that carries it names one
+   * version, which a cache keeps for good. It stays the server's string: a Date would drop its microseconds.
+   */
+  logoVersion: z.iso.datetime().optional(),
+  /** When the background last changed, absent while the project has no background, kept as `logoVersion` is. */
+  backgroundVersion: z.iso.datetime().optional(),
 });
 
 /** The value {@link ProjectSchema} validates. */
@@ -74,7 +114,7 @@ export const ProjectGetRequestSchema = z.object({
 /** The value {@link ProjectGetRequestSchema} validates. */
 export type ProjectGetRequest = z.infer<typeof ProjectGetRequestSchema>;
 
-/** A page of projects, newest first: at most `limit`, 20 when omitted, after the first `offset`. */
+/** A page of projects, most recently edited first: at most `limit`, 20 when omitted, after the first `offset`. */
 export const ProjectListRequestSchema = z.object({
   limit: z.int().min(0).max(100).optional(),
   offset: z.int().min(0).optional(),
@@ -135,7 +175,7 @@ export async function projectGet(
 }
 
 /**
- * Lists a page of the caller's projects, newest first, with their total. Raise `offset` by the page
+ * Lists a page of the caller's projects, most recently edited first, with their total. Raise `offset` by the page
  * size for the next page.
  */
 export async function projectList(
@@ -180,6 +220,85 @@ export async function projectDelete(
 ): Promise<Project> {
   const params = new URLSearchParams({ id: request.id });
   return await api.fetch(`/v1/project?${params.toString()}`, ProjectSchema, {
+    method: "DELETE",
+    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
+  });
+}
+
+/** The picture of a project to replace, the encoded image aside. */
+export const ProjectPictureUpdateRequestSchema = z.object({
+  projectID: z.uuid(),
+  picture: ProjectPictureSchema,
+});
+
+/** The value {@link ProjectPictureUpdateRequestSchema} validates. */
+export type ProjectPictureUpdateRequest = z.infer<typeof ProjectPictureUpdateRequestSchema>;
+
+/** The picture of a project to read. */
+export const ProjectPictureGetRequestSchema = z.object({
+  projectID: z.uuid(),
+  picture: ProjectPictureSchema,
+});
+
+/** The value {@link ProjectPictureGetRequestSchema} validates. */
+export type ProjectPictureGetRequest = z.infer<typeof ProjectPictureGetRequestSchema>;
+
+/** The picture of a project to remove. */
+export const ProjectPictureDeleteRequestSchema = z.object({
+  projectID: z.uuid(),
+  picture: ProjectPictureSchema,
+});
+
+/** The value {@link ProjectPictureDeleteRequestSchema} validates. */
+export type ProjectPictureDeleteRequest = z.infer<typeof ProjectPictureDeleteRequestSchema>;
+
+/**
+ * Replaces a picture of a project with `body`, an encoded still WebP or JPEG, and returns the project. The server
+ * reads the format from the bytes and checks the picture against {@link PROJECT_PICTURE_RULES}. Throws on HTTP 422,
+ * with a {@link PictureRefusal} in the error's `tags.reason`, for a picture it refuses, on 400 past the picture's
+ * `maxBytes`, and on 404 when the caller owns no such project.
+ */
+export async function projectPictureUpdate(
+  api: NarrativeEngineApi,
+  accessToken: string,
+  request: ProjectPictureUpdateRequest,
+  body: Blob
+): Promise<Project> {
+  const params = new URLSearchParams({ projectID: request.projectID, picture: request.picture });
+  return await api.fetch(`/v1/project/picture?${params.toString()}`, ProjectSchema, {
+    method: "PUT",
+    headers: { "Content-Type": body.type, Authorization: `Bearer ${accessToken}` },
+    body,
+  });
+}
+
+/**
+ * Returns a picture of a project, typed with the media type it was stored with. Throws on HTTP 404 when the caller
+ * owns no such project, or the project holds no such picture.
+ */
+export async function projectPictureGet(
+  api: NarrativeEngineApi,
+  accessToken: string,
+  request: ProjectPictureGetRequest
+): Promise<Blob> {
+  const params = new URLSearchParams({ projectID: request.projectID, picture: request.picture });
+  return await api.fetchBlob(`/v1/project/picture?${params.toString()}`, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+}
+
+/**
+ * Removes a picture of a project, and returns the project. A project without the picture keeps none. Throws on HTTP
+ * 404 when the caller owns no such project.
+ */
+export async function projectPictureDelete(
+  api: NarrativeEngineApi,
+  accessToken: string,
+  request: ProjectPictureDeleteRequest
+): Promise<Project> {
+  const params = new URLSearchParams({ projectID: request.projectID, picture: request.picture });
+  return await api.fetch(`/v1/project/picture?${params.toString()}`, ProjectSchema, {
     method: "DELETE",
     headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
   });

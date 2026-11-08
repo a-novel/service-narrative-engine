@@ -134,8 +134,8 @@ paths:
       operationId: projectList
       summary: List projects.
       description: |
-        Returns a page of the caller's projects, newest first, with how many the caller holds in all. To read
-        the next page, raise `offset` by the page size.
+        Returns a page of the caller's projects, most recently edited first, with how many the caller holds in
+        all. To read the next page, raise `offset` by the page size.
       tags: [project]
       parameters:
         - $ref: "#/components/parameters/limit"
@@ -224,6 +224,119 @@ paths:
       tags: [project]
       parameters:
         - $ref: "#/components/parameters/projectID"
+      responses:
+        "200":
+          $ref: "#/components/responses/project"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/plannedDowntime"
+        default:
+          $ref: "#/components/responses/internalError"
+
+  /v1/project/picture:
+    get:
+      operationId: projectPictureGet
+      summary: Get a picture of a project.
+      description: |
+        Returns the bytes of a picture of a project of the caller, with the media type it was stored with.
+
+        The response carries a strong `ETag` and `Last-Modified` from the picture's version, and answers a
+        matching `If-None-Match` or `If-Modified-Since` with 304. `Cache-Control: no-cache` makes a cache
+        revalidate on every use: a client that caches for good does so under a URL that names the version, the
+        project's `logoVersion` or `backgroundVersion`.
+      tags: [project]
+      parameters:
+        - $ref: "#/components/parameters/parentProjectID"
+        - $ref: "#/components/parameters/projectPicture"
+      responses:
+        "200":
+          $ref: "#/components/responses/picture"
+        "304":
+          $ref: "#/components/responses/notModified"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/plannedDowntime"
+        default:
+          $ref: "#/components/responses/internalError"
+
+    put:
+      operationId: projectPictureUpdate
+      summary: Set a picture of a project.
+      description: |
+        Replaces a picture of a project. The body is the encoded image. The server recognizes its format from
+        the bytes, whatever `Content-Type` says, and accepts a still WebP or a JPEG that decodes whole:
+
+        - a `logo` is a square of 1 to 512 pixels, 256 KiB at most;
+        - a `background` is exactly 16:9, 16 to 1280 pixels wide, 512 KiB at most.
+
+        It refuses any other picture with 422, naming the rule it broke, and a body past the picture's byte cap
+        with 400. The write moves the project's `editedAt`, and the picture does not count in the project's
+        stored bytes.
+      tags: [project]
+      parameters:
+        - $ref: "#/components/parameters/parentProjectID"
+        - $ref: "#/components/parameters/projectPicture"
+      requestBody:
+        required: true
+        content:
+          image/webp:
+            schema:
+              type: string
+              contentMediaType: image/webp
+          image/jpeg:
+            schema:
+              type: string
+              contentMediaType: image/jpeg
+      responses:
+        "200":
+          $ref: "#/components/responses/project"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "413":
+          $ref: "#/components/responses/contentTooLarge"
+        "422":
+          $ref: "#/components/responses/pictureRefused"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/plannedDowntime"
+        default:
+          $ref: "#/components/responses/internalError"
+
+    delete:
+      operationId: projectPictureDelete
+      summary: Remove a picture of a project.
+      description: |
+        Removes a picture of a project, and returns the project. A project without the picture keeps none. The
+        removal moves the project's `editedAt`.
+      tags: [project]
+      parameters:
+        - $ref: "#/components/parameters/parentProjectID"
+        - $ref: "#/components/parameters/projectPicture"
       responses:
         "200":
           $ref: "#/components/responses/project"
@@ -1513,11 +1626,57 @@ components:
             $ref: "#/components/schemas/project"
 
     projectList:
-      description: A page of projects, newest first, with their total.
+      description: A page of projects, most recently edited first, with their total.
       content:
         application/json:
           schema:
             $ref: "#/components/schemas/projectPage"
+
+    picture:
+      description: The encoded picture, as its owner sent it.
+      headers:
+        ETag:
+          description: The strong validator of the picture's version.
+          schema:
+            type: string
+            examples: ['"1793780130123456"']
+        Last-Modified:
+          description: When the picture last changed, to the second.
+          schema:
+            type: string
+            examples: ["Wed, 04 Nov 2026 08:15:30 GMT"]
+        Cache-Control:
+          description: Always `no-cache`, so a cache revalidates the picture on every use.
+          schema:
+            type: string
+            const: no-cache
+        X-Content-Type-Options:
+          description: Always `nosniff`, so a browser keeps the stored media type.
+          schema:
+            type: string
+            const: nosniff
+      content:
+        image/webp:
+          schema:
+            type: string
+            contentMediaType: image/webp
+        image/jpeg:
+          schema:
+            type: string
+            contentMediaType: image/jpeg
+
+    notModified:
+      description: The picture still has the version the request names. The response has no body.
+      headers:
+        ETag:
+          description: The strong validator of the picture's version.
+          schema:
+            type: string
+        Cache-Control:
+          description: Always `no-cache`.
+          schema:
+            type: string
+            const: no-cache
 
     projectComposer:
       description: A new project with its required layers.
@@ -1717,8 +1876,18 @@ components:
 
     notFound:
       description: |
-        The caller owns no such project, the project holds no such beat, scene, layer or cell, or genai holds
-        no such generation for the caller.
+        The caller owns no such project, the project holds no such beat, scene, layer, cell or picture, or genai
+        holds no such generation for the caller.
+
+    contentTooLarge:
+      description: The body is over the limit of a route that writes one item, 4 MiB by default.
+
+    pictureRefused:
+      description: The picture breaks the contract, as the problem's `reason` tag names.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/pictureRefusedProblem"
 
     projectFull:
       description: |
@@ -1785,7 +1954,7 @@ components:
               value: |
                 id: project:1
                 event: project
-                data: {"id":"00000000-0000-0000-0000-000000000001","title":"Les Heures claires","premise":"Marie attend.","language":"fr","createdAt":"2021-01-01T00:00:00Z","updatedAt":"2021-01-02T00:00:00Z"}
+                data: {"id":"00000000-0000-0000-0000-000000000001","title":"Les Heures claires","premise":"Marie attend.","language":"fr","createdAt":"2021-01-01T00:00:00Z","updatedAt":"2021-01-02T00:00:00Z","editedAt":"2021-01-02T00:00:00Z"}
 
                 id: beats:1
                 event: beat
@@ -1970,10 +2139,18 @@ components:
       enum: [en, fr]
       examples: [fr]
 
+    projectPicture:
+      type: string
+      description: |
+        A picture a project may hold: `logo`, a square of 1 to 512 pixels, or `background`, exactly 16:9 and 16
+        to 1280 pixels wide.
+      enum: [logo, background]
+      examples: [logo]
+
     project:
       type: object
       description: One narrative, written in one language, that its owner composes scene by scene.
-      required: [id, title, premise, language, createdAt, updatedAt]
+      required: [id, title, premise, language, createdAt, updatedAt, editedAt]
       additionalProperties: false
       properties:
         id:
@@ -1995,14 +2172,35 @@ components:
           examples: ["2021-01-01T00:00:00Z"]
         updatedAt:
           type: string
-          description: When the project was last written.
+          description: When the project's own fields, its title, premise and language, last changed.
           format: date-time
           examples: ["2021-01-02T00:00:00Z"]
+        editedAt:
+          type: string
+          description: |
+            When anything in the project last changed: its own fields, its beats, scenes, layers, cells, recaps
+            or pictures. Lists order projects by it.
+          format: date-time
+          examples: ["2021-01-03T00:00:00Z"]
+        logoVersion:
+          type: string
+          description: |
+            When the logo last changed. Absent while the project has no logo. Picture URLs carry it, so a cache
+            keeps each version for good.
+          format: date-time
+          examples: ["2026-11-04T08:15:30.123456Z"]
+        backgroundVersion:
+          type: string
+          description: |
+            When the background last changed. Absent while the project has no background. Picture URLs carry it,
+            so a cache keeps each version for good.
+          format: date-time
+          examples: ["2026-11-04T08:15:30.123456Z"]
 
     projectComposer:
       type: object
       description: A new project with the layers it starts with, in order.
-      required: [id, title, premise, language, createdAt, updatedAt, layers]
+      required: [id, title, premise, language, createdAt, updatedAt, editedAt, layers]
       additionalProperties: false
       properties:
         id:
@@ -2017,6 +2215,8 @@ components:
           $ref: "#/components/schemas/project/properties/createdAt"
         updatedAt:
           $ref: "#/components/schemas/project/properties/updatedAt"
+        editedAt:
+          $ref: "#/components/schemas/project/properties/editedAt"
         layers:
           type: array
           description: The required layers of the project, one of each kind, in order.
@@ -2025,7 +2225,7 @@ components:
 
     projectPage:
       type: object
-      description: A page of the caller's projects, newest first.
+      description: A page of the caller's projects, most recently edited first.
       required: [projects, total]
       additionalProperties: false
       properties:
@@ -3412,6 +3612,38 @@ components:
               enum: [projectBytes, projects]
               examples: [projectBytes]
 
+    pictureRefusedProblem:
+      type: object
+      description: An RFC 9457 problem details body whose `reason` tag names the rule a refused picture broke.
+      required: [type, title, status, tags]
+      additionalProperties: false
+      properties:
+        type:
+          type: string
+          description: The problem type; about:blank makes the title the HTTP status text.
+          const: about:blank
+        title:
+          type: string
+          description: The HTTP status text.
+          examples: [Unprocessable Entity]
+        status:
+          type: integer
+          description: The HTTP status code.
+          const: 422
+        tags:
+          type: object
+          description: Public details about the failure. Clients ignore tags they do not know.
+          required: [reason]
+          additionalProperties: true
+          properties:
+            reason:
+              type: string
+              description: |
+                The rule the picture broke: `format` for bytes that are neither a still WebP nor a JPEG, or do not
+                decode whole; `ratio` for a picture off its aspect ratio; `dimensions` for a width under 1 or over
+                the picture's widest.
+              enum: [format, ratio, dimensions]
+
     plannedDowntimeProblem:
       type: object
       description: |
@@ -3576,10 +3808,18 @@ components:
     parentProjectID:
       name: projectID
       in: query
-      description: The project that holds the beats, scenes, layers or cells.
+      description: The project that holds the beats, scenes, layers, cells or picture.
       required: true
       schema:
         $ref: "#/components/schemas/projectID"
+
+    projectPicture:
+      name: picture
+      in: query
+      description: The picture to act on.
+      required: true
+      schema:
+        $ref: "#/components/schemas/projectPicture"
 
     manuscriptLayerID:
       name: layerID
