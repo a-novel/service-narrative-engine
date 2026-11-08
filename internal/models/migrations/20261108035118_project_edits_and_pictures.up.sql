@@ -1,16 +1,13 @@
--- edited_at is when anything in the project last changed: its own fields, its beats, scenes, layers and cells,
--- their recaps and its pictures. Every write locks the project, and the lock stamps it, so a list orders the
--- projects by their last edit. updated_at keeps the time the project's own fields last changed.
+-- edited_at is when the project's content last changed: its own fields, its beats, scenes, layers and cells, and
+-- their recaps. Every content write locks the project, and the lock stamps it, so a list orders the projects by
+-- their last edit. Pictures are cosmetic, so their writes leave edited_at as it was. updated_at keeps the time
+-- the project's own fields last changed.
 --
 -- The backfill takes the latest updated_at of the project and of its rows, and the index replaces the one
 -- ordered by ID. No platform creates projects before this release, so the table is small enough to backfill
 -- and index in plain statements.
 ALTER TABLE projects
-ADD COLUMN edited_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
-/* When the logo last changed, null without a logo. Picture URLs carry it as the logo's version. */
-ADD COLUMN logo_updated_at timestamp with time zone,
-/* When the background last changed, null without a background. Picture URLs carry it as its version. */
-ADD COLUMN background_updated_at timestamp with time zone;
+ADD COLUMN edited_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
 UPDATE projects
 SET
@@ -58,8 +55,8 @@ CREATE INDEX projects_owner_id_edited_at_idx ON projects (owner_id, edited_at DE
 -- The pictures a project may hold, one of each.
 CREATE TYPE project_picture AS ENUM('logo', 'background');
 
--- The bytes stay out of the projects row, which every project read selects whole, so a list never reads them.
--- The versions stay in the projects row, which a picture write updates in the statement that writes the bytes.
+-- A picture keeps its bytes and its version in its own row, so a picture write never writes the projects row.
+-- A project read joins each picture's version through the primary key and never selects the bytes.
 CREATE TABLE project_pictures (
   project_id uuid NOT NULL CONSTRAINT project_pictures_project_id_fkey REFERENCES projects (id) ON DELETE CASCADE,
   picture project_picture NOT NULL,
@@ -67,6 +64,10 @@ CREATE TABLE project_pictures (
   data bytea NOT NULL,
   /* The media type the picture is encoded in. */
   media_type text NOT NULL CONSTRAINT project_pictures_media_type_check CHECK (media_type IN ('image/webp', 'image/jpeg')),
+  /* When the picture last changed. Picture URLs carry it as the picture's version. */
+  updated_at timestamp with time zone NOT NULL,
+  -- One picture of each kind per project: a logo and a background may coexist. A new picture replaces the
+  -- stored one of its kind through this key.
   PRIMARY KEY (project_id, picture),
   -- A logo holds 256 KiB at most, a background 512 KiB.
   CONSTRAINT project_pictures_data_check CHECK (

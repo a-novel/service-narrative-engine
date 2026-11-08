@@ -52,6 +52,34 @@ The golib [`transaction` package](https://pkg.go.dev/github.com/a-novel-kit/goli
 
 Unit-test a service that takes a transactor with `transactiontest.NewTransactor`, which runs the callback inline. `NewFailingTransactor` covers the path where the transaction never opens: asserting that no dependency is reached proves the writes sit inside the transaction. A test that needs a real rollback needs a real database. Use `postgrestest.RunDBTest` for it, since the passthrough transaction of `postgrestest.RunTransactionalTest` cannot tell a working transactor from a broken one.
 
+## Project lock
+
+Every write to a project's content takes the project lock with `lockOwnedProject` before its first write, in the same transaction. The content is the project's own fields, its beats, scenes, layers and cells, and their recaps. The lock runs the project's writes one at a time and stamps the project's `edited_at`, which orders the project list. A write that fails later rolls the stamp back with it.
+
+```go
+err := service.transactor.WithinTx(ctx, func(ctx context.Context) error {
+	err := lockOwnedProject(ctx, service.daoLock, projectOwnershipOpts{
+		projectID: request.ProjectID,
+		ownerID:   request.OwnerID,
+	})
+	if err != nil {
+		return fmt.Errorf("lock project: %w", err)
+	}
+
+	// the writes, on this ctx
+})
+```
+
+Four services write without the project lock:
+
+| Service                                        | Reason                                                                 |
+| ---------------------------------------------- | ---------------------------------------------------------------------- |
+| `ProjectCreate`                                | It creates the project, stamped at creation, with its required layers. |
+| `ProjectDelete`                                | It removes the project.                                                |
+| `ProjectPictureUpdate`, `ProjectPictureDelete` | A picture is cosmetic, so its write leaves `edited_at` as it was.      |
+
+`TestProjectWriteLock` in `internal/core/projectWriteLock_test.go` enforces the rule. It fails when the `Exec` method of a service builds a DAO request that inserts, updates, upserts, deletes or moves before it calls `lockOwnedProject`. An exemption goes in its `projectWriteLockExempt` map, with its reason.
+
 ---
 
 ## Code license

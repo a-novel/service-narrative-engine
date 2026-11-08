@@ -59,7 +59,7 @@ export const ProjectSchema = z.object({
   createdAt: z.iso.datetime().transform((value) => new Date(value)),
   /** When the project's own fields, its title, premise and language, last changed. */
   updatedAt: z.iso.datetime().transform((value) => new Date(value)),
-  /** When anything in the project last changed. {@link projectList} orders projects by it. */
+  /** When the project's content last changed, its pictures aside. {@link projectList} orders projects by it. */
   editedAt: z.iso.datetime().transform((value) => new Date(value)),
   /**
    * When the logo last changed, absent while the project has no logo. A picture URL that carries it names one
@@ -253,10 +253,11 @@ export const ProjectPictureDeleteRequestSchema = z.object({
 export type ProjectPictureDeleteRequest = z.infer<typeof ProjectPictureDeleteRequestSchema>;
 
 /**
- * Replaces a picture of a project with `body`, an encoded still WebP or JPEG, and returns the project. The server
- * reads the format from the bytes and checks the picture against {@link PROJECT_PICTURE_RULES}. Throws on HTTP 422,
- * with a {@link PictureRefusal} in the error's `tags.reason`, for a picture it refuses, on 400 past the picture's
- * `maxBytes`, and on 404 when the caller owns no such project.
+ * Replaces a picture of a project with `body`, an encoded still WebP or JPEG, and returns the project. A picture is
+ * cosmetic, so the project keeps its `editedAt`. The server reads the format from the bytes and checks the picture
+ * against {@link PROJECT_PICTURE_RULES}. Throws on HTTP 422, with a {@link PictureRefusal} in the error's
+ * `tags.reason`, for a picture it refuses, on 400 past the picture's `maxBytes`, and on 404 when the caller owns no
+ * such project.
  */
 export async function projectPictureUpdate(
   api: NarrativeEngineApi,
@@ -289,8 +290,8 @@ export async function projectPictureGet(
 }
 
 /**
- * Removes a picture of a project, and returns the project. A project without the picture keeps none. Throws on HTTP
- * 404 when the caller owns no such project.
+ * Removes a picture of a project, and returns the project, which keeps its `editedAt`. A project without the picture
+ * keeps none. Throws on HTTP 404 when the caller owns no such project.
  */
 export async function projectPictureDelete(
   api: NarrativeEngineApi,

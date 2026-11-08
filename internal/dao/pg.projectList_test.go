@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
 	"github.com/a-novel-kit/golib/postgres/postgrestest"
@@ -31,6 +32,22 @@ func TestPgProjectList(t *testing.T) {
 	second := project("00000000-0000-0000-0000-000000000003", ownerID, updatedAt)
 	third := project("00000000-0000-0000-0000-000000000004", ownerID, updatedAt)
 	foreign := project("00000000-0000-0000-0000-000000000002", otherOwnerID, now)
+
+	// The first project holds both pictures, at distinct versions, and the third a background alone.
+	first.LogoUpdatedAt = lo.ToPtr(now)
+	first.BackgroundUpdatedAt = lo.ToPtr(updatedAt)
+	third.BackgroundUpdatedAt = lo.ToPtr(createdAt)
+
+	picture := func(project *dao.Project, name string, version time.Time) *dao.ProjectPicture {
+		return &dao.ProjectPicture{
+			ProjectID: project.ID, Picture: name, Data: []byte(name), MediaType: "image/webp", UpdatedAt: version,
+		}
+	}
+	pictures := []*dao.ProjectPicture{
+		picture(first, "logo", now),
+		picture(first, "background", updatedAt),
+		picture(third, "background", createdAt),
+	}
 
 	row := func(project *dao.Project) *dao.ProjectListRow {
 		return &dao.ProjectListRow{Project: *project, Total: 3}
@@ -74,7 +91,7 @@ func TestPgProjectList(t *testing.T) {
 			postgrestest.RunDBTest(t, configtest.PostgresPreset, migrations.Migrations, func(ctx context.Context, t *testing.T) {
 				t.Helper()
 
-				insertFixtures(ctx, t, fixtures{projects: []*dao.Project{first, foreign, second, third}})
+				insertFixtures(ctx, t, fixtures{projects: []*dao.Project{first, foreign, second, third}, pictures: pictures})
 
 				result, err := daoProjectList.Exec(ctx, testCase.request)
 				require.ErrorIs(t, err, testCase.expectErr)

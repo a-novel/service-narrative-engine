@@ -28,8 +28,8 @@ type Project struct {
 	CreatedAt time.Time
 	// UpdatedAt is when the project's own fields last changed: its title, premise or language.
 	UpdatedAt time.Time
-	// EditedAt is when anything in the project last changed: its own fields, its beats, scenes, layers, cells,
-	// recaps or pictures.
+	// EditedAt is when the project's content last changed: its own fields, its beats, scenes, layers, cells or
+	// recaps. Its pictures are cosmetic and leave it as it was.
 	EditedAt time.Time
 
 	// LogoVersion is when the logo last changed, nil while the project has no logo. Picture URLs carry it,

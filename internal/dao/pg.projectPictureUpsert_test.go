@@ -7,7 +7,9 @@ import (
 
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun/driver/pgdriver"
 
+	"github.com/a-novel-kit/golib/postgres"
 	"github.com/a-novel-kit/golib/postgres/postgrestest"
 
 	"github.com/a-novel/service-narrative-engine/internal/config/configtest"
@@ -17,6 +19,9 @@ import (
 
 func TestPgProjectPictureUpsert(t *testing.T) {
 	t.Parallel()
+
+	// pgUniqueViolation is the SQLSTATE of a write that breaks a unique key.
+	const pgUniqueViolation = "23505"
 
 	// withVersions returns the test project with the versions of its logo and its background.
 	withVersions := func(logo, background *dao.ProjectPicture) *dao.Project {
@@ -57,6 +62,8 @@ func TestPgProjectPictureUpsert(t *testing.T) {
 	testCases := []struct {
 		name string
 
+		// stored is a picture written before the request.
+		stored  *dao.ProjectPictureUpsertRequest
 		request *dao.ProjectPictureUpsertRequest
 
 		expect *dao.Project
@@ -79,6 +86,15 @@ func TestPgProjectPictureUpsert(t *testing.T) {
 
 			expect:         withVersions(storedLogo, newBackground),
 			expectPictures: [2]*dao.ProjectPicture{storedLogo, newBackground},
+		},
+		{
+			name: "Success/ReplaceBesideBackground",
+
+			stored:  request(newBackground),
+			request: request(newLogo),
+
+			expect:         withVersions(newLogo, newBackground),
+			expectPictures: [2]*dao.ProjectPicture{newLogo, newBackground},
 		},
 		{
 			name: "Error/ProjectNotFound",
@@ -124,6 +140,11 @@ func TestPgProjectPictureUpsert(t *testing.T) {
 
 				insertFixtures(ctx, t, pictureFixtures())
 
+				if testCase.stored != nil {
+					_, err := daoProjectPictureUpsert.Exec(ctx, testCase.stored)
+					require.NoError(t, err)
+				}
+
 				result, err := daoProjectPictureUpsert.Exec(ctx, testCase.request)
 				require.Equal(t, testCase.expectErr, err != nil, err)
 				require.Equal(t, testCase.expect, result)
@@ -131,4 +152,30 @@ func TestPgProjectPictureUpsert(t *testing.T) {
 			})
 		})
 	}
+
+	// The key holds one picture of each kind per project, and the upsert replaces a picture through it. A plain
+	// insert of a second logo breaks it.
+	t.Run("Error/DuplicatePicture", func(t *testing.T) {
+		t.Parallel()
+
+		postgrestest.RunDBTest(t, configtest.PostgresPreset, migrations.Migrations, func(ctx context.Context, t *testing.T) {
+			t.Helper()
+
+			insertFixtures(ctx, t, pictureFixtures())
+
+			db, err := postgres.GetContext(ctx)
+			require.NoError(t, err)
+
+			_, err = db.NewInsert().Model(&dao.ProjectPicture{
+				ProjectID: projectID, Picture: "logo", Data: newLogo.Data, MediaType: newLogo.MediaType, UpdatedAt: now,
+			}).Exec(ctx)
+
+			var pgErr pgdriver.Error
+
+			require.ErrorAs(t, err, &pgErr)
+			require.Equal(t, pgUniqueViolation, pgErr.Field('C'))
+			require.Equal(t, "project_pictures_pkey", pgErr.Field('n'))
+			require.Equal(t, [2]*dao.ProjectPicture{storedLogo, nil}, projectPictures(ctx, t))
+		})
+	})
 }

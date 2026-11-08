@@ -11,15 +11,13 @@ import (
 
 	"github.com/a-novel-kit/golib/otel"
 	"github.com/a-novel-kit/golib/picture"
-	"github.com/a-novel-kit/golib/transaction"
 
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// ProjectPictureUpdateDaoLock locks the project its owner names, so the picture write stamps the project's
-// edit.
-type ProjectPictureUpdateDaoLock interface {
-	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
+// ProjectPictureUpdateDaoOwner checks that the user owns the project.
+type ProjectPictureUpdateDaoOwner interface {
+	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
 }
 
 // ProjectPictureUpdateDao writes the picture and its version.
@@ -41,18 +39,15 @@ type ProjectPictureUpdateRequest struct {
 
 // ProjectPictureUpdate replaces a picture of a project. It accepts a still WebP or a JPEG that decodes whole
 // into the picture's ratio, a square logo of 1 to 512 pixels or a 16:9 background 16 to 1280 pixels wide,
-// and refuses any other with a [picture.RefusedError]. The picture does not count in the project's stored
-// bytes.
+// and refuses any other with a [picture.RefusedError]. A picture is cosmetic: it does not count in the
+// project's stored bytes, and its write leaves the project's EditedAt as it was.
 type ProjectPictureUpdate struct {
-	daoLock    ProjectPictureUpdateDaoLock
-	dao        ProjectPictureUpdateDao
-	transactor transaction.Transactor
+	daoOwner ProjectPictureUpdateDaoOwner
+	dao      ProjectPictureUpdateDao
 }
 
-func NewProjectPictureUpdate(
-	daoLock ProjectPictureUpdateDaoLock, dao ProjectPictureUpdateDao, transactor transaction.Transactor,
-) *ProjectPictureUpdate {
-	return &ProjectPictureUpdate{daoLock: daoLock, dao: dao, transactor: transactor}
+func NewProjectPictureUpdate(daoOwner ProjectPictureUpdateDaoOwner, dao ProjectPictureUpdateDao) *ProjectPictureUpdate {
+	return &ProjectPictureUpdate{daoOwner: daoOwner, dao: dao}
 }
 
 func (service *ProjectPictureUpdate) Exec(ctx context.Context, request *ProjectPictureUpdateRequest) (*Project, error) {
@@ -70,41 +65,29 @@ func (service *ProjectPictureUpdate) Exec(ctx context.Context, request *ProjectP
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	// The picture decodes before the transaction, so the project's lock never waits on a decoder.
 	mediaType, err := picture.Check(ctx, request.Data, projectPictureContracts[request.Picture].rule)
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("check picture: %w", err))
 	}
 
-	var project *Project
-
-	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
-		err := lockOwnedProject(ctx, service.daoLock, projectOwnershipOpts{
-			projectID: request.ProjectID,
-			ownerID:   request.OwnerID,
-		})
-		if err != nil {
-			return fmt.Errorf("lock project: %w", err)
-		}
-
-		entity, err := service.dao.Exec(ctx, &dao.ProjectPictureUpsertRequest{
-			ProjectID: request.ProjectID,
-			Picture:   request.Picture,
-			Data:      request.Data,
-			MediaType: mediaType,
-			Now:       time.Now(),
-		})
-		if err != nil {
-			return fmt.Errorf("upsert picture: %w", err)
-		}
-
-		project = newProject(entity)
-
-		return nil
+	err = checkProjectOwnership(ctx, service.daoOwner, projectOwnershipOpts{
+		projectID: request.ProjectID,
+		ownerID:   request.OwnerID,
 	})
 	if err != nil {
-		return nil, otel.ReportError(span, fmt.Errorf("run transaction: %w", err))
+		return nil, otel.ReportError(span, fmt.Errorf("check owner: %w", err))
 	}
 
-	return project, nil
+	entity, err := service.dao.Exec(ctx, &dao.ProjectPictureUpsertRequest{
+		ProjectID: request.ProjectID,
+		Picture:   request.Picture,
+		Data:      request.Data,
+		MediaType: mediaType,
+		Now:       time.Now(),
+	})
+	if err != nil {
+		return nil, otel.ReportError(span, fmt.Errorf("upsert picture: %w", err))
+	}
+
+	return newProject(entity), nil
 }

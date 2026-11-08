@@ -110,6 +110,8 @@ type projectLockDao interface {
 //
 // The stamp is the instant the write asks for the lock. The write stamps its own records once it holds the
 // lock, so a write that waited still stamps them later than the write before it did.
+//
+// Every write to the project's content calls it before its first write, as TestProjectWriteLock checks.
 func lockOwnedProject(ctx context.Context, daoLock projectLockDao, opts projectOwnershipOpts) error {
 	ctx, span := otel.Tracer().Start(ctx, "core.lockOwnedProject")
 	defer span.End()

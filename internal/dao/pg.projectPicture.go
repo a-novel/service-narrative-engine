@@ -20,7 +20,6 @@ type ProjectPicture struct {
 	// MediaType is the media type the picture is encoded in, image/webp or image/jpeg.
 	MediaType string `bun:"media_type"`
 
-	// UpdatedAt is when the picture last changed, from the project's version column of the picture. A read
-	// fills it, and an insert of the model leaves it out.
-	UpdatedAt time.Time `bun:"updated_at,scanonly"`
+	// UpdatedAt is when the picture last changed. Picture URLs carry it as the picture's version.
+	UpdatedAt time.Time `bun:"updated_at"`
 }

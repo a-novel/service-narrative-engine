@@ -19,7 +19,8 @@ func TestPgProjectSelect(t *testing.T) {
 	testCases := []struct {
 		name string
 
-		request *dao.ProjectSelectRequest
+		fixtures fixtures
+		request  *dao.ProjectSelectRequest
 
 		expect    *dao.Project
 		expectErr error
@@ -27,14 +28,24 @@ func TestPgProjectSelect(t *testing.T) {
 		{
 			name: "Success",
 
-			request: &dao.ProjectSelectRequest{ID: projectID},
+			fixtures: composerFixtures(),
+			request:  &dao.ProjectSelectRequest{ID: projectID},
 
 			expect: composerFixtures().projects[0],
 		},
 		{
+			name: "Success/Pictures",
+
+			fixtures: twoPictureFixtures(),
+			request:  &dao.ProjectSelectRequest{ID: projectID},
+
+			expect: twoPictureFixtures().projects[0],
+		},
+		{
 			name: "Error/NotFound",
 
-			request: &dao.ProjectSelectRequest{ID: absentID},
+			fixtures: twoPictureFixtures(),
+			request:  &dao.ProjectSelectRequest{ID: absentID},
 
 			expectErr: dao.ErrProjectSelectNotFound,
 		},
@@ -49,7 +60,7 @@ func TestPgProjectSelect(t *testing.T) {
 			postgrestest.RunDBTest(t, configtest.PostgresPreset, migrations.Migrations, func(ctx context.Context, t *testing.T) {
 				t.Helper()
 
-				insertFixtures(ctx, t, composerFixtures())
+				insertFixtures(ctx, t, testCase.fixtures)
 
 				result, err := daoProjectSelect.Exec(ctx, testCase.request)
 				require.ErrorIs(t, err, testCase.expectErr)

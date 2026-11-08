@@ -17,11 +17,12 @@ import (
 func TestPgProjectPictureDelete(t *testing.T) {
 	t.Parallel()
 
-	fixtures := pictureFixtures()
-	storedLogo := &dao.ProjectPicture{
-		ProjectID: projectID, Picture: "logo", Data: []byte("stored logo"), MediaType: "image/webp",
-		UpdatedAt: updatedAt,
-	}
+	fixtures := twoPictureFixtures()
+	storedLogo, storedBackground := fixtures.pictures[0], fixtures.pictures[1]
+
+	// withoutLogo is the test project once its logo is gone, its background version kept.
+	withoutLogo := twoPictureFixtures().projects[0]
+	withoutLogo.LogoUpdatedAt = nil
 
 	testCases := []struct {
 		name string
@@ -38,22 +39,23 @@ func TestPgProjectPictureDelete(t *testing.T) {
 
 			request: &dao.ProjectPictureDeleteRequest{ProjectID: projectID, Picture: "logo"},
 
-			expect: composerFixtures().projects[0],
+			expect:         withoutLogo,
+			expectPictures: [2]*dao.ProjectPicture{nil, storedBackground},
 		},
 		{
 			name: "Success/NoPicture",
 
-			request: &dao.ProjectPictureDeleteRequest{ProjectID: projectID, Picture: "background"},
+			request: &dao.ProjectPictureDeleteRequest{ProjectID: otherProjectID, Picture: "logo"},
 
-			expect:         fixtures.projects[0],
-			expectPictures: [2]*dao.ProjectPicture{storedLogo, nil},
+			expect:         fixtures.projects[1],
+			expectPictures: [2]*dao.ProjectPicture{storedLogo, storedBackground},
 		},
 		{
 			name: "Error/ProjectNotFound",
 
 			request: &dao.ProjectPictureDeleteRequest{ProjectID: absentID, Picture: "logo"},
 
-			expectPictures: [2]*dao.ProjectPicture{storedLogo, nil},
+			expectPictures: [2]*dao.ProjectPicture{storedLogo, storedBackground},
 			expectErr:      sql.ErrNoRows,
 		},
 	}
@@ -67,7 +69,7 @@ func TestPgProjectPictureDelete(t *testing.T) {
 			postgrestest.RunDBTest(t, configtest.PostgresPreset, migrations.Migrations, func(ctx context.Context, t *testing.T) {
 				t.Helper()
 
-				insertFixtures(ctx, t, pictureFixtures())
+				insertFixtures(ctx, t, twoPictureFixtures())
 
 				result, err := daoProjectPictureDelete.Exec(ctx, testCase.request)
 				require.ErrorIs(t, err, testCase.expectErr)
