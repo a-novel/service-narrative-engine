@@ -3,6 +3,7 @@ package dao_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strconv"
 	"testing"
 	"time"
@@ -77,6 +78,7 @@ type storedBytes struct {
 // fixtures is the data a DAO test seeds before it runs the operation under test.
 type fixtures struct {
 	projects []*dao.Project
+	pictures []*dao.ProjectPicture
 	beats    []*dao.Beat
 	scenes   []*dao.Scene
 	layers   []*dao.Layer
@@ -91,11 +93,11 @@ func composerFixtures() fixtures {
 		projects: []*dao.Project{
 			{
 				ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Premise: "Marie attend.",
-				Language: "fr", CreatedAt: createdAt, UpdatedAt: updatedAt,
+				Language: "fr", CreatedAt: createdAt, UpdatedAt: updatedAt, EditedAt: updatedAt,
 			},
 			{
 				ID: otherProjectID, OwnerID: otherOwnerID, Title: "Other", Language: "en",
-				CreatedAt: createdAt, UpdatedAt: updatedAt,
+				CreatedAt: createdAt, UpdatedAt: updatedAt, EditedAt: updatedAt,
 			},
 		},
 		beats: []*dao.Beat{
@@ -139,6 +141,17 @@ func composerFixtures() fixtures {
 			},
 		},
 	}
+}
+
+// pictureFixtures returns the composer fixtures with a logo on the test project.
+func pictureFixtures() fixtures {
+	data := composerFixtures()
+	data.projects[0].LogoUpdatedAt = lo.ToPtr(updatedAt)
+	data.pictures = []*dao.ProjectPicture{
+		{ProjectID: projectID, Picture: "logo", Data: []byte("stored logo"), MediaType: "image/webp"},
+	}
+
+	return data
 }
 
 // fillerID derives a stable ID from a filler row's position.
@@ -194,6 +207,11 @@ func insertFixtures(ctx context.Context, t *testing.T, data fixtures) {
 
 	if len(data.projects) > 0 {
 		_, err = db.NewInsert().Model(&data.projects).Exec(ctx)
+		require.NoError(t, err)
+	}
+
+	if len(data.pictures) > 0 {
+		_, err = db.NewInsert().Model(&data.pictures).Exec(ctx)
 		require.NoError(t, err)
 	}
 
@@ -346,4 +364,26 @@ func listCells(ctx context.Context, t *testing.T, project uuid.UUID) []*dao.Cell
 	require.NoError(t, err)
 
 	return lo.Map(rows, func(row *dao.CellListRow, _ int) *dao.Cell { return &row.Cell })
+}
+
+// projectPictures reads the logo and the background of the test project, nil for each it lacks.
+func projectPictures(ctx context.Context, t *testing.T) [2]*dao.ProjectPicture {
+	t.Helper()
+
+	var pictures [2]*dao.ProjectPicture
+
+	for i, name := range []string{"logo", "background"} {
+		request := &dao.ProjectPictureSelectRequest{ProjectID: projectID, Picture: name}
+
+		picture, err := dao.NewPgProjectPictureSelect().Exec(ctx, request)
+		if errors.Is(err, dao.ErrProjectPictureSelectNotFound) {
+			continue
+		}
+
+		require.NoError(t, err)
+
+		pictures[i] = picture
+	}
+
+	return pictures
 }

@@ -28,7 +28,7 @@ type ProjectInsertRequest struct {
 	// Language is the language the project is written in: en or fr.
 	Language string
 
-	// Now is the instant stored as both created_at and updated_at.
+	// Now is the instant stored as created_at, updated_at and edited_at.
 	Now time.Time
 }
 

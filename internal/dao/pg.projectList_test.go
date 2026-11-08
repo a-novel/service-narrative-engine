@@ -3,6 +3,7 @@ package dao_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -17,17 +18,19 @@ import (
 func TestPgProjectList(t *testing.T) {
 	t.Parallel()
 
-	project := func(id string, owner uuid.UUID) *dao.Project {
+	project := func(id string, owner uuid.UUID, editedAt time.Time) *dao.Project {
 		return &dao.Project{
 			ID: uuid.MustParse(id), OwnerID: owner, Title: "Project " + id[len(id)-1:], Language: "en",
-			CreatedAt: createdAt, UpdatedAt: updatedAt,
+			CreatedAt: createdAt, UpdatedAt: updatedAt, EditedAt: editedAt,
 		}
 	}
 
-	first := project("00000000-0000-0000-0000-000000000001", ownerID)
-	second := project("00000000-0000-0000-0000-000000000003", ownerID)
-	third := project("00000000-0000-0000-0000-000000000004", ownerID)
-	foreign := project("00000000-0000-0000-0000-000000000002", otherOwnerID)
+	// The oldest project holds the latest edit, and the two others share theirs, so the newer of them
+	// comes first.
+	first := project("00000000-0000-0000-0000-000000000001", ownerID, now)
+	second := project("00000000-0000-0000-0000-000000000003", ownerID, updatedAt)
+	third := project("00000000-0000-0000-0000-000000000004", ownerID, updatedAt)
+	foreign := project("00000000-0000-0000-0000-000000000002", otherOwnerID, now)
 
 	row := func(project *dao.Project) *dao.ProjectListRow {
 		return &dao.ProjectListRow{Project: *project, Total: 3}
@@ -46,14 +49,14 @@ func TestPgProjectList(t *testing.T) {
 
 			request: &dao.ProjectListRequest{OwnerID: ownerID, Limit: 10},
 
-			expect: []*dao.ProjectListRow{row(third), row(second), row(first)},
+			expect: []*dao.ProjectListRow{row(first), row(third), row(second)},
 		},
 		{
 			name: "Success/Page",
 
 			request: &dao.ProjectListRequest{OwnerID: ownerID, Limit: 1, Offset: 1},
 
-			expect: []*dao.ProjectListRow{row(second)},
+			expect: []*dao.ProjectListRow{row(third)},
 		},
 		{
 			name: "Success/NoProject",

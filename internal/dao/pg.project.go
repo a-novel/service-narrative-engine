@@ -23,5 +23,14 @@ type Project struct {
 	Language string `bun:"language"`
 
 	CreatedAt time.Time `bun:"created_at"`
+	// UpdatedAt is when the project's own fields last changed.
 	UpdatedAt time.Time `bun:"updated_at"`
+	// EditedAt is when anything in the project last changed: the instant the write that changed it locked
+	// the project.
+	EditedAt time.Time `bun:"edited_at"`
+
+	// LogoUpdatedAt is when the logo last changed, nil while the project has no logo.
+	LogoUpdatedAt *time.Time `bun:"logo_updated_at"`
+	// BackgroundUpdatedAt is when the background last changed, nil while the project has no background.
+	BackgroundUpdatedAt *time.Time `bun:"background_updated_at"`
 }

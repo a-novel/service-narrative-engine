@@ -44,6 +44,7 @@ func TestPgProjectInsert(t *testing.T) {
 				Language:  "fr",
 				CreatedAt: now,
 				UpdatedAt: now,
+				EditedAt:  now,
 			},
 		},
 	}

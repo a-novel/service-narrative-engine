@@ -22,7 +22,7 @@ type ProjectListRequest struct {
 
 	// Limit caps the projects in the page.
 	Limit int
-	// Offset is how many projects newest first come before the page.
+	// Offset is how many projects, most recently edited first, come before the page.
 	Offset int
 }
 
@@ -34,8 +34,8 @@ type ProjectListRow struct {
 	Total int `bun:"total"`
 }
 
-// PgProjectList reads a page of the projects an owner holds, newest first. Each row carries the
-// total, and a page past the end comes back empty.
+// PgProjectList reads a page of the projects an owner holds, most recently edited first. Each row carries
+// the total, and a page past the end comes back empty.
 type PgProjectList struct{}
 
 func NewPgProjectList() *PgProjectList {
