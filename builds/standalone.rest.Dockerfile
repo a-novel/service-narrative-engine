@@ -1,6 +1,6 @@
 # Runs the migrations, then the REST server, in one image for local development and tests.
 # A production deployment runs the rest.Dockerfile image after the migrations job instead.
-FROM docker.io/library/golang:1.27.3-alpine AS builder
+FROM docker.io/library/golang:1.27.4-alpine AS builder
 
 ENV CGO_ENABLED=0
 
