@@ -44,11 +44,17 @@ type ProjectCreateRequest struct {
 	OwnerID uuid.UUID `validate:"required"`
 
 	// Title names the narrative.
-	Title string `validate:"required,notblank,max=200"`
+	Title string `validate:"required,notblank,max=80"`
 	// Premise says what the narrative is about, in a few sentences.
 	Premise string `validate:"max=20000"`
 	// Language is the language the project is written in, one of [ProjectLanguages].
 	Language string `validate:"required,language"`
+	// Tags are the author's custom labels, in order, none when nil. A tag holds 1 to 24 runes and no
+	// whitespace at either end, and appears once.
+	Tags []string `validate:"max=10,unique,dive,required,max=24,projectlabel"`
+	// Genres are the genres the author names, in order, none when nil. A genre holds 1 to 24 runes and no
+	// whitespace at either end, and appears once.
+	Genres []string `validate:"max=10,unique,dive,required,max=24,projectlabel"`
 }
 
 // ProjectCreate creates a project with its required layers, in one transaction. It creates nothing when the
@@ -124,6 +130,8 @@ func (service *ProjectCreate) Exec(ctx context.Context, request *ProjectCreateRe
 			Title:    request.Title,
 			Premise:  request.Premise,
 			Language: request.Language,
+			Tags:     lo.CoalesceSliceOrEmpty(request.Tags),
+			Genres:   lo.CoalesceSliceOrEmpty(request.Genres),
 			Now:      now,
 		})
 		if err != nil {

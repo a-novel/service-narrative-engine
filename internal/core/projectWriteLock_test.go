@@ -15,10 +15,10 @@ import (
 // projectWriteLockExempt maps each service that writes a project's content without the project lock to the
 // reason it may.
 var projectWriteLockExempt = map[string]string{
-	"ProjectCreate":        "it creates the project, stamped at creation, with its required layers",
-	"ProjectDelete":        "it removes the project",
-	"ProjectPictureUpdate": "a picture is cosmetic and leaves the project's edit date",
-	"ProjectPictureDelete": "a picture is cosmetic and leaves the project's edit date",
+	"ProjectCreate":     "it creates the project, stamped at creation, with its required layers",
+	"ProjectDelete":     "it removes the project",
+	"ProjectLogoUpdate": "a logo is cosmetic and leaves the project's edit date",
+	"ProjectLogoDelete": "a logo is cosmetic and leaves the project's edit date",
 }
 
 // projectWriteOperations end the names of the DAO requests that write a project's content, such as

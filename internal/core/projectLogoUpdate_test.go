@@ -15,21 +15,21 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-func TestProjectPictureUpdate(t *testing.T) {
+func TestProjectLogoUpdate(t *testing.T) {
 	t.Parallel()
 
 	errFoo := errors.New("foo")
 
 	logo := newJPEG(64, 64)
 
-	request := func(name string, data []byte) *core.ProjectPictureUpdateRequest {
-		return &core.ProjectPictureUpdateRequest{OwnerID: ownerID, ProjectID: projectID, Picture: name, Data: data}
+	request := func(data []byte) *core.ProjectLogoUpdateRequest {
+		return &core.ProjectLogoUpdateRequest{OwnerID: ownerID, ProjectID: projectID, Data: data}
 	}
 
 	testCases := []struct {
 		name string
 
-		request *core.ProjectPictureUpdateRequest
+		request *core.ProjectLogoUpdateRequest
 
 		ownerMock *daoMock[bool]
 		// mediaType is the media type the upsert stores.
@@ -42,10 +42,21 @@ func TestProjectPictureUpdate(t *testing.T) {
 		{
 			name: "Success/Logo",
 
-			request: request(core.ProjectPictureLogo, logo),
+			request: request(logo),
 
 			ownerMock:  &daoMock[bool]{resp: true},
 			mediaType:  "image/jpeg",
+			upsertMock: &daoMock[*dao.Project]{resp: daoProject()},
+
+			expect: coreProject(),
+		},
+		{
+			name: "Success/PNG",
+
+			request: request(newPNG(64, 64)),
+
+			ownerMock:  &daoMock[bool]{resp: true},
+			mediaType:  "image/png",
 			upsertMock: &daoMock[*dao.Project]{resp: daoProject()},
 
 			expect: coreProject(),
@@ -53,7 +64,7 @@ func TestProjectPictureUpdate(t *testing.T) {
 		{
 			name: "Success/LogoWidest",
 
-			request: request(core.ProjectPictureLogo, newJPEG(512, 512)),
+			request: request(newJPEG(1024, 128)),
 
 			ownerMock:  &daoMock[bool]{resp: true},
 			mediaType:  "image/jpeg",
@@ -62,9 +73,9 @@ func TestProjectPictureUpdate(t *testing.T) {
 			expect: coreProject(),
 		},
 		{
-			name: "Success/BackgroundWidest",
+			name: "Success/LogoAnyRatio",
 
-			request: request(core.ProjectPictureBackground, newJPEG(1280, 720)),
+			request: request(newJPEG(32, 128)),
 
 			ownerMock:  &daoMock[bool]{resp: true},
 			mediaType:  "image/jpeg",
@@ -73,80 +84,48 @@ func TestProjectPictureUpdate(t *testing.T) {
 			expect: coreProject(),
 		},
 		{
-			name: "Error/LogoRatio",
+			name: "Success/LogoAnyWidth",
 
-			request: request(core.ProjectPictureLogo, newJPEG(64, 32)),
+			request: request(newJPEG(4096, 64)),
 
-			expectErr: picture.ErrRatio,
+			ownerMock:  &daoMock[bool]{resp: true},
+			mediaType:  "image/jpeg",
+			upsertMock: &daoMock[*dao.Project]{resp: daoProject()},
+
+			expect: coreProject(),
 		},
 		{
-			name: "Error/LogoDimensions",
+			name: "Error/LogoHeight",
 
-			request: request(core.ProjectPictureLogo, newJPEG(513, 513)),
-
-			expectErr: picture.ErrDimensions,
-		},
-		{
-			name: "Error/BackgroundRatio",
-
-			request: request(core.ProjectPictureBackground, logo),
-
-			expectErr: picture.ErrRatio,
-		},
-		{
-			name: "Error/BackgroundDimensions",
-
-			request: request(core.ProjectPictureBackground, newJPEG(1296, 729)),
+			request: request(newJPEG(64, 129)),
 
 			expectErr: picture.ErrDimensions,
 		},
 		{
 			name: "Error/Format",
 
-			request: request(core.ProjectPictureLogo, []byte("not an image")),
-
-			expectErr: picture.ErrFormat,
-		},
-		{
-			// A background may hold more bytes than a logo, so the check reaches the decoder.
-			name: "Error/BackgroundOverLogoBytes",
-
-			request: request(core.ProjectPictureBackground, make([]byte, core.ProjectLogoBytesMax+1)),
+			request: request([]byte("not an image")),
 
 			expectErr: picture.ErrFormat,
 		},
 		{
 			name: "Error/LogoBytes",
 
-			request: request(core.ProjectPictureLogo, make([]byte, core.ProjectLogoBytesMax+1)),
+			request: request(make([]byte, 256<<10+1)),
 
-			expectErr: core.ErrInvalidRequest,
-		},
-		{
-			name: "Error/BackgroundBytes",
-
-			request: request(core.ProjectPictureBackground, make([]byte, core.ProjectBackgroundBytesMax+1)),
-
-			expectErr: core.ErrInvalidRequest,
-		},
-		{
-			name: "Error/UnknownPicture",
-
-			request: request("banner", logo),
-
-			expectErr: core.ErrInvalidRequest,
+			expectErr: picture.ErrSize,
 		},
 		{
 			name: "Error/NoData",
 
-			request: request(core.ProjectPictureLogo, nil),
+			request: request(nil),
 
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
 			name: "Error/NotOwned",
 
-			request: request(core.ProjectPictureLogo, logo),
+			request: request(logo),
 
 			ownerMock: &daoMock[bool]{resp: false},
 
@@ -155,7 +134,7 @@ func TestProjectPictureUpdate(t *testing.T) {
 		{
 			name: "Error/Owner",
 
-			request: request(core.ProjectPictureLogo, logo),
+			request: request(logo),
 
 			ownerMock: &daoMock[bool]{err: errFoo},
 
@@ -164,7 +143,7 @@ func TestProjectPictureUpdate(t *testing.T) {
 		{
 			name: "Error/Upsert",
 
-			request: request(core.ProjectPictureLogo, logo),
+			request: request(logo),
 
 			ownerMock:  &daoMock[bool]{resp: true},
 			mediaType:  "image/jpeg",
@@ -178,8 +157,8 @@ func TestProjectPictureUpdate(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockOwner := coremocks.NewMockProjectPictureUpdateDaoOwner(t)
-			mockUpsert := coremocks.NewMockProjectPictureUpdateDao(t)
+			mockOwner := coremocks.NewMockProjectLogoUpdateDaoOwner(t)
+			mockUpsert := coremocks.NewMockProjectLogoUpdateDao(t)
 
 			if testCase.ownerMock != nil {
 				mockOwner.EXPECT().
@@ -189,15 +168,14 @@ func TestProjectPictureUpdate(t *testing.T) {
 
 			if testCase.upsertMock != nil {
 				mockUpsert.EXPECT().
-					Exec(mock.Anything, mock.MatchedBy(func(req *dao.ProjectPictureUpsertRequest) bool {
-						return req.ProjectID == projectID && req.Picture == testCase.request.Picture &&
-							bytes.Equal(req.Data, testCase.request.Data) && req.MediaType == testCase.mediaType &&
-							recent(req.Now)
+					Exec(mock.Anything, mock.MatchedBy(func(req *dao.ProjectLogoUpsertRequest) bool {
+						return req.ProjectID == projectID && bytes.Equal(req.Data, testCase.request.Data) &&
+							req.MediaType == testCase.mediaType && recent(req.Now)
 					})).
 					Return(testCase.upsertMock.resp, testCase.upsertMock.err)
 			}
 
-			service := core.NewProjectPictureUpdate(mockOwner, mockUpsert)
+			service := core.NewProjectLogoUpdate(mockOwner, mockUpsert)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)

@@ -60,20 +60,12 @@ func ValidateStreamSection(fl validator.FieldLevel) bool {
 	return slices.Contains(ProjectStreamSections, fl.Field().String())
 }
 
-// ValidateProjectPicture reports whether a string names a picture a project may hold: [ProjectPictureLogo] or
-// [ProjectPictureBackground]. The package registers it as the "projectpicture" struct tag.
-func ValidateProjectPicture(fl validator.FieldLevel) bool {
-	_, ok := projectPictureContracts[fl.Field().String()]
+// ValidateProjectLabel reports whether a tag or a genre of a project holds no whitespace at either end and no NUL,
+// which the database driver drops on write. The package registers it as the "projectlabel" struct tag.
+func ValidateProjectLabel(fl validator.FieldLevel) bool {
+	label := fl.Field().String()
 
-	return ok
-}
-
-// ValidatePictureBytes reports whether an encoded picture fits the byte cap of the picture its struct's
-// Picture field names. The package registers it as the "picturebytes" struct tag.
-func ValidatePictureBytes(fl validator.FieldLevel) bool {
-	contract, ok := projectPictureContracts[fl.Parent().FieldByName("Picture").String()]
-
-	return ok && fl.Field().Len() <= contract.maxBytes
+	return strings.TrimSpace(label) == label && !strings.ContainsRune(label, 0)
 }
 
 // ValidateUniqueCells reports whether a list of [CellsWriteItem] names each pair of a scene and a layer
@@ -108,8 +100,7 @@ func init() {
 		"targetmode":     ValidateTargetMode,
 		"scenefield":     ValidateSceneField,
 		"streamsection":  ValidateStreamSection,
-		"projectpicture": ValidateProjectPicture,
-		"picturebytes":   ValidatePictureBytes,
+		"projectlabel":   ValidateProjectLabel,
 	}
 
 	for tag, fn := range validations {

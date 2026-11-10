@@ -21,8 +21,8 @@ func TestPgProjectList(t *testing.T) {
 
 	project := func(id string, owner uuid.UUID, editedAt time.Time) *dao.Project {
 		return &dao.Project{
-			ID: uuid.MustParse(id), OwnerID: owner, Title: "Project " + id[len(id)-1:], Language: "en",
-			CreatedAt: createdAt, UpdatedAt: updatedAt, EditedAt: editedAt,
+			ID: uuid.MustParse(id), OwnerID: owner, Title: "Project " + id[len(id)-1:], Language: "en", Tags: []string{},
+			Genres: []string{}, CreatedAt: createdAt, UpdatedAt: updatedAt, EditedAt: editedAt,
 		}
 	}
 
@@ -33,21 +33,14 @@ func TestPgProjectList(t *testing.T) {
 	third := project("00000000-0000-0000-0000-000000000004", ownerID, updatedAt)
 	foreign := project("00000000-0000-0000-0000-000000000002", otherOwnerID, now)
 
-	// The first project holds both pictures, at distinct versions, and the third a background alone.
+	// The first and the third project hold logos, at distinct versions, and the second none.
 	first.LogoUpdatedAt = lo.ToPtr(now)
-	first.BackgroundUpdatedAt = lo.ToPtr(updatedAt)
-	third.BackgroundUpdatedAt = lo.ToPtr(createdAt)
+	third.LogoUpdatedAt = lo.ToPtr(createdAt)
 
-	picture := func(project *dao.Project, name string, version time.Time) *dao.ProjectPicture {
-		return &dao.ProjectPicture{
-			ProjectID: project.ID, Picture: name, Data: []byte(name), MediaType: "image/webp", UpdatedAt: version,
-		}
+	logo := func(project *dao.Project, version time.Time) *dao.ProjectLogo {
+		return &dao.ProjectLogo{ProjectID: project.ID, Data: []byte("logo"), MediaType: "image/webp", UpdatedAt: version}
 	}
-	pictures := []*dao.ProjectPicture{
-		picture(first, "logo", now),
-		picture(first, "background", updatedAt),
-		picture(third, "background", createdAt),
-	}
+	logos := []*dao.ProjectLogo{logo(first, now), logo(third, createdAt)}
 
 	row := func(project *dao.Project) *dao.ProjectListRow {
 		return &dao.ProjectListRow{Project: *project, Total: 3}
@@ -91,7 +84,7 @@ func TestPgProjectList(t *testing.T) {
 			postgrestest.RunDBTest(t, configtest.PostgresPreset, migrations.Migrations, func(ctx context.Context, t *testing.T) {
 				t.Helper()
 
-				insertFixtures(ctx, t, fixtures{projects: []*dao.Project{first, foreign, second, third}, pictures: pictures})
+				insertFixtures(ctx, t, fixtures{projects: []*dao.Project{first, foreign, second, third}, logos: logos})
 
 				result, err := daoProjectList.Exec(ctx, testCase.request)
 				require.ErrorIs(t, err, testCase.expectErr)

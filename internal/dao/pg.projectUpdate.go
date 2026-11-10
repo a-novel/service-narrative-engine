@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/uptrace/bun/dialect/pgdialect"
 
 	"github.com/a-novel-kit/golib/otel"
 	"github.com/a-novel-kit/golib/postgres"
@@ -30,6 +31,10 @@ type ProjectUpdateRequest struct {
 	Premise string
 	// Language is the language the project is written in: en or fr.
 	Language string
+	// Tags are the author's custom labels, in order.
+	Tags []string
+	// Genres are the genres the author names, in order.
+	Genres []string
 
 	// Now is the instant stored as updated_at.
 	Now time.Time
@@ -55,7 +60,8 @@ func (dao *PgProjectUpdate) Exec(ctx context.Context, request *ProjectUpdateRequ
 
 	err = db.NewRaw(
 		projectUpdateQuery,
-		request.ID, request.Title, request.Premise, request.Language, request.Now,
+		request.ID, request.Title, request.Premise, request.Language,
+		pgdialect.Array(request.Tags), pgdialect.Array(request.Genres), request.Now,
 	).Scan(ctx, entity)
 	if errors.Is(err, sql.ErrNoRows) {
 		err = errors.Join(err, ErrProjectUpdateNotFound)

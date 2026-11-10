@@ -3,6 +3,7 @@ package core_test
 import (
 	"errors"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -30,6 +31,34 @@ func TestProjectCreate(t *testing.T) {
 		return &core.ProjectCreateRequest{OwnerID: ownerID, Title: title, Premise: "Paul ment.", Language: language}
 	}
 
+	withTags := func(tags ...string) *core.ProjectCreateRequest {
+		tagged := request("Les Heures claires", "fr")
+		tagged.Tags = tags
+
+		return tagged
+	}
+
+	withGenres := func(genres ...string) *core.ProjectCreateRequest {
+		classified := request("Les Heures claires", "fr")
+		classified.Genres = genres
+
+		return classified
+	}
+
+	created := &core.ProjectComposer{
+		Project: &core.Project{
+			ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr", Tags: []string{"noir"},
+			Genres:    []string{"thriller"},
+			CreatedAt: createdAt, UpdatedAt: updatedAt, EditedAt: editedAt, LogoVersion: lo.ToPtr(editedAt),
+		},
+		Layers: []*core.Layer{
+			{
+				ID: layerID1, ProjectID: projectID, Kind: core.LayerKindManuscript, Name: "Manuscript",
+				UpdatedAt: updatedAt,
+			},
+		},
+	}
+
 	testCases := []struct {
 		name string
 
@@ -54,18 +83,69 @@ func TestProjectCreate(t *testing.T) {
 			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
 			layersMock:  &daoMock[[]*dao.Layer]{resp: []*dao.Layer{manuscript}},
 
-			expect: &core.ProjectComposer{
-				Project: &core.Project{
-					ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr",
-					CreatedAt: createdAt, UpdatedAt: updatedAt, EditedAt: editedAt, LogoVersion: lo.ToPtr(editedAt),
-				},
-				Layers: []*core.Layer{
-					{
-						ID: layerID1, ProjectID: projectID, Kind: core.LayerKindManuscript, Name: "Manuscript",
-						UpdatedAt: updatedAt,
-					},
-				},
-			},
+			expect: created,
+		},
+		{
+			name: "Success/Tags",
+
+			// The check is exact, so a change of case is another tag, and a tag counts its runes.
+			request: withTags("noir", "Noir", "huis clos", strings.Repeat("é", 24)),
+
+			lockMock:    &daoMock[struct{}]{},
+			countMock:   &daoMock[*dao.ProjectCount]{resp: &dao.ProjectCount{Count: core.ProjectsPerOwnerMax - 1}},
+			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
+			layersMock:  &daoMock[[]*dao.Layer]{resp: []*dao.Layer{manuscript}},
+
+			expect: created,
+		},
+		{
+			name: "Success/Genres",
+
+			// The check is exact, so a change of case is another genre, and a genre counts its runes.
+			request: withGenres("noir", "Noir", "huis clos", strings.Repeat("é", 24)),
+
+			lockMock:    &daoMock[struct{}]{},
+			countMock:   &daoMock[*dao.ProjectCount]{resp: &dao.ProjectCount{Count: core.ProjectsPerOwnerMax - 1}},
+			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
+			layersMock:  &daoMock[[]*dao.Layer]{resp: []*dao.Layer{manuscript}},
+
+			expect: created,
+		},
+		{
+			name: "Success/MostTags",
+
+			request: withTags(tenLabels...),
+
+			lockMock:    &daoMock[struct{}]{},
+			countMock:   &daoMock[*dao.ProjectCount]{resp: &dao.ProjectCount{Count: core.ProjectsPerOwnerMax - 1}},
+			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
+			layersMock:  &daoMock[[]*dao.Layer]{resp: []*dao.Layer{manuscript}},
+
+			expect: created,
+		},
+		{
+			name: "Success/MostGenres",
+
+			request: withGenres(tenLabels...),
+
+			lockMock:    &daoMock[struct{}]{},
+			countMock:   &daoMock[*dao.ProjectCount]{resp: &dao.ProjectCount{Count: core.ProjectsPerOwnerMax - 1}},
+			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
+			layersMock:  &daoMock[[]*dao.Layer]{resp: []*dao.Layer{manuscript}},
+
+			expect: created,
+		},
+		{
+			name: "Success/LongestTitle",
+
+			request: request(strings.Repeat("é", 80), "fr"),
+
+			lockMock:    &daoMock[struct{}]{},
+			countMock:   &daoMock[*dao.ProjectCount]{resp: &dao.ProjectCount{Count: core.ProjectsPerOwnerMax - 1}},
+			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
+			layersMock:  &daoMock[[]*dao.Layer]{resp: []*dao.Layer{manuscript}},
+
+			expect: created,
 		},
 		{
 			name: "Error/BlankTitle",
@@ -75,9 +155,128 @@ func TestProjectCreate(t *testing.T) {
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
+			name: "Error/TitleTooLong",
+
+			request: request(strings.Repeat("é", 81), "fr"),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
 			name: "Error/UnknownLanguage",
 
 			request: request("Clear Hours", "de"),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/TooManyTags",
+
+			request: withTags(append(slices.Clone(tenLabels), "k")...),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/TooManyGenres",
+
+			request: withGenres(append(slices.Clone(tenLabels), "k")...),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/DuplicateTags",
+
+			request: withTags("noir", "noir"),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/DuplicateGenres",
+
+			request: withGenres("noir", "noir"),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/EmptyTag",
+
+			request: withTags(""),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/EmptyGenre",
+
+			request: withGenres(""),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/BlankTag",
+
+			request: withTags("   "),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/BlankGenre",
+
+			request: withGenres("   "),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/TagLeadingWhitespace",
+
+			request: withTags(" noir"),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/GenreLeadingWhitespace",
+
+			request: withGenres(" noir"),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/TagTrailingWhitespace",
+
+			request: withTags("noir\n"),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/GenreTrailingWhitespace",
+
+			request: withGenres("noir\n"),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/TagNUL",
+
+			request: withTags("no\x00ir"),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/GenreNUL",
+
+			request: withGenres("no\x00ir"),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/TagTooLong",
+
+			request: withTags(strings.Repeat("é", 25)),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/GenreTooLong",
+
+			request: withGenres(strings.Repeat("é", 25)),
 
 			expectErr: core.ErrInvalidRequest,
 		},
@@ -169,7 +368,9 @@ func TestProjectCreate(t *testing.T) {
 					Exec(mock.Anything, mock.MatchedBy(func(req *dao.ProjectInsertRequest) bool {
 						return req.ID != uuid.Nil && req.OwnerID == testCase.request.OwnerID &&
 							req.Title == testCase.request.Title && req.Premise == testCase.request.Premise &&
-							req.Language == testCase.request.Language && recent(req.Now)
+							req.Language == testCase.request.Language && recent(req.Now) &&
+							req.Tags != nil && slices.Equal(req.Tags, testCase.request.Tags) &&
+							req.Genres != nil && slices.Equal(req.Genres, testCase.request.Genres)
 					})).
 					Return(testCase.projectMock.resp, testCase.projectMock.err)
 			}

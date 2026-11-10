@@ -20,34 +20,17 @@ export enum Language {
 /** Validates a {@link Language}. */
 export const LanguageSchema = z.enum([Language.En, Language.Fr]);
 
-/** The pictures a project may hold. */
-export enum ProjectPicture {
-  /** A square of 1 to 512 pixels, 256 KiB at most. */
-  Logo = "logo",
-  /** Exactly 16:9, 16 to 1280 pixels wide, 512 KiB at most. */
-  Background = "background",
-}
+/** What a logo accepts: any aspect ratio, at most `maxWidth` pixels wide and `maxHeight` tall, and `maxBytes` encoded. */
+export const PROJECT_LOGO_RULES = { maxHeight: 128, maxBytes: 262144 } as const;
 
-/** Validates a {@link ProjectPicture}. */
-export const ProjectPictureSchema = z.enum([ProjectPicture.Logo, ProjectPicture.Background]);
-
-/**
- * What each {@link ProjectPicture} accepts: an exact aspect ratio of `ratioWidth` by `ratioHeight`, at most
- * `maxWidth` pixels wide, and at most `maxBytes` encoded.
- */
-export const PROJECT_PICTURE_RULES = {
-  [ProjectPicture.Logo]: { ratioWidth: 1, ratioHeight: 1, maxWidth: 512, maxBytes: 262144 },
-  [ProjectPicture.Background]: { ratioWidth: 16, ratioHeight: 9, maxWidth: 1280, maxBytes: 524288 },
-} as const;
-
-/** The rules a picture breaks when the server refuses it, as a 422 error's `tags.reason` names them. */
+/** The rules a logo breaks when the server refuses it, as a 422 error's `tags.reason` names them. */
 export enum PictureRefusal {
-  /** The bytes are neither a still WebP nor a JPEG, or do not decode whole. */
+  /** The bytes are neither a still WebP, a JPEG nor a still PNG, or do not decode whole. */
   Format = "format",
-  /** The picture is off its aspect ratio. */
-  Ratio = "ratio",
-  /** The picture's width is under 1 or over its widest. */
+  /** The logo is under 1 pixel on a side, or past its tallest. */
   Dimensions = "dimensions",
+  /** The logo is past its largest size, in bytes. */
+  Size = "size",
 }
 
 /** One narrative, written in one language, that its owner composes scene by scene. */
@@ -56,18 +39,20 @@ export const ProjectSchema = z.object({
   title: z.string(),
   premise: z.string(),
   language: LanguageSchema,
+  /** The author's custom labels, in order. Empty until the author adds one. */
+  tags: z.array(z.string()),
+  /** The genres the author names, in order. Empty until the author adds one. */
+  genres: z.array(z.string()),
   createdAt: z.iso.datetime().transform((value) => new Date(value)),
-  /** When the project's own fields, its title, premise and language, last changed. */
+  /** When the project's own fields, its title, premise, language, tags and genres, last changed. */
   updatedAt: z.iso.datetime().transform((value) => new Date(value)),
-  /** When the project's content last changed, its pictures aside. {@link projectList} orders projects by it. */
+  /** When the project's content last changed, its logo aside. {@link projectList} orders projects by it. */
   editedAt: z.iso.datetime().transform((value) => new Date(value)),
   /**
-   * When the logo last changed, absent while the project has no logo. A picture URL that carries it names one
+   * When the logo last changed, absent while the project has no logo. A logo URL that carries it names one
    * version, which a cache keeps for good. It stays the server's string: a Date would drop its microseconds.
    */
   logoVersion: z.iso.datetime().optional(),
-  /** When the background last changed, absent while the project has no background, kept as `logoVersion` is. */
-  backgroundVersion: z.iso.datetime().optional(),
 });
 
 /** The value {@link ProjectSchema} validates. */
@@ -91,16 +76,48 @@ export const ProjectPageSchema = z.object({
 export type ProjectPage = z.infer<typeof ProjectPageSchema>;
 
 /** The title of a project, which is not blank. */
-export const ProjectTitleSchema = maxChars(200).regex(/\S/);
+export const ProjectTitleSchema = maxChars(80).regex(/\S/);
 
 /** What a project's narrative is about, which may be empty. */
 export const ProjectPremiseSchema = maxChars(20000);
+
+/** The most tags a project holds. */
+export const PROJECT_TAGS_MAX = 10;
+
+/** The most characters a tag of a project holds. */
+export const PROJECT_TAG_CHARS_MAX = 24;
+
+/** A tag of a project, at least one character long, with no whitespace at either end. */
+export const ProjectTagSchema = maxChars(PROJECT_TAG_CHARS_MAX).regex(/^\S(?:.*\S)?$/s);
+
+/** The tags of a project, in order, each appearing once. */
+export const ProjectTagsSchema = z
+  .array(ProjectTagSchema)
+  .max(PROJECT_TAGS_MAX)
+  .refine((tags) => new Set(tags).size === tags.length, { error: "Expected every tag to appear once" });
+
+/** The most genres a project holds. */
+export const PROJECT_GENRES_MAX = 10;
+
+/** The most characters a genre of a project holds. */
+export const PROJECT_GENRE_CHARS_MAX = 24;
+
+/** A genre of a project, at least one character long, with no whitespace at either end. */
+export const ProjectGenreSchema = maxChars(PROJECT_GENRE_CHARS_MAX).regex(/^\S(?:.*\S)?$/s);
+
+/** The genres of a project, in order, each appearing once. */
+export const ProjectGenresSchema = z
+  .array(ProjectGenreSchema)
+  .max(PROJECT_GENRES_MAX)
+  .refine((genres) => new Set(genres).size === genres.length, { error: "Expected every genre to appear once" });
 
 /** The project to create. Its scenes come next, from `sceneCreate`. */
 export const ProjectCreateRequestSchema = z.object({
   title: ProjectTitleSchema,
   premise: ProjectPremiseSchema.optional(),
   language: LanguageSchema,
+  tags: ProjectTagsSchema.optional(),
+  genres: ProjectGenresSchema.optional(),
 });
 
 /** The value {@link ProjectCreateRequestSchema} validates. */
@@ -123,12 +140,14 @@ export const ProjectListRequestSchema = z.object({
 /** The value {@link ProjectListRequestSchema} validates. */
 export type ProjectListRequest = z.infer<typeof ProjectListRequestSchema>;
 
-/** The new fields of a project. An omitted premise is cleared. */
+/** The new fields of a project. An omitted premise is cleared. `tags` and `genres` each replace their whole list. */
 export const ProjectUpdateRequestSchema = z.object({
   id: z.uuid(),
   title: ProjectTitleSchema,
   premise: ProjectPremiseSchema.optional(),
   language: LanguageSchema,
+  tags: ProjectTagsSchema,
+  genres: ProjectGenresSchema,
 });
 
 /** The value {@link ProjectUpdateRequestSchema} validates. */
@@ -194,8 +213,8 @@ export async function projectList(
 }
 
 /**
- * Replaces the title, premise and language of a project. Throws on HTTP 404 for an unknown project, and 409 with
- * `projectBytes` in the error's `tags.limit` when the project would pass its 16 MiB budget of stored bytes.
+ * Replaces the title, premise, language, tags and genres of a project. Throws on HTTP 404 for an unknown project, and 409
+ * with `projectBytes` in the error's `tags.limit` when the project would pass its 16 MiB budget of stored bytes.
  */
 export async function projectUpdate(
   api: NarrativeEngineApi,
@@ -225,48 +244,44 @@ export async function projectDelete(
   });
 }
 
-/** The picture of a project to replace, the encoded image aside. */
-export const ProjectPictureUpdateRequestSchema = z.object({
+/** The project whose logo to replace, the encoded image aside. */
+export const ProjectLogoUpdateRequestSchema = z.object({
   projectID: z.uuid(),
-  picture: ProjectPictureSchema,
 });
 
-/** The value {@link ProjectPictureUpdateRequestSchema} validates. */
-export type ProjectPictureUpdateRequest = z.infer<typeof ProjectPictureUpdateRequestSchema>;
+/** The value {@link ProjectLogoUpdateRequestSchema} validates. */
+export type ProjectLogoUpdateRequest = z.infer<typeof ProjectLogoUpdateRequestSchema>;
 
-/** The picture of a project to read. */
-export const ProjectPictureGetRequestSchema = z.object({
+/** The project whose logo to read. */
+export const ProjectLogoGetRequestSchema = z.object({
   projectID: z.uuid(),
-  picture: ProjectPictureSchema,
 });
 
-/** The value {@link ProjectPictureGetRequestSchema} validates. */
-export type ProjectPictureGetRequest = z.infer<typeof ProjectPictureGetRequestSchema>;
+/** The value {@link ProjectLogoGetRequestSchema} validates. */
+export type ProjectLogoGetRequest = z.infer<typeof ProjectLogoGetRequestSchema>;
 
-/** The picture of a project to remove. */
-export const ProjectPictureDeleteRequestSchema = z.object({
+/** The project whose logo to remove. */
+export const ProjectLogoDeleteRequestSchema = z.object({
   projectID: z.uuid(),
-  picture: ProjectPictureSchema,
 });
 
-/** The value {@link ProjectPictureDeleteRequestSchema} validates. */
-export type ProjectPictureDeleteRequest = z.infer<typeof ProjectPictureDeleteRequestSchema>;
+/** The value {@link ProjectLogoDeleteRequestSchema} validates. */
+export type ProjectLogoDeleteRequest = z.infer<typeof ProjectLogoDeleteRequestSchema>;
 
 /**
- * Replaces a picture of a project with `body`, an encoded still WebP or JPEG, and returns the project. A picture is
- * cosmetic, so the project keeps its `editedAt`. The server reads the format from the bytes and checks the picture
- * against {@link PROJECT_PICTURE_RULES}. Throws on HTTP 422, with a {@link PictureRefusal} in the error's
- * `tags.reason`, for a picture it refuses, on 400 past the picture's `maxBytes`, and on 404 when the caller owns no
- * such project.
+ * Replaces the logo of a project with `body`, an encoded still WebP, JPEG or still PNG, and returns the project. A
+ * logo is cosmetic, so the project keeps its `editedAt`. The server reads the format from the bytes and checks the
+ * logo against {@link PROJECT_LOGO_RULES}. Throws on HTTP 422, with a {@link PictureRefusal} in the error's
+ * `tags.reason`, for a logo it refuses, past `maxBytes` included, and on 404 when the caller owns no such project.
  */
-export async function projectPictureUpdate(
+export async function projectLogoUpdate(
   api: NarrativeEngineApi,
   accessToken: string,
-  request: ProjectPictureUpdateRequest,
+  request: ProjectLogoUpdateRequest,
   body: Blob
 ): Promise<Project> {
-  const params = new URLSearchParams({ projectID: request.projectID, picture: request.picture });
-  return await api.fetch(`/v1/project/picture?${params.toString()}`, ProjectSchema, {
+  const params = new URLSearchParams({ projectID: request.projectID });
+  return await api.fetch(`/v1/project/logo?${params.toString()}`, ProjectSchema, {
     method: "PUT",
     headers: { "Content-Type": body.type, Authorization: `Bearer ${accessToken}` },
     body,
@@ -274,32 +289,32 @@ export async function projectPictureUpdate(
 }
 
 /**
- * Returns a picture of a project, typed with the media type it was stored with. Throws on HTTP 404 when the caller
- * owns no such project, or the project holds no such picture.
+ * Returns the logo of a project, typed with the media type it was stored with. Throws on HTTP 404 when the caller
+ * owns no such project, or the project holds no logo.
  */
-export async function projectPictureGet(
+export async function projectLogoGet(
   api: NarrativeEngineApi,
   accessToken: string,
-  request: ProjectPictureGetRequest
+  request: ProjectLogoGetRequest
 ): Promise<Blob> {
-  const params = new URLSearchParams({ projectID: request.projectID, picture: request.picture });
-  return await api.fetchBlob(`/v1/project/picture?${params.toString()}`, {
+  const params = new URLSearchParams({ projectID: request.projectID });
+  return await api.fetchBlob(`/v1/project/logo?${params.toString()}`, {
     method: "GET",
     headers: { Authorization: `Bearer ${accessToken}` },
   });
 }
 
 /**
- * Removes a picture of a project, and returns the project, which keeps its `editedAt`. A project without the picture
- * keeps none. Throws on HTTP 404 when the caller owns no such project.
+ * Removes the logo of a project, and returns the project, which keeps its `editedAt`. A project without a logo stays
+ * as it is. Throws on HTTP 404 when the caller owns no such project.
  */
-export async function projectPictureDelete(
+export async function projectLogoDelete(
   api: NarrativeEngineApi,
   accessToken: string,
-  request: ProjectPictureDeleteRequest
+  request: ProjectLogoDeleteRequest
 ): Promise<Project> {
-  const params = new URLSearchParams({ projectID: request.projectID, picture: request.picture });
-  return await api.fetch(`/v1/project/picture?${params.toString()}`, ProjectSchema, {
+  const params = new URLSearchParams({ projectID: request.projectID });
+  return await api.fetch(`/v1/project/logo?${params.toString()}`, ProjectSchema, {
     method: "DELETE",
     headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
   });

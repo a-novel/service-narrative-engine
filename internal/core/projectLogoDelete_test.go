@@ -12,19 +12,17 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-func TestProjectPictureDelete(t *testing.T) {
+func TestProjectLogoDelete(t *testing.T) {
 	t.Parallel()
 
 	errFoo := errors.New("foo")
 
-	request := &core.ProjectPictureDeleteRequest{
-		OwnerID: ownerID, ProjectID: projectID, Picture: core.ProjectPictureBackground,
-	}
+	request := &core.ProjectLogoDeleteRequest{OwnerID: ownerID, ProjectID: projectID}
 
 	testCases := []struct {
 		name string
 
-		request *core.ProjectPictureDeleteRequest
+		request *core.ProjectLogoDeleteRequest
 
 		ownerMock  *daoMock[bool]
 		deleteMock *daoMock[*dao.Project]
@@ -43,9 +41,9 @@ func TestProjectPictureDelete(t *testing.T) {
 			expect: coreProject(),
 		},
 		{
-			name: "Error/UnknownPicture",
+			name: "Error/MissingProjectID",
 
-			request: &core.ProjectPictureDeleteRequest{OwnerID: ownerID, ProjectID: projectID, Picture: "banner"},
+			request: &core.ProjectLogoDeleteRequest{OwnerID: ownerID},
 
 			expectErr: core.ErrInvalidRequest,
 		},
@@ -83,8 +81,8 @@ func TestProjectPictureDelete(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockOwner := coremocks.NewMockProjectPictureDeleteDaoOwner(t)
-			mockDelete := coremocks.NewMockProjectPictureDeleteDao(t)
+			mockOwner := coremocks.NewMockProjectLogoDeleteDaoOwner(t)
+			mockDelete := coremocks.NewMockProjectLogoDeleteDao(t)
 
 			if testCase.ownerMock != nil {
 				mockOwner.EXPECT().
@@ -94,13 +92,11 @@ func TestProjectPictureDelete(t *testing.T) {
 
 			if testCase.deleteMock != nil {
 				mockDelete.EXPECT().
-					Exec(mock.Anything, &dao.ProjectPictureDeleteRequest{
-						ProjectID: projectID, Picture: core.ProjectPictureBackground,
-					}).
+					Exec(mock.Anything, &dao.ProjectLogoDeleteRequest{ProjectID: projectID}).
 					Return(testCase.deleteMock.resp, testCase.deleteMock.err)
 			}
 
-			service := core.NewProjectPictureDelete(mockOwner, mockDelete)
+			service := core.NewProjectLogoDelete(mockOwner, mockDelete)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)

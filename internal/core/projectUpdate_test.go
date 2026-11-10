@@ -2,6 +2,8 @@ package core_test
 
 import (
 	"errors"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/samber/lo"
@@ -21,7 +23,30 @@ func TestProjectUpdate(t *testing.T) {
 
 	errFoo := errors.New("foo")
 
-	request := &core.ProjectUpdateRequest{OwnerID: ownerID, ID: projectID, Title: "Clear Hours", Language: "en"}
+	request := &core.ProjectUpdateRequest{
+		OwnerID: ownerID, ID: projectID, Title: "Clear Hours", Language: "en", Tags: []string{"noir", "huis clos"},
+		Genres: []string{"thriller"},
+	}
+
+	withTags := func(tags []string) *core.ProjectUpdateRequest {
+		tagged := *request
+		tagged.Tags = tags
+
+		return &tagged
+	}
+
+	withGenres := func(genres []string) *core.ProjectUpdateRequest {
+		classified := *request
+		classified.Genres = genres
+
+		return &classified
+	}
+
+	updated := &core.Project{
+		ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr", Tags: []string{"noir"},
+		Genres:    []string{"thriller"},
+		CreatedAt: createdAt, UpdatedAt: updatedAt, EditedAt: editedAt, LogoVersion: lo.ToPtr(editedAt),
+	}
 
 	testCases := []struct {
 		name string
@@ -45,22 +70,190 @@ func TestProjectUpdate(t *testing.T) {
 			daoMock:   &daoMock[*dao.Project]{resp: daoProject()},
 			bytesMock: withinBudget,
 
-			expect: &core.Project{
-				ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr",
-				CreatedAt: createdAt, UpdatedAt: updatedAt, EditedAt: editedAt, LogoVersion: lo.ToPtr(editedAt),
-			},
+			expect: updated,
+		},
+		{
+			name: "Success/ClearTags",
+
+			request: withTags([]string{}),
+
+			lockMock:  &daoMock[bool]{resp: true},
+			daoMock:   &daoMock[*dao.Project]{resp: daoProject()},
+			bytesMock: withinBudget,
+
+			expect: updated,
+		},
+		{
+			name: "Success/ClearGenres",
+
+			request: withGenres([]string{}),
+
+			lockMock:  &daoMock[bool]{resp: true},
+			daoMock:   &daoMock[*dao.Project]{resp: daoProject()},
+			bytesMock: withinBudget,
+
+			expect: updated,
+		},
+		{
+			name: "Success/MostTags",
+
+			request: withTags(tenLabels),
+
+			lockMock:  &daoMock[bool]{resp: true},
+			daoMock:   &daoMock[*dao.Project]{resp: daoProject()},
+			bytesMock: withinBudget,
+
+			expect: updated,
+		},
+		{
+			name: "Success/MostGenres",
+
+			request: withGenres(tenLabels),
+
+			lockMock:  &daoMock[bool]{resp: true},
+			daoMock:   &daoMock[*dao.Project]{resp: daoProject()},
+			bytesMock: withinBudget,
+
+			expect: updated,
 		},
 		{
 			name: "Error/InvalidRequest",
 
-			request: &core.ProjectUpdateRequest{OwnerID: ownerID, ID: projectID, Language: "en"},
+			request: &core.ProjectUpdateRequest{
+				OwnerID: ownerID, ID: projectID, Language: "en", Tags: []string{}, Genres: []string{},
+			},
 
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
 			name: "Error/UnknownLanguage",
 
-			request: &core.ProjectUpdateRequest{OwnerID: ownerID, ID: projectID, Title: "Clear Hours", Language: "de"},
+			request: &core.ProjectUpdateRequest{
+				OwnerID: ownerID, ID: projectID, Title: "Clear Hours", Language: "de", Tags: []string{},
+				Genres: []string{},
+			},
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/TitleTooLong",
+
+			request: &core.ProjectUpdateRequest{
+				OwnerID: ownerID, ID: projectID, Title: strings.Repeat("é", 81), Language: "en", Tags: []string{},
+				Genres: []string{},
+			},
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/TagsOmitted",
+
+			request: withTags(nil),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/GenresOmitted",
+
+			request: withGenres(nil),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/TooManyTags",
+
+			request: withTags(append(slices.Clone(tenLabels), "k")),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/TooManyGenres",
+
+			request: withGenres(append(slices.Clone(tenLabels), "k")),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/DuplicateTags",
+
+			request: withTags([]string{"noir", "noir"}),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/DuplicateGenres",
+
+			request: withGenres([]string{"noir", "noir"}),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/EmptyTag",
+
+			request: withTags([]string{""}),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/EmptyGenre",
+
+			request: withGenres([]string{""}),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/BlankTag",
+
+			request: withTags([]string{"   "}),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/BlankGenre",
+
+			request: withGenres([]string{"   "}),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/TagWhitespace",
+
+			request: withTags([]string{"noir "}),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/GenreWhitespace",
+
+			request: withGenres([]string{"noir "}),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/TagNUL",
+
+			request: withTags([]string{"no\x00ir"}),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/GenreNUL",
+
+			request: withGenres([]string{"no\x00ir"}),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/TagTooLong",
+
+			request: withTags([]string{strings.Repeat("é", 25)}),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/GenreTooLong",
+
+			request: withGenres([]string{strings.Repeat("é", 25)}),
 
 			expectErr: core.ErrInvalidRequest,
 		},
@@ -152,7 +345,8 @@ func TestProjectUpdate(t *testing.T) {
 			if testCase.daoMock != nil {
 				mockDao.EXPECT().
 					Exec(mock.Anything, mock.MatchedBy(func(req *dao.ProjectUpdateRequest) bool {
-						return req.ID == projectID && req.Title == "Clear Hours" && req.Language == "en" && recent(req.Now)
+						return req.ID == projectID && req.Title == "Clear Hours" && req.Language == "en" && recent(req.Now) &&
+							slices.Equal(req.Tags, testCase.request.Tags) && slices.Equal(req.Genres, testCase.request.Genres)
 					})).
 					Return(testCase.daoMock.resp, testCase.daoMock.err)
 			}

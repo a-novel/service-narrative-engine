@@ -21,18 +21,19 @@ type Project struct {
 	Premise string `bun:"premise"`
 	// Language is the language the project is written in: en or fr.
 	Language string `bun:"language"`
+	// Tags are the author's custom labels, in order. Empty until the author adds one.
+	Tags []string `bun:"tags,array"`
+	// Genres are the genres the author names, in order. Empty until the author adds one.
+	Genres []string `bun:"genres,array"`
 
 	CreatedAt time.Time `bun:"created_at"`
 	// UpdatedAt is when the project's own fields last changed.
 	UpdatedAt time.Time `bun:"updated_at"`
 	// EditedAt is when the project's content last changed: the instant the write that changed it locked the
-	// project. A picture write leaves it as it was.
+	// project. A logo write leaves it as it was.
 	EditedAt time.Time `bun:"edited_at"`
 
 	// LogoUpdatedAt is when the logo last changed, nil while the project has no logo. A read joins it from the
 	// logo's row, and an insert of the model leaves it out.
 	LogoUpdatedAt *time.Time `bun:"logo_updated_at,scanonly"`
-	// BackgroundUpdatedAt is when the background last changed, nil while the project has no background. A read
-	// joins it from the background's row, and an insert of the model leaves it out.
-	BackgroundUpdatedAt *time.Time `bun:"background_updated_at,scanonly"`
 }

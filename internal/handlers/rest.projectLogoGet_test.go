@@ -17,13 +17,13 @@ import (
 	handlersmocks "github.com/a-novel/service-narrative-engine/internal/handlers/mocks"
 )
 
-func TestRestProjectPictureGet(t *testing.T) {
+func TestRestProjectLogoGet(t *testing.T) {
 	t.Parallel()
 
 	errFoo := errors.New("foo")
 
-	target := "/v1/project/picture?projectID=" + projectID.String() + "&picture=logo"
-	picture := &core.ProjectPicture{MediaType: "image/webp", Data: []byte("picture"), Version: logoVersion}
+	target := "/v1/project/logo?projectID=" + projectID.String()
+	logo := &core.ProjectLogo{MediaType: "image/webp", Data: []byte("logo"), Version: logoVersion}
 	etag := `"1609661730123456"`
 
 	testCases := []struct {
@@ -33,7 +33,7 @@ func TestRestProjectPictureGet(t *testing.T) {
 		caller      *uuid.UUID
 		ifNoneMatch string
 
-		serviceMock *serviceMock[*core.ProjectPicture]
+		serviceMock *serviceMock[*core.ProjectLogo]
 
 		expectStatus int
 		expectBody   string
@@ -44,10 +44,10 @@ func TestRestProjectPictureGet(t *testing.T) {
 			target: target,
 			caller: &ownerID,
 
-			serviceMock: &serviceMock[*core.ProjectPicture]{resp: picture},
+			serviceMock: &serviceMock[*core.ProjectLogo]{resp: logo},
 
 			expectStatus: http.StatusOK,
-			expectBody:   "picture",
+			expectBody:   "logo",
 		},
 		{
 			name: "Success/NotModified",
@@ -56,7 +56,7 @@ func TestRestProjectPictureGet(t *testing.T) {
 			caller:      &ownerID,
 			ifNoneMatch: etag,
 
-			serviceMock: &serviceMock[*core.ProjectPicture]{resp: picture},
+			serviceMock: &serviceMock[*core.ProjectLogo]{resp: logo},
 
 			expectStatus: http.StatusNotModified,
 		},
@@ -70,7 +70,7 @@ func TestRestProjectPictureGet(t *testing.T) {
 		{
 			name: "Error/MalformedProjectID",
 
-			target: "/v1/project/picture?projectID=not-a-uuid&picture=logo",
+			target: "/v1/project/logo?projectID=not-a-uuid",
 			caller: &ownerID,
 
 			expectStatus: http.StatusBadRequest,
@@ -81,7 +81,7 @@ func TestRestProjectPictureGet(t *testing.T) {
 			target: target,
 			caller: &ownerID,
 
-			serviceMock: &serviceMock[*core.ProjectPicture]{err: core.ErrInvalidRequest},
+			serviceMock: &serviceMock[*core.ProjectLogo]{err: core.ErrInvalidRequest},
 
 			expectStatus: http.StatusBadRequest,
 		},
@@ -91,17 +91,17 @@ func TestRestProjectPictureGet(t *testing.T) {
 			target: target,
 			caller: &ownerID,
 
-			serviceMock: &serviceMock[*core.ProjectPicture]{err: core.ErrProjectNotFound},
+			serviceMock: &serviceMock[*core.ProjectLogo]{err: core.ErrProjectNotFound},
 
 			expectStatus: http.StatusNotFound,
 		},
 		{
-			name: "Error/PictureNotFound",
+			name: "Error/LogoNotFound",
 
 			target: target,
 			caller: &ownerID,
 
-			serviceMock: &serviceMock[*core.ProjectPicture]{err: core.ErrPictureNotFound},
+			serviceMock: &serviceMock[*core.ProjectLogo]{err: core.ErrProjectLogoNotFound},
 
 			expectStatus: http.StatusNotFound,
 		},
@@ -111,7 +111,7 @@ func TestRestProjectPictureGet(t *testing.T) {
 			target: target,
 			caller: &ownerID,
 
-			serviceMock: &serviceMock[*core.ProjectPicture]{err: errFoo},
+			serviceMock: &serviceMock[*core.ProjectLogo]{err: errFoo},
 
 			expectStatus: http.StatusInternalServerError,
 		},
@@ -121,13 +121,11 @@ func TestRestProjectPictureGet(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			service := handlersmocks.NewMockRestProjectPictureGetService(t)
+			service := handlersmocks.NewMockRestProjectLogoGetService(t)
 
 			if testCase.serviceMock != nil {
 				service.EXPECT().
-					Exec(mock.Anything, &core.ProjectPictureGetRequest{
-						OwnerID: ownerID, ProjectID: projectID, Picture: core.ProjectPictureLogo,
-					}).
+					Exec(mock.Anything, &core.ProjectLogoGetRequest{OwnerID: ownerID, ProjectID: projectID}).
 					Return(testCase.serviceMock.resp, testCase.serviceMock.err)
 			}
 
@@ -137,7 +135,7 @@ func TestRestProjectPictureGet(t *testing.T) {
 			}
 
 			w := httptest.NewRecorder()
-			handlers.NewRestProjectPictureGet(service, config.LoggerDev).ServeHTTP(w, request)
+			handlers.NewRestProjectLogoGet(service, config.LoggerDev).ServeHTTP(w, request)
 
 			response := w.Result()
 			require.Equal(t, testCase.expectStatus, response.StatusCode)

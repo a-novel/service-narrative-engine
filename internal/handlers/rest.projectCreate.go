@@ -24,6 +24,10 @@ type RestProjectCreateRequest struct {
 	Premise string `json:"premise"`
 	// Language is the language the project is written in, one of [core.ProjectLanguages].
 	Language string `json:"language"`
+	// Tags are the author's custom labels, in order, none when omitted.
+	Tags []string `json:"tags"`
+	// Genres are the genres the author names, in order, none when omitted.
+	Genres []string `json:"genres"`
 }
 
 // RestProjectCreate is the HTTP handler for the create-project endpoint. It responds 201 with the
@@ -63,6 +67,8 @@ func (handler *RestProjectCreate) ServeHTTP(w http.ResponseWriter, r *http.Reque
 		Title:    request.Title,
 		Premise:  request.Premise,
 		Language: request.Language,
+		Tags:     request.Tags,
+		Genres:   request.Genres,
 	}
 
 	result, err := handler.service.Exec(ctx, serviceRequest)

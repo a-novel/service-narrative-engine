@@ -188,7 +188,8 @@ paths:
       operationId: projectUpdate
       summary: Update a project.
       description: |
-        Replaces the title, premise and language of a project.
+        Replaces the title, premise, language, tags and genres of a project. `tags` and `genres` each replace
+        their whole list, so a request that omits one is refused, and an empty list clears it.
       tags: [project]
       requestBody:
         required: true
@@ -242,24 +243,23 @@ paths:
         default:
           $ref: "#/components/responses/internalError"
 
-  /v1/project/picture:
+  /v1/project/logo:
     get:
-      operationId: projectPictureGet
-      summary: Get a picture of a project.
+      operationId: projectLogoGet
+      summary: Get the logo of a project.
       description: |
-        Returns the bytes of a picture of a project of the caller, with the media type it was stored with.
+        Returns the bytes of the logo of a project of the caller, with the media type it was stored with.
 
-        The response carries a strong `ETag` and `Last-Modified` from the picture's version, and answers a
+        The response carries a strong `ETag` and `Last-Modified` from the logo's version, and answers a
         matching `If-None-Match` or `If-Modified-Since` with 304. `Cache-Control: no-cache` makes a cache
         revalidate on every use: a client that caches for good does so under a URL that names the version, the
-        project's `logoVersion` or `backgroundVersion`.
+        project's `logoVersion`.
       tags: [project]
       parameters:
         - $ref: "#/components/parameters/parentProjectID"
-        - $ref: "#/components/parameters/projectPicture"
       responses:
         "200":
-          $ref: "#/components/responses/picture"
+          $ref: "#/components/responses/projectLogo"
         "304":
           $ref: "#/components/responses/notModified"
         "400":
@@ -278,22 +278,19 @@ paths:
           $ref: "#/components/responses/internalError"
 
     put:
-      operationId: projectPictureUpdate
-      summary: Set a picture of a project.
+      operationId: projectLogoUpdate
+      summary: Set the logo of a project.
       description: |
-        Replaces a picture of a project. The body is the encoded image. The server recognizes its format from
-        the bytes, whatever `Content-Type` says, and accepts a still WebP or a JPEG that decodes whole:
+        Replaces the logo of a project. The body is the encoded image. The server recognizes its format from
+        the bytes, whatever `Content-Type` says, and accepts a still WebP, a JPEG or a still PNG that decodes
+        whole, of any aspect ratio, at most 128 pixels tall and 256 KiB.
 
-        - a `logo` is a square of 1 to 512 pixels, 256 KiB at most;
-        - a `background` is exactly 16:9, 16 to 1280 pixels wide, 512 KiB at most.
-
-        It refuses any other picture with 422, naming the rule it broke, and a body past the picture's byte cap
-        with 400. A picture is cosmetic: the write leaves the project's `editedAt` as it was, and the picture
-        does not count in the project's stored bytes.
+        It refuses any other logo with 422, naming the rule it broke. A
+        logo is cosmetic: the write leaves the project's `editedAt` as it was, and the logo does not count in
+        the project's stored bytes.
       tags: [project]
       parameters:
         - $ref: "#/components/parameters/parentProjectID"
-        - $ref: "#/components/parameters/projectPicture"
       requestBody:
         required: true
         content:
@@ -305,6 +302,10 @@ paths:
             schema:
               type: string
               contentMediaType: image/jpeg
+          image/png:
+            schema:
+              type: string
+              contentMediaType: image/png
       responses:
         "200":
           $ref: "#/components/responses/project"
@@ -328,15 +329,14 @@ paths:
           $ref: "#/components/responses/internalError"
 
     delete:
-      operationId: projectPictureDelete
-      summary: Remove a picture of a project.
+      operationId: projectLogoDelete
+      summary: Remove the logo of a project.
       description: |
-        Removes a picture of a project, and returns the project. A project without the picture keeps none. A
-        picture is cosmetic, so the removal leaves the project's `editedAt` as it was.
+        Removes the logo of a project, and returns the project. A project without a logo stays as it is. A logo
+        is cosmetic, so the removal leaves the project's `editedAt` as it was.
       tags: [project]
       parameters:
         - $ref: "#/components/parameters/parentProjectID"
-        - $ref: "#/components/parameters/projectPicture"
       responses:
         "200":
           $ref: "#/components/responses/project"
@@ -1632,21 +1632,21 @@ components:
           schema:
             $ref: "#/components/schemas/projectPage"
 
-    picture:
-      description: The encoded picture, as its owner sent it.
+    projectLogo:
+      description: The encoded logo, as its owner sent it.
       headers:
         ETag:
-          description: The strong validator of the picture's version.
+          description: The strong validator of the logo's version.
           schema:
             type: string
             examples: ['"1793780130123456"']
         Last-Modified:
-          description: When the picture last changed, to the second.
+          description: When the logo last changed, to the second.
           schema:
             type: string
             examples: ["Wed, 04 Nov 2026 08:15:30 GMT"]
         Cache-Control:
-          description: Always `no-cache`, so a cache revalidates the picture on every use.
+          description: Always `no-cache`, so a cache revalidates the logo on every use.
           schema:
             type: string
             const: no-cache
@@ -1664,12 +1664,16 @@ components:
           schema:
             type: string
             contentMediaType: image/jpeg
+        image/png:
+          schema:
+            type: string
+            contentMediaType: image/png
 
     notModified:
-      description: The picture still has the version the request names. The response has no body.
+      description: The logo still has the version the request names. The response has no body.
       headers:
         ETag:
-          description: The strong validator of the picture's version.
+          description: The strong validator of the logo's version.
           schema:
             type: string
         Cache-Control:
@@ -1876,14 +1880,14 @@ components:
 
     notFound:
       description: |
-        The caller owns no such project, the project holds no such beat, scene, layer, cell or picture, or genai
+        The caller owns no such project, the project holds no such beat, scene, layer, cell or logo, or genai
         holds no such generation for the caller.
 
     contentTooLarge:
       description: The body is over the limit of a route that writes one item, 4 MiB by default.
 
     pictureRefused:
-      description: The picture breaks the contract, as the problem's `reason` tag names.
+      description: The logo breaks the contract, as the problem's `reason` tag names.
       content:
         application/problem+json:
           schema:
@@ -2139,18 +2143,10 @@ components:
       enum: [en, fr]
       examples: [fr]
 
-    projectPicture:
-      type: string
-      description: |
-        A picture a project may hold: `logo`, a square of 1 to 512 pixels, or `background`, exactly 16:9 and 16
-        to 1280 pixels wide.
-      enum: [logo, background]
-      examples: [logo]
-
     project:
       type: object
       description: One narrative, written in one language, that its owner composes scene by scene.
-      required: [id, title, premise, language, createdAt, updatedAt, editedAt]
+      required: [id, title, premise, language, tags, genres, createdAt, updatedAt, editedAt]
       additionalProperties: false
       properties:
         id:
@@ -2165,6 +2161,20 @@ components:
           examples: ["Marie attend un homme qui ne viendra pas."]
         language:
           $ref: "#/components/schemas/language"
+        tags:
+          type: array
+          description: The author's custom labels, in order. Empty until the author adds one.
+          items:
+            type: string
+            description: A label of 1 to 24 characters.
+          examples: [["noir", "huis clos"]]
+        genres:
+          type: array
+          description: The genres the author names, in order. Empty until the author adds one.
+          items:
+            type: string
+            description: A genre of 1 to 24 characters.
+          examples: [["thriller", "roman noir"]]
         createdAt:
           type: string
           description: When the project was created.
@@ -2172,28 +2182,21 @@ components:
           examples: ["2021-01-01T00:00:00Z"]
         updatedAt:
           type: string
-          description: When the project's own fields, its title, premise and language, last changed.
+          description: When the project's own fields, its title, premise, language, tags and genres, last changed.
           format: date-time
           examples: ["2021-01-02T00:00:00Z"]
         editedAt:
           type: string
           description: |
             When the project's content last changed: its own fields, its beats, scenes, layers, cells or recaps.
-            Its pictures are cosmetic and leave it as it was. Lists order projects by it.
+            Its logo is cosmetic and leaves it as it was. Lists order projects by it.
           format: date-time
           examples: ["2021-01-03T00:00:00Z"]
         logoVersion:
           type: string
           description: |
-            When the logo last changed. Absent while the project has no logo. Picture URLs carry it, so a cache
+            When the logo last changed. Absent while the project has no logo. Logo URLs carry it, so a cache
             keeps each version for good.
-          format: date-time
-          examples: ["2026-11-04T08:15:30.123456Z"]
-        backgroundVersion:
-          type: string
-          description: |
-            When the background last changed. Absent while the project has no background. Picture URLs carry it,
-            so a cache keeps each version for good.
           format: date-time
           examples: ["2026-11-04T08:15:30.123456Z"]
 
@@ -2532,7 +2535,7 @@ components:
         title:
           type: string
           description: The title of the project. Not blank.
-          maxLength: 200
+          maxLength: 80
           examples: ["Les Heures claires"]
         premise:
           type: string
@@ -2541,6 +2544,28 @@ components:
           examples: ["Marie attend un homme qui ne viendra pas."]
         language:
           $ref: "#/components/schemas/language"
+        tags:
+          type: array
+          description: The author's custom labels, in order, each appearing once. None when omitted.
+          maxItems: 10
+          uniqueItems: true
+          items:
+            type: string
+            description: A label of 1 to 24 characters, with no whitespace at either end.
+            minLength: 1
+            maxLength: 24
+          examples: [["noir", "huis clos"]]
+        genres:
+          type: array
+          description: The genres the author names, in order, each appearing once. None when omitted.
+          maxItems: 10
+          uniqueItems: true
+          items:
+            type: string
+            description: A genre of 1 to 24 characters, with no whitespace at either end.
+            minLength: 1
+            maxLength: 24
+          examples: [["thriller", "roman noir"]]
 
     beatCreateItem:
       type: object
@@ -2603,7 +2628,7 @@ components:
     projectUpdateRequest:
       type: object
       description: The new fields of a project.
-      required: [id, title, language]
+      required: [id, title, language, tags, genres]
       additionalProperties: false
       properties:
         id:
@@ -2614,6 +2639,10 @@ components:
           $ref: "#/components/schemas/projectCreateRequest/properties/premise"
         language:
           $ref: "#/components/schemas/language"
+        tags:
+          $ref: "#/components/schemas/projectCreateRequest/properties/tags"
+        genres:
+          $ref: "#/components/schemas/projectCreateRequest/properties/genres"
 
     beatsCreateRequest:
       type: object
@@ -3614,7 +3643,7 @@ components:
 
     pictureRefusedProblem:
       type: object
-      description: An RFC 9457 problem details body whose `reason` tag names the rule a refused picture broke.
+      description: An RFC 9457 problem details body whose `reason` tag names the rule a refused logo broke.
       required: [type, title, status, tags]
       additionalProperties: false
       properties:
@@ -3639,10 +3668,10 @@ components:
             reason:
               type: string
               description: |
-                The rule the picture broke: `format` for bytes that are neither a still WebP nor a JPEG, or do not
-                decode whole; `ratio` for a picture off its aspect ratio; `dimensions` for a width under 1 or over
-                the picture's widest.
-              enum: [format, ratio, dimensions]
+                The rule the logo broke: `format` for bytes that are neither a still WebP, a JPEG nor a still PNG,
+                or do not decode whole; `dimensions` for a side under 1 pixel, or a logo past its tallest; `size` for a
+                logo past its largest size, in bytes.
+              enum: [format, dimensions, size]
 
     plannedDowntimeProblem:
       type: object
@@ -3808,18 +3837,10 @@ components:
     parentProjectID:
       name: projectID
       in: query
-      description: The project that holds the beats, scenes, layers, cells or picture.
+      description: The project that holds the beats, scenes, layers, cells or logo.
       required: true
       schema:
         $ref: "#/components/schemas/projectID"
-
-    projectPicture:
-      name: picture
-      in: query
-      description: The picture to act on.
-      required: true
-      schema:
-        $ref: "#/components/schemas/projectPicture"
 
     manuscriptLayerID:
       name: layerID

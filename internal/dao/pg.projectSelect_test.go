@@ -34,17 +34,17 @@ func TestPgProjectSelect(t *testing.T) {
 			expect: composerFixtures().projects[0],
 		},
 		{
-			name: "Success/Pictures",
+			name: "Success/Logo",
 
-			fixtures: twoPictureFixtures(),
+			fixtures: logoFixtures(),
 			request:  &dao.ProjectSelectRequest{ID: projectID},
 
-			expect: twoPictureFixtures().projects[0],
+			expect: logoFixtures().projects[0],
 		},
 		{
 			name: "Error/NotFound",
 
-			fixtures: twoPictureFixtures(),
+			fixtures: logoFixtures(),
 			request:  &dao.ProjectSelectRequest{ID: absentID},
 
 			expectErr: dao.ErrProjectSelectNotFound,

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/uptrace/bun/dialect/pgdialect"
 
 	"github.com/a-novel-kit/golib/otel"
 	"github.com/a-novel-kit/golib/postgres"
@@ -27,6 +28,10 @@ type ProjectInsertRequest struct {
 	Premise string
 	// Language is the language the project is written in: en or fr.
 	Language string
+	// Tags are the author's custom labels, in order.
+	Tags []string
+	// Genres are the genres the author names, in order.
+	Genres []string
 
 	// Now is the instant stored as created_at, updated_at and edited_at.
 	Now time.Time
@@ -51,7 +56,9 @@ func (dao *PgProjectInsert) Exec(ctx context.Context, request *ProjectInsertRequ
 	entity := &Project{}
 
 	err = db.NewRaw(
-		projectInsertQuery, request.ID, request.OwnerID, request.Title, request.Premise, request.Language, request.Now,
+		projectInsertQuery,
+		request.ID, request.OwnerID, request.Title, request.Premise, request.Language,
+		pgdialect.Array(request.Tags), pgdialect.Array(request.Genres), request.Now,
 	).Scan(ctx, entity)
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("execute query: %w", err))

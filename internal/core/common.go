@@ -35,8 +35,8 @@ var (
 	ErrSceneNotFound = errors.New("scene not found")
 	// ErrLayerNotFound is returned when the project holds no layer with the ID.
 	ErrLayerNotFound = errors.New("layer not found")
-	// ErrPictureNotFound is returned when the project holds no such picture.
-	ErrPictureNotFound = errors.New("picture not found")
+	// ErrProjectLogoNotFound is returned when the project holds no logo.
+	ErrProjectLogoNotFound = errors.New("project logo not found")
 	// ErrProjectFull is returned when a project already holds as many beats or layers as it may, a beat as
 	// many scenes, or a write would bring a scene past [SceneContentMax] characters.
 	ErrProjectFull = errors.New("project full")

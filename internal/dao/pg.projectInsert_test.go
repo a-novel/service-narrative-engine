@@ -33,6 +33,8 @@ func TestPgProjectInsert(t *testing.T) {
 				Title:    "Les Heures claires",
 				Premise:  "Marie attend.",
 				Language: "fr",
+				Tags:     []string{},
+				Genres:   []string{},
 				Now:      now,
 			},
 
@@ -42,6 +44,34 @@ func TestPgProjectInsert(t *testing.T) {
 				Title:     "Les Heures claires",
 				Premise:   "Marie attend.",
 				Language:  "fr",
+				Tags:      []string{},
+				Genres:    []string{},
+				CreatedAt: now,
+				UpdatedAt: now,
+				EditedAt:  now,
+			},
+		},
+		{
+			// Each label holds a character the array literal escapes, and each list keeps its order.
+			name: "Success/Labels",
+
+			request: &dao.ProjectInsertRequest{
+				ID:       projectID,
+				OwnerID:  ownerID,
+				Title:    "Les Heures claires",
+				Language: "fr",
+				Tags:     []string{"polar", `l'été "noir"`, `a\b`, "{huis, clos}", "noir"},
+				Genres:   []string{"thriller", `d'été "chaud"`, `c\d`, "{roman, noir}"},
+				Now:      now,
+			},
+
+			expect: &dao.Project{
+				ID:        projectID,
+				OwnerID:   ownerID,
+				Title:     "Les Heures claires",
+				Language:  "fr",
+				Tags:      []string{"polar", `l'été "noir"`, `a\b`, "{huis, clos}", "noir"},
+				Genres:    []string{"thriller", `d'été "chaud"`, `c\d`, "{roman, noir}"},
 				CreatedAt: now,
 				UpdatedAt: now,
 				EditedAt:  now,

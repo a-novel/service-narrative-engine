@@ -19,15 +19,15 @@ import (
 	handlersmocks "github.com/a-novel/service-narrative-engine/internal/handlers/mocks"
 )
 
-func TestRestProjectPictureUpdate(t *testing.T) {
+func TestRestProjectLogoUpdate(t *testing.T) {
 	t.Parallel()
 
 	errFoo := errors.New("foo")
 
-	data := []byte("picture")
-	target := "/v1/project/picture?projectID=" + projectID.String() + "&picture=logo"
+	data := []byte("logo")
+	target := "/v1/project/logo?projectID=" + projectID.String()
 
-	// refusedResponse is the problem a refused picture answers, naming the rule it broke.
+	// refusedResponse is the problem a refused logo answers, naming the rule it broke.
 	refusedResponse := func(reason string) map[string]any {
 		return map[string]any{
 			"type":   "about:blank",
@@ -71,7 +71,7 @@ func TestRestProjectPictureUpdate(t *testing.T) {
 		{
 			name: "Error/MalformedProjectID",
 
-			target: "/v1/project/picture?projectID=not-a-uuid&picture=logo",
+			target: "/v1/project/logo?projectID=not-a-uuid",
 			caller: &ownerID,
 
 			expectStatus: http.StatusBadRequest,
@@ -117,17 +117,6 @@ func TestRestProjectPictureUpdate(t *testing.T) {
 			expectResponse: refusedResponse("format"),
 		},
 		{
-			name: "Error/Ratio",
-
-			target: target,
-			caller: &ownerID,
-
-			serviceMock: &serviceMock[*core.Project]{err: picture.ErrRatio},
-
-			expectStatus:   http.StatusUnprocessableEntity,
-			expectResponse: refusedResponse("ratio"),
-		},
-		{
 			name: "Error/Dimensions",
 
 			target: target,
@@ -154,13 +143,11 @@ func TestRestProjectPictureUpdate(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			service := handlersmocks.NewMockRestProjectPictureUpdateService(t)
+			service := handlersmocks.NewMockRestProjectLogoUpdateService(t)
 
 			if testCase.serviceMock != nil {
 				service.EXPECT().
-					Exec(mock.Anything, &core.ProjectPictureUpdateRequest{
-						OwnerID: ownerID, ProjectID: projectID, Picture: core.ProjectPictureLogo, Data: data,
-					}).
+					Exec(mock.Anything, &core.ProjectLogoUpdateRequest{OwnerID: ownerID, ProjectID: projectID, Data: data}).
 					Return(testCase.serviceMock.resp, testCase.serviceMock.err)
 			}
 
@@ -172,7 +159,7 @@ func TestRestProjectPictureUpdate(t *testing.T) {
 			}
 
 			request := httptest.NewRequestWithContext(t.Context(), http.MethodPut, testCase.target, body)
-			handlers.NewRestProjectPictureUpdate(service, config.LoggerDev).ServeHTTP(w, asUser(request, testCase.caller))
+			handlers.NewRestProjectLogoUpdate(service, config.LoggerDev).ServeHTTP(w, asUser(request, testCase.caller))
 
 			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
 			service.AssertExpectations(t)

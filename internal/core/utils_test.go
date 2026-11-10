@@ -6,6 +6,7 @@ import (
 	"image"
 	"image/color"
 	"image/jpeg"
+	"image/png"
 	"slices"
 	"testing"
 	"time"
@@ -87,9 +88,13 @@ func notesLayer(id uuid.UUID, position int) *dao.Layer {
 	return daoLayer(id, position, core.LayerKindNotes)
 }
 
+// tenLabels fills a project's tags or genres.
+var tenLabels = []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j"}
+
 func daoProject() *dao.Project {
 	return &dao.Project{
-		ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr",
+		ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr", Tags: []string{"noir"},
+		Genres:    []string{"thriller"},
 		CreatedAt: createdAt, UpdatedAt: updatedAt, EditedAt: editedAt, LogoUpdatedAt: lo.ToPtr(editedAt),
 	}
 }
@@ -97,12 +102,24 @@ func daoProject() *dao.Project {
 // coreProject returns the project [daoProject] reads.
 func coreProject() *core.Project {
 	return &core.Project{
-		ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr",
+		ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr", Tags: []string{"noir"},
+		Genres:    []string{"thriller"},
 		CreatedAt: createdAt, UpdatedAt: updatedAt, EditedAt: editedAt, LogoVersion: lo.ToPtr(editedAt),
 	}
 }
 
 // newJPEG encodes a gray gradient of the given size as a JPEG.
+func newPNG(width, height int) []byte {
+	var buf bytes.Buffer
+
+	err := png.Encode(&buf, image.NewGray(image.Rect(0, 0, width, height)))
+	if err != nil {
+		panic(err)
+	}
+
+	return buf.Bytes()
+}
+
 func newJPEG(width, height int) []byte {
 	img := image.NewGray(image.Rect(0, 0, width, height))
 

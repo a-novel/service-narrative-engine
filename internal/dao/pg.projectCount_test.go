@@ -20,7 +20,7 @@ func TestPgProjectCount(t *testing.T) {
 	// secondProject gives the owner two projects beside the one of the other owner.
 	secondProject := &dao.Project{
 		ID: uuid.MustParse("00000000-0000-0000-0000-000000000003"), OwnerID: ownerID, Title: "Second",
-		Language: "en", CreatedAt: createdAt, UpdatedAt: updatedAt,
+		Language: "en", Tags: []string{}, Genres: []string{}, CreatedAt: createdAt, UpdatedAt: updatedAt,
 	}
 
 	testCases := []struct {

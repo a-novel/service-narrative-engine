@@ -1,4 +1,4 @@
--- RETURNING cannot join, so the outer query joins the picture versions to the updated row.
+-- RETURNING cannot join, so the outer query joins the logo version to the updated row.
 WITH
   updated AS (
     UPDATE projects
@@ -6,7 +6,9 @@ WITH
       title = ?1,
       premise = ?2,
       language = ?3,
-      updated_at = ?4
+      tags = ?4,
+      genres = ?5,
+      updated_at = ?6
     WHERE
       id = ?0
     RETURNING
@@ -14,11 +16,7 @@ WITH
   )
 SELECT
   updated.*,
-  logo.updated_at AS logo_updated_at,
-  background.updated_at AS background_updated_at
+  logos.updated_at AS logo_updated_at
 FROM
   updated
-  LEFT JOIN project_pictures AS logo ON logo.project_id = updated.id
-  AND logo.picture = 'logo'
-  LEFT JOIN project_pictures AS background ON background.project_id = updated.id
-  AND background.picture = 'background';
+  LEFT JOIN project_logos AS logos ON logos.project_id = updated.id;
