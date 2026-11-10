@@ -14,7 +14,7 @@ import (
 	handlersmocks "github.com/a-novel/service-narrative-engine/internal/handlers/mocks"
 )
 
-func TestRestProjectPictureDelete(t *testing.T) {
+func TestRestProjectLogoDelete(t *testing.T) {
 	t.Parallel()
 
 	errFoo := errors.New("foo")
@@ -22,9 +22,7 @@ func TestRestProjectPictureDelete(t *testing.T) {
 	validRequest := func(t *testing.T) *http.Request {
 		t.Helper()
 
-		return newRequest(
-			t, http.MethodDelete, "/v1/project/picture?projectID="+projectID.String()+"&picture=background", nil,
-		)
+		return newRequest(t, http.MethodDelete, "/v1/project/logo?projectID="+projectID.String(), nil)
 	}
 
 	testCases := []struct {
@@ -64,7 +62,7 @@ func TestRestProjectPictureDelete(t *testing.T) {
 			request: func(t *testing.T) *http.Request {
 				t.Helper()
 
-				return newRequest(t, http.MethodDelete, "/v1/project/picture?projectID=not-a-uuid&picture=logo", nil)
+				return newRequest(t, http.MethodDelete, "/v1/project/logo?projectID=not-a-uuid", nil)
 			},
 
 			expectStatus: http.StatusBadRequest,
@@ -102,18 +100,16 @@ func TestRestProjectPictureDelete(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			service := handlersmocks.NewMockRestProjectPictureDeleteService(t)
+			service := handlersmocks.NewMockRestProjectLogoDeleteService(t)
 
 			if testCase.serviceMock != nil {
 				service.EXPECT().
-					Exec(mock.Anything, &core.ProjectPictureDeleteRequest{
-						OwnerID: ownerID, ProjectID: projectID, Picture: core.ProjectPictureBackground,
-					}).
+					Exec(mock.Anything, &core.ProjectLogoDeleteRequest{OwnerID: ownerID, ProjectID: projectID}).
 					Return(testCase.serviceMock.resp, testCase.serviceMock.err)
 			}
 
 			w := httptest.NewRecorder()
-			handlers.NewRestProjectPictureDelete(service, config.LoggerDev).ServeHTTP(w, testCase.request(t))
+			handlers.NewRestProjectLogoDelete(service, config.LoggerDev).ServeHTTP(w, testCase.request(t))
 
 			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
 			service.AssertExpectations(t)

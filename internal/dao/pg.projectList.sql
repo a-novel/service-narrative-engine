@@ -2,15 +2,11 @@
 -- edited at the same instant list newest first.
 SELECT
   projects.*,
-  logo.updated_at AS logo_updated_at,
-  background.updated_at AS background_updated_at,
+  logos.updated_at AS logo_updated_at,
   count(*) OVER () AS total
 FROM
   projects
-  LEFT JOIN project_pictures AS logo ON logo.project_id = projects.id
-  AND logo.picture = 'logo'
-  LEFT JOIN project_pictures AS background ON background.project_id = projects.id
-  AND background.picture = 'background'
+  LEFT JOIN project_logos AS logos ON logos.project_id = projects.id
 WHERE
   projects.owner_id = ?0
 ORDER BY

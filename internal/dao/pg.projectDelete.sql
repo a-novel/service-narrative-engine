@@ -1,5 +1,4 @@
--- The outer query reads the pictures as they stood before the delete, so it returns the versions the project
--- held.
+-- The outer query reads the logo as it stood before the delete, so it returns the version the project held.
 WITH
   deleted AS (
     DELETE FROM projects
@@ -10,11 +9,7 @@ WITH
   )
 SELECT
   deleted.*,
-  logo.updated_at AS logo_updated_at,
-  background.updated_at AS background_updated_at
+  logos.updated_at AS logo_updated_at
 FROM
   deleted
-  LEFT JOIN project_pictures AS logo ON logo.project_id = deleted.id
-  AND logo.picture = 'logo'
-  LEFT JOIN project_pictures AS background ON background.project_id = deleted.id
-  AND background.picture = 'background';
+  LEFT JOIN project_logos AS logos ON logos.project_id = deleted.id;

@@ -31,7 +31,7 @@ func summaryCells() []*dao.Cell {
 			Recap: &dao.Recap{
 				Condensed: "Marie rit.", Compact: "Rires.", Essentials: "Rire.", Names: []string{"Marie", "Paul"},
 			},
-			RecapCellUpdatedAt: &createdAt,
+			RecapCellUpdatedAt: lo.ToPtr(createdAt),
 		},
 		{
 			ProjectID: projectID, SceneID: sceneID1, LayerID: notesLayerID, UpdatedAt: updatedAt,
@@ -62,7 +62,7 @@ func TestPgCellSummaryList(t *testing.T) {
 			SceneID: sceneID1, LayerID: manuscriptLayerID, UpdatedAt: updatedAt, Size: 38,
 			Speakers:   []string{"Marie", "Paul"},
 			RecapNames: []string{"Marie", "Paul"}, RecapCondensedSize: lo.ToPtr(10), RecapCompactSize: lo.ToPtr(6),
-			RecapEssentialsSize: lo.ToPtr(5), RecapCellUpdatedAt: &createdAt,
+			RecapEssentialsSize: lo.ToPtr(5), RecapCellUpdatedAt: lo.ToPtr(createdAt),
 		},
 		{SceneID: sceneID2, LayerID: manuscriptLayerID, UpdatedAt: updatedAt, Empty: true, Speakers: []string{}},
 		{SceneID: sceneID1, LayerID: notesLayerID, UpdatedAt: updatedAt, Size: 14, Speakers: []string{}},
@@ -79,7 +79,7 @@ func TestPgCellSummaryList(t *testing.T) {
 			SceneID: sceneID1, LayerID: manuscriptLayerID, UpdatedAt: updatedAt, Size: 38,
 			Speakers:   []string{"Marie", "Paul"},
 			RecapNames: []string{"Paul"}, RecapCondensedSize: lo.ToPtr(10), RecapCompactSize: lo.ToPtr(5),
-			RecapEssentialsSize: lo.ToPtr(3), RecapCellUpdatedAt: &updatedAt, Total: 4,
+			RecapEssentialsSize: lo.ToPtr(3), RecapCellUpdatedAt: lo.ToPtr(updatedAt), Total: 4,
 		},
 		{SceneID: sceneID2, LayerID: manuscriptLayerID, UpdatedAt: now, Size: 6, Speakers: []string{"Léa"}, Total: 4},
 		summaries[2],

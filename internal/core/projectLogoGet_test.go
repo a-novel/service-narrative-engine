@@ -12,22 +12,22 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-func TestProjectPictureGet(t *testing.T) {
+func TestProjectLogoGet(t *testing.T) {
 	t.Parallel()
 
 	errFoo := errors.New("foo")
 
-	request := &core.ProjectPictureGetRequest{OwnerID: ownerID, ProjectID: projectID, Picture: core.ProjectPictureLogo}
+	request := &core.ProjectLogoGetRequest{OwnerID: ownerID, ProjectID: projectID}
 
 	testCases := []struct {
 		name string
 
-		request *core.ProjectPictureGetRequest
+		request *core.ProjectLogoGetRequest
 
 		ownerMock *daoMock[bool]
-		daoMock   *daoMock[*dao.ProjectPicture]
+		daoMock   *daoMock[*dao.ProjectLogo]
 
-		expect    *core.ProjectPicture
+		expect    *core.ProjectLogo
 		expectErr error
 	}{
 		{
@@ -36,17 +36,16 @@ func TestProjectPictureGet(t *testing.T) {
 			request: request,
 
 			ownerMock: &daoMock[bool]{resp: true},
-			daoMock: &daoMock[*dao.ProjectPicture]{resp: &dao.ProjectPicture{
-				ProjectID: projectID, Picture: core.ProjectPictureLogo, Data: []byte("logo"), MediaType: "image/webp",
-				UpdatedAt: editedAt,
+			daoMock: &daoMock[*dao.ProjectLogo]{resp: &dao.ProjectLogo{
+				ProjectID: projectID, Data: []byte("logo"), MediaType: "image/webp", UpdatedAt: editedAt,
 			}},
 
-			expect: &core.ProjectPicture{MediaType: "image/webp", Data: []byte("logo"), Version: editedAt},
+			expect: &core.ProjectLogo{MediaType: "image/webp", Data: []byte("logo"), Version: editedAt},
 		},
 		{
-			name: "Error/UnknownPicture",
+			name: "Error/MissingProjectID",
 
-			request: &core.ProjectPictureGetRequest{OwnerID: ownerID, ProjectID: projectID, Picture: "banner"},
+			request: &core.ProjectLogoGetRequest{OwnerID: ownerID},
 
 			expectErr: core.ErrInvalidRequest,
 		},
@@ -69,14 +68,14 @@ func TestProjectPictureGet(t *testing.T) {
 			expectErr: errFoo,
 		},
 		{
-			name: "Error/NoPicture",
+			name: "Error/NoLogo",
 
 			request: request,
 
 			ownerMock: &daoMock[bool]{resp: true},
-			daoMock:   &daoMock[*dao.ProjectPicture]{err: dao.ErrProjectPictureSelectNotFound},
+			daoMock:   &daoMock[*dao.ProjectLogo]{err: dao.ErrProjectLogoSelectNotFound},
 
-			expectErr: core.ErrPictureNotFound,
+			expectErr: core.ErrProjectLogoNotFound,
 		},
 		{
 			name: "Error/Select",
@@ -84,7 +83,7 @@ func TestProjectPictureGet(t *testing.T) {
 			request: request,
 
 			ownerMock: &daoMock[bool]{resp: true},
-			daoMock:   &daoMock[*dao.ProjectPicture]{err: errFoo},
+			daoMock:   &daoMock[*dao.ProjectLogo]{err: errFoo},
 
 			expectErr: errFoo,
 		},
@@ -94,8 +93,8 @@ func TestProjectPictureGet(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockOwner := coremocks.NewMockProjectPictureGetDaoOwner(t)
-			mockSelect := coremocks.NewMockProjectPictureGetDao(t)
+			mockOwner := coremocks.NewMockProjectLogoGetDaoOwner(t)
+			mockSelect := coremocks.NewMockProjectLogoGetDao(t)
 
 			if testCase.ownerMock != nil {
 				mockOwner.EXPECT().
@@ -105,11 +104,11 @@ func TestProjectPictureGet(t *testing.T) {
 
 			if testCase.daoMock != nil {
 				mockSelect.EXPECT().
-					Exec(mock.Anything, &dao.ProjectPictureSelectRequest{ProjectID: projectID, Picture: core.ProjectPictureLogo}).
+					Exec(mock.Anything, &dao.ProjectLogoSelectRequest{ProjectID: projectID}).
 					Return(testCase.daoMock.resp, testCase.daoMock.err)
 			}
 
-			service := core.NewProjectPictureGet(mockOwner, mockSelect)
+			service := core.NewProjectLogoGet(mockOwner, mockSelect)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)

@@ -18,29 +18,32 @@ type Project struct {
 	Premise string `json:"premise"`
 	// Language is the language the project is written in, one of [core.ProjectLanguages].
 	Language string `json:"language"`
+	// Tags are the author's custom labels, in order. Empty until the author adds one.
+	Tags []string `json:"tags"`
+	// Genres are the genres the author names, in order. Empty until the author adds one.
+	Genres []string `json:"genres"`
 
 	CreatedAt time.Time `json:"createdAt"`
 	// UpdatedAt is when the project's own fields last changed.
 	UpdatedAt time.Time `json:"updatedAt"`
-	// EditedAt is when the project's content last changed, its pictures aside.
+	// EditedAt is when the project's content last changed, its logo aside.
 	EditedAt time.Time `json:"editedAt"`
 
 	// LogoVersion is when the logo last changed, absent while the project has no logo.
 	LogoVersion *time.Time `json:"logoVersion,omitempty"`
-	// BackgroundVersion is when the background last changed, absent while the project has no background.
-	BackgroundVersion *time.Time `json:"backgroundVersion,omitempty"`
 }
 
 func loadProject(project *core.Project) Project {
 	return Project{
-		ID:                project.ID,
-		Title:             project.Title,
-		Premise:           project.Premise,
-		Language:          project.Language,
-		CreatedAt:         project.CreatedAt,
-		UpdatedAt:         project.UpdatedAt,
-		EditedAt:          project.EditedAt,
-		LogoVersion:       project.LogoVersion,
-		BackgroundVersion: project.BackgroundVersion,
+		ID:          project.ID,
+		Title:       project.Title,
+		Premise:     project.Premise,
+		Language:    project.Language,
+		Tags:        project.Tags,
+		Genres:      project.Genres,
+		CreatedAt:   project.CreatedAt,
+		UpdatedAt:   project.UpdatedAt,
+		EditedAt:    project.EditedAt,
+		LogoVersion: project.LogoVersion,
 	}
 }

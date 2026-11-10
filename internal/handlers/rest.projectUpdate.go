@@ -28,6 +28,12 @@ type RestProjectUpdateRequest struct {
 	Premise string `json:"premise"`
 	// Language is the language the project is written in, one of [core.ProjectLanguages].
 	Language string `json:"language"`
+	// Tags replace the author's custom labels, in order. An empty list clears them, and an omitted one is
+	// refused.
+	Tags []string `json:"tags"`
+	// Genres replace the genres the author names, in order. An empty list clears them, and an omitted one is
+	// refused.
+	Genres []string `json:"genres"`
 }
 
 // RestProjectUpdate is the HTTP handler for the update-project endpoint. It responds with the updated
@@ -67,6 +73,8 @@ func (handler *RestProjectUpdate) ServeHTTP(w http.ResponseWriter, r *http.Reque
 		Title:    request.Title,
 		Premise:  request.Premise,
 		Language: request.Language,
+		Tags:     request.Tags,
+		Genres:   request.Genres,
 	}
 
 	result, err := handler.service.Exec(ctx, serviceRequest)

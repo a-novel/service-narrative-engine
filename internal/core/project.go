@@ -24,32 +24,35 @@ type Project struct {
 	Premise string
 	// Language is the language the project is written in, as a BCP 47 tag.
 	Language string
+	// Tags are the author's custom labels, in order. Empty until the author adds one.
+	Tags []string
+	// Genres are the genres the author names, in order. Empty until the author adds one.
+	Genres []string
 
 	CreatedAt time.Time
-	// UpdatedAt is when the project's own fields last changed: its title, premise or language.
+	// UpdatedAt is when the project's own fields last changed: its title, premise, language, tags or genres.
 	UpdatedAt time.Time
 	// EditedAt is when the project's content last changed: its own fields, its beats, scenes, layers, cells or
-	// recaps. Its pictures are cosmetic and leave it as it was.
+	// recaps. Its logo is cosmetic and leaves it as it was.
 	EditedAt time.Time
 
-	// LogoVersion is when the logo last changed, nil while the project has no logo. Picture URLs carry it,
-	// so a cache keeps each version for good.
+	// LogoVersion is when the logo last changed, nil while the project has no logo. Logo URLs carry it, so a
+	// cache keeps each version for good.
 	LogoVersion *time.Time
-	// BackgroundVersion is when the background last changed, nil while the project has no background.
-	BackgroundVersion *time.Time
 }
 
 func newProject(entity *dao.Project) *Project {
 	return &Project{
-		ID:                entity.ID,
-		OwnerID:           entity.OwnerID,
-		Title:             entity.Title,
-		Premise:           entity.Premise,
-		Language:          entity.Language,
-		CreatedAt:         entity.CreatedAt,
-		UpdatedAt:         entity.UpdatedAt,
-		EditedAt:          entity.EditedAt,
-		LogoVersion:       entity.LogoUpdatedAt,
-		BackgroundVersion: entity.BackgroundUpdatedAt,
+		ID:          entity.ID,
+		OwnerID:     entity.OwnerID,
+		Title:       entity.Title,
+		Premise:     entity.Premise,
+		Language:    entity.Language,
+		Tags:        entity.Tags,
+		Genres:      entity.Genres,
+		CreatedAt:   entity.CreatedAt,
+		UpdatedAt:   entity.UpdatedAt,
+		EditedAt:    entity.EditedAt,
+		LogoVersion: entity.LogoUpdatedAt,
 	}
 }

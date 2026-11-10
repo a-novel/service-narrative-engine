@@ -19,15 +19,16 @@ func TestPgProjectUpdate(t *testing.T) {
 	t.Parallel()
 
 	update := &dao.ProjectUpdateRequest{
-		ID: projectID, Title: "Clear Hours", Premise: "Marie waits.", Language: "en", Now: now,
+		ID: projectID, Title: "Clear Hours", Premise: "Marie waits.", Language: "en",
+		Tags: []string{"thriller", "polar", "noir"}, Genres: []string{"roman noir", "policier"}, Now: now,
 	}
 
-	// updated returns the test project after the update, with the versions of its logo and its background.
-	updated := func(logo, background *time.Time) *dao.Project {
+	// updated returns the test project after the update, with the version of its logo.
+	updated := func(logo *time.Time) *dao.Project {
 		return &dao.Project{
 			ID: projectID, OwnerID: ownerID, Title: "Clear Hours", Premise: "Marie waits.", Language: "en",
+			Tags: []string{"thriller", "polar", "noir"}, Genres: []string{"roman noir", "policier"},
 			CreatedAt: createdAt, UpdatedAt: now, EditedAt: updatedAt, LogoUpdatedAt: logo,
-			BackgroundUpdatedAt: background,
 		}
 	}
 
@@ -46,22 +47,36 @@ func TestPgProjectUpdate(t *testing.T) {
 			fixtures: composerFixtures(),
 			request:  update,
 
-			expect: updated(nil, nil),
+			expect: updated(nil),
 		},
 		{
-			name: "Success/Pictures",
+			name: "Success/Logo",
 
-			fixtures: twoPictureFixtures(),
+			fixtures: logoFixtures(),
 			request:  update,
 
-			expect: updated(lo.ToPtr(updatedAt), lo.ToPtr(createdAt)),
+			expect: updated(lo.ToPtr(updatedAt)),
+		},
+		{
+			name: "Success/ClearLabels",
+
+			fixtures: composerFixtures(),
+			request: &dao.ProjectUpdateRequest{
+				ID: projectID, Title: "Clear Hours", Premise: "Marie waits.", Language: "en", Tags: []string{},
+				Genres: []string{}, Now: now,
+			},
+
+			expect: &dao.Project{
+				ID: projectID, OwnerID: ownerID, Title: "Clear Hours", Premise: "Marie waits.", Language: "en",
+				Tags: []string{}, Genres: []string{}, CreatedAt: createdAt, UpdatedAt: now, EditedAt: updatedAt,
+			},
 		},
 		{
 			name: "Error/NotFound",
 
-			fixtures: twoPictureFixtures(),
+			fixtures: logoFixtures(),
 			request: &dao.ProjectUpdateRequest{
-				ID: absentID, Title: "Clear Hours", Language: "en", Now: now,
+				ID: absentID, Title: "Clear Hours", Language: "en", Tags: []string{}, Genres: []string{}, Now: now,
 			},
 
 			expectErr: dao.ErrProjectUpdateNotFound,

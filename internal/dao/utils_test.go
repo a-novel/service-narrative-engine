@@ -78,7 +78,7 @@ type storedBytes struct {
 // fixtures is the data a DAO test seeds before it runs the operation under test.
 type fixtures struct {
 	projects []*dao.Project
-	pictures []*dao.ProjectPicture
+	logos    []*dao.ProjectLogo
 	beats    []*dao.Beat
 	scenes   []*dao.Scene
 	layers   []*dao.Layer
@@ -93,11 +93,12 @@ func composerFixtures() fixtures {
 		projects: []*dao.Project{
 			{
 				ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Premise: "Marie attend.",
-				Language: "fr", CreatedAt: createdAt, UpdatedAt: updatedAt, EditedAt: updatedAt,
+				Language: "fr", Tags: []string{"noir", "huis clos"}, Genres: []string{"thriller"},
+				CreatedAt: createdAt, UpdatedAt: updatedAt, EditedAt: updatedAt,
 			},
 			{
-				ID: otherProjectID, OwnerID: otherOwnerID, Title: "Other", Language: "en",
-				CreatedAt: createdAt, UpdatedAt: updatedAt, EditedAt: updatedAt,
+				ID: otherProjectID, OwnerID: otherOwnerID, Title: "Other", Language: "en", Tags: []string{},
+				Genres: []string{}, CreatedAt: createdAt, UpdatedAt: updatedAt, EditedAt: updatedAt,
 			},
 		},
 		beats: []*dao.Beat{
@@ -143,30 +144,14 @@ func composerFixtures() fixtures {
 	}
 }
 
-// pictureFixtures returns the composer fixtures with a logo on the test project. The project carries the
+// logoFixtures returns the composer fixtures with a logo on the test project. The project carries the
 // logo's version, as a read returns it.
-func pictureFixtures() fixtures {
+func logoFixtures() fixtures {
 	data := composerFixtures()
 	data.projects[0].LogoUpdatedAt = lo.ToPtr(updatedAt)
-	data.pictures = []*dao.ProjectPicture{
-		{
-			ProjectID: projectID, Picture: "logo", Data: []byte("stored logo"), MediaType: "image/webp",
-			UpdatedAt: updatedAt,
-		},
+	data.logos = []*dao.ProjectLogo{
+		{ProjectID: projectID, Data: []byte("stored logo"), MediaType: "image/webp", UpdatedAt: updatedAt},
 	}
-
-	return data
-}
-
-// twoPictureFixtures returns the picture fixtures with a background beside the logo. The background holds an
-// older version, so a read that swaps the two versions fails.
-func twoPictureFixtures() fixtures {
-	data := pictureFixtures()
-	data.projects[0].BackgroundUpdatedAt = lo.ToPtr(createdAt)
-	data.pictures = append(data.pictures, &dao.ProjectPicture{
-		ProjectID: projectID, Picture: "background", Data: []byte("stored background"), MediaType: "image/jpeg",
-		UpdatedAt: createdAt,
-	})
 
 	return data
 }
@@ -227,8 +212,8 @@ func insertFixtures(ctx context.Context, t *testing.T, data fixtures) {
 		require.NoError(t, err)
 	}
 
-	if len(data.pictures) > 0 {
-		_, err = db.NewInsert().Model(&data.pictures).Exec(ctx)
+	if len(data.logos) > 0 {
+		_, err = db.NewInsert().Model(&data.logos).Exec(ctx)
 		require.NoError(t, err)
 	}
 
@@ -383,24 +368,16 @@ func listCells(ctx context.Context, t *testing.T, project uuid.UUID) []*dao.Cell
 	return lo.Map(rows, func(row *dao.CellListRow, _ int) *dao.Cell { return &row.Cell })
 }
 
-// projectPictures reads the logo and the background of the test project, nil for each it lacks.
-func projectPictures(ctx context.Context, t *testing.T) [2]*dao.ProjectPicture {
+// projectLogo reads the logo of the test project, nil when it holds none.
+func projectLogo(ctx context.Context, t *testing.T) *dao.ProjectLogo {
 	t.Helper()
 
-	var pictures [2]*dao.ProjectPicture
-
-	for i, name := range []string{"logo", "background"} {
-		request := &dao.ProjectPictureSelectRequest{ProjectID: projectID, Picture: name}
-
-		picture, err := dao.NewPgProjectPictureSelect().Exec(ctx, request)
-		if errors.Is(err, dao.ErrProjectPictureSelectNotFound) {
-			continue
-		}
-
-		require.NoError(t, err)
-
-		pictures[i] = picture
+	logo, err := dao.NewPgProjectLogoSelect().Exec(ctx, &dao.ProjectLogoSelectRequest{ProjectID: projectID})
+	if errors.Is(err, dao.ErrProjectLogoSelectNotFound) {
+		return nil
 	}
 
-	return pictures
+	require.NoError(t, err)
+
+	return logo
 }

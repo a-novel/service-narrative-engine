@@ -28,13 +28,13 @@ var composerErrors = httpf.ErrMap{
 	core.ErrRequiredLayer:   http.StatusConflict,
 }
 
-// pictureErrors maps the refusals of the picture operations to their status. A 422 answers a picture the
+// logoErrors maps the refusals of the logo operations to their status. A 422 answers a logo the
 // contract refuses, with its reason as the problem's reason tag.
-var pictureErrors = httpf.ErrMap{
-	core.ErrInvalidRequest:  http.StatusBadRequest,
-	core.ErrProjectNotFound: http.StatusNotFound,
-	core.ErrPictureNotFound: http.StatusNotFound,
-	picture.ErrRefused:      http.StatusUnprocessableEntity,
+var logoErrors = httpf.ErrMap{
+	core.ErrInvalidRequest:      http.StatusBadRequest,
+	core.ErrProjectNotFound:     http.StatusNotFound,
+	core.ErrProjectLogoNotFound: http.StatusNotFound,
+	picture.ErrRefused:          http.StatusUnprocessableEntity,
 }
 
 // recapErrors maps the refusals of the recap writes to their status. A 409 answers a recap that read its

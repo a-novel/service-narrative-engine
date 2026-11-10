@@ -36,11 +36,19 @@ type ProjectUpdateRequest struct {
 	ID      uuid.UUID `validate:"required"`
 
 	// Title names the narrative.
-	Title string `validate:"required,notblank,max=200"`
+	Title string `validate:"required,notblank,max=80"`
 	// Premise says what the narrative is about, in a few sentences.
 	Premise string `validate:"max=20000"`
 	// Language is the language the project is written in, one of [ProjectLanguages].
 	Language string `validate:"required,language"`
+	// Tags replace the author's custom labels, in order. An empty list clears them, and a nil list fails
+	// validation, so an omission never wipes them. A tag holds 1 to 24 runes and no whitespace at either
+	// end, and appears once.
+	Tags []string `validate:"required,max=10,unique,dive,required,max=24,projectlabel"`
+	// Genres replace the genres the author names, in order. An empty list clears them, and a nil list fails
+	// validation, so an omission never wipes them. A genre holds 1 to 24 runes and no whitespace at either
+	// end, and appears once.
+	Genres []string `validate:"required,max=10,unique,dive,required,max=24,projectlabel"`
 }
 
 // ProjectUpdate replaces a project's own fields. It writes nothing when the project would store more than
@@ -91,6 +99,8 @@ func (service *ProjectUpdate) Exec(ctx context.Context, request *ProjectUpdateRe
 			Title:    request.Title,
 			Premise:  request.Premise,
 			Language: request.Language,
+			Tags:     request.Tags,
+			Genres:   request.Genres,
 			Now:      time.Now(),
 		})
 		if errors.Is(err, dao.ErrProjectUpdateNotFound) {

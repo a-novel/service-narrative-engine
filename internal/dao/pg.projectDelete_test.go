@@ -24,9 +24,9 @@ func TestPgProjectDelete(t *testing.T) {
 
 		expect       *dao.Project
 		expectScenes []*dao.Scene
-		// expectPictures are the logo and the background of the test project after the delete.
-		expectPictures [2]*dao.ProjectPicture
-		expectErr      error
+		// expectLogo is the logo of the test project after the delete.
+		expectLogo *dao.ProjectLogo
+		expectErr  error
 	}{
 		{
 			name: "Success",
@@ -38,24 +38,24 @@ func TestPgProjectDelete(t *testing.T) {
 			expectScenes: []*dao.Scene{},
 		},
 		{
-			// The project returns the versions it held, and its pictures go with it.
-			name: "Success/Pictures",
+			// The project returns the version it held, and its logo goes with it.
+			name: "Success/Logo",
 
-			fixtures: twoPictureFixtures(),
+			fixtures: logoFixtures(),
 			request:  &dao.ProjectDeleteRequest{ID: projectID},
 
-			expect:       twoPictureFixtures().projects[0],
+			expect:       logoFixtures().projects[0],
 			expectScenes: []*dao.Scene{},
 		},
 		{
 			name: "Error/NotFound",
 
-			fixtures: twoPictureFixtures(),
+			fixtures: logoFixtures(),
 			request:  &dao.ProjectDeleteRequest{ID: absentID},
 
-			expectScenes:   composerFixtures().scenes[:4],
-			expectPictures: [2]*dao.ProjectPicture{twoPictureFixtures().pictures[0], twoPictureFixtures().pictures[1]},
-			expectErr:      dao.ErrProjectDeleteNotFound,
+			expectScenes: composerFixtures().scenes[:4],
+			expectLogo:   logoFixtures().logos[0],
+			expectErr:    dao.ErrProjectDeleteNotFound,
 		},
 	}
 
@@ -76,7 +76,7 @@ func TestPgProjectDelete(t *testing.T) {
 
 				// Deleting a project deletes its scenes with it.
 				require.Equal(t, testCase.expectScenes, listScenes(ctx, t, projectID))
-				require.Equal(t, testCase.expectPictures, projectPictures(ctx, t))
+				require.Equal(t, testCase.expectLogo, projectLogo(ctx, t))
 			})
 		})
 	}

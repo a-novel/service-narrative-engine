@@ -27,6 +27,8 @@ func TestRestProjectCreate(t *testing.T) {
 			"title":    "Les Heures claires",
 			"premise":  "Marie attend.",
 			"language": "fr",
+			"tags":     []string{"noir", "huis clos"},
+			"genres":   []string{"thriller"},
 		})
 	}
 
@@ -120,6 +122,8 @@ func TestRestProjectCreate(t *testing.T) {
 						Title:    "Les Heures claires",
 						Premise:  "Marie attend.",
 						Language: "fr",
+						Tags:     []string{"noir", "huis clos"},
+						Genres:   []string{"thriller"},
 					}).
 					Return(testCase.serviceMock.resp, testCase.serviceMock.err)
 			}
