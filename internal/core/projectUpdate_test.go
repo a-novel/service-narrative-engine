@@ -97,8 +97,12 @@ func TestProjectUpdate(t *testing.T) {
 		{
 			name: "Success/Tags",
 
-			// A tag takes lowercase letters from any script and digits, and counts its runes.
-			request: withTags([]string{"noir", "huis-clos", "années-50", "1950", "推理", strings.Repeat("é", 24)}),
+			// A tag takes lowercase letters from any script, with their marks and modifier letters, and digits,
+			// and counts its runes.
+			request: withTags([]string{
+				"noir", "huis-clos", "années-50", "1950", "推理",
+				"เรื่อง", "हिंदी", "ラーメン", "i\u0307stanbul", strings.Repeat("é", 24),
+			}),
 
 			lockMock:  &daoMock[bool]{resp: true},
 			daoMock:   &daoMock[*dao.Project]{resp: daoProject()},
@@ -314,7 +318,8 @@ func TestProjectUpdate(t *testing.T) {
 		{
 			name: "Error/TagDecomposedAccent",
 
-			// The accent is a combining mark after the "e", where "années-50" holds a precomposed "é".
+			// The accent is a combining mark after the "e": the tag is not precomposed (NFC), where "années-50"
+			// holds a precomposed "é".
 			request: withTags([]string{"anne\u0301es-50"}),
 
 			expectErr: core.ErrInvalidRequest,

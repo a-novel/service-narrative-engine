@@ -8,13 +8,14 @@ NEXT accepts only project tags in lower kebab case, such as `huis-clos` or `ann�
 
 ## Send tags in lower kebab case
 
-A tag is one or more runs of lowercase letters or digits, joined by single hyphens. It holds no whitespace, no uppercase letter and no underscore, and no hyphen at either end or twice in a row. Letters come from any script, so French tags keep their accents. The limits stay: at most 10 tags of 1 to 24 characters, each appearing once.
+A tag is one or more runs of lowercase letters, marks or digits, joined by single hyphens. It holds no whitespace, no uppercase letter and no underscore, and no hyphen at either end or twice in a row. Letters come from any script, with the marks and modifier letters their words carry, so French tags keep their accents and Thai, Hindi or Japanese words stay whole. The limits stay: at most 10 tags of 1 to 24 characters, each appearing once.
 
 | Tag              | Accepted |
 | ---------------- | -------- |
 | `annees-50`      | yes      |
 | `années-50`      | yes      |
 | `1950`           | yes      |
+| `ラーメン`       | yes      |
 | `Années 50`      | no       |
 | `roman_maritime` | no       |
 | `huis--clos`     | no       |

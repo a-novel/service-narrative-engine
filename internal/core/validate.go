@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
+	"golang.org/x/text/unicode/norm"
 
 	"github.com/a-novel/service-narrative-engine/internal/models/schemas"
 )
@@ -70,14 +71,16 @@ func ValidateProjectLabel(fl validator.FieldLevel) bool {
 }
 
 // projectTagPattern matches a tag of a project in lower kebab case.
-var projectTagPattern = regexp.MustCompile(`^[\p{Ll}\p{Lo}\p{Nd}]+(-[\p{Ll}\p{Lo}\p{Nd}]+)*$`)
+var projectTagPattern = regexp.MustCompile(`^[\p{Ll}\p{Lm}\p{Lo}\p{M}\p{Nd}]+(-[\p{Ll}\p{Lm}\p{Lo}\p{M}\p{Nd}]+)*$`)
 
 // ValidateProjectTag reports whether a tag of a project is in lower kebab case, as "années-50" is: runs of
-// lowercase letters or digits, from any script, joined by single hyphens. An accented letter must be precomposed
-// (NFC), since a combining mark is neither a letter nor a digit. The package registers it as the "projecttag"
-// struct tag.
+// lowercase, modifier or caseless letters, marks or digits, from any script, joined by single hyphens. Marks keep
+// whole the words of scripts that write with them, as Thai or Hindi do. The tag must be precomposed (NFC), so an
+// accented letter has a single spelling. The package registers it as the "projecttag" struct tag.
 func ValidateProjectTag(fl validator.FieldLevel) bool {
-	return projectTagPattern.MatchString(fl.Field().String())
+	tag := fl.Field().String()
+
+	return projectTagPattern.MatchString(tag) && norm.NFC.IsNormalString(tag)
 }
 
 // ValidateUniqueCells reports whether a list of [CellsWriteItem] names each pair of a scene and a layer

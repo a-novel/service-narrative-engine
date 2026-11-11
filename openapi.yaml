@@ -2552,11 +2552,11 @@ components:
           items:
             type: string
             description: |
-              A label of 1 to 24 characters in lower kebab case: runs of lowercase letters or digits, from any
-              script, joined by single hyphens. An accented letter is precomposed (NFC).
+              A label of 1 to 24 characters in lower kebab case: runs of lowercase letters, marks or digits, from
+              any script, joined by single hyphens. The tag is precomposed (NFC).
             minLength: 1
             maxLength: 24
-            pattern: '^[\p{Ll}\p{Lo}\p{Nd}]+(-[\p{Ll}\p{Lo}\p{Nd}]+)*$'
+            pattern: '^[\p{Ll}\p{Lm}\p{Lo}\p{M}\p{Nd}]+(-[\p{Ll}\p{Lm}\p{Lo}\p{M}\p{Nd}]+)*$'
           examples: [["noir", "huis-clos", "années-50"]]
         genres:
           type: array

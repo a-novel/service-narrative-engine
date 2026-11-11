@@ -79,7 +79,18 @@ async function createProject(request: ProjectCreateRequest): Promise<ProjectComp
 
 describe("ProjectTagsSchema", () => {
   it("accepts tags within the limits", () => {
-    const tags = ["noir", "huis-clos", "années-50", "1950", "推理", "é".repeat(24)];
+    const tags = [
+      "noir",
+      "huis-clos",
+      "années-50",
+      "1950",
+      "推理",
+      "เรื่อง",
+      "हिंदी",
+      "ラーメン",
+      "i\u0307stanbul",
+      "é".repeat(24),
+    ];
     expect(ProjectTagsSchema.parse(tags)).toEqual(tags);
     expect(ProjectTagsSchema.parse([])).toEqual([]);
     expect(ProjectTagsSchema.parse(Array.from({ length: 10 }, (_, index) => `tag-${index}`))).toHaveLength(10);
