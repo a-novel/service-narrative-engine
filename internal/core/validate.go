@@ -70,13 +70,18 @@ func ValidateProjectLabel(fl validator.FieldLevel) bool {
 	return strings.TrimSpace(label) == label && !strings.ContainsRune(label, 0)
 }
 
+// projectTagRune matches one character of a project tag's run: a lowercase, modifier or caseless letter, a mark, a
+// digit, or a zero-width joiner.
+const projectTagRune = `[\p{Ll}\p{Lm}\p{Lo}\p{M}\p{Nd}\x{200C}\x{200D}]`
+
 // projectTagPattern matches a tag of a project in lower kebab case.
-var projectTagPattern = regexp.MustCompile(`^[\p{Ll}\p{Lm}\p{Lo}\p{M}\p{Nd}]+(-[\p{Ll}\p{Lm}\p{Lo}\p{M}\p{Nd}]+)*$`)
+var projectTagPattern = regexp.MustCompile(`^` + projectTagRune + `+(-` + projectTagRune + `+)*$`)
 
 // ValidateProjectTag reports whether a tag of a project is in lower kebab case, as "années-50" is: runs of
-// lowercase, modifier or caseless letters, marks or digits, from any script, joined by single hyphens. Marks keep
-// whole the words of scripts that write with them, as Thai or Hindi do. The tag must be precomposed (NFC), so an
-// accented letter has a single spelling. The package registers it as the "projecttag" struct tag.
+// lowercase, modifier or caseless letters, marks, digits or zero-width joiners, from any script, joined by single
+// hyphens. Marks and joiners keep whole the words of scripts that write with them, as Thai, Hindi or Persian do.
+// The tag must be precomposed (NFC), so an accented letter has a single spelling. The package registers it as the
+// "projecttag" struct tag.
 func ValidateProjectTag(fl validator.FieldLevel) bool {
 	tag := fl.Field().String()
 

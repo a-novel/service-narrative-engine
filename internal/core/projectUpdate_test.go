@@ -97,10 +97,10 @@ func TestProjectUpdate(t *testing.T) {
 		{
 			name: "Success/Tags",
 
-			// A tag takes lowercase letters from any script, with their marks and modifier letters, and digits,
-			// and counts its runes.
+			// A tag takes lowercase letters from any script, with their marks, modifier letters and zero-width
+			// joiners, and digits, and counts its runes.
 			request: withTags([]string{
-				"noir", "huis-clos", "années-50", "1950", "推理",
+				"noir", "huis-clos", "années-50", "می\u200cخواهم", "क्\u200dष",
 				"เรื่อง", "हिंदी", "ラーメン", "i\u0307stanbul", strings.Repeat("é", 24),
 			}),
 

@@ -88,11 +88,11 @@ export const PROJECT_TAGS_MAX = 10;
 export const PROJECT_TAG_CHARS_MAX = 24;
 
 /**
- * A tag of a project in lower kebab case, as `années-50` is: runs of lowercase letters, marks or digits, from any
- * script, joined by single hyphens. The tag must be precomposed, as `normalize("NFC")` returns it.
+ * A tag of a project in lower kebab case, as `années-50` is: runs of lowercase letters, marks, digits or zero-width
+ * joiners, from any script, joined by single hyphens. The tag must be precomposed, as `normalize("NFC")` returns it.
  */
 export const ProjectTagSchema = maxChars(PROJECT_TAG_CHARS_MAX)
-  .regex(/^[\p{Ll}\p{Lm}\p{Lo}\p{M}\p{Nd}]+(-[\p{Ll}\p{Lm}\p{Lo}\p{M}\p{Nd}]+)*$/u)
+  .regex(/^[\p{Ll}\p{Lm}\p{Lo}\p{M}\p{Nd}‌‍]+(-[\p{Ll}\p{Lm}\p{Lo}\p{M}\p{Nd}‌‍]+)*$/u)
   .refine((tag) => tag === tag.normalize("NFC"), { error: "Expected a precomposed (NFC) tag" });
 
 /** The tags of a project, in order, each appearing once. */
