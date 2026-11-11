@@ -2166,8 +2166,8 @@ components:
           description: The author's custom labels, in order. Empty until the author adds one.
           items:
             type: string
-            description: A label of 1 to 24 characters.
-          examples: [["noir", "huis clos"]]
+            description: A label of 1 to 24 characters, in lower kebab case.
+          examples: [["noir", "huis-clos"]]
         genres:
           type: array
           description: The genres the author names, in order. Empty until the author adds one.
@@ -2551,10 +2551,14 @@ components:
           uniqueItems: true
           items:
             type: string
-            description: A label of 1 to 24 characters, with no whitespace at either end.
+            description: |
+              A label of 1 to 24 characters in lower kebab case: words from any script joined by single
+              hyphens. A word starts with a lowercase letter or a digit and holds the marks and zero-width
+              joiners inside it. The tag is precomposed (NFC).
             minLength: 1
             maxLength: 24
-          examples: [["noir", "huis clos"]]
+            pattern: '^[\p{Ll}\p{Lm}\p{Lo}\p{Nd}](?:[\p{Ll}\p{Lm}\p{Lo}\p{Nd}\p{M}\u200C\u200D]*[\p{Ll}\p{Lm}\p{Lo}\p{Nd}\p{M}])?(?:-[\p{Ll}\p{Lm}\p{Lo}\p{Nd}](?:[\p{Ll}\p{Lm}\p{Lo}\p{Nd}\p{M}\u200C\u200D]*[\p{Ll}\p{Lm}\p{Lo}\p{Nd}\p{M}])?)*$'
+          examples: [["noir", "huis-clos", "années-50"]]
         genres:
           type: array
           description: The genres the author names, in order, each appearing once. None when omitted.

@@ -2,11 +2,13 @@ package core
 
 import (
 	"errors"
+	"regexp"
 	"slices"
 	"strings"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
+	"golang.org/x/text/unicode/norm"
 
 	"github.com/a-novel/service-narrative-engine/internal/models/schemas"
 )
@@ -60,12 +62,34 @@ func ValidateStreamSection(fl validator.FieldLevel) bool {
 	return slices.Contains(ProjectStreamSections, fl.Field().String())
 }
 
-// ValidateProjectLabel reports whether a tag or a genre of a project holds no whitespace at either end and no NUL,
-// which the database driver drops on write. The package registers it as the "projectlabel" struct tag.
+// ValidateProjectLabel reports whether a genre of a project holds no whitespace at either end and no NUL, which
+// the database driver drops on write. The package registers it as the "projectlabel" struct tag.
 func ValidateProjectLabel(fl validator.FieldLevel) bool {
 	label := fl.Field().String()
 
 	return strings.TrimSpace(label) == label && !strings.ContainsRune(label, 0)
+}
+
+// projectTagRune lists what a word of a project tag starts with: a lowercase, modifier or caseless letter, or a digit.
+const projectTagRune = `\p{Ll}\p{Lm}\p{Lo}\p{Nd}`
+
+// projectTagWord matches a word of a project tag: a letter or digit, then the marks and zero-width joiners inside it,
+// ending on a letter, a digit or a mark.
+const projectTagWord = `[` + projectTagRune + `]` +
+	`(?:[` + projectTagRune + `\p{M}\x{200C}\x{200D}]*[` + projectTagRune + `\p{M}])?`
+
+// projectTagPattern matches a tag of a project in lower kebab case: words joined by single hyphens.
+var projectTagPattern = regexp.MustCompile(`^` + projectTagWord + `(?:-` + projectTagWord + `)*$`)
+
+// ValidateProjectTag reports whether a tag of a project is in lower kebab case, as "années-50" is: words from any
+// script joined by single hyphens. A word starts with a lowercase, modifier or caseless letter or a digit, and holds
+// the marks and zero-width joiners its script writes inside words, as Thai, Hindi or Persian do, so a mark or joiner
+// left alone, as an emoji's variation selector is, makes no tag. The tag must be precomposed (NFC), so an accented
+// letter has a single spelling. The package registers it as the "projecttag" struct tag.
+func ValidateProjectTag(fl validator.FieldLevel) bool {
+	tag := fl.Field().String()
+
+	return projectTagPattern.MatchString(tag) && norm.NFC.IsNormalString(tag)
 }
 
 // ValidateUniqueCells reports whether a list of [CellsWriteItem] names each pair of a scene and a layer
@@ -101,6 +125,7 @@ func init() {
 		"scenefield":     ValidateSceneField,
 		"streamsection":  ValidateStreamSection,
 		"projectlabel":   ValidateProjectLabel,
+		"projecttag":     ValidateProjectTag,
 	}
 
 	for tag, fn := range validations {

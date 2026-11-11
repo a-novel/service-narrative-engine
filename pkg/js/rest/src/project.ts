@@ -87,8 +87,20 @@ export const PROJECT_TAGS_MAX = 10;
 /** The most characters a tag of a project holds. */
 export const PROJECT_TAG_CHARS_MAX = 24;
 
-/** A tag of a project, at least one character long, with no whitespace at either end. */
-export const ProjectTagSchema = maxChars(PROJECT_TAG_CHARS_MAX).regex(/^\S(?:.*\S)?$/s);
+/** Lowercase, modifier and caseless letters and decimal digits: what a tag's word starts with. */
+const tagRune = String.raw`\p{Ll}\p{Lm}\p{Lo}\p{Nd}`;
+
+/** A tag's word: a letter or digit, then the marks and zero-width joiners inside it, ending on a letter, digit or mark. */
+const tagWord = String.raw`[${tagRune}](?:[${tagRune}\p{M}\u200C\u200D]*[${tagRune}\p{M}])?`;
+
+/**
+ * A tag of a project in lower kebab case, as `années-50` is: words from any script joined by single hyphens, so a
+ * mark or joiner left alone, as an emoji's variation selector is, makes no tag. The tag must be precomposed, as
+ * `normalize("NFC")` returns it.
+ */
+export const ProjectTagSchema = maxChars(PROJECT_TAG_CHARS_MAX)
+  .regex(new RegExp(`^${tagWord}(?:-${tagWord})*$`, "u"))
+  .refine((tag) => tag === tag.normalize("NFC"), { error: "Expected a precomposed (NFC) tag" });
 
 /** The tags of a project, in order, each appearing once. */
 export const ProjectTagsSchema = z
