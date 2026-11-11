@@ -24,7 +24,7 @@ func TestProjectUpdate(t *testing.T) {
 	errFoo := errors.New("foo")
 
 	request := &core.ProjectUpdateRequest{
-		OwnerID: ownerID, ID: projectID, Title: "Clear Hours", Language: "en", Tags: []string{"noir", "huis clos"},
+		OwnerID: ownerID, ID: projectID, Title: "Clear Hours", Language: "en", Tags: []string{"noir", "huis-clos"},
 		Genres: []string{"thriller"},
 	}
 
@@ -87,6 +87,18 @@ func TestProjectUpdate(t *testing.T) {
 			name: "Success/ClearGenres",
 
 			request: withGenres([]string{}),
+
+			lockMock:  &daoMock[bool]{resp: true},
+			daoMock:   &daoMock[*dao.Project]{resp: daoProject()},
+			bytesMock: withinBudget,
+
+			expect: updated,
+		},
+		{
+			name: "Success/Tags",
+
+			// A tag takes lowercase letters from any script and digits, and counts its runes.
+			request: withTags([]string{"noir", "huis-clos", "années-50", "1950", "推理", strings.Repeat("é", 24)}),
 
 			lockMock:  &daoMock[bool]{resp: true},
 			daoMock:   &daoMock[*dao.Project]{resp: daoProject()},
@@ -254,6 +266,56 @@ func TestProjectUpdate(t *testing.T) {
 			name: "Error/GenreTooLong",
 
 			request: withGenres([]string{strings.Repeat("é", 25)}),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/TagUppercase",
+
+			request: withTags([]string{"Noir"}),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/TagSpace",
+
+			request: withTags([]string{"huis clos"}),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/TagUnderscore",
+
+			request: withTags([]string{"roman_maritime"}),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/TagLeadingHyphen",
+
+			request: withTags([]string{"-noir"}),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/TagTrailingHyphen",
+
+			request: withTags([]string{"noir-"}),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/TagDoubleHyphen",
+
+			request: withTags([]string{"huis--clos"}),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/TagDecomposedAccent",
+
+			// The accent is a combining mark after the "e", where "années-50" holds a precomposed "é".
+			request: withTags([]string{"anne\u0301es-50"}),
 
 			expectErr: core.ErrInvalidRequest,
 		},

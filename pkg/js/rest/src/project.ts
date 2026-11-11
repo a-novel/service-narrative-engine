@@ -87,8 +87,13 @@ export const PROJECT_TAGS_MAX = 10;
 /** The most characters a tag of a project holds. */
 export const PROJECT_TAG_CHARS_MAX = 24;
 
-/** A tag of a project, at least one character long, with no whitespace at either end. */
-export const ProjectTagSchema = maxChars(PROJECT_TAG_CHARS_MAX).regex(/^\S(?:.*\S)?$/s);
+/**
+ * A tag of a project in lower kebab case, as `années-50` is: runs of lowercase letters or digits, from any script,
+ * joined by single hyphens. An accented letter must be precomposed, as `normalize("NFC")` returns it.
+ */
+export const ProjectTagSchema = maxChars(PROJECT_TAG_CHARS_MAX).regex(
+  /^[\p{Ll}\p{Lo}\p{Nd}]+(-[\p{Ll}\p{Lo}\p{Nd}]+)*$/u
+);
 
 /** The tags of a project, in order, each appearing once. */
 export const ProjectTagsSchema = z

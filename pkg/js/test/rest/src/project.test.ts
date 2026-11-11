@@ -79,10 +79,10 @@ async function createProject(request: ProjectCreateRequest): Promise<ProjectComp
 
 describe("ProjectTagsSchema", () => {
   it("accepts tags within the limits", () => {
-    const tags = ["noir", "Noir", "huis clos", "é".repeat(24)];
+    const tags = ["noir", "huis-clos", "années-50", "1950", "推理", "é".repeat(24)];
     expect(ProjectTagsSchema.parse(tags)).toEqual(tags);
     expect(ProjectTagsSchema.parse([])).toEqual([]);
-    expect(ProjectTagsSchema.parse(Array.from({ length: 10 }, (_, index) => `tag ${index}`))).toHaveLength(10);
+    expect(ProjectTagsSchema.parse(Array.from({ length: 10 }, (_, index) => `tag-${index}`))).toHaveLength(10);
   });
 
   it("refuses tags the server refuses", () => {
@@ -91,9 +91,16 @@ describe("ProjectTagsSchema", () => {
       ["   "],
       [" noir"],
       ["noir "],
+      ["Noir"],
+      ["huis clos"],
+      ["roman_maritime"],
+      ["-noir"],
+      ["noir-"],
+      ["huis--clos"],
+      ["anne\u0301es-50"],
       ["é".repeat(25)],
       ["noir", "noir"],
-      Array.from({ length: 11 }, (_, index) => `tag ${index}`),
+      Array.from({ length: 11 }, (_, index) => `tag-${index}`),
     ];
 
     for (const tags of refused) expect(ProjectTagsSchema.safeParse(tags).success).toBe(false);
@@ -142,8 +149,8 @@ describe("projectCreate", () => {
   });
 
   it("stores the tags in order", async () => {
-    const project = await createProject({ title: "Clear Hours", language: Language.En, tags: ["noir", "huis clos"] });
-    expect(project.tags).toEqual(["noir", "huis clos"]);
+    const project = await createProject({ title: "Clear Hours", language: Language.En, tags: ["noir", "huis-clos"] });
+    expect(project.tags).toEqual(["noir", "huis-clos"]);
   });
 
   it("stores the genres in order", async () => {
@@ -163,10 +170,10 @@ describe("projectCreate", () => {
     );
   });
 
-  it("names the invalid field of a tag with whitespace at an end", async () => {
+  it("names the invalid field of a tag outside lower kebab case", async () => {
     await expect(
-      projectCreate(api, accessToken, { title: "Clear Hours", language: Language.En, tags: ["noir "] })
-    ).rejects.toThrow('"invalidFields":{"tags[0]":"projectlabel"}');
+      projectCreate(api, accessToken, { title: "Clear Hours", language: Language.En, tags: ["huis clos"] })
+    ).rejects.toThrow('"invalidFields":{"tags[0]":"projecttag"}');
   });
 
   it("names the invalid field of a genre with whitespace at an end", async () => {
@@ -300,14 +307,14 @@ describe("projectUpdate", () => {
       title: "Les Heures claires",
       premise: "Marie attend.",
       language: Language.Fr,
-      tags: ["noir", "huis clos"],
+      tags: ["noir", "huis-clos"],
       genres: ["thriller"],
     });
     expect(project).toMatchObject({
       title: "Les Heures claires",
       premise: "Marie attend.",
       language: "fr",
-      tags: ["noir", "huis clos"],
+      tags: ["noir", "huis-clos"],
       genres: ["thriller"],
     });
   });
@@ -316,8 +323,8 @@ describe("projectUpdate", () => {
     const created = await createProject({ title: "Draft", language: Language.En, tags: ["noir", "polar"] });
     const fields = { id: created.id, title: "Draft", language: Language.En, genres: [] };
 
-    const replaced = await projectUpdate(api, accessToken, { ...fields, tags: ["huis clos"] });
-    expect(replaced.tags).toEqual(["huis clos"]);
+    const replaced = await projectUpdate(api, accessToken, { ...fields, tags: ["huis-clos"] });
+    expect(replaced.tags).toEqual(["huis-clos"]);
 
     const cleared = await projectUpdate(api, accessToken, { ...fields, tags: [] });
     expect(cleared.tags).toEqual([]);

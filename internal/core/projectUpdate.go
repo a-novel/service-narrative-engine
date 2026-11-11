@@ -42,9 +42,9 @@ type ProjectUpdateRequest struct {
 	// Language is the language the project is written in, one of [ProjectLanguages].
 	Language string `validate:"required,language"`
 	// Tags replace the author's custom labels, in order. An empty list clears them, and a nil list fails
-	// validation, so an omission never wipes them. A tag holds 1 to 24 runes and no whitespace at either
-	// end, and appears once.
-	Tags []string `validate:"required,max=10,unique,dive,required,max=24,projectlabel"`
+	// validation, so an omission never wipes them. A tag holds 1 to 24 runes in lower kebab case, as
+	// [ValidateProjectTag] checks, and appears once.
+	Tags []string `validate:"required,max=10,unique,dive,required,max=24,projecttag"`
 	// Genres replace the genres the author names, in order. An empty list clears them, and a nil list fails
 	// validation, so an omission never wipes them. A genre holds 1 to 24 runes and no whitespace at either
 	// end, and appears once.
