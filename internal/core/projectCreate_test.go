@@ -327,6 +327,22 @@ func TestProjectCreate(t *testing.T) {
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
+			name: "Error/TagMarkOnly",
+
+			// An emoji's variation selector is a mark that starts no word.
+			request: withTags("\ufe0f"),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/TagJoinerWord",
+
+			// A zero-width joiner sits inside a word, never alone between two hyphens.
+			request: withTags("rock-\u200d-star"),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
 			name: "Error/TagDecomposedAccent",
 
 			// The accent is a combining mark after the "e": the tag is not precomposed (NFC), where "années-50"

@@ -8,7 +8,7 @@ NEXT accepts only project tags in lower kebab case, such as `huis-clos` or `ann√
 
 ## Send tags in lower kebab case
 
-A tag is one or more runs of lowercase letters, marks, digits or zero-width joiners, joined by single hyphens. It holds no whitespace, no uppercase letter and no underscore, and no hyphen at either end or twice in a row. Letters come from any script, with the marks, modifier letters and joiners their words carry, so French tags keep their accents and Thai, Hindi, Persian or Japanese words stay whole. The limits stay: at most 10 tags of 1 to 24 characters, each appearing once.
+A tag is one or more words joined by single hyphens. A word starts with a lowercase letter or a digit, and holds the marks and zero-width joiners its script writes inside words, so an emoji's leftover variation selector or joiner makes no tag. It holds no whitespace, no uppercase letter and no underscore, and no hyphen at either end or twice in a row. Letters come from any script, with the marks, modifier letters and joiners their words carry, so French tags keep their accents and Thai, Hindi, Persian or Japanese words stay whole. The limits stay: at most 10 tags of 1 to 24 characters, each appearing once.
 
 | Tag              | Accepted |
 | ---------------- | -------- |

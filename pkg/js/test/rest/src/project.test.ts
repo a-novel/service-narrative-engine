@@ -109,6 +109,8 @@ describe("ProjectTagsSchema", () => {
       ["noir-"],
       ["huis--clos"],
       ["anne\u0301es-50"],
+      ["\uFE0F"],
+      ["rock-\u200D-star"],
       ["é".repeat(25)],
       ["noir", "noir"],
       Array.from({ length: 11 }, (_, index) => `tag-${index}`),
