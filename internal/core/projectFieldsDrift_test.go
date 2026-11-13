@@ -20,8 +20,8 @@ func TestProjectFieldsDrift(t *testing.T) {
 
 	removedID := uuid.MustParse("00000000-0000-0000-0000-0000000000ff")
 
-	// held names the test project at an instant with microseconds and an offset, as RFC 3339 allows.
-	held := map[string]string{projectID.String(): "2021-01-02T01:00:00.123456+01:00"}
+	// held names the test project at an instant with microseconds, at the widest offset PostgreSQL takes.
+	held := map[string]string{projectID.String(): "2021-01-02T01:00:00.123456+15:59"}
 
 	// full holds a project past the most a user owns.
 	full := make(map[string]string, core.ProjectsPerOwnerMax+1)
@@ -97,6 +97,35 @@ func TestProjectFieldsDrift(t *testing.T) {
 
 			request: &core.ProjectFieldsDriftRequest{
 				OwnerID: ownerID, Projects: map[string]string{projectID.String(): "2021-01-02 00:00:00"},
+			},
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			// PostgreSQL holds no year 0.
+			name: "Error/YearZero",
+
+			request: &core.ProjectFieldsDriftRequest{
+				OwnerID: ownerID, Projects: map[string]string{projectID.String(): "0000-01-01T00:00:00Z"},
+			},
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			// PostgreSQL takes offsets under 16 hours, east or west.
+			name: "Error/OffsetEast",
+
+			request: &core.ProjectFieldsDriftRequest{
+				OwnerID: ownerID, Projects: map[string]string{projectID.String(): "2026-11-04T08:15:30+16:00"},
+			},
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/OffsetWest",
+
+			request: &core.ProjectFieldsDriftRequest{
+				OwnerID: ownerID, Projects: map[string]string{projectID.String(): "2026-11-04T08:15:30-16:00"},
 			},
 
 			expectErr: core.ErrInvalidRequest,

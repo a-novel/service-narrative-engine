@@ -24,7 +24,7 @@ type ProjectFieldsDriftRequest struct {
 
 	// Projects maps the ID of each project the client holds to its UpdatedAt, as RFC 3339 text, compared to the
 	// millisecond. It holds at most [ProjectsPerOwnerMax] projects, and none when the client holds none.
-	Projects map[string]string `validate:"required,max=100,dive,keys,uuid,endkeys,datetime=2006-01-02T15:04:05Z07:00"`
+	Projects map[string]string `validate:"required,max=100,dive,keys,uuid,endkeys,instant"`
 }
 
 // ProjectFieldsDriftResult is the drift between the projects a client holds and the caller's.
