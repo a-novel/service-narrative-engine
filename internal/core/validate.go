@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
@@ -92,6 +93,24 @@ func ValidateProjectTag(fl validator.FieldLevel) bool {
 	return projectTagPattern.MatchString(tag) && norm.NFC.IsNormalString(tag)
 }
 
+// logoChecksumPattern matches the checksum of a logo: a SHA-256 in lowercase hex.
+var logoChecksumPattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
+
+// ValidateLogoChecksum reports whether a string is the checksum of a logo: a SHA-256 in lowercase hex, as a project
+// carries it. The package registers it as the "logochecksum" struct tag.
+func ValidateLogoChecksum(fl validator.FieldLevel) bool {
+	return logoChecksumPattern.MatchString(fl.Field().String())
+}
+
+// ValidateInstant reports whether a string is an RFC 3339 instant PostgreSQL accepts: a year from 1, at an
+// offset under 16 hours. The package registers it as the "instant" struct tag.
+func ValidateInstant(fl validator.FieldLevel) bool {
+	instant, err := time.Parse(time.RFC3339, fl.Field().String())
+	_, offset := instant.Zone()
+
+	return err == nil && instant.Year() >= 1 && offset > -16*60*60 && offset < 16*60*60
+}
+
 // ValidateUniqueCells reports whether a list of [CellsWriteItem] names each pair of a scene and a layer
 // once. The package registers it as the "uniquecells" struct tag.
 func ValidateUniqueCells(fl validator.FieldLevel) bool {
@@ -126,6 +145,8 @@ func init() {
 		"streamsection":  ValidateStreamSection,
 		"projectlabel":   ValidateProjectLabel,
 		"projecttag":     ValidateProjectTag,
+		"logochecksum":   ValidateLogoChecksum,
+		"instant":        ValidateInstant,
 	}
 
 	for tag, fn := range validations {

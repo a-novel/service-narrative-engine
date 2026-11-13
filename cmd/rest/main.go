@@ -89,6 +89,9 @@ func main() {
 	daoProjectCount := dao.NewPgProjectCount()
 	daoOwnerLock := dao.NewPgOwnerLock()
 	daoProjectList := dao.NewPgProjectList()
+	daoProjectFieldsDrift := dao.NewPgProjectFieldsDrift()
+	daoProjectEditsList := dao.NewPgProjectEditsList()
+	daoProjectLogosDrift := dao.NewPgProjectLogosDrift()
 	daoProjectUpdate := dao.NewPgProjectUpdate()
 	daoProjectDelete := dao.NewPgProjectDelete()
 	daoProjectLogoUpsert := dao.NewPgProjectLogoUpsert()
@@ -141,6 +144,9 @@ func main() {
 	)
 	serviceProjectGet := core.NewProjectGet(daoProjectOwned, daoProjectSelect)
 	serviceProjectList := core.NewProjectList(daoProjectList)
+	serviceProjectFieldsDrift := core.NewProjectFieldsDrift(daoProjectFieldsDrift)
+	serviceProjectEditsList := core.NewProjectEditsList(daoProjectEditsList)
+	serviceProjectLogosDrift := core.NewProjectLogosDrift(daoProjectLogosDrift)
 	serviceProjectUpdate := core.NewProjectUpdate(daoProjectLock, daoProjectUpdate, daoProjectBytes, transactor)
 	serviceProjectDelete := core.NewProjectDelete(daoProjectOwned, daoProjectDelete)
 	serviceProjectLogoUpdate := core.NewProjectLogoUpdate(daoProjectOwned, daoProjectLogoUpsert)
@@ -206,6 +212,9 @@ func main() {
 	handlerProjectCreate := handlers.NewRestProjectCreate(serviceProjectCreate, cfg.Logger)
 	handlerProjectGet := handlers.NewRestProjectGet(serviceProjectGet, cfg.Logger)
 	handlerProjectList := handlers.NewRestProjectList(serviceProjectList, cfg.Logger)
+	handlerProjectFieldsDrift := handlers.NewRestProjectFieldsDrift(serviceProjectFieldsDrift, cfg.Logger)
+	handlerProjectEditsList := handlers.NewRestProjectEditsList(serviceProjectEditsList, cfg.Logger)
+	handlerProjectLogosDrift := handlers.NewRestProjectLogosDrift(serviceProjectLogosDrift, cfg.Logger)
 	handlerProjectUpdate := handlers.NewRestProjectUpdate(serviceProjectUpdate, cfg.Logger)
 	handlerProjectDelete := handlers.NewRestProjectDelete(serviceProjectDelete, cfg.Logger)
 	handlerProjectLogoUpdate := handlers.NewRestProjectLogoUpdate(serviceProjectLogoUpdate, cfg.Logger)
@@ -259,7 +268,8 @@ func main() {
 	)
 
 	router.Route("/v1", func(api chi.Router) {
-		// The router's body limit fits a batch; a route that writes one item caps its body lower.
+		// The router's body limit fits a batch; a route that writes one item, or compares what a client holds,
+		// caps its body lower.
 		item := api.With(middleware.RequestSize(cfg.Limits.ItemMaxRequestSize))
 		// A stream outlives the request timeout, and ends at shutdown: its client resumes on another
 		// instance. One cap counts a caller's open streams across both stream routes.
@@ -270,6 +280,9 @@ func main() {
 
 		withAuth(item, config.PermissionProjectWrite).Post("/projects", handlerProjectCreate.ServeHTTP)
 		withAuth(api, config.PermissionProjectRead).Get("/projects", handlerProjectList.ServeHTTP)
+		withAuth(item, config.PermissionProjectRead).Post("/projects/fields/drift", handlerProjectFieldsDrift.ServeHTTP)
+		withAuth(api, config.PermissionProjectRead).Get("/projects/edits", handlerProjectEditsList.ServeHTTP)
+		withAuth(item, config.PermissionProjectRead).Post("/projects/logos/drift", handlerProjectLogosDrift.ServeHTTP)
 		withAuth(api, config.PermissionProjectRead).Get("/project", handlerProjectGet.ServeHTTP)
 		withAuth(stream, config.PermissionProjectRead).With(limit.Stream).
 			Get("/project/stream", handlerProjectStream.ServeHTTP)

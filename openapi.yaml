@@ -132,10 +132,14 @@ paths:
 
     get:
       operationId: projectList
+      deprecated: true
       summary: List projects.
       description: |
         Returns a page of the caller's projects, most recently edited first, with how many the caller holds in
         all. To read the next page, raise `offset` by the page size.
+
+        Deprecated: a client keeps its copy of the caller's projects in sync with `POST /v1/projects/fields/drift`,
+        `GET /v1/projects/edits` and `POST /v1/projects/logos/drift` instead.
       tags: [project]
       parameters:
         - $ref: "#/components/parameters/limit"
@@ -143,6 +147,106 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/projectList"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/plannedDowntime"
+        default:
+          $ref: "#/components/responses/internalError"
+
+  /v1/projects/fields/drift:
+    post:
+      operationId: projectFieldsDrift
+      summary: Find the projects whose fields drifted.
+      description: |
+        Compares the fields of the projects a client holds with the caller's, and returns the drift. A project's
+        fields are its own fields, from `id` to `updatedAt`, and `updatedAt` changes only when they change.
+
+        The request maps each project the client holds to its `updatedAt`. Instants compare to the millisecond, the
+        precision a JavaScript date keeps, so two changes within one millisecond read as one until the next. The
+        response holds every project of the caller that the request leaves out or names with another `updatedAt`,
+        and `removed` lists every ID of the request that names no project of the caller. A client that applies both
+        holds the caller's fields again. An empty map returns every project of the caller.
+
+        A request names at most 100 projects, as many as a user owns. The drift carries no logo:
+        `POST /v1/projects/logos/drift` compares the logos.
+      tags: [project]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/projectFieldsDriftRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/projectFieldsDrift"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/plannedDowntime"
+        default:
+          $ref: "#/components/responses/internalError"
+
+  /v1/projects/edits:
+    get:
+      operationId: projectEditsList
+      summary: List the edits of the caller's projects.
+      description: |
+        Returns the `editedAt` of every project of the caller, by ID: when its fields or its content last changed.
+        The read is cheap, so a client runs it often to order the projects it holds, and to find a project it lacks
+        or one it holds that is gone. `POST /v1/projects/fields/drift` then reads their fields.
+      tags: [project]
+      responses:
+        "200":
+          $ref: "#/components/responses/projectEdits"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/plannedDowntime"
+        default:
+          $ref: "#/components/responses/internalError"
+
+  /v1/projects/logos/drift:
+    post:
+      operationId: projectLogosDrift
+      summary: Find the logos that drifted.
+      description: |
+        Compares the logos a client holds with those of the caller's projects, by their checksum, the SHA-256 of
+        the logo's stored bytes that `logoChecksum` carries, and returns the drift.
+
+        The request maps each project whose logo the client holds to the logo's checksum, and leaves out a project
+        the client holds without a logo. The response maps every project of the caller whose logo the request leaves
+        out, or names with another checksum, to the logo's checksum. `removed` lists every ID of the request whose
+        project is not the caller's or holds no logo now. The drift carries no bytes: `GET /v1/project/logo` reads a
+        logo.
+
+        A request names at most 100 logos, one for each project a user may own.
+      tags: [project]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/projectLogosDriftRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/projectLogosDrift"
         "400":
           $ref: "#/components/responses/badRequest"
         "401":
@@ -252,8 +356,8 @@ paths:
 
         The response carries a strong `ETag` and `Last-Modified` from the logo's version, and answers a
         matching `If-None-Match` or `If-Modified-Since` with 304. `Cache-Control: no-cache` makes a cache
-        revalidate on every use: a client that caches for good does so under a URL that names the version, the
-        project's `logoVersion`.
+        revalidate on every use: a client that caches for good does so under a URL that names the bytes, the
+        project's `logoChecksum`.
       tags: [project]
       parameters:
         - $ref: "#/components/parameters/parentProjectID"
@@ -1632,6 +1736,27 @@ components:
           schema:
             $ref: "#/components/schemas/projectPage"
 
+    projectFieldsDrift:
+      description: The projects whose fields drifted, and the IDs of the request that name no project of the caller.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/projectFieldsDrift"
+
+    projectEdits:
+      description: The `editedAt` of every project of the caller, by ID.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/projectEdits"
+
+    projectLogosDrift:
+      description: The logos that drifted, and the IDs of the request whose project holds no logo of the caller.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/projectLogosDrift"
+
     projectLogo:
       description: The encoded logo, as its owner sent it.
       headers:
@@ -2194,11 +2319,142 @@ components:
           examples: ["2021-01-03T00:00:00Z"]
         logoVersion:
           type: string
+          deprecated: true
           description: |
-            When the logo last changed. Absent while the project has no logo. Logo URLs carry it, so a cache
-            keeps each version for good.
+            When the logo last changed. Absent while the project has no logo.
+
+            Deprecated: `logoChecksum` names the logo instead.
           format: date-time
           examples: ["2026-11-04T08:15:30.123456Z"]
+        logoChecksum:
+          type: string
+          description: |
+            The checksum of the logo: the SHA-256 of its stored bytes, in lowercase hex. Absent while the project has
+            no logo. A logo URL that carries it names the logo's bytes, so a cache keeps each logo for good.
+          pattern: "^[0-9a-f]{64}$"
+          examples: ["9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"]
+
+    projectFields:
+      type: object
+      description: |
+        The fields of a project, with its `editedAt` so a project the client lacks arrives whole. It carries no logo.
+      required: [id, title, premise, language, tags, genres, createdAt, updatedAt, editedAt]
+      additionalProperties: false
+      properties:
+        id:
+          $ref: "#/components/schemas/projectID"
+        title:
+          $ref: "#/components/schemas/project/properties/title"
+        premise:
+          $ref: "#/components/schemas/project/properties/premise"
+        language:
+          $ref: "#/components/schemas/language"
+        tags:
+          $ref: "#/components/schemas/project/properties/tags"
+        genres:
+          $ref: "#/components/schemas/project/properties/genres"
+        createdAt:
+          $ref: "#/components/schemas/project/properties/createdAt"
+        updatedAt:
+          $ref: "#/components/schemas/project/properties/updatedAt"
+        editedAt:
+          $ref: "#/components/schemas/project/properties/editedAt"
+
+    projectFieldsDriftRequest:
+      type: object
+      description: The projects a client holds.
+      required: [projects]
+      additionalProperties: false
+      properties:
+        projects:
+          type: object
+          description: |
+            Maps the ID of each project the client holds to its `updatedAt`. Instants compare to the millisecond,
+            so a client may hold it as a date of that precision. Empty when the client holds none.
+          maxProperties: 100
+          propertyNames:
+            $ref: "#/components/schemas/projectID"
+          additionalProperties:
+            $ref: "#/components/schemas/project/properties/updatedAt"
+          examples:
+            - { "01920000-0000-7000-8000-000000000001": "2026-11-04T08:15:30.123456Z" }
+
+    projectFieldsDrift:
+      type: object
+      description: The drift between the projects a client holds and the caller's.
+      required: [projects, removed]
+      additionalProperties: false
+      properties:
+        projects:
+          type: array
+          description: Every project of the caller that the request leaves out, or names with another `updatedAt`.
+          items:
+            $ref: "#/components/schemas/projectFields"
+        removed:
+          type: array
+          description: Every ID of the request that names no project of the caller.
+          items:
+            $ref: "#/components/schemas/projectID"
+
+    projectEdits:
+      type: object
+      description: The `editedAt` of every project of the caller.
+      required: [edits]
+      additionalProperties: false
+      properties:
+        edits:
+          type: object
+          description: Maps the ID of each project of the caller to its `editedAt`.
+          maxProperties: 100
+          propertyNames:
+            $ref: "#/components/schemas/projectID"
+          additionalProperties:
+            $ref: "#/components/schemas/project/properties/editedAt"
+          examples:
+            - { "01920000-0000-7000-8000-000000000001": "2026-11-04T08:15:30.123456Z" }
+
+    projectLogosDriftRequest:
+      type: object
+      description: The logos a client holds.
+      required: [logos]
+      additionalProperties: false
+      properties:
+        logos:
+          type: object
+          description: |
+            Maps the ID of each project whose logo the client holds to the logo's `logoChecksum`. Empty when the client
+            holds none.
+          maxProperties: 100
+          propertyNames:
+            $ref: "#/components/schemas/projectID"
+          additionalProperties:
+            $ref: "#/components/schemas/project/properties/logoChecksum"
+          examples:
+            - {
+                "01920000-0000-7000-8000-000000000001": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+              }
+
+    projectLogosDrift:
+      type: object
+      description: The drift between the logos a client holds and those of the caller's projects.
+      required: [logos, removed]
+      additionalProperties: false
+      properties:
+        logos:
+          type: object
+          description: |
+            Maps every project of the caller whose logo the request leaves out, or names with another checksum, to the
+            logo's `logoChecksum`.
+          maxProperties: 100
+          propertyNames:
+            $ref: "#/components/schemas/projectID"
+          additionalProperties:
+            $ref: "#/components/schemas/project/properties/logoChecksum"
+        removed:
+          type: array
+          description: Every ID of the request whose project is not the caller's or holds no logo now.
+          items:
+            $ref: "#/components/schemas/projectID"
 
     projectComposer:
       type: object

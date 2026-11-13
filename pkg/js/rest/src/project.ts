@@ -33,6 +33,12 @@ export enum PictureRefusal {
   Size = "size",
 }
 
+/** The most projects a user owns, and so the most entries a drift request holds. */
+export const PROJECTS_MAX = 100;
+
+/** The checksum of a logo: the SHA-256 of its stored bytes, in lowercase hex. */
+const LogoChecksumSchema = z.string().regex(/^[0-9a-f]{64}$/);
+
 /** One narrative, written in one language, that its owner composes scene by scene. */
 export const ProjectSchema = z.object({
   id: z.uuid(),
@@ -49,10 +55,17 @@ export const ProjectSchema = z.object({
   /** When the project's content last changed, its logo aside. {@link projectList} orders projects by it. */
   editedAt: z.iso.datetime().transform((value) => new Date(value)),
   /**
-   * When the logo last changed, absent while the project has no logo. A logo URL that carries it names one
-   * version, which a cache keeps for good. It stays the server's string: a Date would drop its microseconds.
+   * When the logo last changed, absent while the project has no logo. It stays the server's string: a Date would
+   * drop its microseconds.
+   *
+   * @deprecated `logoChecksum` names the logo instead.
    */
   logoVersion: z.iso.datetime().optional(),
+  /**
+   * The checksum of the logo, absent while the project has no logo. A logo URL that carries it names the logo's
+   * bytes, which a cache keeps for good.
+   */
+  logoChecksum: LogoChecksumSchema.optional(),
 });
 
 /** The value {@link ProjectSchema} validates. */
@@ -208,6 +221,9 @@ export async function projectGet(
 /**
  * Lists a page of the caller's projects, most recently edited first, with their total. Raise `offset` by the page
  * size for the next page.
+ *
+ * @deprecated Keep a copy of the caller's projects in sync with {@link projectFieldsDrift}, {@link projectEditsList}
+ * and {@link projectLogosDrift} instead.
  */
 export async function projectList(
   api: NarrativeEngineApi,
@@ -221,6 +237,123 @@ export async function projectList(
   return await api.fetch(`/v1/projects${query ? `?${query}` : ""}`, ProjectPageSchema, {
     method: "GET",
     headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
+  });
+}
+
+/**
+ * The fields of a project, with its `editedAt` so a project the client lacks arrives whole, and no logo.
+ */
+export const ProjectFieldsSchema = ProjectSchema.omit({ logoVersion: true, logoChecksum: true });
+
+/** The value {@link ProjectFieldsSchema} validates. */
+export type ProjectFields = z.infer<typeof ProjectFieldsSchema>;
+
+/**
+ * The projects a client holds: each project's ID mapped to its `updatedAt`, as `toISOString` writes it. The service
+ * compares instants to the millisecond, the precision a Date keeps. At most {@link PROJECTS_MAX} projects, and none
+ * when the client holds none.
+ */
+export const ProjectFieldsDriftRequestSchema = z.object({
+  projects: z.record(z.uuid(), z.iso.datetime()).refine((projects) => Object.keys(projects).length <= PROJECTS_MAX, {
+    error: `Expected at most ${PROJECTS_MAX} projects`,
+  }),
+});
+
+/** The value {@link ProjectFieldsDriftRequestSchema} validates. */
+export type ProjectFieldsDriftRequest = z.infer<typeof ProjectFieldsDriftRequestSchema>;
+
+/** The drift between the projects a client holds and the caller's. */
+export const ProjectFieldsDriftResponseSchema = z.object({
+  /** Every project of the caller that the request leaves out, or names with another `updatedAt`. */
+  projects: z.array(ProjectFieldsSchema),
+  /** Every ID of the request that names no project of the caller. */
+  removed: z.array(z.uuid()),
+});
+
+/** The value {@link ProjectFieldsDriftResponseSchema} validates. */
+export type ProjectFieldsDriftResponse = z.infer<typeof ProjectFieldsDriftResponseSchema>;
+
+/** The `editedAt` of every project of the caller, by ID. */
+export const ProjectEditsListResponseSchema = z.object({
+  edits: z.record(
+    z.uuid(),
+    z.iso.datetime().transform((value) => new Date(value))
+  ),
+});
+
+/** The value {@link ProjectEditsListResponseSchema} validates. */
+export type ProjectEditsListResponse = z.infer<typeof ProjectEditsListResponseSchema>;
+
+/**
+ * The logos a client holds: the ID of each project whose logo it holds mapped to the logo's `logoChecksum`. A project
+ * the client holds without a logo stays out. At most {@link PROJECTS_MAX} logos, and none when the client holds none.
+ */
+export const ProjectLogosDriftRequestSchema = z.object({
+  logos: z
+    .record(z.uuid(), LogoChecksumSchema)
+    .refine((logos) => Object.keys(logos).length <= PROJECTS_MAX, { error: `Expected at most ${PROJECTS_MAX} logos` }),
+});
+
+/** The value {@link ProjectLogosDriftRequestSchema} validates. */
+export type ProjectLogosDriftRequest = z.infer<typeof ProjectLogosDriftRequestSchema>;
+
+/** The drift between the logos a client holds and those of the caller's projects. */
+export const ProjectLogosDriftResponseSchema = z.object({
+  /** The checksum of each logo of the caller the request leaves out, or names with another checksum, by project ID. */
+  logos: z.record(z.uuid(), LogoChecksumSchema),
+  /** Every ID of the request whose project is not the caller's or holds no logo now. */
+  removed: z.array(z.uuid()),
+});
+
+/** The value {@link ProjectLogosDriftResponseSchema} validates. */
+export type ProjectLogosDriftResponse = z.infer<typeof ProjectLogosDriftResponseSchema>;
+
+/**
+ * Compares the fields of the projects a client holds with the caller's. It returns every project of the caller the
+ * request leaves out or names with another `updatedAt`, and every ID of the request that names no project of the
+ * caller. An empty map returns every project. Throws on HTTP 400 for a request past {@link PROJECTS_MAX} projects.
+ */
+export async function projectFieldsDrift(
+  api: NarrativeEngineApi,
+  accessToken: string,
+  request: ProjectFieldsDriftRequest
+): Promise<ProjectFieldsDriftResponse> {
+  return await api.fetch("/v1/projects/fields/drift", ProjectFieldsDriftResponseSchema, {
+    method: "POST",
+    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify(request),
+  });
+}
+
+/**
+ * Returns the `editedAt` of every project of the caller, by ID: when its fields or its content last changed. The read
+ * is cheap, and shows which projects changed, appeared or are gone.
+ */
+export async function projectEditsList(
+  api: NarrativeEngineApi,
+  accessToken: string
+): Promise<ProjectEditsListResponse> {
+  return await api.fetch("/v1/projects/edits", ProjectEditsListResponseSchema, {
+    method: "GET",
+    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
+  });
+}
+
+/**
+ * Compares the logos a client holds with those of the caller's projects, by checksum. It returns the checksum of every
+ * logo of the caller the request leaves out or names with another checksum, and every ID of the request whose project
+ * is not the caller's or holds no logo now. Read a drifted logo with {@link projectLogoGet}. Throws on HTTP 400 for a
+ * request past {@link PROJECTS_MAX} logos.
+ */
+export async function projectLogosDrift(
+  api: NarrativeEngineApi,
+  accessToken: string,
+  request: ProjectLogosDriftRequest
+): Promise<ProjectLogosDriftResponse> {
+  return await api.fetch("/v1/projects/logos/drift", ProjectLogosDriftResponseSchema, {
+    method: "POST",
+    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify(request),
   });
 }
 

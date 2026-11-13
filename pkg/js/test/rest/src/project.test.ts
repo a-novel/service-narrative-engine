@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { anonymousAccessToken, superAdminAccessToken, userAccessToken } from "./token";
 
+import { createHash, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 
 import { describe, expect, it, onTestFinished } from "vitest";
@@ -20,11 +21,14 @@ import {
   cellWrite,
   projectCreate,
   projectDelete,
+  projectEditsList,
+  projectFieldsDrift,
   projectGet,
   projectList,
   projectLogoDelete,
   projectLogoGet,
   projectLogoUpdate,
+  projectLogosDrift,
   projectStream,
   projectUpdate,
   sceneCreate,
@@ -64,11 +68,11 @@ async function collect<T>(stream: AsyncIterable<T>): Promise<T[]> {
   return items;
 }
 
-/** Creates a project the test deletes when it finishes, whatever its outcome. */
-async function createProject(request: ProjectCreateRequest): Promise<ProjectComposer> {
-  const project = await projectCreate(api, accessToken, request);
+/** Creates a project of the session the test deletes when it finishes, whatever its outcome. */
+async function createProject(request: ProjectCreateRequest, token = accessToken): Promise<ProjectComposer> {
+  const project = await projectCreate(api, token, request);
   onTestFinished(() =>
-    projectDelete(api, accessToken, project).then(
+    projectDelete(api, token, project).then(
       () => undefined,
       () => undefined
     )
@@ -76,6 +80,16 @@ async function createProject(request: ProjectCreateRequest): Promise<ProjectComp
 
   return project;
 }
+
+/** Returns the checksum the server gives a logo: the SHA-256 of its bytes, in lowercase hex. */
+async function checksumOf(body: Blob): Promise<string> {
+  return createHash("sha256")
+    .update(new Uint8Array(await body.arrayBuffer()))
+    .digest("hex");
+}
+
+/** A checksum that names no logo. */
+const OTHER_CHECKSUM = "0".repeat(64);
 
 describe("ProjectTagsSchema", () => {
   it("accepts tags within the limits", () => {
@@ -311,6 +325,167 @@ describe("projectList", () => {
   });
 });
 
+describe("projectFieldsDrift", () => {
+  it("returns every project of the caller when the client holds none", async () => {
+    const user = await userAccessToken();
+    const first = await createProject({ title: "First", language: Language.En, tags: ["noir"] }, user);
+    const second = await createProject({ title: "Second", language: Language.Fr }, user);
+
+    const drift = await projectFieldsDrift(api, user, { projects: {} });
+    expect(drift.removed).toEqual([]);
+    expect(drift.projects).toHaveLength(2);
+    expect(drift.projects).toEqual(
+      expect.arrayContaining([
+        {
+          id: first.id,
+          title: "First",
+          premise: "",
+          language: Language.En,
+          tags: ["noir"],
+          genres: [],
+          createdAt: first.createdAt,
+          updatedAt: first.updatedAt,
+          editedAt: first.editedAt,
+        },
+        expect.objectContaining({ id: second.id, title: "Second" }),
+      ])
+    );
+  });
+
+  it("finds no drift in a project held as a write or a drift returned it", async () => {
+    const user = await userAccessToken();
+    const written = await createProject({ title: "Written", language: Language.En }, user);
+    await createProject({ title: "Swept", language: Language.En }, user);
+
+    const { projects } = await projectFieldsDrift(api, user, { projects: {} });
+    const held = Object.fromEntries(projects.map((project) => [project.id, project.updatedAt.toISOString()]));
+    held[written.id] = written.updatedAt.toISOString();
+
+    await expect(projectFieldsDrift(api, user, { projects: held })).resolves.toEqual({ projects: [], removed: [] });
+  });
+
+  it("returns a project held with another updatedAt, and one updated since", async () => {
+    const user = await userAccessToken();
+    const stale = await createProject({ title: "Stale", language: Language.En }, user);
+    const renamed = await createProject({ title: "Draft", language: Language.En }, user);
+
+    const { projects } = await projectFieldsDrift(api, user, { projects: {} });
+    const held = Object.fromEntries(projects.map((project) => [project.id, project.updatedAt.toISOString()]));
+    held[stale.id] = "2021-01-02T00:00:00Z";
+    await projectUpdate(api, user, { id: renamed.id, title: "Renamed", language: Language.En, tags: [], genres: [] });
+
+    const drift = await projectFieldsDrift(api, user, { projects: held });
+    expect(drift.removed).toEqual([]);
+    expect(drift.projects.map((project) => [project.id, project.title]).sort()).toEqual(
+      [
+        [stale.id, "Stale"],
+        [renamed.id, "Renamed"],
+      ].sort()
+    );
+  });
+
+  it("lists the IDs that name no project of the caller", async () => {
+    const user = await userAccessToken();
+    const deleted = await createProject({ title: "Deleted", language: Language.En }, user);
+    await projectDelete(api, user, deleted);
+    const foreign = await createProject({ title: "Foreign", language: Language.En });
+
+    const drift = await projectFieldsDrift(api, user, {
+      projects: { [deleted.id]: "2021-01-02T00:00:00Z", [foreign.id]: "2021-01-02T00:00:00Z" },
+    });
+    expect(drift.projects).toEqual([]);
+    expect([...drift.removed].sort()).toEqual([deleted.id, foreign.id].sort());
+  });
+
+  it("returns 400 for a request past 100 projects", async () => {
+    const projects = Object.fromEntries(Array.from({ length: 101 }, () => [randomUUID(), "2021-01-02T00:00:00Z"]));
+    await expectStatus(projectFieldsDrift(api, accessToken, { projects }), 400);
+  });
+
+  it("returns 400 for an updatedAt that is no RFC 3339 instant", async () => {
+    await expectStatus(projectFieldsDrift(api, accessToken, { projects: { [ABSENT_ID]: "yesterday" } }), 400);
+  });
+
+  it("returns 403 for an anonymous session", async () => {
+    await expectStatus(projectFieldsDrift(api, await anonymousAccessToken(), { projects: {} }), 403);
+  });
+});
+
+describe("projectEditsList", () => {
+  it("returns the editedAt of every project of the caller", async () => {
+    const user = await userAccessToken();
+    const first = await createProject({ title: "First", language: Language.En }, user);
+    const second = await createProject({ title: "Second", language: Language.En }, user);
+
+    await expect(projectEditsList(api, user)).resolves.toEqual({
+      edits: { [first.id]: first.editedAt, [second.id]: second.editedAt },
+    });
+  });
+
+  it("follows a content write", async () => {
+    const user = await userAccessToken();
+    const project = await createProject({ title: "Edited", language: Language.En }, user);
+
+    await beatCreate(api, user, { projectID: project.id, title: "Le départ", color: "#4a90d9" });
+
+    const { edits } = await projectEditsList(api, user);
+    expect(edits[project.id].getTime()).toBeGreaterThan(project.editedAt.getTime());
+  });
+
+  it("returns 403 for an anonymous session", async () => {
+    await expectStatus(projectEditsList(api, await anonymousAccessToken()), 403);
+  });
+});
+
+describe("projectLogosDrift", () => {
+  it("returns the logos the client lacks, with their checksum", async () => {
+    const user = await userAccessToken();
+    const pictured = await createProject({ title: "Pictured", language: Language.En }, user);
+    await createProject({ title: "Bare", language: Language.En }, user);
+    await projectLogoUpdate(api, user, { projectID: pictured.id }, logo);
+
+    await expect(projectLogosDrift(api, user, { logos: {} })).resolves.toEqual({
+      logos: { [pictured.id]: await checksumOf(logo) },
+      removed: [],
+    });
+  });
+
+  it("finds no drift in the logos held with their checksum", async () => {
+    const user = await userAccessToken();
+    const pictured = await createProject({ title: "Pictured", language: Language.En }, user);
+    const { logoChecksum } = await projectLogoUpdate(api, user, { projectID: pictured.id }, logo);
+
+    await expect(projectLogosDrift(api, user, { logos: { [pictured.id]: logoChecksum! } })).resolves.toEqual({
+      logos: {},
+      removed: [],
+    });
+  });
+
+  it("returns a logo held with another checksum, and lists the IDs without a logo of the caller", async () => {
+    const user = await userAccessToken();
+    const pictured = await createProject({ title: "Pictured", language: Language.En }, user);
+    const bare = await createProject({ title: "Bare", language: Language.En }, user);
+    await projectLogoUpdate(api, user, { projectID: pictured.id }, wideLogo);
+
+    const drift = await projectLogosDrift(api, user, {
+      logos: { [pictured.id]: OTHER_CHECKSUM, [bare.id]: OTHER_CHECKSUM, [ABSENT_ID]: OTHER_CHECKSUM },
+    });
+    expect(drift.logos).toEqual({ [pictured.id]: await checksumOf(wideLogo) });
+    expect([...drift.removed].sort()).toEqual([bare.id, ABSENT_ID].sort());
+  });
+
+  it("returns 400 for a checksum in uppercase", async () => {
+    await expectStatus(
+      projectLogosDrift(api, accessToken, { logos: { [ABSENT_ID]: (await checksumOf(logo)).toUpperCase() } }),
+      400
+    );
+  });
+
+  it("returns 403 for an anonymous session", async () => {
+    await expectStatus(projectLogosDrift(api, await anonymousAccessToken(), { logos: {} }), 403);
+  });
+});
+
 describe("projectUpdate", () => {
   it("replaces the fields", async () => {
     const created = await createProject({ title: "Draft", language: Language.En });
@@ -447,6 +622,7 @@ describe("projectLogoUpdate", () => {
 
     const project = await projectLogoUpdate(api, accessToken, { projectID: created.id }, logo);
     expect(project.logoVersion).toEqual(expect.any(String));
+    expect(project.logoChecksum).toBe(await checksumOf(logo));
     expect(project.editedAt).toEqual(created.editedAt);
     expect(project.updatedAt).toEqual(created.updatedAt);
   });
@@ -469,7 +645,7 @@ describe("projectLogoUpdate", () => {
   it("keeps the version on every read and write of the project", async () => {
     const created = await createProject({ title: "Pictured", language: Language.En });
     const pictured = await projectLogoUpdate(api, accessToken, { projectID: created.id }, logo);
-    const version = { logoVersion: pictured.logoVersion };
+    const version = { logoVersion: pictured.logoVersion, logoChecksum: pictured.logoChecksum };
 
     expect(await projectGet(api, accessToken, { id: created.id })).toMatchObject(version);
     const listed = (await projectList(api, accessToken, { limit: 100 })).projects.find(
@@ -494,6 +670,10 @@ describe("projectLogoUpdate", () => {
     const first = await projectLogoUpdate(api, accessToken, request, logo);
     const second = await projectLogoUpdate(api, accessToken, request, logo);
     expect(second.logoVersion).not.toBe(first.logoVersion);
+    expect(second.logoChecksum).toBe(first.logoChecksum);
+
+    const third = await projectLogoUpdate(api, accessToken, request, wideLogo);
+    expect(third.logoChecksum).toBe(await checksumOf(wideLogo));
   });
 
   it("returns 422 with the reason for a refused logo", async () => {
@@ -565,6 +745,7 @@ describe("projectLogoDelete", () => {
 
     const project = await projectLogoDelete(api, accessToken, request);
     expect(project.logoVersion).toBeUndefined();
+    expect(project.logoChecksum).toBeUndefined();
     expect(project.editedAt).toEqual(created.editedAt);
     expect(project.updatedAt).toEqual(created.updatedAt);
     await expectStatus(projectLogoGet(api, accessToken, request), 404);

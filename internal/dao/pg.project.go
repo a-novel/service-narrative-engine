@@ -36,4 +36,7 @@ type Project struct {
 	// LogoUpdatedAt is when the logo last changed, nil while the project has no logo. A read joins it from the
 	// logo's row, and an insert of the model leaves it out.
 	LogoUpdatedAt *time.Time `bun:"logo_updated_at,scanonly"`
+	// LogoChecksum is the SHA-256 of the logo's bytes in lowercase hex, nil while the project has no logo. A read
+	// joins it from the logo's row, and an insert of the model leaves it out.
+	LogoChecksum *string `bun:"logo_checksum,scanonly"`
 }

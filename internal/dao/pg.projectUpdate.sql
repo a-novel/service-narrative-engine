@@ -1,4 +1,4 @@
--- RETURNING cannot join, so the outer query joins the logo version to the updated row.
+-- RETURNING cannot join, so the outer query joins the logo version and checksum to the updated row.
 WITH
   updated AS (
     UPDATE projects
@@ -16,7 +16,8 @@ WITH
   )
 SELECT
   updated.*,
-  logos.updated_at AS logo_updated_at
+  logos.updated_at AS logo_updated_at,
+  encode(logos.checksum, 'hex') AS logo_checksum
 FROM
   updated
   LEFT JOIN project_logos AS logos ON logos.project_id = updated.id;

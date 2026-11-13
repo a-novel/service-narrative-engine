@@ -2,6 +2,8 @@ package dao_test
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"strconv"
@@ -145,15 +147,23 @@ func composerFixtures() fixtures {
 }
 
 // logoFixtures returns the composer fixtures with a logo on the test project. The project carries the
-// logo's version, as a read returns it.
+// logo's version and checksum, as a read returns them.
 func logoFixtures() fixtures {
 	data := composerFixtures()
-	data.projects[0].LogoUpdatedAt = lo.ToPtr(updatedAt)
 	data.logos = []*dao.ProjectLogo{
 		{ProjectID: projectID, Data: []byte("stored logo"), MediaType: "image/webp", UpdatedAt: updatedAt},
 	}
+	data.projects[0].LogoUpdatedAt = lo.ToPtr(updatedAt)
+	data.projects[0].LogoChecksum = logoChecksum(data.logos[0].Data)
 
 	return data
+}
+
+// logoChecksum returns the checksum a read joins for a logo of these bytes: their SHA-256, in lowercase hex.
+func logoChecksum(data []byte) *string {
+	sum := sha256.Sum256(data)
+
+	return lo.ToPtr(hex.EncodeToString(sum[:]))
 }
 
 // fillerID derives a stable ID from a filler row's position.

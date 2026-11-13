@@ -42,6 +42,9 @@ var (
 	editedAt  = time.Date(2021, 1, 3, 0, 0, 0, 0, time.UTC)
 )
 
+// logoChecksum is the checksum of the test project's logo: a SHA-256 in lowercase hex.
+const logoChecksum = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+
 // daoMock is the answer a DAO mock gives. Go allows no generic type inside a function, so the
 // tests share this one.
 type daoMock[Resp any] struct {
@@ -96,6 +99,7 @@ func daoProject() *dao.Project {
 		ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr", Tags: []string{"noir"},
 		Genres:    []string{"thriller"},
 		CreatedAt: createdAt, UpdatedAt: updatedAt, EditedAt: editedAt, LogoUpdatedAt: lo.ToPtr(editedAt),
+		LogoChecksum: lo.ToPtr(logoChecksum),
 	}
 }
 
@@ -105,6 +109,7 @@ func coreProject() *core.Project {
 		ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr", Tags: []string{"noir"},
 		Genres:    []string{"thriller"},
 		CreatedAt: createdAt, UpdatedAt: updatedAt, EditedAt: editedAt, LogoVersion: lo.ToPtr(editedAt),
+		LogoChecksum: lo.ToPtr(logoChecksum),
 	}
 }
 

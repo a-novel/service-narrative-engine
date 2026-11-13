@@ -23,6 +23,7 @@ func TestPgProjectLogoDelete(t *testing.T) {
 	// withoutLogo is the test project once its logo is gone.
 	withoutLogo := logoFixtures().projects[0]
 	withoutLogo.LogoUpdatedAt = nil
+	withoutLogo.LogoChecksum = nil
 
 	testCases := []struct {
 		name string

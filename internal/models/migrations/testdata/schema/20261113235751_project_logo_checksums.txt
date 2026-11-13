@@ -1,0 +1,163 @@
+migration-history	sha256:71727ffca97cac48415931567c244d5bbb4eb5f3b392cae68539c9922fbbeb52
+column	beats.bytes	bigint DEFAULT ((((octet_length(title) + octet_length(description)) + octet_length(prompt)) + COALESCE(octet_length((recap)::text), 0)) + COALESCE(octet_length((recap_sources)::text), 0)) GENERATED s
+column	beats.color	text NOT NULL
+column	beats.description	text NOT NULL DEFAULT ''::text
+column	beats.id	uuid NOT NULL DEFAULT uuidv7()
+column	beats.position	integer NOT NULL
+column	beats.project_id	uuid NOT NULL
+column	beats.prompt	text NOT NULL DEFAULT ''::text
+column	beats.recap	jsonb
+column	beats.recap_beat_updated_at	timestamp with time zone
+column	beats.recap_sources	jsonb
+column	beats.title	text NOT NULL
+column	beats.updated_at	timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
+column	cells.bytes	bigint DEFAULT (octet_length((content)::text) + COALESCE(octet_length((recap)::text), 0)) GENERATED s
+column	cells.content	jsonb NOT NULL
+column	cells.content_empty	boolean DEFAULT ((COALESCE((content ->> 'text'::text), ''::text) = ''::text) AND (NOT jsonb_path_exists(content, '$."blocks"[*]'::jsonpath))) GENERATED s
+column	cells.content_size	integer DEFAULT cell_content_size(content) GENERATED s
+column	cells.content_speakers	text[] DEFAULT cell_content_speakers(content) GENERATED s
+column	cells.layer_id	uuid NOT NULL
+column	cells.project_id	uuid NOT NULL
+column	cells.recap	jsonb
+column	cells.recap_cell_updated_at	timestamp with time zone
+column	cells.recap_compact_size	integer DEFAULT char_length((recap ->> 'compact'::text)) GENERATED s
+column	cells.recap_condensed_size	integer DEFAULT char_length((recap ->> 'condensed'::text)) GENERATED s
+column	cells.recap_essentials_size	integer DEFAULT char_length((recap ->> 'essentials'::text)) GENERATED s
+column	cells.recap_names	jsonb DEFAULT (recap -> 'names'::text) GENERATED s
+column	cells.scene_id	uuid NOT NULL
+column	cells.updated_at	timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
+column	layers.bytes	bigint DEFAULT (octet_length(name) + octet_length(description)) GENERATED s
+column	layers.description	text NOT NULL DEFAULT ''::text
+column	layers.id	uuid NOT NULL DEFAULT uuidv7()
+column	layers.kind	text NOT NULL
+column	layers.name	text NOT NULL
+column	layers.position	integer NOT NULL
+column	layers.project_id	uuid NOT NULL
+column	layers.updated_at	timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
+column	project_logos.checksum	bytea DEFAULT sha256(data) GENERATED s
+column	project_logos.data	bytea NOT NULL
+column	project_logos.media_type	text NOT NULL
+column	project_logos.project_id	uuid NOT NULL
+column	project_logos.updated_at	timestamp with time zone NOT NULL
+column	projects.bytes	bigint DEFAULT (octet_length(title) + octet_length(premise)) GENERATED s
+column	projects.created_at	timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
+column	projects.edited_at	timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
+column	projects.genres	text[] NOT NULL DEFAULT '{}'::text[]
+column	projects.id	uuid NOT NULL DEFAULT uuidv7()
+column	projects.language	project_language NOT NULL
+column	projects.owner_id	uuid NOT NULL
+column	projects.premise	text NOT NULL DEFAULT ''::text
+column	projects.stored_bytes	bigint NOT NULL DEFAULT 0
+column	projects.tags	text[] NOT NULL DEFAULT '{}'::text[]
+column	projects.title	text NOT NULL
+column	projects.updated_at	timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
+column	scenes.beat_id	uuid NOT NULL
+column	scenes.bytes	bigint DEFAULT ((octet_length(title) + octet_length(description)) + octet_length(prompt)) GENERATED s
+column	scenes.description	text NOT NULL DEFAULT ''::text
+column	scenes.id	uuid NOT NULL DEFAULT uuidv7()
+column	scenes.position	integer NOT NULL
+column	scenes.project_id	uuid NOT NULL
+column	scenes.prompt	text NOT NULL DEFAULT ''::text
+column	scenes.title	text NOT NULL
+column	scenes.updated_at	timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
+comment	schema public	standard public schema
+constraint	beats.beats_color_check	CHECK ((color ~ '^#[0-9a-f]{6}$'::text))
+constraint	beats.beats_color_not_null	NOT NULL color
+constraint	beats.beats_description_not_null	NOT NULL description
+constraint	beats.beats_id_not_null	NOT NULL id
+constraint	beats.beats_pkey	PRIMARY KEY (id)
+constraint	beats.beats_position_check	CHECK ((("position" >= 0) AND ("position" < 200)))
+constraint	beats.beats_position_not_null	NOT NULL "position"
+constraint	beats.beats_project_id_fkey	FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+constraint	beats.beats_project_id_id_key	UNIQUE (project_id, id)
+constraint	beats.beats_project_id_not_null	NOT NULL project_id
+constraint	beats.beats_project_id_position_key	UNIQUE (project_id, "position") DEFERRABLE INITIALLY DEFERRED
+constraint	beats.beats_prompt_not_null	NOT NULL prompt
+constraint	beats.beats_title_check	CHECK ((title <> ''::text))
+constraint	beats.beats_title_not_null	NOT NULL title
+constraint	beats.beats_updated_at_not_null	NOT NULL updated_at
+constraint	cells.cells_content_not_null	NOT NULL content
+constraint	cells.cells_layer_fkey	FOREIGN KEY (project_id, layer_id) REFERENCES layers(project_id, id) ON DELETE CASCADE
+constraint	cells.cells_layer_id_not_null	NOT NULL layer_id
+constraint	cells.cells_pkey	PRIMARY KEY (scene_id, layer_id)
+constraint	cells.cells_project_id_not_null	NOT NULL project_id
+constraint	cells.cells_scene_fkey	FOREIGN KEY (project_id, scene_id) REFERENCES scenes(project_id, id) ON DELETE CASCADE
+constraint	cells.cells_scene_id_not_null	NOT NULL scene_id
+constraint	cells.cells_updated_at_not_null	NOT NULL updated_at
+constraint	layers.layers_description_not_null	NOT NULL description
+constraint	layers.layers_id_not_null	NOT NULL id
+constraint	layers.layers_kind_check	CHECK ((kind ~ '^[a-z][a-z0-9]*(-[a-z0-9]+)*$'::text))
+constraint	layers.layers_kind_not_null	NOT NULL kind
+constraint	layers.layers_name_check	CHECK ((name <> ''::text))
+constraint	layers.layers_name_not_null	NOT NULL name
+constraint	layers.layers_pkey	PRIMARY KEY (id)
+constraint	layers.layers_position_check	CHECK ((("position" >= 0) AND ("position" < 1000)))
+constraint	layers.layers_position_not_null	NOT NULL "position"
+constraint	layers.layers_project_id_fkey	FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+constraint	layers.layers_project_id_id_key	UNIQUE (project_id, id)
+constraint	layers.layers_project_id_not_null	NOT NULL project_id
+constraint	layers.layers_project_id_position_key	UNIQUE (project_id, "position") DEFERRABLE INITIALLY DEFERRED
+constraint	layers.layers_updated_at_not_null	NOT NULL updated_at
+constraint	project_logos.project_logos_data_check	CHECK ((octet_length(data) <= 262144))
+constraint	project_logos.project_logos_data_not_null	NOT NULL data
+constraint	project_logos.project_logos_media_type_check	CHECK ((media_type = ANY (ARRAY['image/webp'::text, 'image/jpeg'::text, 'image/png'::text])))
+constraint	project_logos.project_logos_media_type_not_null	NOT NULL media_type
+constraint	project_logos.project_logos_pkey	PRIMARY KEY (project_id)
+constraint	project_logos.project_logos_project_id_fkey	FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+constraint	project_logos.project_logos_project_id_not_null	NOT NULL project_id
+constraint	project_logos.project_logos_updated_at_not_null	NOT NULL updated_at
+constraint	projects.projects_created_at_not_null	NOT NULL created_at
+constraint	projects.projects_edited_at_not_null	NOT NULL edited_at
+constraint	projects.projects_genres_check	CHECK ((cardinality(genres) <= 10))
+constraint	projects.projects_genres_not_null	NOT NULL genres
+constraint	projects.projects_id_not_null	NOT NULL id
+constraint	projects.projects_language_not_null	NOT NULL language
+constraint	projects.projects_owner_id_not_null	NOT NULL owner_id
+constraint	projects.projects_pkey	PRIMARY KEY (id)
+constraint	projects.projects_premise_not_null	NOT NULL premise
+constraint	projects.projects_stored_bytes_not_null	NOT NULL stored_bytes
+constraint	projects.projects_tags_check	CHECK ((cardinality(tags) <= 10))
+constraint	projects.projects_tags_not_null	NOT NULL tags
+constraint	projects.projects_title_check	CHECK ((title <> ''::text))
+constraint	projects.projects_title_not_null	NOT NULL title
+constraint	projects.projects_updated_at_not_null	NOT NULL updated_at
+constraint	scenes.scenes_beat_fkey	FOREIGN KEY (project_id, beat_id) REFERENCES beats(project_id, id) ON DELETE CASCADE
+constraint	scenes.scenes_beat_id_not_null	NOT NULL beat_id
+constraint	scenes.scenes_beat_id_position_key	UNIQUE (beat_id, "position") DEFERRABLE INITIALLY DEFERRED
+constraint	scenes.scenes_description_not_null	NOT NULL description
+constraint	scenes.scenes_id_not_null	NOT NULL id
+constraint	scenes.scenes_pkey	PRIMARY KEY (id)
+constraint	scenes.scenes_position_check	CHECK ((("position" >= 0) AND ("position" < 10)))
+constraint	scenes.scenes_position_not_null	NOT NULL "position"
+constraint	scenes.scenes_project_id_fkey	FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+constraint	scenes.scenes_project_id_id_key	UNIQUE (project_id, id)
+constraint	scenes.scenes_project_id_not_null	NOT NULL project_id
+constraint	scenes.scenes_prompt_not_null	NOT NULL prompt
+constraint	scenes.scenes_title_check	CHECK ((title <> ''::text))
+constraint	scenes.scenes_title_not_null	NOT NULL title
+constraint	scenes.scenes_updated_at_not_null	NOT NULL updated_at
+extension	plpgsql	1.0
+index	beats_pkey	CREATE UNIQUE INDEX beats_pkey ON public.beats USING btree (id)
+index	beats_project_id_id_key	CREATE UNIQUE INDEX beats_project_id_id_key ON public.beats USING btree (project_id, id)
+index	beats_project_id_position_key	CREATE UNIQUE INDEX beats_project_id_position_key ON public.beats USING btree (project_id, "position")
+index	cells_pkey	CREATE UNIQUE INDEX cells_pkey ON public.cells USING btree (scene_id, layer_id)
+index	cells_project_id_layer_id_idx	CREATE INDEX cells_project_id_layer_id_idx ON public.cells USING btree (project_id, layer_id)
+index	layers_pkey	CREATE UNIQUE INDEX layers_pkey ON public.layers USING btree (id)
+index	layers_project_id_id_key	CREATE UNIQUE INDEX layers_project_id_id_key ON public.layers USING btree (project_id, id)
+index	layers_project_id_position_key	CREATE UNIQUE INDEX layers_project_id_position_key ON public.layers USING btree (project_id, "position")
+index	project_logos_pkey	CREATE UNIQUE INDEX project_logos_pkey ON public.project_logos USING btree (project_id)
+index	projects_owner_id_edited_at_idx	CREATE INDEX projects_owner_id_edited_at_idx ON public.projects USING btree (owner_id, edited_at DESC, id DESC)
+index	projects_pkey	CREATE UNIQUE INDEX projects_pkey ON public.projects USING btree (id)
+index	scenes_beat_id_position_key	CREATE UNIQUE INDEX scenes_beat_id_position_key ON public.scenes USING btree (beat_id, "position")
+index	scenes_pkey	CREATE UNIQUE INDEX scenes_pkey ON public.scenes USING btree (id)
+index	scenes_project_id_id_key	CREATE UNIQUE INDEX scenes_project_id_id_key ON public.scenes USING btree (project_id, id)
+relation	beats	r
+relation	cells	r
+relation	layers	r
+relation	project_logos	r
+relation	projects	r
+relation	scenes	r
+routine	cell_content_size(content jsonb)	f 1d23d976afaed241b3718d1ff329fe3b integer i false false sql
+routine	cell_content_speakers(content jsonb)	f 2f387e9aff07a660ae79c4cd0c726041 text[] i false false sql
+schema	public	pg_database_owner=UC/pg_database_owner,=U/pg_database_owner
+type	project_language	e en,fr

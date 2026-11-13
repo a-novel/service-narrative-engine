@@ -31,19 +31,22 @@ type Project struct {
 
 	// LogoVersion is when the logo last changed, absent while the project has no logo.
 	LogoVersion *time.Time `json:"logoVersion,omitempty"`
+	// LogoChecksum is the SHA-256 of the logo's bytes in lowercase hex, absent while the project has no logo.
+	LogoChecksum *string `json:"logoChecksum,omitempty"`
 }
 
 func loadProject(project *core.Project) Project {
 	return Project{
-		ID:          project.ID,
-		Title:       project.Title,
-		Premise:     project.Premise,
-		Language:    project.Language,
-		Tags:        project.Tags,
-		Genres:      project.Genres,
-		CreatedAt:   project.CreatedAt,
-		UpdatedAt:   project.UpdatedAt,
-		EditedAt:    project.EditedAt,
-		LogoVersion: project.LogoVersion,
+		ID:           project.ID,
+		Title:        project.Title,
+		Premise:      project.Premise,
+		Language:     project.Language,
+		Tags:         project.Tags,
+		Genres:       project.Genres,
+		CreatedAt:    project.CreatedAt,
+		UpdatedAt:    project.UpdatedAt,
+		EditedAt:     project.EditedAt,
+		LogoVersion:  project.LogoVersion,
+		LogoChecksum: project.LogoChecksum,
 	}
 }
