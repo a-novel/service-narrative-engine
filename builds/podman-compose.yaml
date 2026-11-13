@@ -66,6 +66,8 @@ services:
       # runs from the JSON Keys repository.
       SERVICE_JSON_KEYS_HOST: "${SERVICE_JSON_KEYS_GRPC_HOST}"
       SERVICE_JSON_KEYS_PORT: "${SERVICE_JSON_KEYS_GRPC_PORT}"
+      # The standalone image sets it too, but a go-exec target reads only this block.
+      SERVICE_ISSUER_OPTIONAL: true
     networks:
       - api
 
