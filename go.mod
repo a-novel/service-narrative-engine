@@ -4,7 +4,7 @@ go 1.27.4
 
 require (
 	github.com/a-novel-kit/golib v0.65.0
-	github.com/a-novel/service-authentication/v2 v2.25.4
+	github.com/a-novel/service-authentication/v2 v2.26.0
 	github.com/a-novel/service-genai v0.11.1
 	github.com/a-novel/service-json-keys/v2 v2.15.8
 	github.com/go-chi/chi/v5 v5.5.0
