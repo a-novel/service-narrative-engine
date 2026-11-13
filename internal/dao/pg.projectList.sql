@@ -3,6 +3,7 @@
 SELECT
   projects.*,
   logos.updated_at AS logo_updated_at,
+  encode(logos.checksum, 'hex') AS logo_checksum,
   count(*) OVER () AS total
 FROM
   projects

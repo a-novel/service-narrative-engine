@@ -92,6 +92,15 @@ func ValidateProjectTag(fl validator.FieldLevel) bool {
 	return projectTagPattern.MatchString(tag) && norm.NFC.IsNormalString(tag)
 }
 
+// logoChecksumPattern matches the checksum of a logo: a SHA-256 in lowercase hex.
+var logoChecksumPattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
+
+// ValidateLogoChecksum reports whether a string is the checksum of a logo: a SHA-256 in lowercase hex, as a project
+// carries it. The package registers it as the "logochecksum" struct tag.
+func ValidateLogoChecksum(fl validator.FieldLevel) bool {
+	return logoChecksumPattern.MatchString(fl.Field().String())
+}
+
 // ValidateUniqueCells reports whether a list of [CellsWriteItem] names each pair of a scene and a layer
 // once. The package registers it as the "uniquecells" struct tag.
 func ValidateUniqueCells(fl validator.FieldLevel) bool {
@@ -126,6 +135,7 @@ func init() {
 		"streamsection":  ValidateStreamSection,
 		"projectlabel":   ValidateProjectLabel,
 		"projecttag":     ValidateProjectTag,
+		"logochecksum":   ValidateLogoChecksum,
 	}
 
 	for tag, fn := range validations {

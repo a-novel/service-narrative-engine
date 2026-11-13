@@ -1,4 +1,5 @@
--- The outer query reads the logo as it stood before the delete, so it returns the version the project held.
+-- The outer query reads the logo as it stood before the delete, so it returns the version and checksum the project
+-- held.
 WITH
   deleted AS (
     DELETE FROM projects
@@ -9,7 +10,8 @@ WITH
   )
 SELECT
   deleted.*,
-  logos.updated_at AS logo_updated_at
+  logos.updated_at AS logo_updated_at,
+  encode(logos.checksum, 'hex') AS logo_checksum
 FROM
   deleted
   LEFT JOIN project_logos AS logos ON logos.project_id = deleted.id;

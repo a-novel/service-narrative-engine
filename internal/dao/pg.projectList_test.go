@@ -35,7 +35,9 @@ func TestPgProjectList(t *testing.T) {
 
 	// The first and the third project hold logos, at distinct versions, and the second none.
 	first.LogoUpdatedAt = lo.ToPtr(now)
+	first.LogoChecksum = logoChecksum([]byte("logo"))
 	third.LogoUpdatedAt = lo.ToPtr(createdAt)
+	third.LogoChecksum = logoChecksum([]byte("logo"))
 
 	logo := func(project *dao.Project, version time.Time) *dao.ProjectLogo {
 		return &dao.ProjectLogo{ProjectID: project.ID, Data: []byte("logo"), MediaType: "image/webp", UpdatedAt: version}

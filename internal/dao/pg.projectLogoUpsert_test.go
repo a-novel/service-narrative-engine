@@ -23,10 +23,11 @@ func TestPgProjectLogoUpsert(t *testing.T) {
 	// pgUniqueViolation is the SQLSTATE of a write that breaks a unique key.
 	const pgUniqueViolation = "23505"
 
-	// withLogo returns the test project with the version of its new logo.
+	// withLogo returns the test project with the version and checksum of its new logo.
 	withLogo := func(logo *dao.ProjectLogo) *dao.Project {
 		project := composerFixtures().projects[0]
 		project.LogoUpdatedAt = lo.ToPtr(logo.UpdatedAt)
+		project.LogoChecksum = logoChecksum(logo.Data)
 
 		return project
 	}
