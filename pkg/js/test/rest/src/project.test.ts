@@ -24,7 +24,6 @@ import {
   projectEditsList,
   projectFieldsDrift,
   projectGet,
-  projectList,
   projectLogoDelete,
   projectLogoGet,
   projectLogoUpdate,
@@ -55,11 +54,6 @@ const pngLogo = new Blob([readFileSync(new URL("../testdata/logo.png", import.me
 const animatedLogo = new Blob([readFileSync(new URL("../testdata/animated-logo.png", import.meta.url))], {
   type: "image/png",
 });
-
-/** Lists the IDs of the caller's projects, most recently edited first. */
-async function listedIDs(): Promise<string[]> {
-  return (await projectList(api, accessToken, { limit: 100 })).projects.map((project) => project.id);
-}
 
 /** Reads a stream to its end. */
 async function collect<T>(stream: AsyncIterable<T>): Promise<T[]> {
@@ -262,69 +256,6 @@ describe("projectGet", () => {
   });
 });
 
-describe("projectList", () => {
-  it("lists projects newest first, a page at a time, with their total", async () => {
-    const older = await createProject({ title: "Older", language: Language.En });
-    const newer = await createProject({ title: "Newer", language: Language.En });
-
-    const ids = (await projectList(api, accessToken)).projects.map((project) => project.id);
-    expect(ids.indexOf(newer.id)).toBeGreaterThanOrEqual(0);
-    expect(ids.indexOf(newer.id)).toBeLessThan(ids.indexOf(older.id));
-
-    // Other test files create projects meanwhile, so the page after the newer project still holds the older one.
-    const offset = ids.indexOf(newer.id) + 1;
-    const nextPage = (await projectList(api, accessToken, { offset, limit: 100 })).projects.map(
-      (project) => project.id
-    );
-    expect(nextPage).toContain(older.id);
-
-    const firstPage = await projectList(api, accessToken, { limit: 1 });
-    expect(firstPage.projects).toHaveLength(1);
-    expect(firstPage.total).toBeGreaterThanOrEqual(2);
-  });
-
-  it("lists the project a cell write edits first", async () => {
-    const edited = await createProject({ title: "Edited", language: Language.En });
-    const beat = await beatCreate(api, accessToken, { projectID: edited.id, title: "Le départ", color: "#4a90d9" });
-    const scene = await sceneCreate(api, accessToken, {
-      projectID: edited.id,
-      beatID: beat.id,
-      position: 0,
-      title: "Le quai",
-    });
-    const before = await projectGet(api, accessToken, { id: edited.id });
-    const untouched = await createProject({ title: "Untouched", language: Language.En });
-
-    let ids = await listedIDs();
-    expect(ids.indexOf(untouched.id)).toBeGreaterThanOrEqual(0);
-    expect(ids.indexOf(untouched.id)).toBeLessThan(ids.indexOf(edited.id));
-
-    await cellWrite(api, accessToken, {
-      projectID: edited.id,
-      sceneID: scene.id,
-      layerID: edited.layers[0].id,
-      content: { blocks: [{ kind: "narration", text: "Le train entrait en gare." }] },
-    });
-
-    ids = await listedIDs();
-    expect(ids.indexOf(edited.id)).toBeGreaterThanOrEqual(0);
-    expect(ids.indexOf(edited.id)).toBeLessThan(ids.indexOf(untouched.id));
-
-    // The cell write edits the project and leaves its own fields as they were.
-    const after = await projectGet(api, accessToken, { id: edited.id });
-    expect(after.editedAt.getTime()).toBeGreaterThan(before.editedAt.getTime());
-    expect(after.updatedAt).toEqual(before.updatedAt);
-  });
-
-  it("returns 400 for a page over 100 projects", async () => {
-    await expectStatus(projectList(api, accessToken, { limit: 101 }), 400);
-  });
-
-  it("returns 400 for a negative offset", async () => {
-    await expectStatus(projectList(api, accessToken, { offset: -1 }), 400);
-  });
-});
-
 describe("projectFieldsDrift", () => {
   it("returns every project of the caller when the client holds none", async () => {
     const user = await userAccessToken();
@@ -422,7 +353,7 @@ describe("projectEditsList", () => {
     });
   });
 
-  it("follows a content write", async () => {
+  it("follows a content write, which leaves the project's fields as they were", async () => {
     const user = await userAccessToken();
     const project = await createProject({ title: "Edited", language: Language.En }, user);
 
@@ -430,6 +361,7 @@ describe("projectEditsList", () => {
 
     const { edits } = await projectEditsList(api, user);
     expect(edits[project.id].getTime()).toBeGreaterThan(project.editedAt.getTime());
+    expect((await projectGet(api, user, { id: project.id })).updatedAt).toEqual(project.updatedAt);
   });
 
   it("returns 403 for an anonymous session", async () => {
@@ -617,11 +549,10 @@ describe("projectStream", () => {
 });
 
 describe("projectLogoUpdate", () => {
-  it("sets the logo, with a version, and keeps the project's edit date", async () => {
+  it("sets the logo, with its checksum, and keeps the project's edit date", async () => {
     const created = await createProject({ title: "Pictured", language: Language.En });
 
     const project = await projectLogoUpdate(api, accessToken, { projectID: created.id }, logo);
-    expect(project.logoVersion).toEqual(expect.any(String));
     expect(project.logoChecksum).toBe(await checksumOf(logo));
     expect(project.editedAt).toEqual(created.editedAt);
     expect(project.updatedAt).toEqual(created.updatedAt);
@@ -631,27 +562,23 @@ describe("projectLogoUpdate", () => {
     const created = await createProject({ title: "Pictured", language: Language.En });
 
     const project = await projectLogoUpdate(api, accessToken, { projectID: created.id }, wideLogo);
-    expect(project.logoVersion).toEqual(expect.any(String));
+    expect(project.logoChecksum).toBe(await checksumOf(wideLogo));
   });
 
   it("sets a still PNG", async () => {
     const created = await createProject({ title: "Pictured", language: Language.En });
 
     const project = await projectLogoUpdate(api, accessToken, { projectID: created.id }, pngLogo);
-    expect(project.logoVersion).toEqual(expect.any(String));
+    expect(project.logoChecksum).toBe(await checksumOf(pngLogo));
     expect((await projectLogoGet(api, accessToken, { projectID: created.id })).type).toBe("image/png");
   });
 
-  it("keeps the version on every read and write of the project", async () => {
+  it("keeps the checksum on every read and write of the project", async () => {
     const created = await createProject({ title: "Pictured", language: Language.En });
     const pictured = await projectLogoUpdate(api, accessToken, { projectID: created.id }, logo);
-    const version = { logoVersion: pictured.logoVersion, logoChecksum: pictured.logoChecksum };
+    const checksum = { logoChecksum: pictured.logoChecksum };
 
-    expect(await projectGet(api, accessToken, { id: created.id })).toMatchObject(version);
-    const listed = (await projectList(api, accessToken, { limit: 100 })).projects.find(
-      (project) => project.id === created.id
-    );
-    expect(listed).toMatchObject(version);
+    expect(await projectGet(api, accessToken, { id: created.id })).toMatchObject(checksum);
     const updated = await projectUpdate(api, accessToken, {
       id: created.id,
       title: "Renamed",
@@ -659,17 +586,16 @@ describe("projectLogoUpdate", () => {
       tags: [],
       genres: [],
     });
-    expect(updated).toMatchObject(version);
-    expect(await projectDelete(api, accessToken, created)).toMatchObject(version);
+    expect(updated).toMatchObject(checksum);
+    expect(await projectDelete(api, accessToken, created)).toMatchObject(checksum);
   });
 
-  it("replaces a logo with a new version", async () => {
+  it("replaces a logo, named by the checksum of its bytes", async () => {
     const created = await createProject({ title: "Pictured", language: Language.En });
     const request = { projectID: created.id };
 
     const first = await projectLogoUpdate(api, accessToken, request, logo);
     const second = await projectLogoUpdate(api, accessToken, request, logo);
-    expect(second.logoVersion).not.toBe(first.logoVersion);
     expect(second.logoChecksum).toBe(first.logoChecksum);
 
     const third = await projectLogoUpdate(api, accessToken, request, wideLogo);
@@ -744,7 +670,6 @@ describe("projectLogoDelete", () => {
     await projectLogoUpdate(api, accessToken, request, logo);
 
     const project = await projectLogoDelete(api, accessToken, request);
-    expect(project.logoVersion).toBeUndefined();
     expect(project.logoChecksum).toBeUndefined();
     expect(project.editedAt).toEqual(created.editedAt);
     expect(project.updatedAt).toEqual(created.updatedAt);

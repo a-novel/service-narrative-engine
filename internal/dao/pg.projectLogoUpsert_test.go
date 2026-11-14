@@ -5,7 +5,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun/driver/pgdriver"
 
@@ -23,18 +22,23 @@ func TestPgProjectLogoUpsert(t *testing.T) {
 	// pgUniqueViolation is the SQLSTATE of a write that breaks a unique key.
 	const pgUniqueViolation = "23505"
 
-	// withLogo returns the test project with the version and checksum of its new logo.
+	// withLogo returns the test project with the checksum of its new logo.
 	withLogo := func(logo *dao.ProjectLogo) *dao.Project {
 		project := composerFixtures().projects[0]
-		project.LogoUpdatedAt = lo.ToPtr(logo.UpdatedAt)
 		project.LogoChecksum = logoChecksum(logo.Data)
 
 		return project
 	}
 
 	storedLogo := logoFixtures().logos[0]
-	newLogo := &dao.ProjectLogo{ProjectID: projectID, Data: []byte("new logo"), MediaType: "image/jpeg", UpdatedAt: now}
-	pngLogo := &dao.ProjectLogo{ProjectID: projectID, Data: []byte("png logo"), MediaType: "image/png", UpdatedAt: now}
+	newLogo := &dao.ProjectLogo{
+		ProjectID: projectID, Data: []byte("new logo"), MediaType: "image/jpeg",
+		Checksum: *logoChecksum([]byte("new logo")), UpdatedAt: now,
+	}
+	pngLogo := &dao.ProjectLogo{
+		ProjectID: projectID, Data: []byte("png logo"), MediaType: "image/png",
+		Checksum: *logoChecksum([]byte("png logo")), UpdatedAt: now,
+	}
 
 	request := func(logo *dao.ProjectLogo) *dao.ProjectLogoUpsertRequest {
 		return &dao.ProjectLogoUpsertRequest{

@@ -52,15 +52,8 @@ export const ProjectSchema = z.object({
   createdAt: z.iso.datetime().transform((value) => new Date(value)),
   /** When the project's own fields, its title, premise, language, tags and genres, last changed. */
   updatedAt: z.iso.datetime().transform((value) => new Date(value)),
-  /** When the project's content last changed, its logo aside. {@link projectList} orders projects by it. */
+  /** When the project's content last changed, its logo aside. */
   editedAt: z.iso.datetime().transform((value) => new Date(value)),
-  /**
-   * When the logo last changed, absent while the project has no logo. It stays the server's string: a Date would
-   * drop its microseconds.
-   *
-   * @deprecated `logoChecksum` names the logo instead.
-   */
-  logoVersion: z.iso.datetime().optional(),
   /**
    * The checksum of the logo, absent while the project has no logo. A logo URL that carries it names the logo's
    * bytes, which a cache keeps for good.
@@ -78,15 +71,6 @@ export const ProjectComposerSchema = ProjectSchema.extend({
 
 /** The value {@link ProjectComposerSchema} validates. */
 export type ProjectComposer = z.infer<typeof ProjectComposerSchema>;
-
-/** A page of the caller's projects, with how many the caller holds in all. */
-export const ProjectPageSchema = z.object({
-  projects: z.array(ProjectSchema),
-  total: z.int(),
-});
-
-/** The value {@link ProjectPageSchema} validates. */
-export type ProjectPage = z.infer<typeof ProjectPageSchema>;
 
 /** The title of a project, which is not blank. */
 export const ProjectTitleSchema = maxChars(80).regex(/\S/);
@@ -156,15 +140,6 @@ export const ProjectGetRequestSchema = z.object({
 /** The value {@link ProjectGetRequestSchema} validates. */
 export type ProjectGetRequest = z.infer<typeof ProjectGetRequestSchema>;
 
-/** A page of projects, most recently edited first: at most `limit`, 20 when omitted, after the first `offset`. */
-export const ProjectListRequestSchema = z.object({
-  limit: z.int().min(0).max(100).optional(),
-  offset: z.int().min(0).optional(),
-});
-
-/** The value {@link ProjectListRequestSchema} validates. */
-export type ProjectListRequest = z.infer<typeof ProjectListRequestSchema>;
-
 /** The new fields of a project. An omitted premise is cleared. `tags` and `genres` each replace their whole list. */
 export const ProjectUpdateRequestSchema = z.object({
   id: z.uuid(),
@@ -219,31 +194,9 @@ export async function projectGet(
 }
 
 /**
- * Lists a page of the caller's projects, most recently edited first, with their total. Raise `offset` by the page
- * size for the next page.
- *
- * @deprecated Keep a copy of the caller's projects in sync with {@link projectFieldsDrift}, {@link projectEditsList}
- * and {@link projectLogosDrift} instead.
- */
-export async function projectList(
-  api: NarrativeEngineApi,
-  accessToken: string,
-  request: ProjectListRequest = {}
-): Promise<ProjectPage> {
-  const params = new URLSearchParams();
-  if (request.limit) params.set("limit", `${request.limit}`);
-  if (request.offset) params.set("offset", `${request.offset}`);
-  const query = params.toString();
-  return await api.fetch(`/v1/projects${query ? `?${query}` : ""}`, ProjectPageSchema, {
-    method: "GET",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
-  });
-}
-
-/**
  * The fields of a project, with its `editedAt` so a project the client lacks arrives whole, and no logo.
  */
-export const ProjectFieldsSchema = ProjectSchema.omit({ logoVersion: true, logoChecksum: true });
+export const ProjectFieldsSchema = ProjectSchema.omit({ logoChecksum: true });
 
 /** The value {@link ProjectFieldsSchema} validates. */
 export type ProjectFields = z.infer<typeof ProjectFieldsSchema>;

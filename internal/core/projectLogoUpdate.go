@@ -20,7 +20,7 @@ type ProjectLogoUpdateDaoOwner interface {
 	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
 }
 
-// ProjectLogoUpdateDao writes the logo and its version.
+// ProjectLogoUpdateDao writes the logo and the instant it changed.
 type ProjectLogoUpdateDao interface {
 	Exec(ctx context.Context, request *dao.ProjectLogoUpsertRequest) (*dao.Project, error)
 }

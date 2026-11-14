@@ -24,7 +24,7 @@ type ProjectLogoSelectRequest struct {
 	ProjectID uuid.UUID
 }
 
-// PgProjectLogoSelect reads the logo of a project, with its version. The caller checks the owner with
+// PgProjectLogoSelect reads the logo of a project, with its checksum. The caller checks the owner with
 // [PgProjectOwned].
 type PgProjectLogoSelect struct{}
 

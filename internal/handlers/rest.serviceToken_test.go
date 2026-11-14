@@ -46,7 +46,7 @@ func TestRestServiceToken(t *testing.T) {
 			name: "Success",
 
 			tokenConfig: tokenConfig,
-			path:        "/v1/projects",
+			path:        "/v1/projects/edits",
 			token:       issuer.Sign(t, issuer.Claims(serviceTokenCaller, serviceTokenAudience)),
 
 			expectStatus: http.StatusNoContent,
@@ -54,7 +54,7 @@ func TestRestServiceToken(t *testing.T) {
 		{
 			name: "Success/Unconfigured",
 
-			path: "/v1/projects",
+			path: "/v1/projects/edits",
 
 			expectStatus: http.StatusNoContent,
 		},
@@ -70,7 +70,7 @@ func TestRestServiceToken(t *testing.T) {
 			name: "Error/UnknownCaller",
 
 			tokenConfig: tokenConfig,
-			path:        "/v1/projects",
+			path:        "/v1/projects/edits",
 			token:       issuer.Sign(t, issuer.Claims(serviceTokenStranger, serviceTokenAudience)),
 
 			expectStatus: http.StatusUnauthorized,
@@ -79,7 +79,7 @@ func TestRestServiceToken(t *testing.T) {
 			name: "Error/Missing",
 
 			tokenConfig: tokenConfig,
-			path:        "/v1/projects",
+			path:        "/v1/projects/edits",
 
 			expectStatus: http.StatusUnauthorized,
 		},

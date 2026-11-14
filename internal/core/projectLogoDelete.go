@@ -18,7 +18,7 @@ type ProjectLogoDeleteDaoOwner interface {
 	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
 }
 
-// ProjectLogoDeleteDao removes the logo and its version.
+// ProjectLogoDeleteDao removes the logo.
 type ProjectLogoDeleteDao interface {
 	Exec(ctx context.Context, request *dao.ProjectLogoDeleteRequest) (*dao.Project, error)
 }

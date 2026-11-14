@@ -30,7 +30,8 @@ func TestPgProjectLogoSelect(t *testing.T) {
 			request: &dao.ProjectLogoSelectRequest{ProjectID: projectID},
 
 			expect: &dao.ProjectLogo{
-				ProjectID: projectID, Data: []byte("stored logo"), MediaType: "image/webp", UpdatedAt: updatedAt,
+				ProjectID: projectID, Data: []byte("stored logo"), MediaType: "image/webp",
+				Checksum: *logoChecksum([]byte("stored logo")), UpdatedAt: updatedAt,
 			},
 		},
 		{

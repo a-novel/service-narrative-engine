@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"net/http"
-	"strconv"
 
 	"github.com/google/uuid"
 
@@ -29,10 +28,10 @@ type RestProjectLogoGetRequest struct {
 // of a project of the caller.
 //
 // The logo carries the media type it was stored with, which X-Content-Type-Options keeps the browser from
-// second-guessing. Its strong ETag (RFC 9110 section 8.8.3) and Last-Modified come from its version, so
-// [http.ServeContent] answers a matching conditional request with 304. Cache-Control is no-cache (RFC 9111
-// section 5.2.2.4): a cache revalidates the logo on every use. The platform caches for good under a URL
-// that names the version.
+// second-guessing. Its checksum is its strong ETag (RFC 9110 section 8.8.3), and Last-Modified is when it
+// last changed. [http.ServeContent] then answers a matching conditional request with 304. Cache-Control is
+// no-cache (RFC 9111 section 5.2.2.4): a cache revalidates the logo on every use. The platform caches for good
+// under a URL that names the checksum.
 type RestProjectLogoGet struct {
 	service RestProjectLogoGetService
 	logger  logging.Log
@@ -73,7 +72,7 @@ func (handler *RestProjectLogoGet) ServeHTTP(w http.ResponseWriter, r *http.Requ
 	header.Set("Content-Type", result.MediaType)
 	header.Set("X-Content-Type-Options", "nosniff")
 	header.Set("Cache-Control", "no-cache")
-	header.Set("ETag", `"`+strconv.FormatInt(result.Version.UnixMicro(), 10)+`"`)
+	header.Set("ETag", `"`+result.Checksum+`"`)
 
-	http.ServeContent(w, r, "", result.Version, bytes.NewReader(result.Data))
+	http.ServeContent(w, r, "", result.UpdatedAt, bytes.NewReader(result.Data))
 }

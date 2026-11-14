@@ -90,8 +90,7 @@ func (service *ProjectCreate) Exec(ctx context.Context, request *ProjectCreateRe
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	// UUIDv7 sorts by creation time, which lets ProjectList order projects by ID. The project takes the
-	// first ID, then its required layers.
+	// The project takes the first ID, then its required layers.
 	ids, err := newIDs(ctx, 1+len(requiredLayers))
 	if err != nil {
 		return nil, otel.ReportError(span, err)

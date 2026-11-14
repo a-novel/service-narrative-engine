@@ -3,9 +3,7 @@ package dao_test
 import (
 	"context"
 	"testing"
-	"time"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
 	"github.com/a-novel-kit/golib/postgres/postgrestest"
@@ -23,12 +21,12 @@ func TestPgProjectUpdate(t *testing.T) {
 		Tags: []string{"thriller", "polar", "noir"}, Genres: []string{"roman noir", "policier"}, Now: now,
 	}
 
-	// updated returns the test project after the update, with the version and checksum of its logo.
-	updated := func(logo *time.Time, checksum *string) *dao.Project {
+	// updated returns the test project after the update, with the checksum of its logo.
+	updated := func(checksum *string) *dao.Project {
 		return &dao.Project{
 			ID: projectID, OwnerID: ownerID, Title: "Clear Hours", Premise: "Marie waits.", Language: "en",
 			Tags: []string{"thriller", "polar", "noir"}, Genres: []string{"roman noir", "policier"},
-			CreatedAt: createdAt, UpdatedAt: now, EditedAt: updatedAt, LogoUpdatedAt: logo, LogoChecksum: checksum,
+			CreatedAt: createdAt, UpdatedAt: now, EditedAt: updatedAt, LogoChecksum: checksum,
 		}
 	}
 
@@ -47,7 +45,7 @@ func TestPgProjectUpdate(t *testing.T) {
 			fixtures: composerFixtures(),
 			request:  update,
 
-			expect: updated(nil, nil),
+			expect: updated(nil),
 		},
 		{
 			name: "Success/Logo",
@@ -55,7 +53,7 @@ func TestPgProjectUpdate(t *testing.T) {
 			fixtures: logoFixtures(),
 			request:  update,
 
-			expect: updated(lo.ToPtr(updatedAt), logoFixtures().projects[0].LogoChecksum),
+			expect: updated(logoFixtures().projects[0].LogoChecksum),
 		},
 		{
 			name: "Success/ClearLabels",

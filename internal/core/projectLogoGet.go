@@ -72,5 +72,7 @@ func (service *ProjectLogoGet) Exec(
 		return nil, otel.ReportError(span, fmt.Errorf("select logo: %w", err))
 	}
 
-	return &ProjectLogo{MediaType: entity.MediaType, Data: entity.Data, Version: entity.UpdatedAt}, nil
+	return &ProjectLogo{
+		MediaType: entity.MediaType, Data: entity.Data, Checksum: entity.Checksum, UpdatedAt: entity.UpdatedAt,
+	}, nil
 }

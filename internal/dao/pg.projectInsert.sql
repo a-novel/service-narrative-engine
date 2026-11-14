@@ -1,4 +1,4 @@
--- A new project holds no logo, so it returns no logo version.
+-- A new project holds no logo, so it returns no logo checksum.
 INSERT INTO
   projects (
     id,

@@ -1,0 +1,57 @@
+# Upgrading to NEXT
+
+Keep the caller's projects in sync with the three project sweeps instead of `projectList`, and name a logo by `logoChecksum` instead of `logoVersion`: both are removed.
+
+## Do I need to act?
+
+**Required** for a client that calls `GET /v1/projects` (`projectList`) or reads `logoVersion`. The service no longer serves a `GET` on `/v1/projects`, and no project read carries `logoVersion` anymore. v1.7.0 added both replacements, so a client can move before it upgrades. A client that uses neither keeps working, and the release migrates no data.
+
+## Replace `projectList` with the sweeps
+
+A user owns at most 100 projects, so a client keeps all of them and asks the service only for what drifted, instead of reading pages. `projectList`, `ProjectListRequestSchema`, `ProjectPageSchema` and their types are removed from the JS client, with the `limit`, `offset` and `total` of the route.
+
+Each sweep compares one part of the projects a client holds with the caller's:
+
+| Sweep  | Call                 | The client sends                                      | The service returns                                                     |
+| ------ | -------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------- |
+| fields | `projectFieldsDrift` | each held project's ID, mapped to its `updatedAt`     | the projects whose fields drifted, and the held IDs that are gone       |
+| edits  | `projectEditsList`   | nothing                                               | every project's ID, mapped to its `editedAt`                            |
+| logo   | `projectLogosDrift`  | each held logo's project ID, mapped to `logoChecksum` | the checksum of each logo that drifted, and the held IDs without a logo |
+
+A client that holds nothing sends empty maps, and the sweeps return every project and every logo:
+
+```diff
+-const { projects } = await projectList(api, accessToken, { limit: 100 });
++const { projects } = await projectFieldsDrift(api, accessToken, { projects: {} });
++const { logos } = await projectLogosDrift(api, accessToken, { logos: {} });
+```
+
+On each later sweep, the client sends what it holds. It then replaces each project the drift returns, and deletes each ID of `removed`.
+
+```ts
+const held = Object.fromEntries(projects.map((project) => [project.id, project.updatedAt.toISOString()]));
+const drift = await projectFieldsDrift(api, accessToken, { projects: held });
+```
+
+The service compares `updatedAt` to the millisecond, so the `toISOString()` of the parsed `Date` stays in sync with the served string. Each map holds at most `PROJECTS_MAX` (100) entries, and a larger one answers 400.
+
+`projectList` ordered projects by `editedAt`, newest first. Each project of `projectFieldsDrift` carries its `editedAt`, and `projectEditsList` returns the latest `editedAt` of every project, so a client sorts and pages the projects it holds itself:
+
+```ts
+const ordered = projects.toSorted((a, b) => b.editedAt.getTime() - a.editedAt.getTime());
+```
+
+## Name a logo by `logoChecksum`
+
+Every project read carries `logoChecksum` while the project holds a logo: the SHA-256 of the logo's bytes, in lowercase hex. `logoVersion` is removed from the JSON and from `ProjectSchema`. Put the checksum in the logo's URL where the version was, so a cache keeps each logo for good:
+
+```diff
+-const logo = project.logoVersion && `/projects/${project.id}/logo?v=${project.logoVersion}`;
++const logo = project.logoChecksum && `/projects/${project.id}/logo?v=${project.logoChecksum}`;
+```
+
+The same bytes keep the same checksum, so uploading a logo again leaves its URL as it was.
+
+## Notes
+
+`GET /v1/project/logo` sends the logo's checksum as its `ETag`, so a client compares it with `logoChecksum`. A cache that stored a logo under the previous `ETag` fetches it once more, then revalidates against the checksum. `Last-Modified` keeps its meaning.

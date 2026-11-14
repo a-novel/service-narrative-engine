@@ -49,7 +49,7 @@ func TestProjectCreate(t *testing.T) {
 		Project: &core.Project{
 			ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr", Tags: []string{"noir"},
 			Genres:    []string{"thriller"},
-			CreatedAt: createdAt, UpdatedAt: updatedAt, EditedAt: editedAt, LogoVersion: lo.ToPtr(editedAt),
+			CreatedAt: createdAt, UpdatedAt: updatedAt, EditedAt: editedAt,
 			LogoChecksum: lo.ToPtr(logoChecksum),
 		},
 		Layers: []*core.Layer{

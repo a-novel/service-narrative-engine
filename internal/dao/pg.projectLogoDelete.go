@@ -19,8 +19,8 @@ type ProjectLogoDeleteRequest struct {
 	ProjectID uuid.UUID
 }
 
-// PgProjectLogoDelete removes the logo of a project, and its version, in one statement. It returns the
-// project. A project without a logo stays as it is, and a missing project fails the write.
+// PgProjectLogoDelete removes the logo of a project in one statement. It returns the project. A project
+// without a logo stays as it is, and a missing project fails the write.
 type PgProjectLogoDelete struct{}
 
 func NewPgProjectLogoDelete() *PgProjectLogoDelete {
