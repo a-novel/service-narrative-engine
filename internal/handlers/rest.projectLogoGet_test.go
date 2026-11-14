@@ -23,8 +23,10 @@ func TestRestProjectLogoGet(t *testing.T) {
 	errFoo := errors.New("foo")
 
 	target := "/v1/project/logo?projectID=" + projectID.String()
-	logo := &core.ProjectLogo{MediaType: "image/webp", Data: []byte("logo"), Version: logoVersion}
-	etag := `"1609661730123456"`
+	logo := &core.ProjectLogo{
+		MediaType: "image/webp", Data: []byte("logo"), Checksum: logoChecksum, UpdatedAt: preciseAt,
+	}
+	etag := `"` + logoChecksum + `"`
 
 	testCases := []struct {
 		name string

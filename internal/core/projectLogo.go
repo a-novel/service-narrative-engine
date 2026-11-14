@@ -23,7 +23,8 @@ type ProjectLogo struct {
 	MediaType string
 	// Data holds the encoded image.
 	Data []byte
+	// Checksum is the SHA-256 of Data in lowercase hex, as [Project.LogoChecksum] carries it.
+	Checksum string
 
-	// Version is when the logo last changed.
-	Version time.Time
+	UpdatedAt time.Time
 }

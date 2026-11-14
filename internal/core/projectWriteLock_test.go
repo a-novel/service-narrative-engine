@@ -35,7 +35,7 @@ type projectWrites struct {
 // TestProjectWriteLock enforces the project lock rule over internal/core, where it lives. It parses the
 // package's non-test files and checks that the Exec method of every service that builds a DAO request writing a
 // project's content calls lockOwnedProject before that request. The lock runs the project's writes one at a
-// time and stamps the project's edited_at, which orders the project list.
+// time and stamps the project's edited_at, which ProjectEditsList returns.
 //
 // A service listed in projectWriteLockExempt skips the rule, and the test fails once that service no longer
 // exists or no longer writes, so the list holds only real exemptions.

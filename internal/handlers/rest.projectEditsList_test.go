@@ -43,7 +43,7 @@ func TestRestProjectEditsList(t *testing.T) {
 			request: validRequest,
 
 			serviceMock: &serviceMock[*core.ProjectEdits]{
-				resp: &core.ProjectEdits{Edits: map[uuid.UUID]time.Time{projectID: logoVersion}},
+				resp: &core.ProjectEdits{Edits: map[uuid.UUID]time.Time{projectID: preciseAt}},
 			},
 
 			expectStatus: http.StatusOK,

@@ -1,4 +1,4 @@
--- The logo and its version go in one row, so the project returns with no logo version.
+-- The logo and its checksum go in one row, so the project returns with no logo checksum.
 WITH
   deleted AS (
     DELETE FROM project_logos

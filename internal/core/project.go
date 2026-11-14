@@ -36,8 +36,6 @@ type Project struct {
 	// recaps. Its logo is cosmetic and leaves it as it was.
 	EditedAt time.Time
 
-	// LogoVersion is when the logo last changed, nil while the project has no logo.
-	LogoVersion *time.Time
 	// LogoChecksum is the SHA-256 of the logo's bytes in lowercase hex, nil while the project has no logo. Logo URLs
 	// carry it, so a cache keeps each logo for good.
 	LogoChecksum *string
@@ -55,7 +53,6 @@ func newProject(entity *dao.Project) *Project {
 		CreatedAt:    entity.CreatedAt,
 		UpdatedAt:    entity.UpdatedAt,
 		EditedAt:     entity.EditedAt,
-		LogoVersion:  entity.LogoUpdatedAt,
 		LogoChecksum: entity.LogoChecksum,
 	}
 }

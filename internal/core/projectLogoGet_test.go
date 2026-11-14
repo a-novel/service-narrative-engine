@@ -37,10 +37,13 @@ func TestProjectLogoGet(t *testing.T) {
 
 			ownerMock: &daoMock[bool]{resp: true},
 			daoMock: &daoMock[*dao.ProjectLogo]{resp: &dao.ProjectLogo{
-				ProjectID: projectID, Data: []byte("logo"), MediaType: "image/webp", UpdatedAt: editedAt,
+				ProjectID: projectID, Data: []byte("logo"), MediaType: "image/webp", Checksum: logoChecksum,
+				UpdatedAt: editedAt,
 			}},
 
-			expect: &core.ProjectLogo{MediaType: "image/webp", Data: []byte("logo"), Version: editedAt},
+			expect: &core.ProjectLogo{
+				MediaType: "image/webp", Data: []byte("logo"), Checksum: logoChecksum, UpdatedAt: editedAt,
+			},
 		},
 		{
 			name: "Error/MissingProjectID",

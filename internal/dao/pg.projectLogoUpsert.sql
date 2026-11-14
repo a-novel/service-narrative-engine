@@ -1,4 +1,4 @@
--- The logo and its version change in one row, and the project returns with the written version and checksum.
+-- The logo and its checksum change in one row, and the project returns with the written checksum.
 WITH
   stored AS (
     INSERT INTO
@@ -11,12 +11,10 @@ WITH
       media_type = EXCLUDED.media_type,
       updated_at = EXCLUDED.updated_at
     RETURNING
-      updated_at,
       checksum
   )
 SELECT
   projects.*,
-  stored.updated_at AS logo_updated_at,
   encode(stored.checksum, 'hex') AS logo_checksum
 FROM
   projects

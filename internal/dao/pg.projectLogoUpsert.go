@@ -24,12 +24,12 @@ type ProjectLogoUpsertRequest struct {
 	// MediaType is the media type the logo is encoded in.
 	MediaType string
 
-	// Now is the instant stored as the logo's version.
+	// Now is the instant stored as the logo's last change.
 	Now time.Time
 }
 
-// PgProjectLogoUpsert replaces the logo of a project, and its version, in one statement. It returns the
-// project. A missing project fails the write.
+// PgProjectLogoUpsert replaces the logo of a project, and the instant it changed, in one statement. It
+// returns the project. A missing project fails the write.
 type PgProjectLogoUpsert struct{}
 
 func NewPgProjectLogoUpsert() *PgProjectLogoUpsert {

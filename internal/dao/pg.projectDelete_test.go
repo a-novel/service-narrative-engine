@@ -38,7 +38,7 @@ func TestPgProjectDelete(t *testing.T) {
 			expectScenes: []*dao.Scene{},
 		},
 		{
-			// The project returns the version it held, and its logo goes with it.
+			// The project returns the logo checksum it held, and its logo goes with it.
 			name: "Success/Logo",
 
 			fixtures: logoFixtures(),

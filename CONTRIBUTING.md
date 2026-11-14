@@ -54,7 +54,7 @@ Unit-test a service that takes a transactor with `transactiontest.NewTransactor`
 
 ## Project lock
 
-Every write to a project's content takes the project lock with `lockOwnedProject` before its first write, in the same transaction. The content is the project's own fields, its beats, scenes, layers and cells, and their recaps. The lock runs the project's writes one at a time and stamps the project's `edited_at`, which orders the project list. A write that fails later rolls the stamp back with it.
+Every write to a project's content takes the project lock with `lockOwnedProject` before its first write, in the same transaction. The content is the project's own fields, its beats, scenes, layers and cells, and their recaps. The lock runs the project's writes one at a time and stamps the project's `edited_at`, which `ProjectEditsList` returns. A write that fails later rolls the stamp back with it.
 
 ```go
 err := service.transactor.WithinTx(ctx, func(ctx context.Context) error {

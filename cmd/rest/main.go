@@ -88,7 +88,6 @@ func main() {
 	daoProjectBytes := dao.NewPgProjectBytes()
 	daoProjectCount := dao.NewPgProjectCount()
 	daoOwnerLock := dao.NewPgOwnerLock()
-	daoProjectList := dao.NewPgProjectList()
 	daoProjectFieldsDrift := dao.NewPgProjectFieldsDrift()
 	daoProjectEditsList := dao.NewPgProjectEditsList()
 	daoProjectLogosDrift := dao.NewPgProjectLogosDrift()
@@ -143,7 +142,6 @@ func main() {
 		daoOwnerLock, daoProjectCount, daoProjectInsert, daoLayersInsert, transactor,
 	)
 	serviceProjectGet := core.NewProjectGet(daoProjectOwned, daoProjectSelect)
-	serviceProjectList := core.NewProjectList(daoProjectList)
 	serviceProjectFieldsDrift := core.NewProjectFieldsDrift(daoProjectFieldsDrift)
 	serviceProjectEditsList := core.NewProjectEditsList(daoProjectEditsList)
 	serviceProjectLogosDrift := core.NewProjectLogosDrift(daoProjectLogosDrift)
@@ -211,7 +209,6 @@ func main() {
 	handlerHealth := handlers.NewRestHealth(jsonKeysClient, genaiHealth(genaiClient, cfg.Dependencies))
 	handlerProjectCreate := handlers.NewRestProjectCreate(serviceProjectCreate, cfg.Logger)
 	handlerProjectGet := handlers.NewRestProjectGet(serviceProjectGet, cfg.Logger)
-	handlerProjectList := handlers.NewRestProjectList(serviceProjectList, cfg.Logger)
 	handlerProjectFieldsDrift := handlers.NewRestProjectFieldsDrift(serviceProjectFieldsDrift, cfg.Logger)
 	handlerProjectEditsList := handlers.NewRestProjectEditsList(serviceProjectEditsList, cfg.Logger)
 	handlerProjectLogosDrift := handlers.NewRestProjectLogosDrift(serviceProjectLogosDrift, cfg.Logger)
@@ -279,7 +276,6 @@ func main() {
 		api.Get("/healthcheck", handlerHealth.ServeHTTP)
 
 		withAuth(item, config.PermissionProjectWrite).Post("/projects", handlerProjectCreate.ServeHTTP)
-		withAuth(api, config.PermissionProjectRead).Get("/projects", handlerProjectList.ServeHTTP)
 		withAuth(item, config.PermissionProjectRead).Post("/projects/fields/drift", handlerProjectFieldsDrift.ServeHTTP)
 		withAuth(api, config.PermissionProjectRead).Get("/projects/edits", handlerProjectEditsList.ServeHTTP)
 		withAuth(item, config.PermissionProjectRead).Post("/projects/logos/drift", handlerProjectLogosDrift.ServeHTTP)

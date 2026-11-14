@@ -29,8 +29,6 @@ type Project struct {
 	// EditedAt is when the project's content last changed, its logo aside.
 	EditedAt time.Time `json:"editedAt"`
 
-	// LogoVersion is when the logo last changed, absent while the project has no logo.
-	LogoVersion *time.Time `json:"logoVersion,omitempty"`
 	// LogoChecksum is the SHA-256 of the logo's bytes in lowercase hex, absent while the project has no logo.
 	LogoChecksum *string `json:"logoChecksum,omitempty"`
 }
@@ -46,7 +44,6 @@ func loadProject(project *core.Project) Project {
 		CreatedAt:    project.CreatedAt,
 		UpdatedAt:    project.UpdatedAt,
 		EditedAt:     project.EditedAt,
-		LogoVersion:  project.LogoVersion,
 		LogoChecksum: project.LogoChecksum,
 	}
 }

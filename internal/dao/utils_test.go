@@ -146,14 +146,16 @@ func composerFixtures() fixtures {
 	}
 }
 
-// logoFixtures returns the composer fixtures with a logo on the test project. The project carries the
-// logo's version and checksum, as a read returns them.
+// logoFixtures returns the composer fixtures with a logo on the test project. The logo and the project carry
+// the logo's checksum, as a read returns them.
 func logoFixtures() fixtures {
 	data := composerFixtures()
 	data.logos = []*dao.ProjectLogo{
-		{ProjectID: projectID, Data: []byte("stored logo"), MediaType: "image/webp", UpdatedAt: updatedAt},
+		{
+			ProjectID: projectID, Data: []byte("stored logo"), MediaType: "image/webp",
+			Checksum: *logoChecksum([]byte("stored logo")), UpdatedAt: updatedAt,
+		},
 	}
-	data.projects[0].LogoUpdatedAt = lo.ToPtr(updatedAt)
 	data.projects[0].LogoChecksum = logoChecksum(data.logos[0].Data)
 
 	return data
