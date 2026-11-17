@@ -5,7 +5,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
@@ -30,13 +32,8 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/handlers"
 )
 
-//nolint:maintidx // main wires the whole dependency graph as one flat list, one line per dependency.
 func main() {
 	cfg := config.AppPresetDefault
-
-	withServiceToken := lo.Must(httpf.ServiceTokenGate(
-		cfg.ServiceToken, httpf.NewPoolClient(httpf.PoolOptions{}), cfg.Logger, cfg.Rest.Liveness,
-	))
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -52,10 +49,6 @@ func main() {
 		defer cfg.Postgres.Close()
 	}
 
-	// =================================================================================================================
-	// CLIENTS
-	// =================================================================================================================
-
 	jsonKeysClient := lo.Must(servicejsonkeys.NewClient(
 		cfg.Dependencies.ServiceJSONKeys.Address(), cfg.Dependencies.ServiceJSONKeys.DialOptions()...,
 	))
@@ -64,7 +57,35 @@ func main() {
 	genaiClient := newGenaiClient(cfg.Dependencies.ServiceGenai)
 	defer genaiClient.Close()
 
-	claimsVerifier := lo.Must(servicejsonkeys.NewClaimsVerifier[serviceauthentication.Claims](jsonKeysClient))
+	router := lo.Must(newRouter(ctx, cfg, jsonKeysClient, genaiClient))
+
+	log.Println("Starting REST server on :" + strconv.Itoa(cfg.Rest.Port))
+
+	lo.Must0(httpf.ListenAndServe(ctx, cfg.Rest, router))
+}
+
+// newRouter builds the API behind the service-token gate, which wraps the whole router: a request
+// reaches a route only with a token cfg accepts, and the mux reads the client IP header and counts
+// rate limits for verified callers alone. The liveness route stays open to the kubelet. The gate
+// refuses an empty issuer unless cfg opts a local stack out, so the server never starts open by
+// mistake. The stream routes end their streams once ctx ends.
+//
+//nolint:maintidx // newRouter wires the whole dependency graph as one flat list, one line per dependency.
+func newRouter(
+	ctx context.Context, cfg config.App, jsonKeysClient servicejsonkeys.Client, genai genaiClient,
+) (http.Handler, error) {
+	withServiceToken, err := httpf.ServiceTokenGate(
+		cfg.ServiceToken, httpf.NewPoolClient(httpf.PoolOptions{}), cfg.Logger, cfg.Rest.Liveness,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("service token gate: %w", err)
+	}
+
+	claimsVerifier, err := servicejsonkeys.NewClaimsVerifier[serviceauthentication.Claims](jsonKeysClient)
+	if err != nil {
+		return nil, fmt.Errorf("claims verifier: %w", err)
+	}
+
 	withAuth := serviceauthentication.NewAuthHandler(claimsVerifier, cfg.Permissions, cfg.Logger)
 
 	// =================================================================================================================
@@ -112,7 +133,11 @@ func main() {
 	daoManuscriptSelect := dao.NewPgManuscriptSelect()
 	transactor := postgres.NewTransactor(nil)
 	projectReadGate := core.NewProjectReadGate(cfg.Limits.MaxConcurrentProjectReads)
-	generationCaps := lo.Must(core.NewGenerationCapsPolicy(cfg.Permissions, cfg.Caps))
+
+	generationCaps, err := core.NewGenerationCapsPolicy(cfg.Permissions, cfg.Caps)
+	if err != nil {
+		return nil, fmt.Errorf("generation caps: %w", err)
+	}
 
 	// =================================================================================================================
 	// SERVICES
@@ -159,12 +184,12 @@ func main() {
 	)
 	serviceGenerationPlan := core.NewGenerationPlan(cfg.Generations, daoCellsSelect)
 	serviceGenerationSubmit := core.NewGenerationSubmit(
-		serviceProjectSnapshotRead, serviceGenerationPlan, genaiClient, projectReadGate, generationCaps,
+		serviceProjectSnapshotRead, serviceGenerationPlan, genai, projectReadGate, generationCaps,
 	)
-	serviceGenerationGet := core.NewGenerationGet(genaiClient)
-	serviceGenerationStream := core.NewGenerationStream(genaiClient, serviceGenerationGet)
-	serviceGenerationCancel := core.NewGenerationCancel(genaiClient)
-	serviceGenerationUsage := core.NewGenerationUsage(genaiClient, generationCaps)
+	serviceGenerationGet := core.NewGenerationGet(genai)
+	serviceGenerationStream := core.NewGenerationStream(genai, serviceGenerationGet)
+	serviceGenerationCancel := core.NewGenerationCancel(genai)
+	serviceGenerationUsage := core.NewGenerationUsage(genai, generationCaps)
 	serviceProjectStream := core.NewProjectStream(
 		daoProjectOwned, daoProjectSelect, daoBeatList, daoSceneList, daoLayerList, daoCellList,
 	)
@@ -173,7 +198,7 @@ func main() {
 	// HANDLERS
 	// =================================================================================================================
 
-	handlerHealth := handlers.NewRestHealth(jsonKeysClient, genaiHealth(genaiClient, cfg.Dependencies.ServiceGenai))
+	handlerHealth := handlers.NewRestHealth(jsonKeysClient, genaiHealth(genai, cfg.Dependencies.ServiceGenai))
 	handlerProjectCreate := handlers.NewRestProjectCreate(serviceProjectCreate, cfg.Logger)
 	handlerProjectGet := handlers.NewRestProjectGet(serviceProjectGet, cfg.Logger)
 	handlerProjectFieldsDrift := handlers.NewRestProjectFieldsDrift(serviceProjectFieldsDrift, cfg.Logger)
@@ -299,11 +324,5 @@ func main() {
 		withAuth(api, config.PermissionProjectRead).Get("/generation/usage", handlerGenerationUsage.ServeHTTP)
 	})
 
-	// =================================================================================================================
-	// RUN
-	// =================================================================================================================
-
-	log.Println("Starting REST server on :" + strconv.Itoa(cfg.Rest.Port))
-
-	lo.Must0(httpf.ListenAndServe(ctx, cfg.Rest, withServiceToken(router)))
+	return withServiceToken(router), nil
 }
