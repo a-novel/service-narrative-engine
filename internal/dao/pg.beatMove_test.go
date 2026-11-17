@@ -88,6 +88,7 @@ func TestPgBeatMove(t *testing.T) {
 
 				result, err := daoBeatMove.Exec(ctx, testCase.request)
 				require.ErrorIs(t, err, testCase.expectErr)
+				requireStoredBytes(ctx, t)
 				require.Equal(t, testCase.expect, result)
 
 				if testCase.expectErr == nil {

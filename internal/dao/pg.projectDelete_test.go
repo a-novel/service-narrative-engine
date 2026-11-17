@@ -72,6 +72,7 @@ func TestPgProjectDelete(t *testing.T) {
 
 				result, err := daoProjectDelete.Exec(ctx, testCase.request)
 				require.ErrorIs(t, err, testCase.expectErr)
+				requireStoredBytes(ctx, t)
 				require.Equal(t, testCase.expect, result)
 
 				// Deleting a project deletes its scenes with it.

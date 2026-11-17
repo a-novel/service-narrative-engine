@@ -88,6 +88,7 @@ func TestPgLayerMove(t *testing.T) {
 
 				result, err := daoLayerMove.Exec(ctx, testCase.request)
 				require.ErrorIs(t, err, testCase.expectErr)
+				requireStoredBytes(ctx, t)
 				require.Equal(t, testCase.expect, result)
 
 				if testCase.expectErr == nil {
