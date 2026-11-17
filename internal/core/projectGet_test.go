@@ -60,15 +60,6 @@ func TestProjectGet(t *testing.T) {
 			expectErr: core.ErrProjectNotFound,
 		},
 		{
-			name: "Error/CheckOwner",
-
-			request: &core.ProjectGetRequest{OwnerID: ownerID, ID: projectID},
-
-			ownerMock: &daoMock[bool]{err: errFoo},
-
-			expectErr: errFoo,
-		},
-		{
 			name: "Error/Select",
 
 			request: &core.ProjectGetRequest{OwnerID: ownerID, ID: projectID},

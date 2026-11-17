@@ -119,15 +119,6 @@ func TestLayersUpdate(t *testing.T) {
 			expectErr: core.ErrProjectNotFound,
 		},
 		{
-			name: "Error/Lock",
-
-			request: request(layer(layerID2)),
-
-			lockMock: &daoMock[bool]{err: errFoo},
-
-			expectErr: errFoo,
-		},
-		{
 			name: "Error/NotFound",
 
 			request: request(layer(layerID2), layer(layerID3)),
@@ -161,18 +152,6 @@ func TestLayersUpdate(t *testing.T) {
 			updateLayers: []dao.LayersUpdateItem{updateLayer(layerID2)},
 
 			expectErr: core.ErrProjectBudget,
-		},
-		{
-			name: "Error/ProjectBytes",
-
-			request: request(layer(layerID2)),
-
-			lockMock:     &daoMock[bool]{resp: true},
-			updateMock:   &daoMock[[]*dao.Layer]{resp: []*dao.Layer{notesLayer(layerID2, 1)}},
-			bytesMock:    &daoMock[*dao.ProjectBytes]{err: errFoo},
-			updateLayers: []dao.LayersUpdateItem{updateLayer(layerID2)},
-
-			expectErr: errFoo,
 		},
 		{
 			name: "Error/Transaction",

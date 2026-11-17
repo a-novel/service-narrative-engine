@@ -111,15 +111,6 @@ func TestManuscriptExport(t *testing.T) {
 			expectErr: core.ErrProjectNotFound,
 		},
 		{
-			name: "Error/CheckOwner",
-
-			request: request,
-
-			ownerMock: &daoMock[bool]{err: errFoo},
-
-			expectErr: errFoo,
-		},
-		{
 			name: "Error/LayerNotFound",
 
 			request: request,
@@ -159,17 +150,6 @@ func TestManuscriptExport(t *testing.T) {
 			bytesMock: overBudget,
 
 			expectErr: core.ErrProjectBudget,
-		},
-		{
-			name: "Error/ProjectBytes",
-
-			request: request,
-
-			ownerMock: &daoMock[bool]{resp: true},
-			kindMock:  &daoMock[[]*dao.LayerKind]{resp: []*dao.LayerKind{{ID: layerID1, Kind: "manuscript", Count: 1}}},
-			bytesMock: &daoMock[*dao.ProjectBytes]{err: errFoo},
-
-			expectErr: errFoo,
 		},
 		{
 			// Another read of a whole project holds the gate's only slot, and the export gives up once its

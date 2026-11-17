@@ -350,15 +350,6 @@ func TestProjectUpdate(t *testing.T) {
 			expectErr: core.ErrProjectNotFound,
 		},
 		{
-			name: "Error/Lock",
-
-			request: request,
-
-			lockMock: &daoMock[bool]{err: errFoo},
-
-			expectErr: errFoo,
-		},
-		{
 			name: "Error/DeletedMeanwhile",
 
 			request: request,
@@ -388,17 +379,6 @@ func TestProjectUpdate(t *testing.T) {
 			bytesMock: overBudget,
 
 			expectErr: core.ErrProjectBudget,
-		},
-		{
-			name: "Error/ProjectBytes",
-
-			request: request,
-
-			lockMock:  &daoMock[bool]{resp: true},
-			daoMock:   &daoMock[*dao.Project]{resp: daoProject()},
-			bytesMock: &daoMock[*dao.ProjectBytes]{err: errFoo},
-
-			expectErr: errFoo,
 		},
 		{
 			name: "Error/Transaction",

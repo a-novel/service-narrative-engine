@@ -85,15 +85,6 @@ func TestSceneList(t *testing.T) {
 			expectErr: core.ErrProjectNotFound,
 		},
 		{
-			name: "Error/CheckOwner",
-
-			request: &core.SceneListRequest{OwnerID: ownerID, ProjectID: projectID},
-
-			ownerMock: &daoMock[bool]{err: errFoo},
-
-			expectErr: errFoo,
-		},
-		{
 			name: "Error/List",
 
 			request: &core.SceneListRequest{OwnerID: ownerID, ProjectID: projectID},

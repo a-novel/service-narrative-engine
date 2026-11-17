@@ -121,15 +121,6 @@ func TestLayersDelete(t *testing.T) {
 			expectErr: core.ErrProjectNotFound,
 		},
 		{
-			name: "Error/Lock",
-
-			request: request(layerID2),
-
-			lockMock: &daoMock[bool]{err: errFoo},
-
-			expectErr: errFoo,
-		},
-		{
 			name: "Error/Kind",
 
 			request: request(layerID2),

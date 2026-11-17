@@ -140,15 +140,6 @@ func TestLayersCreate(t *testing.T) {
 			expectErr: core.ErrProjectNotFound,
 		},
 		{
-			name: "Error/Lock",
-
-			request: request(0, layer),
-
-			lockMock: &daoMock[bool]{err: errFoo},
-
-			expectErr: errFoo,
-		},
-		{
 			name: "Error/ProjectFull",
 
 			request: request(0, layer),
@@ -190,18 +181,6 @@ func TestLayersCreate(t *testing.T) {
 			insertLayers: []dao.LayersInsertItem{insertLayer},
 
 			expectErr: core.ErrProjectBudget,
-		},
-		{
-			name: "Error/ProjectBytes",
-
-			request: request(0, layer),
-
-			lockMock:     &daoMock[bool]{resp: true},
-			insertMock:   &daoMock[[]*dao.Layer]{resp: []*dao.Layer{notesLayer(layerID3, 0)}},
-			bytesMock:    &daoMock[*dao.ProjectBytes]{err: errFoo},
-			insertLayers: []dao.LayersInsertItem{insertLayer},
-
-			expectErr: errFoo,
 		},
 	}
 

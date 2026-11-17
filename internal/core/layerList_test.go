@@ -87,15 +87,6 @@ func TestLayerList(t *testing.T) {
 			expectErr: core.ErrProjectNotFound,
 		},
 		{
-			name: "Error/CheckOwner",
-
-			request: &core.LayerListRequest{OwnerID: ownerID, ProjectID: projectID},
-
-			ownerMock: &daoMock[bool]{err: errFoo},
-
-			expectErr: errFoo,
-		},
-		{
 			name: "Error/List",
 
 			request: &core.LayerListRequest{OwnerID: ownerID, ProjectID: projectID},

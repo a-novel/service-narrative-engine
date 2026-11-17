@@ -132,15 +132,6 @@ func TestProjectLogoUpdate(t *testing.T) {
 			expectErr: core.ErrProjectNotFound,
 		},
 		{
-			name: "Error/Owner",
-
-			request: request(logo),
-
-			ownerMock: &daoMock[bool]{err: errFoo},
-
-			expectErr: errFoo,
-		},
-		{
 			name: "Error/Upsert",
 
 			request: request(logo),

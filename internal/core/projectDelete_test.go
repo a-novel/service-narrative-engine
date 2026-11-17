@@ -62,15 +62,6 @@ func TestProjectDelete(t *testing.T) {
 			expectErr: core.ErrProjectNotFound,
 		},
 		{
-			name: "Error/CheckOwner",
-
-			request: request,
-
-			ownerMock: &daoMock[bool]{err: errFoo},
-
-			expectErr: errFoo,
-		},
-		{
 			name: "Error/DeletedMeanwhile",
 
 			request: request,

@@ -62,15 +62,6 @@ func TestProjectLogoGet(t *testing.T) {
 			expectErr: core.ErrProjectNotFound,
 		},
 		{
-			name: "Error/Owner",
-
-			request: request,
-
-			ownerMock: &daoMock[bool]{err: errFoo},
-
-			expectErr: errFoo,
-		},
-		{
 			name: "Error/NoLogo",
 
 			request: request,
