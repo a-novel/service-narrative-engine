@@ -157,7 +157,7 @@ func TestRestProjectStream(t *testing.T) {
 			expectAfter: &core.ProjectStreamPosition{Section: "chapters", Count: 2},
 			serviceMock: &serviceMock[iter.Seq2[*core.ProjectRecord, error]]{err: core.ErrInvalidRequest},
 
-			expectStatus: http.StatusBadRequest,
+			expectStatus: http.StatusUnprocessableEntity,
 		},
 		{
 			name: "Error/NotFound",

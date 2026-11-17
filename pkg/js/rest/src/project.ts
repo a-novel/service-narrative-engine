@@ -264,7 +264,7 @@ export type ProjectLogosDriftResponse = z.infer<typeof ProjectLogosDriftResponse
 /**
  * Compares the fields of the projects a client holds with the caller's. It returns every project of the caller the
  * request leaves out or names with another `updatedAt`, and every ID of the request that names no project of the
- * caller. An empty map returns every project. Throws on HTTP 400 for a request past {@link PROJECTS_MAX} projects.
+ * caller. An empty map returns every project. Throws on HTTP 422 for a request past {@link PROJECTS_MAX} projects.
  */
 export async function projectFieldsDrift(
   api: NarrativeEngineApi,
@@ -295,7 +295,7 @@ export async function projectEditsList(
 /**
  * Compares the logos a client holds with those of the caller's projects, by checksum. It returns the checksum of every
  * logo of the caller the request leaves out or names with another checksum, and every ID of the request whose project
- * is not the caller's or holds no logo now. Read a drifted logo with {@link projectLogoGet}. Throws on HTTP 400 for a
+ * is not the caller's or holds no logo now. Read a drifted logo with {@link projectLogoGet}. Throws on HTTP 422 for a
  * request past {@link PROJECTS_MAX} logos.
  */
 export async function projectLogosDrift(

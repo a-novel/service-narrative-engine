@@ -93,7 +93,7 @@ func TestRestSceneList(t *testing.T) {
 
 			serviceMock: &serviceMock[*core.ScenePage]{err: core.ErrInvalidRequest},
 
-			expectStatus: http.StatusBadRequest,
+			expectStatus: http.StatusUnprocessableEntity,
 		},
 		{
 			name: "Error/Internal",

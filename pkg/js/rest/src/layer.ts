@@ -140,7 +140,7 @@ export type LayerListRequest = z.infer<typeof LayerListRequestSchema>;
 
 /**
  * Adds one layer of any kind to a project and returns it at its place; the layers from there on move down one
- * place. Throws on HTTP 400 for a kind with no content schema, 404 when the caller owns no such project, 409
+ * place. Throws on HTTP 422 for a kind with no content schema, 404 when the caller owns no such project, 409
  * when the project holds 1000 layers already, and 409 with `projectBytes` in the error's `tags.limit` when the
  * project would pass its 16 MiB budget of stored bytes. {@link layersCreate} adds several at once.
  */
@@ -158,7 +158,7 @@ export async function layerCreate(
 
 /**
  * Adds layers of any kind to a project and returns them in order; the layers from there on move down. They are
- * all added, or none are. Throws on HTTP 400 for a kind with no content schema, 404 when the caller owns no such
+ * all added, or none are. Throws on HTTP 422 for a kind with no content schema, 404 when the caller owns no such
  * project, 409 when the project would hold more than 1000 layers, and 409 with `projectBytes` in the error's
  * `tags.limit` when the project would pass its 16 MiB budget of stored bytes.
  */

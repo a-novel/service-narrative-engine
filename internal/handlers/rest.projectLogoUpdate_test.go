@@ -93,7 +93,7 @@ func TestRestProjectLogoUpdate(t *testing.T) {
 
 			serviceMock: &serviceMock[*core.Project]{err: core.ErrInvalidRequest},
 
-			expectStatus: http.StatusBadRequest,
+			expectStatus: http.StatusUnprocessableEntity,
 		},
 		{
 			name: "Error/ProjectNotFound",

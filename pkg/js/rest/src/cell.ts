@@ -92,7 +92,7 @@ export type CellsWriteRequest = z.infer<typeof CellsWriteRequestSchema>;
 
 /**
  * Writes one cell where a scene and a layer of the project cross, and returns it without its content. The first
- * write creates the cell. Throws on HTTP 400 when the content breaks the schema of the layer's kind or weighs
+ * write creates the cell. Throws on HTTP 422 when the content breaks the schema of the layer's kind or weighs
  * over 2 MiB, 404 when the caller owns no such project, or the project holds no such scene or layer, 409 when
  * the scene's cells would pass 400,000 characters over their stored JSON documents, and 409 with `projectBytes`
  * in the error's `tags.limit` when the project would pass its 16 MiB budget of stored bytes. {@link cellsWrite}
@@ -113,7 +113,7 @@ export async function cellWrite(
 /**
  * Writes cells where scenes and layers of the project cross, and returns each written cell, without its content,
  * in the order of the request. The first write of a cell creates it, and the cells are all written or none are.
- * Throws on HTTP 400 when a content breaks the schema of its layer's kind or weighs over 2 MiB, 404 when the
+ * Throws on HTTP 422 when a content breaks the schema of its layer's kind or weighs over 2 MiB, 404 when the
  * caller owns no such project, or the project lacks one of the scenes or layers, 409 when the cells of one of
  * the scenes would pass 400,000 characters over their stored JSON documents, and 409 with `projectBytes` in the
  * error's `tags.limit` when the project would pass its 16 MiB budget of stored bytes.

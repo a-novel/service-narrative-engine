@@ -86,8 +86,8 @@ describe("beatCreate", () => {
     await expect(beatTitles()).resolves.toEqual(["First", "Second", "Last"]);
   });
 
-  it("returns 400 for a negative position", async () => {
-    await expectStatus(createBeat("Beat", -1), 400);
+  it("returns 422 for a negative position", async () => {
+    await expectStatus(createBeat("Beat", -1), 422);
   });
 
   it("names the invalid field of a blank title", async () => {
@@ -150,13 +150,13 @@ describe("beatsCreate", () => {
     );
   });
 
-  it("returns 400 for an empty list or more than 100 beats", async () => {
+  it("returns 422 for an empty list or more than 100 beats", async () => {
     const beat = { title: "Beat", color: COLOR };
 
-    await expectStatus(beatsCreate(api, accessToken, { projectID: project.id, beats: [] }), 400);
+    await expectStatus(beatsCreate(api, accessToken, { projectID: project.id, beats: [] }), 422);
     await expectStatus(
       beatsCreate(api, accessToken, { projectID: project.id, beats: Array.from({ length: 101 }, () => beat) }),
-      400
+      422
     );
   });
 
@@ -166,7 +166,7 @@ describe("beatsCreate", () => {
       { title: " ", color: COLOR },
     ];
 
-    await expectStatus(beatsCreate(api, accessToken, { projectID: project.id, beats }), 400);
+    await expectStatus(beatsCreate(api, accessToken, { projectID: project.id, beats }), 422);
     await expect(storedBeats()).resolves.toEqual([]);
   });
 });
@@ -241,11 +241,11 @@ describe("beatsUpdate", () => {
     await expect(beatTitles()).resolves.toEqual(["Kept"]);
   });
 
-  it("returns 400 for a beat named twice", async () => {
+  it("returns 422 for a beat named twice", async () => {
     const beat = await createBeat("Twice");
 
     const item = { id: beat.id, title: "Renamed", color: COLOR };
-    await expectStatus(beatsUpdate(api, accessToken, { projectID: project.id, beats: [item, item] }), 400);
+    await expectStatus(beatsUpdate(api, accessToken, { projectID: project.id, beats: [item, item] }), 422);
   });
 });
 
@@ -282,10 +282,10 @@ describe("beatMove", () => {
     expect(new Set(stored.map((beat) => beat.id))).toEqual(new Set(beats.map((beat) => beat.id)));
   });
 
-  it("returns 400 for a negative position", async () => {
+  it("returns 422 for a negative position", async () => {
     const beat = await createBeat("Beat");
 
-    await expectStatus(beatMove(api, accessToken, { projectID: project.id, id: beat.id, position: -1 }), 400);
+    await expectStatus(beatMove(api, accessToken, { projectID: project.id, id: beat.id, position: -1 }), 422);
   });
 
   it("returns 404 for an absent beat", async () => {
@@ -353,8 +353,8 @@ describe("beatsDelete", () => {
     await expect(beatTitles()).resolves.toEqual(["Kept"]);
   });
 
-  it("returns 400 for an empty list", async () => {
-    await expectStatus(beatsDelete(api, accessToken, { projectID: project.id, ids: [] }), 400);
+  it("returns 422 for an empty list", async () => {
+    await expectStatus(beatsDelete(api, accessToken, { projectID: project.id, ids: [] }), 422);
   });
 });
 
@@ -379,8 +379,8 @@ describe("beatList", () => {
     });
   });
 
-  it("returns 400 for a page over 500 beats", async () => {
-    await expectStatus(beatList(api, accessToken, { projectID: project.id, limit: 501 }), 400);
+  it("returns 422 for a page over 500 beats", async () => {
+    await expectStatus(beatList(api, accessToken, { projectID: project.id, limit: 501 }), 422);
   });
 
   it("returns 404 for an absent project", async () => {

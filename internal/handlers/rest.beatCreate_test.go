@@ -110,7 +110,7 @@ func TestRestBeatCreate(t *testing.T) {
 
 			serviceMock: &serviceMock[[]*core.Beat]{err: core.ErrInvalidRequest},
 
-			expectStatus: http.StatusBadRequest,
+			expectStatus: http.StatusUnprocessableEntity,
 		},
 		{
 			// The batch request names the title Beats[0].Title; the route names it as its own body does.
@@ -126,7 +126,7 @@ func TestRestBeatCreate(t *testing.T) {
 				Title string `validate:"required"`
 			}, 1)}), core.ErrInvalidRequest)},
 
-			expectStatus:   http.StatusBadRequest,
+			expectStatus:   http.StatusUnprocessableEntity,
 			expectResponse: invalidFieldsProblem(map[string]any{"title": "required"}),
 		},
 		{

@@ -129,12 +129,12 @@ describe("cellRecapWrite", () => {
     await expectStatus(cellRecapWrite(api, accessToken, { ...request, cellUpdatedAt: "2100-01-01T00:00:00Z" }), 409);
   });
 
-  it("returns 400 for a recap that breaks the consolidate output schema", async () => {
+  it("returns 422 for a recap that breaks the consolidate output schema", async () => {
     const request = await cellRecapRequest(4);
 
     await expectStatus(
       cellRecapWrite(api, accessToken, { ...request, recap: { condensed: "Marie." } as unknown as Recap }),
-      400
+      422
     );
   });
 

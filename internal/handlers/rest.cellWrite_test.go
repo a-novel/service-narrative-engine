@@ -125,7 +125,7 @@ func TestRestCellWrite(t *testing.T) {
 
 			serviceMock: &serviceMock[[]*core.WrittenCell]{err: core.ErrInvalidRequest},
 
-			expectStatus: http.StatusBadRequest,
+			expectStatus: http.StatusUnprocessableEntity,
 		},
 		{
 			name: "Error/Internal",

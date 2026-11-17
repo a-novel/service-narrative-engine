@@ -103,7 +103,7 @@ func TestRestScenesDelete(t *testing.T) {
 
 			serviceMock: &serviceMock[[]*core.Scene]{err: core.ErrInvalidRequest},
 
-			expectStatus: http.StatusBadRequest,
+			expectStatus: http.StatusUnprocessableEntity,
 		},
 		{
 			name: "Error/Internal",

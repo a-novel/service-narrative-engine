@@ -95,7 +95,7 @@ func TestRestProjectFieldsDrift(t *testing.T) {
 
 			serviceMock: &serviceMock[*core.ProjectFieldsDriftResult]{err: core.ErrInvalidRequest},
 
-			expectStatus: http.StatusBadRequest,
+			expectStatus: http.StatusUnprocessableEntity,
 		},
 		{
 			name: "Error/Internal",

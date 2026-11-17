@@ -328,13 +328,13 @@ describe("projectFieldsDrift", () => {
     expect([...drift.removed].sort()).toEqual([deleted.id, foreign.id].sort());
   });
 
-  it("returns 400 for a request past 100 projects", async () => {
+  it("returns 422 for a request past 100 projects", async () => {
     const projects = Object.fromEntries(Array.from({ length: 101 }, () => [randomUUID(), "2021-01-02T00:00:00Z"]));
-    await expectStatus(projectFieldsDrift(api, accessToken, { projects }), 400);
+    await expectStatus(projectFieldsDrift(api, accessToken, { projects }), 422);
   });
 
-  it("returns 400 for an updatedAt that is no RFC 3339 instant", async () => {
-    await expectStatus(projectFieldsDrift(api, accessToken, { projects: { [ABSENT_ID]: "yesterday" } }), 400);
+  it("returns 422 for an updatedAt that is no RFC 3339 instant", async () => {
+    await expectStatus(projectFieldsDrift(api, accessToken, { projects: { [ABSENT_ID]: "yesterday" } }), 422);
   });
 
   it("returns 403 for an anonymous session", async () => {
@@ -406,10 +406,10 @@ describe("projectLogosDrift", () => {
     expect([...drift.removed].sort()).toEqual([bare.id, ABSENT_ID].sort());
   });
 
-  it("returns 400 for a checksum in uppercase", async () => {
+  it("returns 422 for a checksum in uppercase", async () => {
     await expectStatus(
       projectLogosDrift(api, accessToken, { logos: { [ABSENT_ID]: (await checksumOf(logo)).toUpperCase() } }),
-      400
+      422
     );
   });
 

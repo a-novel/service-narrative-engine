@@ -123,6 +123,8 @@ paths:
           $ref: "#/components/responses/forbidden"
         "409":
           $ref: "#/components/responses/projectsFull"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -162,6 +164,8 @@ paths:
           $ref: "#/components/responses/invalidToken"
         "403":
           $ref: "#/components/responses/forbidden"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -223,6 +227,8 @@ paths:
           $ref: "#/components/responses/invalidToken"
         "403":
           $ref: "#/components/responses/forbidden"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -251,6 +257,8 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -284,6 +292,8 @@ paths:
           $ref: "#/components/responses/notFound"
         "409":
           $ref: "#/components/responses/projectBudget"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -310,6 +320,8 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -344,6 +356,8 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -422,6 +436,8 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -465,6 +481,8 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -501,6 +519,8 @@ paths:
           $ref: "#/components/responses/notFound"
         "409":
           $ref: "#/components/responses/projectFull"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -533,6 +553,8 @@ paths:
           $ref: "#/components/responses/notFound"
         "409":
           $ref: "#/components/responses/projectBudget"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -561,6 +583,8 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -593,6 +617,8 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -630,6 +656,8 @@ paths:
           $ref: "#/components/responses/notFound"
         "409":
           $ref: "#/components/responses/recapConflict"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -661,6 +689,8 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -695,6 +725,8 @@ paths:
           $ref: "#/components/responses/notFound"
         "409":
           $ref: "#/components/responses/projectFull"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -728,6 +760,8 @@ paths:
           $ref: "#/components/responses/notFound"
         "409":
           $ref: "#/components/responses/projectBudget"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -757,6 +791,8 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -792,6 +828,8 @@ paths:
           $ref: "#/components/responses/notFound"
         "409":
           $ref: "#/components/responses/projectFull"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -824,6 +862,8 @@ paths:
           $ref: "#/components/responses/notFound"
         "409":
           $ref: "#/components/responses/projectBudget"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -852,6 +892,8 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -888,6 +930,8 @@ paths:
           $ref: "#/components/responses/notFound"
         "409":
           $ref: "#/components/responses/beatFull"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -920,6 +964,8 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -956,6 +1002,8 @@ paths:
           $ref: "#/components/responses/notFound"
         "409":
           $ref: "#/components/responses/projectFull"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -989,6 +1037,8 @@ paths:
           $ref: "#/components/responses/notFound"
         "409":
           $ref: "#/components/responses/projectBudget"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -1018,6 +1068,8 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -1053,6 +1105,8 @@ paths:
           $ref: "#/components/responses/notFound"
         "409":
           $ref: "#/components/responses/projectFull"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -1085,6 +1139,8 @@ paths:
           $ref: "#/components/responses/notFound"
         "409":
           $ref: "#/components/responses/projectBudget"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -1116,6 +1172,8 @@ paths:
           $ref: "#/components/responses/notFound"
         "409":
           $ref: "#/components/responses/requiredLayer"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -1148,6 +1206,8 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -1179,6 +1239,8 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -1213,6 +1275,8 @@ paths:
           $ref: "#/components/responses/notFound"
         "409":
           $ref: "#/components/responses/projectFull"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -1246,6 +1310,8 @@ paths:
           $ref: "#/components/responses/notFound"
         "409":
           $ref: "#/components/responses/projectBudget"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -1277,6 +1343,8 @@ paths:
           $ref: "#/components/responses/notFound"
         "409":
           $ref: "#/components/responses/requiredLayer"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -1314,6 +1382,8 @@ paths:
           $ref: "#/components/responses/notFound"
         "409":
           $ref: "#/components/responses/projectFull"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -1351,6 +1421,8 @@ paths:
           $ref: "#/components/responses/notFound"
         "409":
           $ref: "#/components/responses/recapConflict"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -1383,6 +1455,8 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -1420,6 +1494,8 @@ paths:
           $ref: "#/components/responses/notFound"
         "409":
           $ref: "#/components/responses/projectFull"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -1456,6 +1532,8 @@ paths:
           $ref: "#/components/responses/notFound"
         "409":
           $ref: "#/components/responses/projectBudget"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -1534,6 +1612,8 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -1561,6 +1641,8 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -1607,6 +1689,8 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
         "429":
           $ref: "#/components/responses/tooManyRequests"
         "503":
@@ -1945,13 +2029,8 @@ components:
 
     badRequest:
       description: |
-        The request could not be parsed, or failed validation. A field that breaks its rule answers a
-        problem naming each invalid field and the rule it broke. Malformed JSON, a body over its limit and
-        content that breaks its schema answer the status text alone.
+        The request could not be parsed, such as malformed JSON, or a parameter or header of the wrong type.
       content:
-        application/problem+json:
-          schema:
-            $ref: "#/components/schemas/invalidRequest"
         text/plain:
           schema:
             type: string
@@ -1974,12 +2053,30 @@ components:
     contentTooLarge:
       description: The body is over the limit of a route that writes one item, 4 MiB by default.
 
-    pictureRefused:
-      description: The logo breaks the contract, as the problem's `reason` tag names.
+    unprocessableEntity:
+      description: |
+        The request was understood by the server, but cannot be processed because the data did not pass
+        required validation. A field that breaks its rule answers a problem naming each invalid field and the
+        rule it broke. Content that breaks its schema answers the status text alone.
       content:
         application/problem+json:
           schema:
-            $ref: "#/components/schemas/pictureRefusedProblem"
+            $ref: "#/components/schemas/invalidRequest"
+        text/plain:
+          schema:
+            type: string
+            examples: [Unprocessable Entity]
+
+    pictureRefused:
+      description: |
+        The request did not pass validation, as for `unprocessableEntity`, or the logo breaks the contract, as
+        the problem's `reason` tag names.
+      content:
+        application/problem+json:
+          schema:
+            anyOf:
+              - $ref: "#/components/schemas/invalidRequest"
+              - $ref: "#/components/schemas/pictureRefusedProblem"
 
     projectFull:
       description: |
@@ -2109,9 +2206,19 @@ components:
 
     contextTooLarge:
       description: |
-        The generation outgrows every call its kind allows: the parts that always enter pass its long limit,
-        or a single text or block would rewrite past the output cap. A narrower range, fewer targets or
-        excluded layers fit. A project past its 16 MiB budget of stored bytes answers the same.
+        The request did not pass validation, as for `unprocessableEntity`, or the generation outgrows every call
+        its kind allows, which answers the status text alone. A generation outgrows its calls when the parts
+        that always enter pass its long limit, or a single text or block would rewrite past the output cap. A
+        narrower range, fewer targets or excluded layers fit. A project past its 16 MiB budget of stored bytes
+        answers the same.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/invalidRequest"
+        text/plain:
+          schema:
+            type: string
+            examples: [Unprocessable Entity]
 
     recapWritten:
       description: The recap is stored.
@@ -2179,11 +2286,11 @@ components:
         title:
           type: string
           description: The HTTP status text.
-          examples: [Bad Request]
+          examples: [Unprocessable Entity]
         status:
           type: integer
           description: The HTTP status code.
-          const: 400
+          const: 422
         tags:
           type: object
           description: Public details about the failure. Clients ignore tags they do not know.

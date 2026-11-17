@@ -185,7 +185,7 @@ func TestRestGenerationSubmit(t *testing.T) {
 
 			serviceMock: &serviceMock[*core.Generation]{err: core.ErrInvalidRequest},
 
-			expectStatus: http.StatusBadRequest,
+			expectStatus: http.StatusUnprocessableEntity,
 		},
 		{
 			name: "Error/ProjectNotFound",

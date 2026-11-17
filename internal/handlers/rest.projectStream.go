@@ -134,12 +134,12 @@ func parsePosition(value string) (*core.ProjectStreamPosition, error) {
 
 	section, count, ok := strings.Cut(value, ":")
 	if !ok {
-		return nil, errors.Join(fmt.Errorf("%w: %q", errProjectStreamPosition, value), core.ErrInvalidRequest)
+		return nil, fmt.Errorf("%w: %q", errProjectStreamPosition, value)
 	}
 
 	parsed, err := strconv.Atoi(count)
 	if err != nil {
-		return nil, errors.Join(fmt.Errorf("%w: %w", errProjectStreamPosition, err), core.ErrInvalidRequest)
+		return nil, fmt.Errorf("%w: %w", errProjectStreamPosition, err)
 	}
 
 	return &core.ProjectStreamPosition{Section: section, Count: parsed}, nil

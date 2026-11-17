@@ -93,7 +93,7 @@ func TestRestBeatList(t *testing.T) {
 
 			serviceMock: &serviceMock[*core.BeatPage]{err: core.ErrInvalidRequest},
 
-			expectStatus: http.StatusBadRequest,
+			expectStatus: http.StatusUnprocessableEntity,
 		},
 		{
 			name: "Error/Internal",
