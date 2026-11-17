@@ -4002,7 +4002,9 @@ components:
         tags:
           type: object
           description: Public details about the failure. Clients ignore tags they do not know.
-          minProperties: 1
+          anyOf:
+            - required: [reason]
+            - required: [limit]
           additionalProperties: true
           properties:
             reason:
