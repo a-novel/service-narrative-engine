@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/samber/lo"
+
 	"github.com/a-novel-kit/golib/config"
 	"github.com/a-novel-kit/golib/downtime"
 	"github.com/a-novel-kit/golib/grpcf"
@@ -27,10 +29,6 @@ func getEnv(name string) string {
 const (
 	// AppNameDefault names the application in logs and traces when APP_NAME is unset.
 	AppNameDefault = "service-narrative-engine"
-
-	// TimeoutShutdownDefault ends a server's drain 6 seconds after SIGTERM, so its OpenTelemetry
-	// flush, up to 2 seconds, finishes long before Kubernetes kills the pod at 30 seconds.
-	TimeoutShutdownDefault = 6 * time.Second
 
 	// ServiceJSONKeysHostDefault reaches a JSON Keys service on the same host.
 	ServiceJSONKeysHostDefault = "localhost"
@@ -60,10 +58,10 @@ const (
 var (
 	// RestRateLimitGenerationDefault caps a user's generation submits. Each one reads the project and plans
 	// its calls before genai's per-user quota applies, so a burst costs this service first.
-	RestRateLimitGenerationDefault = config.Must(httpf.ParseRate("30/1m"))
+	RestRateLimitGenerationDefault = lo.Must(httpf.ParseRate("30/1m"))
 	// RestRateLimitGenerationReadDefault caps a user's reads of a call. Each unsettled read asks the provider
 	// for the call's state through genai, and a client polling twice a second sees a finished call at once.
-	RestRateLimitGenerationReadDefault = config.Must(httpf.ParseRate("2/1s"))
+	RestRateLimitGenerationReadDefault = lo.Must(httpf.ParseRate("2/1s"))
 )
 
 var (
@@ -120,11 +118,11 @@ var (
 	DowntimeStart = config.LoadEnv(getEnv("DOWNTIME_START"), nil, downtime.ParseStart)
 )
 
-// restDefaults keeps golib's REST defaults but for the versioned ping path and the request size.
+// restDefaults keeps golib's REST defaults but for the versioned ping path, the request and write
+// timeouts, and the request size.
 func restDefaults() httpf.ServerConfig {
 	defaults := httpf.ServerConfigDefault
 	defaults.Liveness = "/v1/ping"
-	defaults.Timeouts.Shutdown = TimeoutShutdownDefault
 	defaults.Timeouts.Write, defaults.Timeouts.Request = RestTimeoutDefault, RestTimeoutDefault
 	defaults.MaxRequestSize = RestMaxRequestSizeDefault
 
