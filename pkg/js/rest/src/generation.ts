@@ -3,9 +3,8 @@ import { ManuscriptContentSchema, NotesContentSchema } from "./content";
 import { BeatRecapSourceSchema } from "./recap";
 import { SceneDescriptionSchema, ScenePromptSchema, SceneTitleSchema } from "./scene";
 import { maxChars } from "./schema";
-import { wait } from "./stream";
 
-import { HTTP_HEADERS } from "@a-novel-kit/nodelib-browser/http";
+import { wait } from "@a-novel-kit/nodelib-browser/utils";
 
 import { z } from "zod";
 
@@ -399,8 +398,8 @@ export async function generationSubmit(
 ): Promise<Generation> {
   return await api.fetch("/v1/generation", GenerationSchema, {
     method: "POST",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
-    body: JSON.stringify(request),
+    accessToken,
+    json: request,
   });
 }
 
@@ -417,7 +416,7 @@ export async function generationGet(
   const params = new URLSearchParams({ id: request.id });
   return await api.fetch(`/v1/generation?${params.toString()}`, GenerationResultSchema, {
     method: "GET",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
+    accessToken,
   });
 }
 
@@ -434,7 +433,7 @@ export async function generationCancel(
   const params = new URLSearchParams({ id: request.id });
   return await api.fetch(`/v1/generation?${params.toString()}`, GenerationResultSchema, {
     method: "DELETE",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
+    accessToken,
   });
 }
 
@@ -446,7 +445,7 @@ export async function generationCancel(
 export async function generationUsage(api: NarrativeEngineApi, accessToken: string): Promise<GenerationUsage> {
   return await api.fetch("/v1/generation/usage", GenerationUsageSchema, {
     method: "GET",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
+    accessToken,
   });
 }
 
@@ -484,7 +483,7 @@ export async function* generationStream(
   const params = new URLSearchParams({ id: request.id });
   const events = api.stream(
     `/v1/generation/stream?${params.toString()}`,
-    { method: "GET", headers: { Authorization: `Bearer ${accessToken}` }, signal: options.signal },
+    { method: "GET", accessToken, signal: options.signal },
     (event) => event.type === "result"
   );
 

@@ -1,8 +1,6 @@
 import type { NarrativeEngineApi } from "./api";
 import { maxChars } from "./schema";
 
-import { HTTP_HEADERS } from "@a-novel-kit/nodelib-browser/http";
-
 import { z } from "zod";
 
 /**
@@ -76,8 +74,8 @@ export async function cellRecapWrite(
 ): Promise<void> {
   await api.fetchVoid("/v1/cell/recap", {
     method: "PUT",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
-    body: JSON.stringify(request),
+    accessToken,
+    json: request,
   });
 }
 
@@ -96,7 +94,7 @@ export async function beatRecapWrite(
 ): Promise<void> {
   await api.fetchVoid("/v1/beat/recap", {
     method: "PUT",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
-    body: JSON.stringify(request),
+    accessToken,
+    json: request,
   });
 }

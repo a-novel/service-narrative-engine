@@ -2,8 +2,6 @@ import type { NarrativeEngineApi } from "./api";
 import { BeatRecapSourceSchema, RecapSchema } from "./recap";
 import { DateSchema, PositionSchema, maxChars } from "./schema";
 
-import { HTTP_HEADERS } from "@a-novel-kit/nodelib-browser/http";
-
 import { z } from "zod";
 
 /**
@@ -154,8 +152,8 @@ export async function beatCreate(
 ): Promise<Beat> {
   return await api.fetch("/v1/beat", BeatSchema, {
     method: "POST",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
-    body: JSON.stringify(request),
+    accessToken,
+    json: request,
   });
 }
 
@@ -172,8 +170,8 @@ export async function beatsCreate(
 ): Promise<Beat[]> {
   return await api.fetch("/v1/beats", BeatsSchema, {
     method: "POST",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
-    body: JSON.stringify(request),
+    accessToken,
+    json: request,
   });
 }
 
@@ -189,8 +187,8 @@ export async function beatUpdate(
 ): Promise<Beat> {
   return await api.fetch("/v1/beat", BeatSchema, {
     method: "PUT",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
-    body: JSON.stringify(request),
+    accessToken,
+    json: request,
   });
 }
 
@@ -207,8 +205,8 @@ export async function beatsUpdate(
 ): Promise<Beat[]> {
   return await api.fetch("/v1/beats", BeatsSchema, {
     method: "PUT",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
-    body: JSON.stringify(request),
+    accessToken,
+    json: request,
   });
 }
 
@@ -219,8 +217,8 @@ export async function beatsUpdate(
 export async function beatMove(api: NarrativeEngineApi, accessToken: string, request: BeatMoveRequest): Promise<Beat> {
   return await api.fetch("/v1/beat/move", BeatSchema, {
     method: "POST",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
-    body: JSON.stringify(request),
+    accessToken,
+    json: request,
   });
 }
 
@@ -236,7 +234,7 @@ export async function beatDelete(
   const params = new URLSearchParams({ projectID: request.projectID, id: request.id });
   return await api.fetch(`/v1/beat?${params.toString()}`, BeatSchema, {
     method: "DELETE",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
+    accessToken,
   });
 }
 
@@ -254,7 +252,7 @@ export async function beatsDelete(
   for (const id of request.ids) params.append("id", id);
   return await api.fetch(`/v1/beats?${params.toString()}`, BeatsSchema, {
     method: "DELETE",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
+    accessToken,
   });
 }
 
@@ -273,6 +271,6 @@ export async function beatList(
   if (request.offset) params.set("offset", `${request.offset}`);
   return await api.fetch(`/v1/beats?${params.toString()}`, BeatPageSchema, {
     method: "GET",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
+    accessToken,
   });
 }

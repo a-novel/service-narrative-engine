@@ -1,8 +1,15 @@
-import { type ServerSentEvent, readEventStream, wait } from "./stream";
+import { type ServerSentEvent, readEventStream } from "./stream";
 
-import { decodeHttpResponse, handleHttpResponse, isHttpError } from "@a-novel-kit/nodelib-browser/http";
+import {
+  type HealthDependency,
+  RestClient,
+  type RestInit,
+  handleHttpResponse,
+  isHttpError,
+} from "@a-novel-kit/nodelib-browser/http";
+import { wait } from "@a-novel-kit/nodelib-browser/utils";
 
-import type { ZodType } from "zod";
+export type { HealthDependency } from "@a-novel-kit/nodelib-browser/http";
 
 /** How many attempts in a row a stream makes without receiving an event before it gives up. */
 const STREAM_ATTEMPTS = 5;
@@ -11,46 +18,10 @@ const STREAM_ATTEMPTS = 5;
 const STREAM_RETRY_DELAY = 500;
 
 /**
- * Health of a single upstream dependency reported by the service. The health endpoint is
- * unauthenticated, so the report carries the state alone. Diagnostics stay on the server's traces.
- */
-export type HealthDependency = {
-  status: "up" | "down";
-};
-
-/**
  * A NarrativeEngineApi is the HTTP client for the Narrative Engine service. Construct it with
  * the service base URL, then pass it to the resource helpers to make requests.
  */
-export class NarrativeEngineApi {
-  private readonly _baseUrl: string;
-
-  constructor(baseUrl: string) {
-    this._baseUrl = baseUrl;
-  }
-
-  /** Sends a request and resolves once the status is validated, discarding the body. */
-  async fetchVoid(input: string, init?: RequestInit): Promise<void> {
-    await fetch(`${this._baseUrl}${input}`, init).then(handleHttpResponse);
-  }
-
-  /**
-   * Sends a request and decodes the JSON body. The schema validates it when given; without one, the body is trusted
-   * to match T.
-   */
-  async fetch<T>(input: string, validator?: ZodType<T>, init?: RequestInit): Promise<T> {
-    return await fetch(`${this._baseUrl}${input}`, init)
-      .then(handleHttpResponse)
-      .then(validator ? decodeHttpResponse(validator) : (response): Promise<T> => response.json());
-  }
-
-  /** Sends a request and reads the body as a Blob, typed with the response's Content-Type. */
-  async fetchBlob(input: string, init?: RequestInit): Promise<Blob> {
-    return await fetch(`${this._baseUrl}${input}`, init)
-      .then(handleHttpResponse)
-      .then((response) => response.blob());
-  }
-
+export class NarrativeEngineApi extends RestClient {
   /**
    * Reads a server-sent event stream, and yields its events until `isLast` accepts one. A stream cut before then
    * reconnects with the last event ID it received, after a pause that doubles with each attempt that receives no
@@ -60,7 +31,7 @@ export class NarrativeEngineApi {
    */
   async *stream(
     input: string,
-    init: RequestInit,
+    init: RestInit,
     isLast: (event: ServerSentEvent) => boolean
   ): AsyncGenerator<ServerSentEvent> {
     let lastEventId = "";
@@ -71,7 +42,7 @@ export class NarrativeEngineApi {
       if (lastEventId) headers.set("Last-Event-ID", lastEventId);
 
       try {
-        const response = await fetch(`${this._baseUrl}${input}`, { ...init, headers }).then(handleHttpResponse);
+        const response = await this.fetchResponse(input, { ...init, headers }).then(handleHttpResponse);
         if (!response.body || !response.headers.get("Content-Type")?.startsWith("text/event-stream")) {
           await response.body?.cancel();
           return;
@@ -95,7 +66,7 @@ export class NarrativeEngineApi {
 
   /** Liveness probe; resolves when the service is reachable. */
   async ping(): Promise<void> {
-    await this.fetchVoid("/v1/ping", { method: "GET" });
+    await this.fetchVoid("/v1/ping");
   }
 
   /**
@@ -103,6 +74,6 @@ export class NarrativeEngineApi {
    * is healthy. Throws on HTTP 503 when a dependency probe fails, or on another non-2xx response.
    */
   async health(): Promise<Record<string, HealthDependency>> {
-    return await this.fetch("/v1/healthcheck", undefined, { method: "GET" });
+    return await this.fetch("/v1/healthcheck");
   }
 }

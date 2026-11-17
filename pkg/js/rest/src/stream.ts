@@ -78,19 +78,3 @@ export async function* readEventStream(body: ReadableStream<Uint8Array<ArrayBuff
     pending += chunk.slice(start);
   }
 }
-
-/** Resolves after a delay, or rejects once the signal aborts. */
-export async function wait(delay: number, signal?: AbortSignal | null): Promise<void> {
-  signal?.throwIfAborted();
-  await new Promise<void>((resolve, reject) => {
-    const timer = setTimeout(resolve, delay);
-    signal?.addEventListener(
-      "abort",
-      () => {
-        clearTimeout(timer);
-        reject(signal.reason);
-      },
-      { once: true }
-    );
-  });
-}

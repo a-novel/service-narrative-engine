@@ -2,8 +2,6 @@ import type { NarrativeEngineApi } from "./api";
 import { ManuscriptContentSchema } from "./content";
 import { maxChars } from "./schema";
 
-import { HTTP_HEADERS } from "@a-novel-kit/nodelib-browser/http";
-
 import { z } from "zod";
 
 /** One scene of an exported manuscript: its beat, its title and its blocks, in reading order. */
@@ -64,6 +62,6 @@ export async function manuscriptExport(
   const params = new URLSearchParams({ projectID: request.projectID, layerID: request.layerID });
   return await api.fetch(`/v1/manuscript?${params.toString()}`, ManuscriptSchema, {
     method: "GET",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
+    accessToken,
   });
 }

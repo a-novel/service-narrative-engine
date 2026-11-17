@@ -5,8 +5,6 @@ import { type Layer, LayerSchema } from "./layer";
 import { type Scene, SceneSchema } from "./scene";
 import { DateSchema, maxChars } from "./schema";
 
-import { HTTP_HEADERS } from "@a-novel-kit/nodelib-browser/http";
-
 import { z } from "zod";
 
 /** The languages a project is written in, as BCP 47 tags. */
@@ -172,8 +170,8 @@ export async function projectCreate(
 ): Promise<ProjectComposer> {
   return await api.fetch("/v1/projects", ProjectComposerSchema, {
     method: "POST",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
-    body: JSON.stringify(request),
+    accessToken,
+    json: request,
   });
 }
 
@@ -189,7 +187,7 @@ export async function projectGet(
   const params = new URLSearchParams({ id: request.id });
   return await api.fetch(`/v1/project?${params.toString()}`, ProjectSchema, {
     method: "GET",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
+    accessToken,
   });
 }
 
@@ -270,8 +268,8 @@ export async function projectFieldsDrift(
 ): Promise<ProjectFieldsDriftResponse> {
   return await api.fetch("/v1/projects/fields/drift", ProjectFieldsDriftResponseSchema, {
     method: "POST",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
-    body: JSON.stringify(request),
+    accessToken,
+    json: request,
   });
 }
 
@@ -285,7 +283,7 @@ export async function projectEditsList(
 ): Promise<ProjectEditsListResponse> {
   return await api.fetch("/v1/projects/edits", ProjectEditsListResponseSchema, {
     method: "GET",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
+    accessToken,
   });
 }
 
@@ -302,8 +300,8 @@ export async function projectLogosDrift(
 ): Promise<ProjectLogosDriftResponse> {
   return await api.fetch("/v1/projects/logos/drift", ProjectLogosDriftResponseSchema, {
     method: "POST",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
-    body: JSON.stringify(request),
+    accessToken,
+    json: request,
   });
 }
 
@@ -318,8 +316,8 @@ export async function projectUpdate(
 ): Promise<Project> {
   return await api.fetch("/v1/project", ProjectSchema, {
     method: "PUT",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
-    body: JSON.stringify(request),
+    accessToken,
+    json: request,
   });
 }
 
@@ -335,7 +333,7 @@ export async function projectDelete(
   const params = new URLSearchParams({ id: request.id });
   return await api.fetch(`/v1/project?${params.toString()}`, ProjectSchema, {
     method: "DELETE",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
+    accessToken,
   });
 }
 
@@ -378,7 +376,8 @@ export async function projectLogoUpdate(
   const params = new URLSearchParams({ projectID: request.projectID });
   return await api.fetch(`/v1/project/logo?${params.toString()}`, ProjectSchema, {
     method: "PUT",
-    headers: { "Content-Type": body.type, Authorization: `Bearer ${accessToken}` },
+    accessToken,
+    headers: { "Content-Type": body.type },
     body,
   });
 }
@@ -395,7 +394,7 @@ export async function projectLogoGet(
   const params = new URLSearchParams({ projectID: request.projectID });
   return await api.fetchBlob(`/v1/project/logo?${params.toString()}`, {
     method: "GET",
-    headers: { Authorization: `Bearer ${accessToken}` },
+    accessToken,
   });
 }
 
@@ -411,7 +410,7 @@ export async function projectLogoDelete(
   const params = new URLSearchParams({ projectID: request.projectID });
   return await api.fetch(`/v1/project/logo?${params.toString()}`, ProjectSchema, {
     method: "DELETE",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
+    accessToken,
   });
 }
 
@@ -444,7 +443,7 @@ export async function* projectStream(
   const params = new URLSearchParams({ id: request.id });
   const events = api.stream(
     `/v1/project/stream?${params.toString()}`,
-    { method: "GET", headers: { Authorization: `Bearer ${accessToken}` }, signal: options.signal },
+    { method: "GET", accessToken, signal: options.signal },
     (event) => event.type === "end"
   );
 
