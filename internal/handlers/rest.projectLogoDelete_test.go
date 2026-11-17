@@ -86,6 +86,15 @@ func TestRestProjectLogoDelete(t *testing.T) {
 			expectStatus: http.StatusNotFound,
 		},
 		{
+			name: "Error/LogoNotFound",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[*core.Project]{err: core.ErrProjectLogoNotFound},
+
+			expectStatus: http.StatusNotFound,
+		},
+		{
 			name: "Error/Internal",
 
 			request: validRequest,

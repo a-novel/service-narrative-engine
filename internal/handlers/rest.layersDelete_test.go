@@ -76,13 +76,13 @@ func TestRestLayersDelete(t *testing.T) {
 			expectStatus: http.StatusBadRequest,
 		},
 		{
-			name: "Error/ProjectNotFound",
+			name: "Error/RequiredLayer",
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[[]*core.Layer]{err: core.ErrProjectNotFound},
+			serviceMock: &serviceMock[[]*core.Layer]{err: core.ErrRequiredLayer},
 
-			expectStatus: http.StatusNotFound,
+			expectStatus: http.StatusConflict,
 		},
 	}
 

@@ -86,6 +86,15 @@ func TestRestBeatRecapWrite(t *testing.T) {
 			expectStatus:   http.StatusConflict,
 			expectResponse: limitProblem("projectBytes"),
 		},
+		{
+			name: "Error/Conflict",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[struct{}]{err: core.ErrRecapConflict},
+
+			expectStatus: http.StatusConflict,
+		},
 	}
 
 	for _, testCase := range testCases {

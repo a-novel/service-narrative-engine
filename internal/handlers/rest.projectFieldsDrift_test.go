@@ -86,13 +86,13 @@ func TestRestProjectFieldsDrift(t *testing.T) {
 			expectStatus: http.StatusBadRequest,
 		},
 		{
-			name: "Error/InvalidRequest",
+			name: "Error/ProjectFull",
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.ProjectFieldsDriftResult]{err: core.ErrInvalidRequest},
+			serviceMock: &serviceMock[*core.ProjectFieldsDriftResult]{err: core.ErrProjectFull},
 
-			expectStatus: http.StatusUnprocessableEntity,
+			expectStatus: http.StatusConflict,
 		},
 	}
 

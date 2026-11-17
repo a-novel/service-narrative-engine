@@ -160,13 +160,13 @@ func TestRestProjectStream(t *testing.T) {
 			expectStatus: http.StatusUnprocessableEntity,
 		},
 		{
-			name: "Error/NotFound",
+			name: "Error/ProjectFull",
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[iter.Seq2[*core.ProjectRecord, error]]{err: core.ErrProjectNotFound},
+			serviceMock: &serviceMock[iter.Seq2[*core.ProjectRecord, error]]{err: core.ErrProjectFull},
 
-			expectStatus: http.StatusNotFound,
+			expectStatus: http.StatusConflict,
 		},
 	}
 

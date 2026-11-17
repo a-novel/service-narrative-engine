@@ -75,13 +75,13 @@ func TestRestCellList(t *testing.T) {
 			expectStatus: http.StatusBadRequest,
 		},
 		{
-			name: "Error/ProjectNotFound",
+			name: "Error/ProjectFull",
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.CellPage]{err: core.ErrProjectNotFound},
+			serviceMock: &serviceMock[*core.CellPage]{err: core.ErrProjectFull},
 
-			expectStatus: http.StatusNotFound,
+			expectStatus: http.StatusConflict,
 		},
 	}
 

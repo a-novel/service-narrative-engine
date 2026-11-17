@@ -158,16 +158,16 @@ func TestRestProjectUpdate(t *testing.T) {
 			expectStatus: http.StatusBadRequest,
 		},
 		{
-			name: "Error/ProjectBudget",
+			name: "Error/ProjectsFull",
 
 			request: validRequest,
 
 			expectTags:   tags,
 			expectGenres: genres,
-			serviceMock:  &serviceMock[*core.Project]{err: core.ErrProjectBudget},
+			serviceMock:  &serviceMock[*core.Project]{err: core.ErrProjectsFull},
 
 			expectStatus:   http.StatusConflict,
-			expectResponse: limitProblem("projectBytes"),
+			expectResponse: limitProblem("projects"),
 		},
 	}
 

@@ -68,14 +68,14 @@ func TestRestCellsWrite(t *testing.T) {
 			expectStatus: http.StatusBadRequest,
 		},
 		{
-			name: "Error/ProjectBudget",
+			name: "Error/ProjectsFull",
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[[]*core.WrittenCell]{err: core.ErrProjectBudget},
+			serviceMock: &serviceMock[[]*core.WrittenCell]{err: core.ErrProjectsFull},
 
 			expectStatus:   http.StatusConflict,
-			expectResponse: limitProblem("projectBytes"),
+			expectResponse: limitProblem("projects"),
 		},
 		{
 			name: "Error/InvalidContent",

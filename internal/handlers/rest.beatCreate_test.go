@@ -74,14 +74,14 @@ func TestRestBeatCreate(t *testing.T) {
 			expectStatus: http.StatusBadRequest,
 		},
 		{
-			name: "Error/ProjectBudget",
+			name: "Error/ProjectsFull",
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[[]*core.Beat]{err: core.ErrProjectBudget},
+			serviceMock: &serviceMock[[]*core.Beat]{err: core.ErrProjectsFull},
 
 			expectStatus:   http.StatusConflict,
-			expectResponse: limitProblem("projectBytes"),
+			expectResponse: limitProblem("projects"),
 		},
 		{
 			// The batch request names the title Beats[0].Title; the route names it as its own body does.

@@ -72,14 +72,14 @@ func TestRestSceneCreate(t *testing.T) {
 			expectStatus: http.StatusBadRequest,
 		},
 		{
-			name: "Error/ProjectBudget",
+			name: "Error/ProjectsFull",
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[[]*core.Scene]{err: core.ErrProjectBudget},
+			serviceMock: &serviceMock[[]*core.Scene]{err: core.ErrProjectsFull},
 
 			expectStatus:   http.StatusConflict,
-			expectResponse: limitProblem("projectBytes"),
+			expectResponse: limitProblem("projects"),
 		},
 	}
 

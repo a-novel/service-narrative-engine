@@ -74,14 +74,14 @@ func TestRestBeatsUpdate(t *testing.T) {
 			expectStatus: http.StatusBadRequest,
 		},
 		{
-			name: "Error/ProjectBudget",
+			name: "Error/ProjectsFull",
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[[]*core.Beat]{err: core.ErrProjectBudget},
+			serviceMock: &serviceMock[[]*core.Beat]{err: core.ErrProjectsFull},
 
 			expectStatus:   http.StatusConflict,
-			expectResponse: limitProblem("projectBytes"),
+			expectResponse: limitProblem("projects"),
 		},
 	}
 

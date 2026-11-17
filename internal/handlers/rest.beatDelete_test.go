@@ -68,13 +68,13 @@ func TestRestBeatDelete(t *testing.T) {
 			expectStatus: http.StatusBadRequest,
 		},
 		{
-			name: "Error/ProjectNotFound",
+			name: "Error/ProjectFull",
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[[]*core.Beat]{err: core.ErrProjectNotFound},
+			serviceMock: &serviceMock[[]*core.Beat]{err: core.ErrProjectFull},
 
-			expectStatus: http.StatusNotFound,
+			expectStatus: http.StatusConflict,
 		},
 		{
 			// The batch request names the ID IDs[0]; the route names it as its own query does.

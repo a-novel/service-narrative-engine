@@ -34,7 +34,7 @@ var PostgresPresetMigrations = NewPostgresPreset(
 )
 
 // NewPostgresPreset returns a PostgreSQL preset with a pool bounded before it opens. Extra options
-// apply last. It panics when the connection has no password.
+// apply last. It panics when the connection names a host without a password.
 //
 // The pool limits are set before the handle is first used: once the handle is cached, later changes
 // to them are silently ignored.

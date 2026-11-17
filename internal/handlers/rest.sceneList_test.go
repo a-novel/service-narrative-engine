@@ -75,13 +75,13 @@ func TestRestSceneList(t *testing.T) {
 			expectStatus: http.StatusBadRequest,
 		},
 		{
-			name: "Error/ProjectNotFound",
+			name: "Error/ProjectFull",
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.ScenePage]{err: core.ErrProjectNotFound},
+			serviceMock: &serviceMock[*core.ScenePage]{err: core.ErrProjectFull},
 
-			expectStatus: http.StatusNotFound,
+			expectStatus: http.StatusConflict,
 		},
 	}
 

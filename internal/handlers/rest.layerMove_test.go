@@ -68,13 +68,13 @@ func TestRestLayerMove(t *testing.T) {
 			expectStatus: http.StatusBadRequest,
 		},
 		{
-			name: "Error/ProjectNotFound",
+			name: "Error/ProjectFull",
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Layer]{err: core.ErrProjectNotFound},
+			serviceMock: &serviceMock[*core.Layer]{err: core.ErrProjectFull},
 
-			expectStatus: http.StatusNotFound,
+			expectStatus: http.StatusConflict,
 		},
 	}
 

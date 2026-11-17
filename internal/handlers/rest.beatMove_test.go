@@ -69,13 +69,13 @@ func TestRestBeatMove(t *testing.T) {
 			expectStatus: http.StatusBadRequest,
 		},
 		{
-			name: "Error/ProjectNotFound",
+			name: "Error/ProjectFull",
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Beat]{err: core.ErrProjectNotFound},
+			serviceMock: &serviceMock[*core.Beat]{err: core.ErrProjectFull},
 
-			expectStatus: http.StatusNotFound,
+			expectStatus: http.StatusConflict,
 		},
 	}
 

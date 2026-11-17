@@ -89,13 +89,13 @@ func TestRestProjectLogosDrift(t *testing.T) {
 			expectStatus: http.StatusBadRequest,
 		},
 		{
-			name: "Error/InvalidRequest",
+			name: "Error/ProjectFull",
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.ProjectLogosDriftResult]{err: core.ErrInvalidRequest},
+			serviceMock: &serviceMock[*core.ProjectLogosDriftResult]{err: core.ErrProjectFull},
 
-			expectStatus: http.StatusUnprocessableEntity,
+			expectStatus: http.StatusConflict,
 		},
 	}
 

@@ -3,6 +3,7 @@ package core_test
 import (
 	"context"
 	"errors"
+	"runtime/debug"
 	"testing"
 	"time"
 
@@ -38,8 +39,8 @@ func TestProjectReadGate(t *testing.T) {
 			expectRan: true,
 		},
 		{
-			// A gate of size 0 sizes itself to the memory limit, at least one slot.
-			name: "Success/SizedFromMemory",
+			// Without GOMEMLIMIT, as go test runs, a gate of size 0 runs as many reads as CPUs.
+			name: "Success/SizedFromCPUs",
 
 			expectRan: true,
 		},
@@ -127,4 +128,32 @@ func TestProjectReadGate(t *testing.T) {
 			require.NoError(t, gate.Run(waitCtx, func(context.Context) error { return nil }))
 		})
 	}
+}
+
+// TestProjectReadGateMemory sizes a gate from a 1 GiB memory limit: the reads take half of it, at 128 MiB each, so
+// the gate runs 4 at once and a fifth waits.
+//
+//nolint:paralleltest // debug.SetMemoryLimit sets the limit of the whole process.
+func TestProjectReadGateMemory(t *testing.T) {
+	previous := debug.SetMemoryLimit(1 << 30)
+	gate := core.NewProjectReadGate(0)
+
+	debug.SetMemoryLimit(previous)
+
+	for range 4 {
+		t.Cleanup(holdGate(t, gate))
+	}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	var ran bool
+
+	err := gate.Run(ctx, func(context.Context) error {
+		ran = true
+
+		return nil
+	})
+	require.ErrorIs(t, err, context.Canceled)
+	require.False(t, ran)
 }

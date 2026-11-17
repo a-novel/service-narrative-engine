@@ -38,4 +38,4 @@ The previous release reads these variables too, so set them before you upgrade. 
 
 ## Notes
 
-`MAX_CONCURRENT_PROJECT_READS` keeps its meaning and default: unset (or `0`), the service runs 4 whole-project reads per GiB of `GOMEMLIMIT`, or one per CPU without a memory limit.
+`MAX_CONCURRENT_PROJECT_READS` keeps its default: unset, the service runs 4 whole-project reads per GiB of `GOMEMLIMIT`, or one per CPU without a memory limit. An explicit `0` or a negative value now sizes the reads the same way, where it ran one read at a time before: set `1` to keep that.
