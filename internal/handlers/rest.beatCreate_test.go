@@ -37,7 +37,7 @@ func TestRestBeatCreate(t *testing.T) {
 
 		request func(t *testing.T) *http.Request
 
-		serviceMock *serviceMock[*core.Beat]
+		serviceMock *serviceMock[[]*core.Beat]
 
 		expectStatus   int
 		expectResponse any
@@ -47,7 +47,7 @@ func TestRestBeatCreate(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Beat]{resp: coreBeat},
+			serviceMock: &serviceMock[[]*core.Beat]{resp: []*core.Beat{coreBeat}},
 
 			expectStatus:   http.StatusOK,
 			expectResponse: jsonBeat,
@@ -79,7 +79,7 @@ func TestRestBeatCreate(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Beat]{err: core.ErrProjectNotFound},
+			serviceMock: &serviceMock[[]*core.Beat]{err: core.ErrProjectNotFound},
 
 			expectStatus: http.StatusNotFound,
 		},
@@ -88,7 +88,7 @@ func TestRestBeatCreate(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Beat]{err: core.ErrProjectBudget},
+			serviceMock: &serviceMock[[]*core.Beat]{err: core.ErrProjectBudget},
 
 			expectStatus:   http.StatusConflict,
 			expectResponse: limitProblem("projectBytes"),
@@ -98,7 +98,7 @@ func TestRestBeatCreate(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Beat]{err: core.ErrProjectFull},
+			serviceMock: &serviceMock[[]*core.Beat]{err: core.ErrProjectFull},
 
 			expectStatus: http.StatusConflict,
 		},
@@ -107,7 +107,7 @@ func TestRestBeatCreate(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Beat]{err: core.ErrInvalidRequest},
+			serviceMock: &serviceMock[[]*core.Beat]{err: core.ErrInvalidRequest},
 
 			expectStatus: http.StatusBadRequest,
 		},
@@ -116,7 +116,7 @@ func TestRestBeatCreate(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Beat]{err: errFoo},
+			serviceMock: &serviceMock[[]*core.Beat]{err: errFoo},
 
 			expectStatus: http.StatusInternalServerError,
 		},
@@ -130,14 +130,16 @@ func TestRestBeatCreate(t *testing.T) {
 
 			if testCase.serviceMock != nil {
 				service.EXPECT().
-					Exec(mock.Anything, &core.BeatCreateRequest{
-						OwnerID:     ownerID,
-						ProjectID:   projectID,
-						Position:    2,
-						Title:       "Ouverture",
-						Color:       "#e0457b",
-						Description: "Marie attend.",
-						Prompt:      "Lent.",
+					Exec(mock.Anything, &core.BeatsCreateRequest{
+						OwnerID:   ownerID,
+						ProjectID: projectID,
+						Position:  2,
+						Beats: []core.BeatsCreateItem{{
+							Title:       "Ouverture",
+							Color:       "#e0457b",
+							Description: "Marie attend.",
+							Prompt:      "Lent.",
+						}},
 					}).
 					Return(testCase.serviceMock.resp, testCase.serviceMock.err)
 			}

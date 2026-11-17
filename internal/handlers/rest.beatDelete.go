@@ -13,9 +13,9 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/core"
 )
 
-// RestBeatDeleteService is the core operation [RestBeatDelete] delegates to.
+// RestBeatDeleteService is the batch operation [RestBeatDelete] delegates to, with a list of one.
 type RestBeatDeleteService interface {
-	Exec(ctx context.Context, request *core.BeatDeleteRequest) (*core.Beat, error)
+	Exec(ctx context.Context, request *core.BeatsDeleteRequest) ([]*core.Beat, error)
 }
 
 // RestBeatDeleteRequest is the query parameters the delete-beat endpoint accepts.
@@ -55,10 +55,10 @@ func (handler *RestBeatDelete) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	serviceRequest := &core.BeatDeleteRequest{
+	serviceRequest := &core.BeatsDeleteRequest{
 		OwnerID:   ownerID,
 		ProjectID: request.ProjectID,
-		ID:        request.ID,
+		IDs:       []uuid.UUID{request.ID},
 	}
 
 	result, err := handler.service.Exec(ctx, serviceRequest)
@@ -68,5 +68,5 @@ func (handler *RestBeatDelete) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	httpf.SendJSONStatus(w, span, http.StatusOK, loadBeat(result))
+	httpf.SendJSONStatus(w, span, http.StatusOK, loadBeat(result[0]))
 }

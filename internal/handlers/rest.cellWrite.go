@@ -14,9 +14,9 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/core"
 )
 
-// RestCellWriteService is the core operation [RestCellWrite] delegates to.
+// RestCellWriteService is the batch operation [RestCellWrite] delegates to, with a list of one.
 type RestCellWriteService interface {
-	Exec(ctx context.Context, request *core.CellWriteRequest) (*core.WrittenCell, error)
+	Exec(ctx context.Context, request *core.CellsWriteRequest) ([]*core.WrittenCell, error)
 }
 
 // RestCellWriteRequest is the JSON body the write-cell endpoint accepts.
@@ -62,12 +62,14 @@ func (handler *RestCellWrite) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	serviceRequest := &core.CellWriteRequest{
+	serviceRequest := &core.CellsWriteRequest{
 		OwnerID:   ownerID,
 		ProjectID: request.ProjectID,
-		SceneID:   request.SceneID,
-		LayerID:   request.LayerID,
-		Content:   request.Content,
+		Cells: []core.CellsWriteItem{{
+			SceneID: request.SceneID,
+			LayerID: request.LayerID,
+			Content: request.Content,
+		}},
 	}
 
 	result, err := handler.service.Exec(ctx, serviceRequest)
@@ -77,5 +79,5 @@ func (handler *RestCellWrite) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	httpf.SendJSONStatus(w, span, http.StatusOK, loadWrittenCell(result))
+	httpf.SendJSONStatus(w, span, http.StatusOK, loadWrittenCell(result[0]))
 }

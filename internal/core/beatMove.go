@@ -14,11 +14,6 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// BeatMoveDaoLock locks the project its owner names, so changes to its order run one at a time.
-type BeatMoveDaoLock interface {
-	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
-}
-
 // BeatMoveDao moves the beat, and shifts the beats between its old and new position.
 type BeatMoveDao interface {
 	Exec(ctx context.Context, request *dao.BeatMoveRequest) (*dao.Beat, error)
@@ -38,13 +33,13 @@ type BeatMoveRequest struct {
 // BeatMove moves a beat within its project, and returns it at its new position. The beats between its
 // old and new position shift by one.
 type BeatMove struct {
-	daoLock    BeatMoveDaoLock
+	daoLock    ProjectLockDao
 	dao        BeatMoveDao
 	transactor transaction.Transactor
 }
 
 func NewBeatMove(
-	daoLock BeatMoveDaoLock,
+	daoLock ProjectLockDao,
 	dao BeatMoveDao,
 	transactor transaction.Transactor,
 ) *BeatMove {

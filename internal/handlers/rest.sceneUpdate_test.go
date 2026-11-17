@@ -36,7 +36,7 @@ func TestRestSceneUpdate(t *testing.T) {
 
 		request func(t *testing.T) *http.Request
 
-		serviceMock *serviceMock[*core.Scene]
+		serviceMock *serviceMock[[]*core.Scene]
 
 		expectStatus   int
 		expectResponse any
@@ -46,7 +46,7 @@ func TestRestSceneUpdate(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Scene]{resp: coreScene},
+			serviceMock: &serviceMock[[]*core.Scene]{resp: []*core.Scene{coreScene}},
 
 			expectStatus:   http.StatusOK,
 			expectResponse: jsonScene,
@@ -78,7 +78,7 @@ func TestRestSceneUpdate(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Scene]{err: core.ErrProjectNotFound},
+			serviceMock: &serviceMock[[]*core.Scene]{err: core.ErrProjectNotFound},
 
 			expectStatus: http.StatusNotFound,
 		},
@@ -87,7 +87,7 @@ func TestRestSceneUpdate(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Scene]{err: core.ErrProjectBudget},
+			serviceMock: &serviceMock[[]*core.Scene]{err: core.ErrProjectBudget},
 
 			expectStatus:   http.StatusConflict,
 			expectResponse: limitProblem("projectBytes"),
@@ -97,7 +97,7 @@ func TestRestSceneUpdate(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Scene]{err: core.ErrSceneNotFound},
+			serviceMock: &serviceMock[[]*core.Scene]{err: core.ErrSceneNotFound},
 
 			expectStatus: http.StatusNotFound,
 		},
@@ -106,7 +106,7 @@ func TestRestSceneUpdate(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Scene]{err: core.ErrInvalidRequest},
+			serviceMock: &serviceMock[[]*core.Scene]{err: core.ErrInvalidRequest},
 
 			expectStatus: http.StatusBadRequest,
 		},
@@ -115,7 +115,7 @@ func TestRestSceneUpdate(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Scene]{err: errFoo},
+			serviceMock: &serviceMock[[]*core.Scene]{err: errFoo},
 
 			expectStatus: http.StatusInternalServerError,
 		},
@@ -129,13 +129,15 @@ func TestRestSceneUpdate(t *testing.T) {
 
 			if testCase.serviceMock != nil {
 				service.EXPECT().
-					Exec(mock.Anything, &core.SceneUpdateRequest{
-						OwnerID:     ownerID,
-						ProjectID:   projectID,
-						ID:          sceneID,
-						Title:       "Ouverture",
-						Description: "Marie attend.",
-						Prompt:      "Lent.",
+					Exec(mock.Anything, &core.ScenesUpdateRequest{
+						OwnerID:   ownerID,
+						ProjectID: projectID,
+						Scenes: []core.ScenesUpdateItem{{
+							ID:          sceneID,
+							Title:       "Ouverture",
+							Description: "Marie attend.",
+							Prompt:      "Lent.",
+						}},
 					}).
 					Return(testCase.serviceMock.resp, testCase.serviceMock.err)
 			}

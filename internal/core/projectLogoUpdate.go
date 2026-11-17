@@ -15,11 +15,6 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// ProjectLogoUpdateDaoOwner checks that the user owns the project.
-type ProjectLogoUpdateDaoOwner interface {
-	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
-}
-
 // ProjectLogoUpdateDao writes the logo and the instant it changed.
 type ProjectLogoUpdateDao interface {
 	Exec(ctx context.Context, request *dao.ProjectLogoUpsertRequest) (*dao.Project, error)
@@ -39,11 +34,11 @@ type ProjectLogoUpdateRequest struct {
 // [picture.RefusedError]. A logo is cosmetic: it does not count in the project's stored bytes, and its write
 // leaves the project's EditedAt as it was.
 type ProjectLogoUpdate struct {
-	daoOwner ProjectLogoUpdateDaoOwner
+	daoOwner ProjectOwnerDao
 	dao      ProjectLogoUpdateDao
 }
 
-func NewProjectLogoUpdate(daoOwner ProjectLogoUpdateDaoOwner, dao ProjectLogoUpdateDao) *ProjectLogoUpdate {
+func NewProjectLogoUpdate(daoOwner ProjectOwnerDao, dao ProjectLogoUpdateDao) *ProjectLogoUpdate {
 	return &ProjectLogoUpdate{daoOwner: daoOwner, dao: dao}
 }
 

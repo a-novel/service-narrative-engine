@@ -112,7 +112,7 @@ func TestBeatList(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockOwner := coremocks.NewMockBeatListDaoOwner(t)
+			mockOwner := coremocks.NewMockProjectOwnerDao(t)
 			mockList := coremocks.NewMockBeatListDao(t)
 
 			if testCase.ownerMock != nil {

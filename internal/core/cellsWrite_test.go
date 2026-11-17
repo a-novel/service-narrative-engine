@@ -323,11 +323,11 @@ func TestCellsWrite(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockLock := coremocks.NewMockCellsWriteDaoLock(t)
+			mockLock := coremocks.NewMockProjectLockDao(t)
 			mockKind := coremocks.NewMockCellsWriteDaoKind(t)
 			mockDao := coremocks.NewMockCellsWriteDao(t)
-			mockLength := coremocks.NewMockCellsWriteDaoLength(t)
-			mockBytes := coremocks.NewMockCellsWriteDaoBytes(t)
+			mockLength := coremocks.NewMockSceneLengthDao(t)
+			mockBytes := coremocks.NewMockProjectBytesDao(t)
 
 			if testCase.lockMock != nil {
 				mockLock.EXPECT().

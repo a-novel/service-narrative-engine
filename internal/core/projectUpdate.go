@@ -15,19 +15,9 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// ProjectUpdateDaoLock locks the project its owner names, so the writes to its bytes run one at a time.
-type ProjectUpdateDaoLock interface {
-	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
-}
-
 // ProjectUpdateDao writes the project's new fields.
 type ProjectUpdateDao interface {
 	Exec(ctx context.Context, request *dao.ProjectUpdateRequest) (*dao.Project, error)
-}
-
-// ProjectUpdateDaoBytes reads how many bytes the project stores, the write included.
-type ProjectUpdateDaoBytes interface {
-	Exec(ctx context.Context, request *dao.ProjectBytesRequest) (*dao.ProjectBytes, error)
 }
 
 // ProjectUpdateRequest carries a project's new fields.
@@ -54,16 +44,16 @@ type ProjectUpdateRequest struct {
 // ProjectUpdate replaces a project's own fields. It writes nothing when the project would store more than
 // [ProjectBytesMax] bytes.
 type ProjectUpdate struct {
-	daoLock    ProjectUpdateDaoLock
+	daoLock    ProjectLockDao
 	dao        ProjectUpdateDao
-	daoBytes   ProjectUpdateDaoBytes
+	daoBytes   ProjectBytesDao
 	transactor transaction.Transactor
 }
 
 func NewProjectUpdate(
-	daoLock ProjectUpdateDaoLock,
+	daoLock ProjectLockDao,
 	dao ProjectUpdateDao,
-	daoBytes ProjectUpdateDaoBytes,
+	daoBytes ProjectBytesDao,
 	transactor transaction.Transactor,
 ) *ProjectUpdate {
 	return &ProjectUpdate{daoLock: daoLock, dao: dao, daoBytes: daoBytes, transactor: transactor}

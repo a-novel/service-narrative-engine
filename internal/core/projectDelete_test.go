@@ -96,7 +96,7 @@ func TestProjectDelete(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockOwner := coremocks.NewMockProjectDeleteDaoOwner(t)
+			mockOwner := coremocks.NewMockProjectOwnerDao(t)
 			mockDao := coremocks.NewMockProjectDeleteDao(t)
 
 			if testCase.ownerMock != nil {

@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
 
 	"github.com/a-novel/service-narrative-engine/internal/config"
@@ -30,7 +31,7 @@ func TestRestLayerDelete(t *testing.T) {
 
 		request func(t *testing.T) *http.Request
 
-		serviceMock *serviceMock[*core.Layer]
+		serviceMock *serviceMock[[]*core.Layer]
 
 		expectStatus   int
 		expectResponse any
@@ -40,7 +41,7 @@ func TestRestLayerDelete(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Layer]{resp: coreLayer},
+			serviceMock: &serviceMock[[]*core.Layer]{resp: []*core.Layer{coreLayer}},
 
 			expectStatus:   http.StatusOK,
 			expectResponse: jsonLayer,
@@ -72,7 +73,7 @@ func TestRestLayerDelete(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Layer]{err: core.ErrProjectNotFound},
+			serviceMock: &serviceMock[[]*core.Layer]{err: core.ErrProjectNotFound},
 
 			expectStatus: http.StatusNotFound,
 		},
@@ -81,7 +82,7 @@ func TestRestLayerDelete(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Layer]{err: core.ErrLayerNotFound},
+			serviceMock: &serviceMock[[]*core.Layer]{err: core.ErrLayerNotFound},
 
 			expectStatus: http.StatusNotFound,
 		},
@@ -90,7 +91,7 @@ func TestRestLayerDelete(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Layer]{err: core.ErrRequiredLayer},
+			serviceMock: &serviceMock[[]*core.Layer]{err: core.ErrRequiredLayer},
 
 			expectStatus: http.StatusConflict,
 		},
@@ -99,7 +100,7 @@ func TestRestLayerDelete(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Layer]{err: core.ErrInvalidRequest},
+			serviceMock: &serviceMock[[]*core.Layer]{err: core.ErrInvalidRequest},
 
 			expectStatus: http.StatusBadRequest,
 		},
@@ -108,7 +109,7 @@ func TestRestLayerDelete(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Layer]{err: errFoo},
+			serviceMock: &serviceMock[[]*core.Layer]{err: errFoo},
 
 			expectStatus: http.StatusInternalServerError,
 		},
@@ -122,7 +123,7 @@ func TestRestLayerDelete(t *testing.T) {
 
 			if testCase.serviceMock != nil {
 				service.EXPECT().
-					Exec(mock.Anything, &core.LayerDeleteRequest{OwnerID: ownerID, ProjectID: projectID, ID: layerID}).
+					Exec(mock.Anything, &core.LayersDeleteRequest{OwnerID: ownerID, ProjectID: projectID, IDs: []uuid.UUID{layerID}}).
 					Return(testCase.serviceMock.resp, testCase.serviceMock.err)
 			}
 

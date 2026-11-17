@@ -13,9 +13,9 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/core"
 )
 
-// RestLayerDeleteService is the core operation [RestLayerDelete] delegates to.
+// RestLayerDeleteService is the batch operation [RestLayerDelete] delegates to, with a list of one.
 type RestLayerDeleteService interface {
-	Exec(ctx context.Context, request *core.LayerDeleteRequest) (*core.Layer, error)
+	Exec(ctx context.Context, request *core.LayersDeleteRequest) ([]*core.Layer, error)
 }
 
 // RestLayerDeleteRequest is the query parameters the delete-layer endpoint accepts.
@@ -55,10 +55,10 @@ func (handler *RestLayerDelete) ServeHTTP(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	serviceRequest := &core.LayerDeleteRequest{
+	serviceRequest := &core.LayersDeleteRequest{
 		OwnerID:   ownerID,
 		ProjectID: request.ProjectID,
-		ID:        request.ID,
+		IDs:       []uuid.UUID{request.ID},
 	}
 
 	result, err := handler.service.Exec(ctx, serviceRequest)
@@ -68,5 +68,5 @@ func (handler *RestLayerDelete) ServeHTTP(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	httpf.SendJSONStatus(w, span, http.StatusOK, loadLayer(result))
+	httpf.SendJSONStatus(w, span, http.StatusOK, loadLayer(result[0]))
 }

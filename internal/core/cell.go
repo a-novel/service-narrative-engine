@@ -49,7 +49,7 @@ func newCell(entity *dao.Cell) *Cell {
 	}
 }
 
-// WrittenCell names a cell [CellWrite] wrote, and when. The caller already holds its content.
+// WrittenCell names a cell [CellsWrite] wrote, and when. The caller already holds its content.
 type WrittenCell struct {
 	// SceneID is the scene whose column holds the cell.
 	SceneID uuid.UUID

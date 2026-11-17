@@ -139,9 +139,9 @@ func TestBeatRecapWrite(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockLock := coremocks.NewMockBeatRecapWriteDaoLock(t)
+			mockLock := coremocks.NewMockProjectLockDao(t)
 			mockDao := coremocks.NewMockBeatRecapWriteDao(t)
-			mockBytes := coremocks.NewMockBeatRecapWriteDaoBytes(t)
+			mockBytes := coremocks.NewMockProjectBytesDao(t)
 
 			if testCase.lockMock != nil {
 				mockLock.EXPECT().

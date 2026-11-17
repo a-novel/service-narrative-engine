@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
 
 	"github.com/a-novel/service-narrative-engine/internal/config"
@@ -30,7 +31,7 @@ func TestRestBeatDelete(t *testing.T) {
 
 		request func(t *testing.T) *http.Request
 
-		serviceMock *serviceMock[*core.Beat]
+		serviceMock *serviceMock[[]*core.Beat]
 
 		expectStatus   int
 		expectResponse any
@@ -40,7 +41,7 @@ func TestRestBeatDelete(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Beat]{resp: coreBeat},
+			serviceMock: &serviceMock[[]*core.Beat]{resp: []*core.Beat{coreBeat}},
 
 			expectStatus:   http.StatusOK,
 			expectResponse: jsonBeat,
@@ -72,7 +73,7 @@ func TestRestBeatDelete(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Beat]{err: core.ErrProjectNotFound},
+			serviceMock: &serviceMock[[]*core.Beat]{err: core.ErrProjectNotFound},
 
 			expectStatus: http.StatusNotFound,
 		},
@@ -81,7 +82,7 @@ func TestRestBeatDelete(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Beat]{err: core.ErrBeatNotFound},
+			serviceMock: &serviceMock[[]*core.Beat]{err: core.ErrBeatNotFound},
 
 			expectStatus: http.StatusNotFound,
 		},
@@ -90,7 +91,7 @@ func TestRestBeatDelete(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Beat]{err: core.ErrInvalidRequest},
+			serviceMock: &serviceMock[[]*core.Beat]{err: core.ErrInvalidRequest},
 
 			expectStatus: http.StatusBadRequest,
 		},
@@ -99,7 +100,7 @@ func TestRestBeatDelete(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Beat]{err: errFoo},
+			serviceMock: &serviceMock[[]*core.Beat]{err: errFoo},
 
 			expectStatus: http.StatusInternalServerError,
 		},
@@ -113,7 +114,7 @@ func TestRestBeatDelete(t *testing.T) {
 
 			if testCase.serviceMock != nil {
 				service.EXPECT().
-					Exec(mock.Anything, &core.BeatDeleteRequest{OwnerID: ownerID, ProjectID: projectID, ID: beatID}).
+					Exec(mock.Anything, &core.BeatsDeleteRequest{OwnerID: ownerID, ProjectID: projectID, IDs: []uuid.UUID{beatID}}).
 					Return(testCase.serviceMock.resp, testCase.serviceMock.err)
 			}
 

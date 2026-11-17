@@ -42,11 +42,6 @@ var ProjectStreamSections = []string{
 	ProjectStreamEnd,
 }
 
-// ProjectStreamDaoOwner checks that the caller owns the project.
-type ProjectStreamDaoOwner interface {
-	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
-}
-
 // ProjectStreamDaoProject reads the project.
 type ProjectStreamDaoProject interface {
 	Exec(ctx context.Context, request *dao.ProjectSelectRequest) (*dao.Project, error)
@@ -107,7 +102,7 @@ type ProjectRecord struct {
 // It checks ownership before the stream opens, and returns [ErrStreamEnded] when the caller resumes
 // after the end record.
 type ProjectStream struct {
-	daoOwner   ProjectStreamDaoOwner
+	daoOwner   ProjectOwnerDao
 	daoProject ProjectStreamDaoProject
 	daoBeats   ProjectStreamDaoBeats
 	daoScenes  ProjectStreamDaoScenes
@@ -116,7 +111,7 @@ type ProjectStream struct {
 }
 
 func NewProjectStream(
-	daoOwner ProjectStreamDaoOwner,
+	daoOwner ProjectOwnerDao,
 	daoProject ProjectStreamDaoProject,
 	daoBeats ProjectStreamDaoBeats,
 	daoScenes ProjectStreamDaoScenes,

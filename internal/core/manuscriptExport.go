@@ -13,19 +13,9 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// ManuscriptExportDaoOwner checks that the user owns the project.
-type ManuscriptExportDaoOwner interface {
-	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
-}
-
 // ManuscriptExportDaoKind reads the kind of the layer to export.
 type ManuscriptExportDaoKind interface {
 	Exec(ctx context.Context, request *dao.LayerKindRequest) ([]*dao.LayerKind, error)
-}
-
-// ManuscriptExportDaoBytes reads how many bytes the project stores.
-type ManuscriptExportDaoBytes interface {
-	Exec(ctx context.Context, request *dao.ProjectBytesRequest) (*dao.ProjectBytes, error)
 }
 
 // ManuscriptExportDaoProject reads the project, for its title and language.
@@ -51,18 +41,18 @@ type ManuscriptExportRequest struct {
 // [ErrLayerNotFound], and a project past [ProjectBytesMax] stored bytes [ErrProjectBudget]. The read and
 // the build wait for a slot of the gate, which they share with every other read of a whole project.
 type ManuscriptExport struct {
-	daoOwner   ManuscriptExportDaoOwner
+	daoOwner   ProjectOwnerDao
 	daoKind    ManuscriptExportDaoKind
-	daoBytes   ManuscriptExportDaoBytes
+	daoBytes   ProjectBytesDao
 	daoProject ManuscriptExportDaoProject
 	dao        ManuscriptExportDao
 	gate       *ProjectReadGate
 }
 
 func NewManuscriptExport(
-	daoOwner ManuscriptExportDaoOwner,
+	daoOwner ProjectOwnerDao,
 	daoKind ManuscriptExportDaoKind,
-	daoBytes ManuscriptExportDaoBytes,
+	daoBytes ProjectBytesDao,
 	daoProject ManuscriptExportDaoProject,
 	dao ManuscriptExportDao,
 	gate *ProjectReadGate,

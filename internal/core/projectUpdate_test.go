@@ -415,9 +415,9 @@ func TestProjectUpdate(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockLock := coremocks.NewMockProjectUpdateDaoLock(t)
+			mockLock := coremocks.NewMockProjectLockDao(t)
 			mockDao := coremocks.NewMockProjectUpdateDao(t)
-			mockBytes := coremocks.NewMockProjectUpdateDaoBytes(t)
+			mockBytes := coremocks.NewMockProjectBytesDao(t)
 
 			if testCase.lockMock != nil {
 				mockLock.EXPECT().

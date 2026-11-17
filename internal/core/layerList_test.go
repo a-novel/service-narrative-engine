@@ -114,7 +114,7 @@ func TestLayerList(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockOwner := coremocks.NewMockLayerListDaoOwner(t)
+			mockOwner := coremocks.NewMockProjectOwnerDao(t)
 			mockList := coremocks.NewMockLayerListDao(t)
 
 			if testCase.ownerMock != nil {

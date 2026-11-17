@@ -13,11 +13,6 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// ProjectLogoDeleteDaoOwner checks that the user owns the project.
-type ProjectLogoDeleteDaoOwner interface {
-	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
-}
-
 // ProjectLogoDeleteDao removes the logo.
 type ProjectLogoDeleteDao interface {
 	Exec(ctx context.Context, request *dao.ProjectLogoDeleteRequest) (*dao.Project, error)
@@ -32,11 +27,11 @@ type ProjectLogoDeleteRequest struct {
 // ProjectLogoDelete removes the logo of a project. A project without a logo stays as it is. A logo is cosmetic,
 // so the removal leaves the project's EditedAt as it was.
 type ProjectLogoDelete struct {
-	daoOwner ProjectLogoDeleteDaoOwner
+	daoOwner ProjectOwnerDao
 	dao      ProjectLogoDeleteDao
 }
 
-func NewProjectLogoDelete(daoOwner ProjectLogoDeleteDaoOwner, dao ProjectLogoDeleteDao) *ProjectLogoDelete {
+func NewProjectLogoDelete(daoOwner ProjectOwnerDao, dao ProjectLogoDeleteDao) *ProjectLogoDelete {
 	return &ProjectLogoDelete{daoOwner: daoOwner, dao: dao}
 }
 

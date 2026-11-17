@@ -13,9 +13,9 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/core"
 )
 
-// RestBeatUpdateService is the core operation [RestBeatUpdate] delegates to.
+// RestBeatUpdateService is the batch operation [RestBeatUpdate] delegates to, with a list of one.
 type RestBeatUpdateService interface {
-	Exec(ctx context.Context, request *core.BeatUpdateRequest) (*core.Beat, error)
+	Exec(ctx context.Context, request *core.BeatsUpdateRequest) ([]*core.Beat, error)
 }
 
 // RestBeatUpdateRequest is the JSON body the update-beat endpoint accepts.
@@ -64,14 +64,16 @@ func (handler *RestBeatUpdate) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	serviceRequest := &core.BeatUpdateRequest{
-		OwnerID:     ownerID,
-		ProjectID:   request.ProjectID,
-		ID:          request.ID,
-		Title:       request.Title,
-		Color:       request.Color,
-		Description: request.Description,
-		Prompt:      request.Prompt,
+	serviceRequest := &core.BeatsUpdateRequest{
+		OwnerID:   ownerID,
+		ProjectID: request.ProjectID,
+		Beats: []core.BeatsUpdateItem{{
+			ID:          request.ID,
+			Title:       request.Title,
+			Color:       request.Color,
+			Description: request.Description,
+			Prompt:      request.Prompt,
+		}},
 	}
 
 	result, err := handler.service.Exec(ctx, serviceRequest)
@@ -81,5 +83,5 @@ func (handler *RestBeatUpdate) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	httpf.SendJSONStatus(w, span, http.StatusOK, loadBeat(result))
+	httpf.SendJSONStatus(w, span, http.StatusOK, loadBeat(result[0]))
 }

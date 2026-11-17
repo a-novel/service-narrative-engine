@@ -13,9 +13,9 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/core"
 )
 
-// RestSceneDeleteService is the core operation [RestSceneDelete] delegates to.
+// RestSceneDeleteService is the batch operation [RestSceneDelete] delegates to, with a list of one.
 type RestSceneDeleteService interface {
-	Exec(ctx context.Context, request *core.SceneDeleteRequest) (*core.Scene, error)
+	Exec(ctx context.Context, request *core.ScenesDeleteRequest) ([]*core.Scene, error)
 }
 
 // RestSceneDeleteRequest is the query parameters the delete-scene endpoint accepts.
@@ -55,10 +55,10 @@ func (handler *RestSceneDelete) ServeHTTP(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	serviceRequest := &core.SceneDeleteRequest{
+	serviceRequest := &core.ScenesDeleteRequest{
 		OwnerID:   ownerID,
 		ProjectID: request.ProjectID,
-		ID:        request.ID,
+		IDs:       []uuid.UUID{request.ID},
 	}
 
 	result, err := handler.service.Exec(ctx, serviceRequest)
@@ -68,5 +68,5 @@ func (handler *RestSceneDelete) ServeHTTP(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	httpf.SendJSONStatus(w, span, http.StatusOK, loadScene(result))
+	httpf.SendJSONStatus(w, span, http.StatusOK, loadScene(result[0]))
 }

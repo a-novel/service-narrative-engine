@@ -52,26 +52,26 @@ func (_m *MockRestBeatCreateService) EXPECT() *MockRestBeatCreateService_Expecte
 }
 
 // Exec provides a mock function for the type MockRestBeatCreateService
-func (_mock *MockRestBeatCreateService) Exec(ctx context.Context, request *core.BeatCreateRequest) (*core.Beat, error) {
+func (_mock *MockRestBeatCreateService) Exec(ctx context.Context, request *core.BeatsCreateRequest) ([]*core.Beat, error) {
 	ret := _mock.Called(ctx, request)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Exec")
 	}
 
-	var r0 *core.Beat
+	var r0 []*core.Beat
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.BeatCreateRequest) (*core.Beat, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.BeatsCreateRequest) ([]*core.Beat, error)); ok {
 		return returnFunc(ctx, request)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.BeatCreateRequest) *core.Beat); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.BeatsCreateRequest) []*core.Beat); ok {
 		r0 = returnFunc(ctx, request)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*core.Beat)
+			r0 = ret.Get(0).([]*core.Beat)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *core.BeatCreateRequest) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *core.BeatsCreateRequest) error); ok {
 		r1 = returnFunc(ctx, request)
 	} else {
 		r1 = ret.Error(1)
@@ -86,20 +86,20 @@ type MockRestBeatCreateService_Exec_Call struct {
 
 // Exec is a helper method to define mock.On call
 //   - ctx context.Context
-//   - request *core.BeatCreateRequest
+//   - request *core.BeatsCreateRequest
 func (_e *MockRestBeatCreateService_Expecter) Exec(ctx any, request any) *MockRestBeatCreateService_Exec_Call {
 	return &MockRestBeatCreateService_Exec_Call{Call: _e.mock.On("Exec", ctx, request)}
 }
 
-func (_c *MockRestBeatCreateService_Exec_Call) Run(run func(ctx context.Context, request *core.BeatCreateRequest)) *MockRestBeatCreateService_Exec_Call {
+func (_c *MockRestBeatCreateService_Exec_Call) Run(run func(ctx context.Context, request *core.BeatsCreateRequest)) *MockRestBeatCreateService_Exec_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 *core.BeatCreateRequest
+		var arg1 *core.BeatsCreateRequest
 		if args[1] != nil {
-			arg1 = args[1].(*core.BeatCreateRequest)
+			arg1 = args[1].(*core.BeatsCreateRequest)
 		}
 		run(
 			arg0,
@@ -109,12 +109,12 @@ func (_c *MockRestBeatCreateService_Exec_Call) Run(run func(ctx context.Context,
 	return _c
 }
 
-func (_c *MockRestBeatCreateService_Exec_Call) Return(beat *core.Beat, err error) *MockRestBeatCreateService_Exec_Call {
-	_c.Call.Return(beat, err)
+func (_c *MockRestBeatCreateService_Exec_Call) Return(beats []*core.Beat, err error) *MockRestBeatCreateService_Exec_Call {
+	_c.Call.Return(beats, err)
 	return _c
 }
 
-func (_c *MockRestBeatCreateService_Exec_Call) RunAndReturn(run func(ctx context.Context, request *core.BeatCreateRequest) (*core.Beat, error)) *MockRestBeatCreateService_Exec_Call {
+func (_c *MockRestBeatCreateService_Exec_Call) RunAndReturn(run func(ctx context.Context, request *core.BeatsCreateRequest) ([]*core.Beat, error)) *MockRestBeatCreateService_Exec_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -156,26 +156,26 @@ func (_m *MockRestBeatDeleteService) EXPECT() *MockRestBeatDeleteService_Expecte
 }
 
 // Exec provides a mock function for the type MockRestBeatDeleteService
-func (_mock *MockRestBeatDeleteService) Exec(ctx context.Context, request *core.BeatDeleteRequest) (*core.Beat, error) {
+func (_mock *MockRestBeatDeleteService) Exec(ctx context.Context, request *core.BeatsDeleteRequest) ([]*core.Beat, error) {
 	ret := _mock.Called(ctx, request)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Exec")
 	}
 
-	var r0 *core.Beat
+	var r0 []*core.Beat
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.BeatDeleteRequest) (*core.Beat, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.BeatsDeleteRequest) ([]*core.Beat, error)); ok {
 		return returnFunc(ctx, request)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.BeatDeleteRequest) *core.Beat); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.BeatsDeleteRequest) []*core.Beat); ok {
 		r0 = returnFunc(ctx, request)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*core.Beat)
+			r0 = ret.Get(0).([]*core.Beat)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *core.BeatDeleteRequest) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *core.BeatsDeleteRequest) error); ok {
 		r1 = returnFunc(ctx, request)
 	} else {
 		r1 = ret.Error(1)
@@ -190,20 +190,20 @@ type MockRestBeatDeleteService_Exec_Call struct {
 
 // Exec is a helper method to define mock.On call
 //   - ctx context.Context
-//   - request *core.BeatDeleteRequest
+//   - request *core.BeatsDeleteRequest
 func (_e *MockRestBeatDeleteService_Expecter) Exec(ctx any, request any) *MockRestBeatDeleteService_Exec_Call {
 	return &MockRestBeatDeleteService_Exec_Call{Call: _e.mock.On("Exec", ctx, request)}
 }
 
-func (_c *MockRestBeatDeleteService_Exec_Call) Run(run func(ctx context.Context, request *core.BeatDeleteRequest)) *MockRestBeatDeleteService_Exec_Call {
+func (_c *MockRestBeatDeleteService_Exec_Call) Run(run func(ctx context.Context, request *core.BeatsDeleteRequest)) *MockRestBeatDeleteService_Exec_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 *core.BeatDeleteRequest
+		var arg1 *core.BeatsDeleteRequest
 		if args[1] != nil {
-			arg1 = args[1].(*core.BeatDeleteRequest)
+			arg1 = args[1].(*core.BeatsDeleteRequest)
 		}
 		run(
 			arg0,
@@ -213,12 +213,12 @@ func (_c *MockRestBeatDeleteService_Exec_Call) Run(run func(ctx context.Context,
 	return _c
 }
 
-func (_c *MockRestBeatDeleteService_Exec_Call) Return(beat *core.Beat, err error) *MockRestBeatDeleteService_Exec_Call {
-	_c.Call.Return(beat, err)
+func (_c *MockRestBeatDeleteService_Exec_Call) Return(beats []*core.Beat, err error) *MockRestBeatDeleteService_Exec_Call {
+	_c.Call.Return(beats, err)
 	return _c
 }
 
-func (_c *MockRestBeatDeleteService_Exec_Call) RunAndReturn(run func(ctx context.Context, request *core.BeatDeleteRequest) (*core.Beat, error)) *MockRestBeatDeleteService_Exec_Call {
+func (_c *MockRestBeatDeleteService_Exec_Call) RunAndReturn(run func(ctx context.Context, request *core.BeatsDeleteRequest) ([]*core.Beat, error)) *MockRestBeatDeleteService_Exec_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -561,26 +561,26 @@ func (_m *MockRestBeatUpdateService) EXPECT() *MockRestBeatUpdateService_Expecte
 }
 
 // Exec provides a mock function for the type MockRestBeatUpdateService
-func (_mock *MockRestBeatUpdateService) Exec(ctx context.Context, request *core.BeatUpdateRequest) (*core.Beat, error) {
+func (_mock *MockRestBeatUpdateService) Exec(ctx context.Context, request *core.BeatsUpdateRequest) ([]*core.Beat, error) {
 	ret := _mock.Called(ctx, request)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Exec")
 	}
 
-	var r0 *core.Beat
+	var r0 []*core.Beat
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.BeatUpdateRequest) (*core.Beat, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.BeatsUpdateRequest) ([]*core.Beat, error)); ok {
 		return returnFunc(ctx, request)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.BeatUpdateRequest) *core.Beat); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.BeatsUpdateRequest) []*core.Beat); ok {
 		r0 = returnFunc(ctx, request)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*core.Beat)
+			r0 = ret.Get(0).([]*core.Beat)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *core.BeatUpdateRequest) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *core.BeatsUpdateRequest) error); ok {
 		r1 = returnFunc(ctx, request)
 	} else {
 		r1 = ret.Error(1)
@@ -595,20 +595,20 @@ type MockRestBeatUpdateService_Exec_Call struct {
 
 // Exec is a helper method to define mock.On call
 //   - ctx context.Context
-//   - request *core.BeatUpdateRequest
+//   - request *core.BeatsUpdateRequest
 func (_e *MockRestBeatUpdateService_Expecter) Exec(ctx any, request any) *MockRestBeatUpdateService_Exec_Call {
 	return &MockRestBeatUpdateService_Exec_Call{Call: _e.mock.On("Exec", ctx, request)}
 }
 
-func (_c *MockRestBeatUpdateService_Exec_Call) Run(run func(ctx context.Context, request *core.BeatUpdateRequest)) *MockRestBeatUpdateService_Exec_Call {
+func (_c *MockRestBeatUpdateService_Exec_Call) Run(run func(ctx context.Context, request *core.BeatsUpdateRequest)) *MockRestBeatUpdateService_Exec_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 *core.BeatUpdateRequest
+		var arg1 *core.BeatsUpdateRequest
 		if args[1] != nil {
-			arg1 = args[1].(*core.BeatUpdateRequest)
+			arg1 = args[1].(*core.BeatsUpdateRequest)
 		}
 		run(
 			arg0,
@@ -618,12 +618,12 @@ func (_c *MockRestBeatUpdateService_Exec_Call) Run(run func(ctx context.Context,
 	return _c
 }
 
-func (_c *MockRestBeatUpdateService_Exec_Call) Return(beat *core.Beat, err error) *MockRestBeatUpdateService_Exec_Call {
-	_c.Call.Return(beat, err)
+func (_c *MockRestBeatUpdateService_Exec_Call) Return(beats []*core.Beat, err error) *MockRestBeatUpdateService_Exec_Call {
+	_c.Call.Return(beats, err)
 	return _c
 }
 
-func (_c *MockRestBeatUpdateService_Exec_Call) RunAndReturn(run func(ctx context.Context, request *core.BeatUpdateRequest) (*core.Beat, error)) *MockRestBeatUpdateService_Exec_Call {
+func (_c *MockRestBeatUpdateService_Exec_Call) RunAndReturn(run func(ctx context.Context, request *core.BeatsUpdateRequest) ([]*core.Beat, error)) *MockRestBeatUpdateService_Exec_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1174,26 +1174,26 @@ func (_m *MockRestCellWriteService) EXPECT() *MockRestCellWriteService_Expecter 
 }
 
 // Exec provides a mock function for the type MockRestCellWriteService
-func (_mock *MockRestCellWriteService) Exec(ctx context.Context, request *core.CellWriteRequest) (*core.WrittenCell, error) {
+func (_mock *MockRestCellWriteService) Exec(ctx context.Context, request *core.CellsWriteRequest) ([]*core.WrittenCell, error) {
 	ret := _mock.Called(ctx, request)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Exec")
 	}
 
-	var r0 *core.WrittenCell
+	var r0 []*core.WrittenCell
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.CellWriteRequest) (*core.WrittenCell, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.CellsWriteRequest) ([]*core.WrittenCell, error)); ok {
 		return returnFunc(ctx, request)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.CellWriteRequest) *core.WrittenCell); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.CellsWriteRequest) []*core.WrittenCell); ok {
 		r0 = returnFunc(ctx, request)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*core.WrittenCell)
+			r0 = ret.Get(0).([]*core.WrittenCell)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *core.CellWriteRequest) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *core.CellsWriteRequest) error); ok {
 		r1 = returnFunc(ctx, request)
 	} else {
 		r1 = ret.Error(1)
@@ -1208,20 +1208,20 @@ type MockRestCellWriteService_Exec_Call struct {
 
 // Exec is a helper method to define mock.On call
 //   - ctx context.Context
-//   - request *core.CellWriteRequest
+//   - request *core.CellsWriteRequest
 func (_e *MockRestCellWriteService_Expecter) Exec(ctx any, request any) *MockRestCellWriteService_Exec_Call {
 	return &MockRestCellWriteService_Exec_Call{Call: _e.mock.On("Exec", ctx, request)}
 }
 
-func (_c *MockRestCellWriteService_Exec_Call) Run(run func(ctx context.Context, request *core.CellWriteRequest)) *MockRestCellWriteService_Exec_Call {
+func (_c *MockRestCellWriteService_Exec_Call) Run(run func(ctx context.Context, request *core.CellsWriteRequest)) *MockRestCellWriteService_Exec_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 *core.CellWriteRequest
+		var arg1 *core.CellsWriteRequest
 		if args[1] != nil {
-			arg1 = args[1].(*core.CellWriteRequest)
+			arg1 = args[1].(*core.CellsWriteRequest)
 		}
 		run(
 			arg0,
@@ -1231,12 +1231,12 @@ func (_c *MockRestCellWriteService_Exec_Call) Run(run func(ctx context.Context, 
 	return _c
 }
 
-func (_c *MockRestCellWriteService_Exec_Call) Return(writtenCell *core.WrittenCell, err error) *MockRestCellWriteService_Exec_Call {
-	_c.Call.Return(writtenCell, err)
+func (_c *MockRestCellWriteService_Exec_Call) Return(writtenCells []*core.WrittenCell, err error) *MockRestCellWriteService_Exec_Call {
+	_c.Call.Return(writtenCells, err)
 	return _c
 }
 
-func (_c *MockRestCellWriteService_Exec_Call) RunAndReturn(run func(ctx context.Context, request *core.CellWriteRequest) (*core.WrittenCell, error)) *MockRestCellWriteService_Exec_Call {
+func (_c *MockRestCellWriteService_Exec_Call) RunAndReturn(run func(ctx context.Context, request *core.CellsWriteRequest) ([]*core.WrittenCell, error)) *MockRestCellWriteService_Exec_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -2140,26 +2140,26 @@ func (_m *MockRestLayerCreateService) EXPECT() *MockRestLayerCreateService_Expec
 }
 
 // Exec provides a mock function for the type MockRestLayerCreateService
-func (_mock *MockRestLayerCreateService) Exec(ctx context.Context, request *core.LayerCreateRequest) (*core.Layer, error) {
+func (_mock *MockRestLayerCreateService) Exec(ctx context.Context, request *core.LayersCreateRequest) ([]*core.Layer, error) {
 	ret := _mock.Called(ctx, request)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Exec")
 	}
 
-	var r0 *core.Layer
+	var r0 []*core.Layer
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.LayerCreateRequest) (*core.Layer, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.LayersCreateRequest) ([]*core.Layer, error)); ok {
 		return returnFunc(ctx, request)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.LayerCreateRequest) *core.Layer); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.LayersCreateRequest) []*core.Layer); ok {
 		r0 = returnFunc(ctx, request)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*core.Layer)
+			r0 = ret.Get(0).([]*core.Layer)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *core.LayerCreateRequest) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *core.LayersCreateRequest) error); ok {
 		r1 = returnFunc(ctx, request)
 	} else {
 		r1 = ret.Error(1)
@@ -2174,20 +2174,20 @@ type MockRestLayerCreateService_Exec_Call struct {
 
 // Exec is a helper method to define mock.On call
 //   - ctx context.Context
-//   - request *core.LayerCreateRequest
+//   - request *core.LayersCreateRequest
 func (_e *MockRestLayerCreateService_Expecter) Exec(ctx any, request any) *MockRestLayerCreateService_Exec_Call {
 	return &MockRestLayerCreateService_Exec_Call{Call: _e.mock.On("Exec", ctx, request)}
 }
 
-func (_c *MockRestLayerCreateService_Exec_Call) Run(run func(ctx context.Context, request *core.LayerCreateRequest)) *MockRestLayerCreateService_Exec_Call {
+func (_c *MockRestLayerCreateService_Exec_Call) Run(run func(ctx context.Context, request *core.LayersCreateRequest)) *MockRestLayerCreateService_Exec_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 *core.LayerCreateRequest
+		var arg1 *core.LayersCreateRequest
 		if args[1] != nil {
-			arg1 = args[1].(*core.LayerCreateRequest)
+			arg1 = args[1].(*core.LayersCreateRequest)
 		}
 		run(
 			arg0,
@@ -2197,12 +2197,12 @@ func (_c *MockRestLayerCreateService_Exec_Call) Run(run func(ctx context.Context
 	return _c
 }
 
-func (_c *MockRestLayerCreateService_Exec_Call) Return(layer *core.Layer, err error) *MockRestLayerCreateService_Exec_Call {
-	_c.Call.Return(layer, err)
+func (_c *MockRestLayerCreateService_Exec_Call) Return(layers []*core.Layer, err error) *MockRestLayerCreateService_Exec_Call {
+	_c.Call.Return(layers, err)
 	return _c
 }
 
-func (_c *MockRestLayerCreateService_Exec_Call) RunAndReturn(run func(ctx context.Context, request *core.LayerCreateRequest) (*core.Layer, error)) *MockRestLayerCreateService_Exec_Call {
+func (_c *MockRestLayerCreateService_Exec_Call) RunAndReturn(run func(ctx context.Context, request *core.LayersCreateRequest) ([]*core.Layer, error)) *MockRestLayerCreateService_Exec_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -2244,26 +2244,26 @@ func (_m *MockRestLayerDeleteService) EXPECT() *MockRestLayerDeleteService_Expec
 }
 
 // Exec provides a mock function for the type MockRestLayerDeleteService
-func (_mock *MockRestLayerDeleteService) Exec(ctx context.Context, request *core.LayerDeleteRequest) (*core.Layer, error) {
+func (_mock *MockRestLayerDeleteService) Exec(ctx context.Context, request *core.LayersDeleteRequest) ([]*core.Layer, error) {
 	ret := _mock.Called(ctx, request)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Exec")
 	}
 
-	var r0 *core.Layer
+	var r0 []*core.Layer
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.LayerDeleteRequest) (*core.Layer, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.LayersDeleteRequest) ([]*core.Layer, error)); ok {
 		return returnFunc(ctx, request)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.LayerDeleteRequest) *core.Layer); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.LayersDeleteRequest) []*core.Layer); ok {
 		r0 = returnFunc(ctx, request)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*core.Layer)
+			r0 = ret.Get(0).([]*core.Layer)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *core.LayerDeleteRequest) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *core.LayersDeleteRequest) error); ok {
 		r1 = returnFunc(ctx, request)
 	} else {
 		r1 = ret.Error(1)
@@ -2278,20 +2278,20 @@ type MockRestLayerDeleteService_Exec_Call struct {
 
 // Exec is a helper method to define mock.On call
 //   - ctx context.Context
-//   - request *core.LayerDeleteRequest
+//   - request *core.LayersDeleteRequest
 func (_e *MockRestLayerDeleteService_Expecter) Exec(ctx any, request any) *MockRestLayerDeleteService_Exec_Call {
 	return &MockRestLayerDeleteService_Exec_Call{Call: _e.mock.On("Exec", ctx, request)}
 }
 
-func (_c *MockRestLayerDeleteService_Exec_Call) Run(run func(ctx context.Context, request *core.LayerDeleteRequest)) *MockRestLayerDeleteService_Exec_Call {
+func (_c *MockRestLayerDeleteService_Exec_Call) Run(run func(ctx context.Context, request *core.LayersDeleteRequest)) *MockRestLayerDeleteService_Exec_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 *core.LayerDeleteRequest
+		var arg1 *core.LayersDeleteRequest
 		if args[1] != nil {
-			arg1 = args[1].(*core.LayerDeleteRequest)
+			arg1 = args[1].(*core.LayersDeleteRequest)
 		}
 		run(
 			arg0,
@@ -2301,12 +2301,12 @@ func (_c *MockRestLayerDeleteService_Exec_Call) Run(run func(ctx context.Context
 	return _c
 }
 
-func (_c *MockRestLayerDeleteService_Exec_Call) Return(layer *core.Layer, err error) *MockRestLayerDeleteService_Exec_Call {
-	_c.Call.Return(layer, err)
+func (_c *MockRestLayerDeleteService_Exec_Call) Return(layers []*core.Layer, err error) *MockRestLayerDeleteService_Exec_Call {
+	_c.Call.Return(layers, err)
 	return _c
 }
 
-func (_c *MockRestLayerDeleteService_Exec_Call) RunAndReturn(run func(ctx context.Context, request *core.LayerDeleteRequest) (*core.Layer, error)) *MockRestLayerDeleteService_Exec_Call {
+func (_c *MockRestLayerDeleteService_Exec_Call) RunAndReturn(run func(ctx context.Context, request *core.LayersDeleteRequest) ([]*core.Layer, error)) *MockRestLayerDeleteService_Exec_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -2556,26 +2556,26 @@ func (_m *MockRestLayerUpdateService) EXPECT() *MockRestLayerUpdateService_Expec
 }
 
 // Exec provides a mock function for the type MockRestLayerUpdateService
-func (_mock *MockRestLayerUpdateService) Exec(ctx context.Context, request *core.LayerUpdateRequest) (*core.Layer, error) {
+func (_mock *MockRestLayerUpdateService) Exec(ctx context.Context, request *core.LayersUpdateRequest) ([]*core.Layer, error) {
 	ret := _mock.Called(ctx, request)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Exec")
 	}
 
-	var r0 *core.Layer
+	var r0 []*core.Layer
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.LayerUpdateRequest) (*core.Layer, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.LayersUpdateRequest) ([]*core.Layer, error)); ok {
 		return returnFunc(ctx, request)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.LayerUpdateRequest) *core.Layer); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.LayersUpdateRequest) []*core.Layer); ok {
 		r0 = returnFunc(ctx, request)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*core.Layer)
+			r0 = ret.Get(0).([]*core.Layer)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *core.LayerUpdateRequest) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *core.LayersUpdateRequest) error); ok {
 		r1 = returnFunc(ctx, request)
 	} else {
 		r1 = ret.Error(1)
@@ -2590,20 +2590,20 @@ type MockRestLayerUpdateService_Exec_Call struct {
 
 // Exec is a helper method to define mock.On call
 //   - ctx context.Context
-//   - request *core.LayerUpdateRequest
+//   - request *core.LayersUpdateRequest
 func (_e *MockRestLayerUpdateService_Expecter) Exec(ctx any, request any) *MockRestLayerUpdateService_Exec_Call {
 	return &MockRestLayerUpdateService_Exec_Call{Call: _e.mock.On("Exec", ctx, request)}
 }
 
-func (_c *MockRestLayerUpdateService_Exec_Call) Run(run func(ctx context.Context, request *core.LayerUpdateRequest)) *MockRestLayerUpdateService_Exec_Call {
+func (_c *MockRestLayerUpdateService_Exec_Call) Run(run func(ctx context.Context, request *core.LayersUpdateRequest)) *MockRestLayerUpdateService_Exec_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 *core.LayerUpdateRequest
+		var arg1 *core.LayersUpdateRequest
 		if args[1] != nil {
-			arg1 = args[1].(*core.LayerUpdateRequest)
+			arg1 = args[1].(*core.LayersUpdateRequest)
 		}
 		run(
 			arg0,
@@ -2613,12 +2613,12 @@ func (_c *MockRestLayerUpdateService_Exec_Call) Run(run func(ctx context.Context
 	return _c
 }
 
-func (_c *MockRestLayerUpdateService_Exec_Call) Return(layer *core.Layer, err error) *MockRestLayerUpdateService_Exec_Call {
-	_c.Call.Return(layer, err)
+func (_c *MockRestLayerUpdateService_Exec_Call) Return(layers []*core.Layer, err error) *MockRestLayerUpdateService_Exec_Call {
+	_c.Call.Return(layers, err)
 	return _c
 }
 
-func (_c *MockRestLayerUpdateService_Exec_Call) RunAndReturn(run func(ctx context.Context, request *core.LayerUpdateRequest) (*core.Layer, error)) *MockRestLayerUpdateService_Exec_Call {
+func (_c *MockRestLayerUpdateService_Exec_Call) RunAndReturn(run func(ctx context.Context, request *core.LayersUpdateRequest) ([]*core.Layer, error)) *MockRestLayerUpdateService_Exec_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -4220,26 +4220,26 @@ func (_m *MockRestSceneCreateService) EXPECT() *MockRestSceneCreateService_Expec
 }
 
 // Exec provides a mock function for the type MockRestSceneCreateService
-func (_mock *MockRestSceneCreateService) Exec(ctx context.Context, request *core.SceneCreateRequest) (*core.Scene, error) {
+func (_mock *MockRestSceneCreateService) Exec(ctx context.Context, request *core.ScenesCreateRequest) ([]*core.Scene, error) {
 	ret := _mock.Called(ctx, request)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Exec")
 	}
 
-	var r0 *core.Scene
+	var r0 []*core.Scene
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.SceneCreateRequest) (*core.Scene, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.ScenesCreateRequest) ([]*core.Scene, error)); ok {
 		return returnFunc(ctx, request)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.SceneCreateRequest) *core.Scene); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.ScenesCreateRequest) []*core.Scene); ok {
 		r0 = returnFunc(ctx, request)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*core.Scene)
+			r0 = ret.Get(0).([]*core.Scene)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *core.SceneCreateRequest) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *core.ScenesCreateRequest) error); ok {
 		r1 = returnFunc(ctx, request)
 	} else {
 		r1 = ret.Error(1)
@@ -4254,20 +4254,20 @@ type MockRestSceneCreateService_Exec_Call struct {
 
 // Exec is a helper method to define mock.On call
 //   - ctx context.Context
-//   - request *core.SceneCreateRequest
+//   - request *core.ScenesCreateRequest
 func (_e *MockRestSceneCreateService_Expecter) Exec(ctx any, request any) *MockRestSceneCreateService_Exec_Call {
 	return &MockRestSceneCreateService_Exec_Call{Call: _e.mock.On("Exec", ctx, request)}
 }
 
-func (_c *MockRestSceneCreateService_Exec_Call) Run(run func(ctx context.Context, request *core.SceneCreateRequest)) *MockRestSceneCreateService_Exec_Call {
+func (_c *MockRestSceneCreateService_Exec_Call) Run(run func(ctx context.Context, request *core.ScenesCreateRequest)) *MockRestSceneCreateService_Exec_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 *core.SceneCreateRequest
+		var arg1 *core.ScenesCreateRequest
 		if args[1] != nil {
-			arg1 = args[1].(*core.SceneCreateRequest)
+			arg1 = args[1].(*core.ScenesCreateRequest)
 		}
 		run(
 			arg0,
@@ -4277,12 +4277,12 @@ func (_c *MockRestSceneCreateService_Exec_Call) Run(run func(ctx context.Context
 	return _c
 }
 
-func (_c *MockRestSceneCreateService_Exec_Call) Return(scene *core.Scene, err error) *MockRestSceneCreateService_Exec_Call {
-	_c.Call.Return(scene, err)
+func (_c *MockRestSceneCreateService_Exec_Call) Return(scenes []*core.Scene, err error) *MockRestSceneCreateService_Exec_Call {
+	_c.Call.Return(scenes, err)
 	return _c
 }
 
-func (_c *MockRestSceneCreateService_Exec_Call) RunAndReturn(run func(ctx context.Context, request *core.SceneCreateRequest) (*core.Scene, error)) *MockRestSceneCreateService_Exec_Call {
+func (_c *MockRestSceneCreateService_Exec_Call) RunAndReturn(run func(ctx context.Context, request *core.ScenesCreateRequest) ([]*core.Scene, error)) *MockRestSceneCreateService_Exec_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -4324,26 +4324,26 @@ func (_m *MockRestSceneDeleteService) EXPECT() *MockRestSceneDeleteService_Expec
 }
 
 // Exec provides a mock function for the type MockRestSceneDeleteService
-func (_mock *MockRestSceneDeleteService) Exec(ctx context.Context, request *core.SceneDeleteRequest) (*core.Scene, error) {
+func (_mock *MockRestSceneDeleteService) Exec(ctx context.Context, request *core.ScenesDeleteRequest) ([]*core.Scene, error) {
 	ret := _mock.Called(ctx, request)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Exec")
 	}
 
-	var r0 *core.Scene
+	var r0 []*core.Scene
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.SceneDeleteRequest) (*core.Scene, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.ScenesDeleteRequest) ([]*core.Scene, error)); ok {
 		return returnFunc(ctx, request)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.SceneDeleteRequest) *core.Scene); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.ScenesDeleteRequest) []*core.Scene); ok {
 		r0 = returnFunc(ctx, request)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*core.Scene)
+			r0 = ret.Get(0).([]*core.Scene)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *core.SceneDeleteRequest) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *core.ScenesDeleteRequest) error); ok {
 		r1 = returnFunc(ctx, request)
 	} else {
 		r1 = ret.Error(1)
@@ -4358,20 +4358,20 @@ type MockRestSceneDeleteService_Exec_Call struct {
 
 // Exec is a helper method to define mock.On call
 //   - ctx context.Context
-//   - request *core.SceneDeleteRequest
+//   - request *core.ScenesDeleteRequest
 func (_e *MockRestSceneDeleteService_Expecter) Exec(ctx any, request any) *MockRestSceneDeleteService_Exec_Call {
 	return &MockRestSceneDeleteService_Exec_Call{Call: _e.mock.On("Exec", ctx, request)}
 }
 
-func (_c *MockRestSceneDeleteService_Exec_Call) Run(run func(ctx context.Context, request *core.SceneDeleteRequest)) *MockRestSceneDeleteService_Exec_Call {
+func (_c *MockRestSceneDeleteService_Exec_Call) Run(run func(ctx context.Context, request *core.ScenesDeleteRequest)) *MockRestSceneDeleteService_Exec_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 *core.SceneDeleteRequest
+		var arg1 *core.ScenesDeleteRequest
 		if args[1] != nil {
-			arg1 = args[1].(*core.SceneDeleteRequest)
+			arg1 = args[1].(*core.ScenesDeleteRequest)
 		}
 		run(
 			arg0,
@@ -4381,12 +4381,12 @@ func (_c *MockRestSceneDeleteService_Exec_Call) Run(run func(ctx context.Context
 	return _c
 }
 
-func (_c *MockRestSceneDeleteService_Exec_Call) Return(scene *core.Scene, err error) *MockRestSceneDeleteService_Exec_Call {
-	_c.Call.Return(scene, err)
+func (_c *MockRestSceneDeleteService_Exec_Call) Return(scenes []*core.Scene, err error) *MockRestSceneDeleteService_Exec_Call {
+	_c.Call.Return(scenes, err)
 	return _c
 }
 
-func (_c *MockRestSceneDeleteService_Exec_Call) RunAndReturn(run func(ctx context.Context, request *core.SceneDeleteRequest) (*core.Scene, error)) *MockRestSceneDeleteService_Exec_Call {
+func (_c *MockRestSceneDeleteService_Exec_Call) RunAndReturn(run func(ctx context.Context, request *core.ScenesDeleteRequest) ([]*core.Scene, error)) *MockRestSceneDeleteService_Exec_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -4636,26 +4636,26 @@ func (_m *MockRestSceneUpdateService) EXPECT() *MockRestSceneUpdateService_Expec
 }
 
 // Exec provides a mock function for the type MockRestSceneUpdateService
-func (_mock *MockRestSceneUpdateService) Exec(ctx context.Context, request *core.SceneUpdateRequest) (*core.Scene, error) {
+func (_mock *MockRestSceneUpdateService) Exec(ctx context.Context, request *core.ScenesUpdateRequest) ([]*core.Scene, error) {
 	ret := _mock.Called(ctx, request)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Exec")
 	}
 
-	var r0 *core.Scene
+	var r0 []*core.Scene
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.SceneUpdateRequest) (*core.Scene, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.ScenesUpdateRequest) ([]*core.Scene, error)); ok {
 		return returnFunc(ctx, request)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.SceneUpdateRequest) *core.Scene); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.ScenesUpdateRequest) []*core.Scene); ok {
 		r0 = returnFunc(ctx, request)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*core.Scene)
+			r0 = ret.Get(0).([]*core.Scene)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *core.SceneUpdateRequest) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *core.ScenesUpdateRequest) error); ok {
 		r1 = returnFunc(ctx, request)
 	} else {
 		r1 = ret.Error(1)
@@ -4670,20 +4670,20 @@ type MockRestSceneUpdateService_Exec_Call struct {
 
 // Exec is a helper method to define mock.On call
 //   - ctx context.Context
-//   - request *core.SceneUpdateRequest
+//   - request *core.ScenesUpdateRequest
 func (_e *MockRestSceneUpdateService_Expecter) Exec(ctx any, request any) *MockRestSceneUpdateService_Exec_Call {
 	return &MockRestSceneUpdateService_Exec_Call{Call: _e.mock.On("Exec", ctx, request)}
 }
 
-func (_c *MockRestSceneUpdateService_Exec_Call) Run(run func(ctx context.Context, request *core.SceneUpdateRequest)) *MockRestSceneUpdateService_Exec_Call {
+func (_c *MockRestSceneUpdateService_Exec_Call) Run(run func(ctx context.Context, request *core.ScenesUpdateRequest)) *MockRestSceneUpdateService_Exec_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 *core.SceneUpdateRequest
+		var arg1 *core.ScenesUpdateRequest
 		if args[1] != nil {
-			arg1 = args[1].(*core.SceneUpdateRequest)
+			arg1 = args[1].(*core.ScenesUpdateRequest)
 		}
 		run(
 			arg0,
@@ -4693,12 +4693,12 @@ func (_c *MockRestSceneUpdateService_Exec_Call) Run(run func(ctx context.Context
 	return _c
 }
 
-func (_c *MockRestSceneUpdateService_Exec_Call) Return(scene *core.Scene, err error) *MockRestSceneUpdateService_Exec_Call {
-	_c.Call.Return(scene, err)
+func (_c *MockRestSceneUpdateService_Exec_Call) Return(scenes []*core.Scene, err error) *MockRestSceneUpdateService_Exec_Call {
+	_c.Call.Return(scenes, err)
 	return _c
 }
 
-func (_c *MockRestSceneUpdateService_Exec_Call) RunAndReturn(run func(ctx context.Context, request *core.SceneUpdateRequest) (*core.Scene, error)) *MockRestSceneUpdateService_Exec_Call {
+func (_c *MockRestSceneUpdateService_Exec_Call) RunAndReturn(run func(ctx context.Context, request *core.ScenesUpdateRequest) ([]*core.Scene, error)) *MockRestSceneUpdateService_Exec_Call {
 	_c.Call.Return(run)
 	return _c
 }

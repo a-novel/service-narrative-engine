@@ -156,9 +156,9 @@ func TestCellRecapWrite(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockLock := coremocks.NewMockCellRecapWriteDaoLock(t)
+			mockLock := coremocks.NewMockProjectLockDao(t)
 			mockDao := coremocks.NewMockCellRecapWriteDao(t)
-			mockBytes := coremocks.NewMockCellRecapWriteDaoBytes(t)
+			mockBytes := coremocks.NewMockProjectBytesDao(t)
 
 			if testCase.lockMock != nil {
 				mockLock.EXPECT().

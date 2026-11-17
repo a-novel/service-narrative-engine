@@ -14,11 +14,6 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// LayerMoveDaoLock locks the project its owner names, so changes to its order run one at a time.
-type LayerMoveDaoLock interface {
-	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
-}
-
 // LayerMoveDao moves the layer, and shifts the layers between its old and new position.
 type LayerMoveDao interface {
 	Exec(ctx context.Context, request *dao.LayerMoveRequest) (*dao.Layer, error)
@@ -38,13 +33,13 @@ type LayerMoveRequest struct {
 // LayerMove moves a layer within its project, and returns it at its new position. The layers between its
 // old and new position shift by one.
 type LayerMove struct {
-	daoLock    LayerMoveDaoLock
+	daoLock    ProjectLockDao
 	dao        LayerMoveDao
 	transactor transaction.Transactor
 }
 
 func NewLayerMove(
-	daoLock LayerMoveDaoLock,
+	daoLock ProjectLockDao,
 	dao LayerMoveDao,
 	transactor transaction.Transactor,
 ) *LayerMove {

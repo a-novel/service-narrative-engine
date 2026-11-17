@@ -16,19 +16,9 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// ScenesCreateDaoLock locks the project its owner names, so changes to its order run one at a time.
-type ScenesCreateDaoLock interface {
-	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
-}
-
 // ScenesCreateDaoInsert inserts the scenes, and moves the scenes at or after their position down.
 type ScenesCreateDaoInsert interface {
 	Exec(ctx context.Context, request *dao.ScenesInsertRequest) ([]*dao.Scene, error)
-}
-
-// ScenesCreateDaoBytes reads how many bytes the project stores, the new scenes included.
-type ScenesCreateDaoBytes interface {
-	Exec(ctx context.Context, request *dao.ProjectBytesRequest) (*dao.ProjectBytes, error)
 }
 
 // ScenesCreateItem is one scene of a [ScenesCreateRequest].
@@ -62,16 +52,16 @@ type ScenesCreateRequest struct {
 // does not hold answers [ErrBeatNotFound], and no scene is added. It writes nothing when the project would
 // store more than [ProjectBytesMax] bytes.
 type ScenesCreate struct {
-	daoLock    ScenesCreateDaoLock
+	daoLock    ProjectLockDao
 	daoInsert  ScenesCreateDaoInsert
-	daoBytes   ScenesCreateDaoBytes
+	daoBytes   ProjectBytesDao
 	transactor transaction.Transactor
 }
 
 func NewScenesCreate(
-	daoLock ScenesCreateDaoLock,
+	daoLock ProjectLockDao,
 	daoInsert ScenesCreateDaoInsert,
-	daoBytes ScenesCreateDaoBytes,
+	daoBytes ProjectBytesDao,
 	transactor transaction.Transactor,
 ) *ScenesCreate {
 	return &ScenesCreate{daoLock: daoLock, daoInsert: daoInsert, daoBytes: daoBytes, transactor: transactor}

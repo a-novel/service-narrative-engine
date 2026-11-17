@@ -17,19 +17,9 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// BeatRecapWriteDaoLock locks the project its owner names, so the writes to its bytes run one at a time.
-type BeatRecapWriteDaoLock interface {
-	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
-}
-
 // BeatRecapWriteDao writes the recap of a beat of the project.
 type BeatRecapWriteDao interface {
 	Exec(ctx context.Context, request *dao.BeatRecapUpdateRequest) error
-}
-
-// BeatRecapWriteDaoBytes reads how many bytes the project stores, the recap included.
-type BeatRecapWriteDaoBytes interface {
-	Exec(ctx context.Context, request *dao.ProjectBytesRequest) (*dao.ProjectBytes, error)
 }
 
 // BeatRecapWriteRequest carries the recap a consolidation wrote for a beat.
@@ -52,16 +42,16 @@ type BeatRecapWriteRequest struct {
 // is. It refuses a recap that read the beat at a version older than the stored recap's, or newer than the
 // beat's own, and one that would bring the project past [ProjectBytesMax] bytes.
 type BeatRecapWrite struct {
-	daoLock    BeatRecapWriteDaoLock
+	daoLock    ProjectLockDao
 	dao        BeatRecapWriteDao
-	daoBytes   BeatRecapWriteDaoBytes
+	daoBytes   ProjectBytesDao
 	transactor transaction.Transactor
 }
 
 func NewBeatRecapWrite(
-	daoLock BeatRecapWriteDaoLock,
+	daoLock ProjectLockDao,
 	dao BeatRecapWriteDao,
-	daoBytes BeatRecapWriteDaoBytes,
+	daoBytes ProjectBytesDao,
 	transactor transaction.Transactor,
 ) *BeatRecapWrite {
 	return &BeatRecapWrite{daoLock: daoLock, dao: dao, daoBytes: daoBytes, transactor: transactor}

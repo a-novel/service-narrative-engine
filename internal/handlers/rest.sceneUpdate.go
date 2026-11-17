@@ -13,9 +13,9 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/core"
 )
 
-// RestSceneUpdateService is the core operation [RestSceneUpdate] delegates to.
+// RestSceneUpdateService is the batch operation [RestSceneUpdate] delegates to, with a list of one.
 type RestSceneUpdateService interface {
-	Exec(ctx context.Context, request *core.SceneUpdateRequest) (*core.Scene, error)
+	Exec(ctx context.Context, request *core.ScenesUpdateRequest) ([]*core.Scene, error)
 }
 
 // RestSceneUpdateRequest is the JSON body the update-scene endpoint accepts.
@@ -62,13 +62,15 @@ func (handler *RestSceneUpdate) ServeHTTP(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	serviceRequest := &core.SceneUpdateRequest{
-		OwnerID:     ownerID,
-		ProjectID:   request.ProjectID,
-		ID:          request.ID,
-		Title:       request.Title,
-		Description: request.Description,
-		Prompt:      request.Prompt,
+	serviceRequest := &core.ScenesUpdateRequest{
+		OwnerID:   ownerID,
+		ProjectID: request.ProjectID,
+		Scenes: []core.ScenesUpdateItem{{
+			ID:          request.ID,
+			Title:       request.Title,
+			Description: request.Description,
+			Prompt:      request.Prompt,
+		}},
 	}
 
 	result, err := handler.service.Exec(ctx, serviceRequest)
@@ -78,5 +80,5 @@ func (handler *RestSceneUpdate) ServeHTTP(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	httpf.SendJSONStatus(w, span, http.StatusOK, loadScene(result))
+	httpf.SendJSONStatus(w, span, http.StatusOK, loadScene(result[0]))
 }

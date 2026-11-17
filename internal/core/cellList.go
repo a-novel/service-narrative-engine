@@ -14,11 +14,6 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// CellListDaoOwner checks that the user owns the project.
-type CellListDaoOwner interface {
-	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
-}
-
 // CellListDao reads a page of the project's cells.
 type CellListDao interface {
 	Exec(ctx context.Context, request *dao.CellListRequest) ([]*dao.CellListRow, error)
@@ -43,11 +38,11 @@ type CellListRequest struct {
 // of their layer. Each page carries the total, so a client knows when it holds every cell. A page stops
 // early once it holds [ListPageBytesMax] bytes, and the next starts at the offset plus the cells received.
 type CellList struct {
-	daoOwner CellListDaoOwner
+	daoOwner ProjectOwnerDao
 	dao      CellListDao
 }
 
-func NewCellList(daoOwner CellListDaoOwner, dao CellListDao) *CellList {
+func NewCellList(daoOwner ProjectOwnerDao, dao CellListDao) *CellList {
 	return &CellList{daoOwner: daoOwner, dao: dao}
 }
 

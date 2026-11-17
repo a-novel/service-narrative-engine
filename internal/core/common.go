@@ -68,9 +68,9 @@ var (
 	ErrStreamEnded = errors.New("stream ended")
 )
 
-// projectOwnerDao checks that a user owns a project. Each service names its own interface, and every
-// one satisfies this.
-type projectOwnerDao interface {
+// ProjectOwnerDao checks that a user owns a project. A service that checks ownership without the project lock
+// takes it for [checkProjectOwnership].
+type ProjectOwnerDao interface {
 	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
 }
 
@@ -82,7 +82,7 @@ type projectOwnershipOpts struct {
 
 // checkProjectOwnership returns [ErrProjectNotFound] unless the user owns the project, so another
 // user's project reads as missing.
-func checkProjectOwnership(ctx context.Context, daoOwner projectOwnerDao, opts projectOwnershipOpts) error {
+func checkProjectOwnership(ctx context.Context, daoOwner ProjectOwnerDao, opts projectOwnershipOpts) error {
 	ctx, span := otel.Tracer().Start(ctx, "core.checkProjectOwnership")
 	defer span.End()
 
@@ -98,9 +98,9 @@ func checkProjectOwnership(ctx context.Context, daoOwner projectOwnerDao, opts p
 	return nil
 }
 
-// projectLockDao locks a project its owner names until the transaction ends, and stamps its edit. Each service
-// names its own interface, and every one satisfies this.
-type projectLockDao interface {
+// ProjectLockDao locks a project its owner names until the transaction ends, and stamps its edit. Every
+// service that writes a project's content takes it for [lockOwnedProject].
+type ProjectLockDao interface {
 	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
 }
 
@@ -112,7 +112,7 @@ type projectLockDao interface {
 // lock, so a write that waited still stamps them later than the write before it did.
 //
 // Every write to the project's content calls it before its first write, as TestProjectWriteLock checks.
-func lockOwnedProject(ctx context.Context, daoLock projectLockDao, opts projectOwnershipOpts) error {
+func lockOwnedProject(ctx context.Context, daoLock ProjectLockDao, opts projectOwnershipOpts) error {
 	ctx, span := otel.Tracer().Start(ctx, "core.lockOwnedProject")
 	defer span.End()
 
@@ -130,9 +130,9 @@ func lockOwnedProject(ctx context.Context, daoLock projectLockDao, opts projectO
 	return nil
 }
 
-// projectBytesDao reads how many bytes a project stores. Each service names its own interface, and every
-// one satisfies this.
-type projectBytesDao interface {
+// ProjectBytesDao reads how many bytes a project stores. Every service that grows a project, or reads it
+// whole, takes it for [keepProjectBudget].
+type ProjectBytesDao interface {
 	Exec(ctx context.Context, request *dao.ProjectBytesRequest) (*dao.ProjectBytes, error)
 }
 
@@ -144,7 +144,7 @@ type projectBudgetOpts struct {
 // keepProjectBudget returns [ErrProjectBudget] when the project stores more than [ProjectBytesMax] bytes. A
 // write runs it after its write, in the same transaction, so the count holds that write and a refusal
 // rolls it back. A whole-project read runs it before it reads.
-func keepProjectBudget(ctx context.Context, daoBytes projectBytesDao, opts projectBudgetOpts) error {
+func keepProjectBudget(ctx context.Context, daoBytes ProjectBytesDao, opts projectBudgetOpts) error {
 	ctx, span := otel.Tracer().Start(ctx, "core.keepProjectBudget")
 	defer span.End()
 
@@ -162,16 +162,15 @@ func keepProjectBudget(ctx context.Context, daoBytes projectBytesDao, opts proje
 	return nil
 }
 
-// sceneLengthDao reads how many characters the cells of scenes hold. Each service names its own interface,
-// and every one satisfies this.
-type sceneLengthDao interface {
+// SceneLengthDao reads how many characters the cells of scenes hold, for [checkSceneContent].
+type SceneLengthDao interface {
 	Exec(ctx context.Context, request *dao.SceneLengthRequest) ([]*dao.SceneLength, error)
 }
 
 // checkSceneContent returns [ErrProjectFull] when one of the scenes holds more than [SceneContentMax]
 // characters. A cell write runs it after its write, in the transaction that locked the project, so the count
 // holds that write and every earlier one.
-func checkSceneContent(ctx context.Context, daoLength sceneLengthDao, projectID uuid.UUID, sceneIDs []uuid.UUID) error {
+func checkSceneContent(ctx context.Context, daoLength SceneLengthDao, projectID uuid.UUID, sceneIDs []uuid.UUID) error {
 	ctx, span := otel.Tracer().Start(ctx, "core.checkSceneContent")
 	defer span.End()
 

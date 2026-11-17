@@ -123,7 +123,7 @@ func TestLayerMove(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockLock := coremocks.NewMockLayerMoveDaoLock(t)
+			mockLock := coremocks.NewMockProjectLockDao(t)
 			mockMove := coremocks.NewMockLayerMoveDao(t)
 
 			if testCase.lockMock != nil {

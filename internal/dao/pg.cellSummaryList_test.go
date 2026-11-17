@@ -126,9 +126,12 @@ func TestPgCellSummaryList(t *testing.T) {
 			rewrite: func(ctx context.Context, t *testing.T) {
 				t.Helper()
 
-				_, err := dao.NewPgCellUpsert().Exec(ctx, &dao.CellUpsertRequest{
-					ProjectID: projectID, SceneID: sceneID2, LayerID: manuscriptLayerID, Now: now,
-					Content: json.RawMessage(`{"blocks": [{"kind": "dialogue", "speaker": "Léa", "parts": [{"text": "Là."}]}]}`),
+				_, err := dao.NewPgCellsUpsert().Exec(ctx, &dao.CellsUpsertRequest{
+					ProjectID: projectID, Now: now,
+					Cells: []dao.CellsUpsertItem{{
+						SceneID: sceneID2, LayerID: manuscriptLayerID,
+						Content: json.RawMessage(`{"blocks": [{"kind": "dialogue", "speaker": "Léa", "parts": [{"text": "Là."}]}]}`),
+					}},
 				})
 				require.NoError(t, err)
 

@@ -18,19 +18,9 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// LayersCreateDaoLock locks the project its owner names, so changes to its order run one at a time.
-type LayersCreateDaoLock interface {
-	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
-}
-
 // LayersCreateDaoInsert inserts the layers, and moves the layers at or after their position down.
 type LayersCreateDaoInsert interface {
 	Exec(ctx context.Context, request *dao.LayersInsertRequest) ([]*dao.Layer, error)
-}
-
-// LayersCreateDaoBytes reads how many bytes the project stores, the new layers included.
-type LayersCreateDaoBytes interface {
-	Exec(ctx context.Context, request *dao.ProjectBytesRequest) (*dao.ProjectBytes, error)
 }
 
 // LayersCreateItem is one layer of a [LayersCreateRequest].
@@ -59,16 +49,16 @@ type LayersCreateRequest struct {
 // LayersCreate adds layers to a project at the position the caller names. The layers from that position on
 // move down to make room. It writes nothing when the project would store more than [ProjectBytesMax] bytes.
 type LayersCreate struct {
-	daoLock    LayersCreateDaoLock
+	daoLock    ProjectLockDao
 	daoInsert  LayersCreateDaoInsert
-	daoBytes   LayersCreateDaoBytes
+	daoBytes   ProjectBytesDao
 	transactor transaction.Transactor
 }
 
 func NewLayersCreate(
-	daoLock LayersCreateDaoLock,
+	daoLock ProjectLockDao,
 	daoInsert LayersCreateDaoInsert,
-	daoBytes LayersCreateDaoBytes,
+	daoBytes ProjectBytesDao,
 	transactor transaction.Transactor,
 ) *LayersCreate {
 	return &LayersCreate{daoLock: daoLock, daoInsert: daoInsert, daoBytes: daoBytes, transactor: transactor}

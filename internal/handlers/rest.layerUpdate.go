@@ -13,9 +13,9 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/core"
 )
 
-// RestLayerUpdateService is the core operation [RestLayerUpdate] delegates to.
+// RestLayerUpdateService is the batch operation [RestLayerUpdate] delegates to, with a list of one.
 type RestLayerUpdateService interface {
-	Exec(ctx context.Context, request *core.LayerUpdateRequest) (*core.Layer, error)
+	Exec(ctx context.Context, request *core.LayersUpdateRequest) ([]*core.Layer, error)
 }
 
 // RestLayerUpdateRequest is the JSON body the update-layer endpoint accepts.
@@ -60,12 +60,14 @@ func (handler *RestLayerUpdate) ServeHTTP(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	serviceRequest := &core.LayerUpdateRequest{
-		OwnerID:     ownerID,
-		ProjectID:   request.ProjectID,
-		ID:          request.ID,
-		Name:        request.Name,
-		Description: request.Description,
+	serviceRequest := &core.LayersUpdateRequest{
+		OwnerID:   ownerID,
+		ProjectID: request.ProjectID,
+		Layers: []core.LayersUpdateItem{{
+			ID:          request.ID,
+			Name:        request.Name,
+			Description: request.Description,
+		}},
 	}
 
 	result, err := handler.service.Exec(ctx, serviceRequest)
@@ -75,5 +77,5 @@ func (handler *RestLayerUpdate) ServeHTTP(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	httpf.SendJSONStatus(w, span, http.StatusOK, loadLayer(result))
+	httpf.SendJSONStatus(w, span, http.StatusOK, loadLayer(result[0]))
 }

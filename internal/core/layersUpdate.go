@@ -16,19 +16,9 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// LayersUpdateDaoLock locks the project its owner names, so the writes to its bytes run one at a time.
-type LayersUpdateDaoLock interface {
-	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
-}
-
 // LayersUpdateDao writes the layers' new fields, all of them or none.
 type LayersUpdateDao interface {
 	Exec(ctx context.Context, request *dao.LayersUpdateRequest) ([]*dao.Layer, error)
-}
-
-// LayersUpdateDaoBytes reads how many bytes the project stores, the write included.
-type LayersUpdateDaoBytes interface {
-	Exec(ctx context.Context, request *dao.ProjectBytesRequest) (*dao.ProjectBytes, error)
 }
 
 // LayersUpdateItem is one layer of a [LayersUpdateRequest].
@@ -49,20 +39,19 @@ type LayersUpdateRequest struct {
 	Layers []LayersUpdateItem `validate:"required,min=1,max=100,unique=ID,dive"`
 }
 
-// LayersUpdate replaces the fields of several layers at once, all of them or none, and returns them in the
-// order of the request. [LayerUpdate] updates one. It writes nothing when the project would store more than
-// [ProjectBytesMax] bytes.
+// LayersUpdate replaces the fields of one or more layers, all of them or none, and returns them in the order
+// of the request. It writes nothing when the project would store more than [ProjectBytesMax] bytes.
 type LayersUpdate struct {
-	daoLock    LayersUpdateDaoLock
+	daoLock    ProjectLockDao
 	dao        LayersUpdateDao
-	daoBytes   LayersUpdateDaoBytes
+	daoBytes   ProjectBytesDao
 	transactor transaction.Transactor
 }
 
 func NewLayersUpdate(
-	daoLock LayersUpdateDaoLock,
+	daoLock ProjectLockDao,
 	dao LayersUpdateDao,
-	daoBytes LayersUpdateDaoBytes,
+	daoBytes ProjectBytesDao,
 	transactor transaction.Transactor,
 ) *LayersUpdate {
 	return &LayersUpdate{daoLock: daoLock, dao: dao, daoBytes: daoBytes, transactor: transactor}

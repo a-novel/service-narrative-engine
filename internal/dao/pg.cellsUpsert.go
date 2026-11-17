@@ -28,6 +28,16 @@ var (
 	ErrCellsUpsertLayerNotFound = errors.New("layer not found")
 )
 
+// CellUpsertRow names a cell [PgCellsUpsert.Exec] wrote, and when. The caller already holds its content.
+type CellUpsertRow struct {
+	// SceneID is the scene whose column holds the cell.
+	SceneID uuid.UUID `bun:"scene_id,type:uuid"`
+	// LayerID is the layer whose row holds the cell.
+	LayerID uuid.UUID `bun:"layer_id,type:uuid"`
+
+	UpdatedAt time.Time `bun:"updated_at"`
+}
+
 // CellsUpsertItem is one cell of a [CellsUpsertRequest].
 type CellsUpsertItem struct {
 	// SceneID is the scene whose column holds the cell.

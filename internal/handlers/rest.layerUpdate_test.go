@@ -35,7 +35,7 @@ func TestRestLayerUpdate(t *testing.T) {
 
 		request func(t *testing.T) *http.Request
 
-		serviceMock *serviceMock[*core.Layer]
+		serviceMock *serviceMock[[]*core.Layer]
 
 		expectStatus   int
 		expectResponse any
@@ -45,7 +45,7 @@ func TestRestLayerUpdate(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Layer]{resp: coreLayer},
+			serviceMock: &serviceMock[[]*core.Layer]{resp: []*core.Layer{coreLayer}},
 
 			expectStatus:   http.StatusOK,
 			expectResponse: jsonLayer,
@@ -77,7 +77,7 @@ func TestRestLayerUpdate(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Layer]{err: core.ErrProjectNotFound},
+			serviceMock: &serviceMock[[]*core.Layer]{err: core.ErrProjectNotFound},
 
 			expectStatus: http.StatusNotFound,
 		},
@@ -86,7 +86,7 @@ func TestRestLayerUpdate(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Layer]{err: core.ErrProjectBudget},
+			serviceMock: &serviceMock[[]*core.Layer]{err: core.ErrProjectBudget},
 
 			expectStatus:   http.StatusConflict,
 			expectResponse: limitProblem("projectBytes"),
@@ -96,7 +96,7 @@ func TestRestLayerUpdate(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Layer]{err: core.ErrLayerNotFound},
+			serviceMock: &serviceMock[[]*core.Layer]{err: core.ErrLayerNotFound},
 
 			expectStatus: http.StatusNotFound,
 		},
@@ -105,7 +105,7 @@ func TestRestLayerUpdate(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Layer]{err: core.ErrInvalidRequest},
+			serviceMock: &serviceMock[[]*core.Layer]{err: core.ErrInvalidRequest},
 
 			expectStatus: http.StatusBadRequest,
 		},
@@ -114,7 +114,7 @@ func TestRestLayerUpdate(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Layer]{err: errFoo},
+			serviceMock: &serviceMock[[]*core.Layer]{err: errFoo},
 
 			expectStatus: http.StatusInternalServerError,
 		},
@@ -128,12 +128,14 @@ func TestRestLayerUpdate(t *testing.T) {
 
 			if testCase.serviceMock != nil {
 				service.EXPECT().
-					Exec(mock.Anything, &core.LayerUpdateRequest{
-						OwnerID:     ownerID,
-						ProjectID:   projectID,
-						ID:          layerID,
-						Name:        "Characters",
-						Description: "Who appears",
+					Exec(mock.Anything, &core.LayersUpdateRequest{
+						OwnerID:   ownerID,
+						ProjectID: projectID,
+						Layers: []core.LayersUpdateItem{{
+							ID:          layerID,
+							Name:        "Characters",
+							Description: "Who appears",
+						}},
 					}).
 					Return(testCase.serviceMock.resp, testCase.serviceMock.err)
 			}

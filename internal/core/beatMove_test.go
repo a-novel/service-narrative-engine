@@ -123,7 +123,7 @@ func TestBeatMove(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockLock := coremocks.NewMockBeatMoveDaoLock(t)
+			mockLock := coremocks.NewMockProjectLockDao(t)
 			mockMove := coremocks.NewMockBeatMoveDao(t)
 
 			if testCase.lockMock != nil {

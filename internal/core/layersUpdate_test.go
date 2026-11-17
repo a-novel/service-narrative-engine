@@ -189,9 +189,9 @@ func TestLayersUpdate(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockLock := coremocks.NewMockLayersUpdateDaoLock(t)
+			mockLock := coremocks.NewMockProjectLockDao(t)
 			mockUpdate := coremocks.NewMockLayersUpdateDao(t)
-			mockBytes := coremocks.NewMockLayersUpdateDaoBytes(t)
+			mockBytes := coremocks.NewMockProjectBytesDao(t)
 
 			if testCase.lockMock != nil {
 				mockLock.EXPECT().

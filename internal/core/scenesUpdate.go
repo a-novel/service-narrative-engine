@@ -16,19 +16,9 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// ScenesUpdateDaoLock locks the project its owner names, so the writes to its bytes run one at a time.
-type ScenesUpdateDaoLock interface {
-	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
-}
-
 // ScenesUpdateDao writes the scenes' new fields, all of them or none.
 type ScenesUpdateDao interface {
 	Exec(ctx context.Context, request *dao.ScenesUpdateRequest) ([]*dao.Scene, error)
-}
-
-// ScenesUpdateDaoBytes reads how many bytes the project stores, the write included.
-type ScenesUpdateDaoBytes interface {
-	Exec(ctx context.Context, request *dao.ProjectBytesRequest) (*dao.ProjectBytes, error)
 }
 
 // ScenesUpdateItem is one scene of a [ScenesUpdateRequest].
@@ -51,20 +41,19 @@ type ScenesUpdateRequest struct {
 	Scenes []ScenesUpdateItem `validate:"required,min=1,max=100,unique=ID,dive"`
 }
 
-// ScenesUpdate replaces the fields of several scenes at once, all of them or none, and returns them in the
-// order of the request. [SceneUpdate] updates one. It writes nothing when the project would store more than
-// [ProjectBytesMax] bytes.
+// ScenesUpdate replaces the fields of one or more scenes, all of them or none, and returns them in the order
+// of the request. It writes nothing when the project would store more than [ProjectBytesMax] bytes.
 type ScenesUpdate struct {
-	daoLock    ScenesUpdateDaoLock
+	daoLock    ProjectLockDao
 	dao        ScenesUpdateDao
-	daoBytes   ScenesUpdateDaoBytes
+	daoBytes   ProjectBytesDao
 	transactor transaction.Transactor
 }
 
 func NewScenesUpdate(
-	daoLock ScenesUpdateDaoLock,
+	daoLock ProjectLockDao,
 	dao ScenesUpdateDao,
-	daoBytes ScenesUpdateDaoBytes,
+	daoBytes ProjectBytesDao,
 	transactor transaction.Transactor,
 ) *ScenesUpdate {
 	return &ScenesUpdate{daoLock: daoLock, dao: dao, daoBytes: daoBytes, transactor: transactor}

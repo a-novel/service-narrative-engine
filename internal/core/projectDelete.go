@@ -13,11 +13,6 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// ProjectDeleteDaoOwner checks that the user owns the project.
-type ProjectDeleteDaoOwner interface {
-	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
-}
-
 // ProjectDeleteDao removes the project.
 type ProjectDeleteDao interface {
 	Exec(ctx context.Context, request *dao.ProjectDeleteRequest) (*dao.Project, error)
@@ -31,11 +26,11 @@ type ProjectDeleteRequest struct {
 
 // ProjectDelete deletes a project with its beats, scenes, layers and cells.
 type ProjectDelete struct {
-	daoOwner ProjectDeleteDaoOwner
+	daoOwner ProjectOwnerDao
 	dao      ProjectDeleteDao
 }
 
-func NewProjectDelete(daoOwner ProjectDeleteDaoOwner, dao ProjectDeleteDao) *ProjectDelete {
+func NewProjectDelete(daoOwner ProjectOwnerDao, dao ProjectDeleteDao) *ProjectDelete {
 	return &ProjectDelete{daoOwner: daoOwner, dao: dao}
 }
 

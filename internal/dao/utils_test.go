@@ -349,13 +349,6 @@ func listBeats(ctx context.Context, t *testing.T, project uuid.UUID) []*dao.Beat
 	return lo.Map(rows, func(row *dao.BeatListRow, _ int) *dao.Beat { return &row.Beat })
 }
 
-// beatScenes reads every scene of a beat, in order.
-func beatScenes(ctx context.Context, t *testing.T, beat uuid.UUID) []*dao.Scene {
-	t.Helper()
-
-	return lo.Filter(listScenes(ctx, t, projectID), func(scene *dao.Scene, _ int) bool { return scene.BeatID == beat })
-}
-
 // listLayers reads every layer of a project, in order.
 func listLayers(ctx context.Context, t *testing.T, project uuid.UUID) []*dao.Layer {
 	t.Helper()

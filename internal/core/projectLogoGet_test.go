@@ -96,7 +96,7 @@ func TestProjectLogoGet(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockOwner := coremocks.NewMockProjectLogoGetDaoOwner(t)
+			mockOwner := coremocks.NewMockProjectOwnerDao(t)
 			mockSelect := coremocks.NewMockProjectLogoGetDao(t)
 
 			if testCase.ownerMock != nil {

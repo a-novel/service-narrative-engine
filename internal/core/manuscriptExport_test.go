@@ -215,11 +215,11 @@ func TestManuscriptExport(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockOwner := coremocks.NewMockManuscriptExportDaoOwner(t)
+			mockOwner := coremocks.NewMockProjectOwnerDao(t)
 			mockKind := coremocks.NewMockManuscriptExportDaoKind(t)
 			mockProject := coremocks.NewMockManuscriptExportDaoProject(t)
 			mockDao := coremocks.NewMockManuscriptExportDao(t)
-			mockBytes := coremocks.NewMockManuscriptExportDaoBytes(t)
+			mockBytes := coremocks.NewMockProjectBytesDao(t)
 
 			if testCase.ownerMock != nil {
 				mockOwner.EXPECT().
