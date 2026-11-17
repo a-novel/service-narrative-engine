@@ -7,7 +7,6 @@ import (
 	"context"
 	"io"
 	"log"
-	"net"
 	"os"
 	"os/signal"
 	"strconv"
@@ -61,12 +60,11 @@ func main() {
 	// =================================================================================================================
 
 	jsonKeysClient := lo.Must(servicejsonkeys.NewClient(
-		net.JoinHostPort(cfg.Dependencies.ServiceJSONKeysHost, strconv.Itoa(cfg.Dependencies.ServiceJSONKeysPort)),
-		lo.Must(cfg.Dependencies.ServiceJSONKeysCredentials.Options(ctx))...,
+		cfg.Dependencies.ServiceJSONKeys.Address(), cfg.Dependencies.ServiceJSONKeys.DialOptions()...,
 	))
 	defer jsonKeysClient.Close()
 
-	genaiClient := newGenaiClient(ctx, cfg.Dependencies)
+	genaiClient := newGenaiClient(cfg.Dependencies.ServiceGenai)
 	defer genaiClient.Close()
 
 	claimsVerifier := lo.Must(servicejsonkeys.NewClaimsVerifier[serviceauthentication.Claims](jsonKeysClient))
@@ -178,7 +176,7 @@ func main() {
 	// HANDLERS
 	// =================================================================================================================
 
-	handlerHealth := handlers.NewRestHealth(jsonKeysClient, genaiHealth(genaiClient, cfg.Dependencies))
+	handlerHealth := handlers.NewRestHealth(jsonKeysClient, genaiHealth(genaiClient, cfg.Dependencies.ServiceGenai))
 	handlerProjectCreate := handlers.NewRestProjectCreate(serviceProjectCreate, cfg.Logger)
 	handlerProjectGet := handlers.NewRestProjectGet(serviceProjectGet, cfg.Logger)
 	handlerProjectFieldsDrift := handlers.NewRestProjectFieldsDrift(serviceProjectFieldsDrift, cfg.Logger)

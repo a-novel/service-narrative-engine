@@ -1,8 +1,6 @@
 package config
 
 import (
-	"github.com/a-novel-kit/golib/grpcf"
-
 	"github.com/a-novel/service-narrative-engine/internal/config/env"
 )
 
@@ -15,12 +13,8 @@ var AppPresetDefault = App{
 		DowntimeStart: env.DowntimeStart,
 	},
 	Dependencies: Dependencies{
-		ServiceJSONKeysHost:        env.ServiceJSONKeysHost,
-		ServiceJSONKeysPort:        env.ServiceJSONKeysPort,
-		ServiceJSONKeysCredentials: newCredentials(env.ServiceJSONKeysTokenPath, env.ServiceJSONKeysTLS),
-		ServiceGenaiHost:           env.ServiceGenaiHost,
-		ServiceGenaiPort:           env.ServiceGenaiPort,
-		ServiceGenaiCredentials:    newCredentials(env.ServiceGenaiTokenPath, env.ServiceGenaiTLS),
+		ServiceJSONKeys: env.ServiceJSONKeys,
+		ServiceGenai:    env.ServiceGenai,
 	},
 	Permissions:  PermissionsConfigDefault,
 	Caps:         CapsConfigDefault,
@@ -40,15 +34,4 @@ var AppPresetDefault = App{
 	Logger:     env.Telemetry.Logger,
 	RestLogger: env.Telemetry.HTTPLogger,
 	Postgres:   PostgresPresetDefault,
-}
-
-// newCredentials authenticates a connection with the service token at tokenPath, over TLS once overTLS
-// is set. Each callee has its own audience, so each gets its own token. Without one, it sends nothing
-// and dials plaintext.
-func newCredentials(tokenPath string, overTLS bool) grpcf.CredentialsProvider {
-	if tokenPath == "" {
-		return &grpcf.LocalCredentialsProvider{}
-	}
-
-	return &grpcf.ServiceTokenCredentialsProvider{ServiceTokenPath: tokenPath, TLS: overTLS}
 }

@@ -24,20 +24,12 @@ type Main struct {
 
 // Dependencies configures how the service reaches the services it calls.
 type Dependencies struct {
-	// ServiceJSONKeysHost is the hostname of the JSON Keys service, which verifies access tokens.
-	ServiceJSONKeysHost string
-	// ServiceJSONKeysPort is the gRPC port of the JSON Keys service.
-	ServiceJSONKeysPort int
-	// ServiceJSONKeysCredentials authenticates the calls to the JSON Keys service.
-	ServiceJSONKeysCredentials grpcf.CredentialsProvider
-
-	// ServiceGenaiHost is the hostname of the genai service, which runs the model calls of generations.
-	// Empty leaves genai unconfigured.
-	ServiceGenaiHost string
-	// ServiceGenaiPort is the gRPC port of the genai service.
-	ServiceGenaiPort int
-	// ServiceGenaiCredentials authenticates the calls to the genai service.
-	ServiceGenaiCredentials grpcf.CredentialsProvider
+	// ServiceJSONKeys locates the JSON Keys service, which verifies access tokens, and says how to
+	// dial it.
+	ServiceJSONKeys grpcf.ClientConfig
+	// ServiceGenai locates the genai service, which runs the model calls of generations, and says how
+	// to dial it. An empty host leaves genai unconfigured.
+	ServiceGenai grpcf.ClientConfig
 }
 
 // Limits bounds what one request carries, below the REST server's own limits. The server's

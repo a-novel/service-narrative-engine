@@ -8,6 +8,7 @@ import (
 
 	"github.com/a-novel-kit/golib/config"
 	"github.com/a-novel-kit/golib/downtime"
+	"github.com/a-novel-kit/golib/grpcf"
 	"github.com/a-novel-kit/golib/httpf"
 	otelpresets "github.com/a-novel-kit/golib/otel/presets"
 	"github.com/a-novel-kit/golib/servicetoken"
@@ -95,30 +96,14 @@ var (
 	// PostgresMaxIdleConns is the maximum number of connections kept open while idle.
 	PostgresMaxIdleConns = config.LoadEnv(getEnv("POSTGRES_MAX_IDLE_CONNS"), PostgresMaxIdleConnsDefault, strconv.Atoi)
 
-	// ServiceJSONKeysHost is the hostname of the JSON Keys service, without scheme or port.
-	ServiceJSONKeysHost = cmp.Or(getEnv("SERVICE_JSON_KEYS_HOST"), ServiceJSONKeysHostDefault)
-	// ServiceJSONKeysPort is the gRPC port of the JSON Keys service.
-	ServiceJSONKeysPort = config.LoadEnv(getEnv("SERVICE_JSON_KEYS_PORT"), ServiceJSONKeysPortDefault, strconv.Atoi)
-	// ServiceJSONKeysTokenPath is the file the kubelet projects this service's token for JSON Keys into.
-	// When set, the JSON Keys connection sends that token with every call.
-	ServiceJSONKeysTokenPath = getEnv("SERVICE_JSON_KEYS_TOKEN_PATH")
-	// ServiceJSONKeysTLS dials the JSON Keys service over TLS once ServiceJSONKeysTokenPath names a token.
-	// The server's certificate is verified for ServiceJSONKeysHost against the system roots, which
-	// SSL_CERT_DIR extends.
-	ServiceJSONKeysTLS = config.LoadEnv(getEnv("SERVICE_JSON_KEYS_TLS"), false, strconv.ParseBool)
-
-	// ServiceGenaiHost is the hostname of the genai service, without scheme or port. Empty leaves genai
-	// unconfigured, and the generation routes answer 503.
-	ServiceGenaiHost = getEnv("SERVICE_GENAI_HOST")
-	// ServiceGenaiPort is the gRPC port of the genai service.
-	ServiceGenaiPort = config.LoadEnv(getEnv("SERVICE_GENAI_PORT"), ServiceGenaiPortDefault, strconv.Atoi)
-	// ServiceGenaiTokenPath is the file the kubelet projects this service's token for genai into. When set,
-	// the genai connection sends that token with every call.
-	ServiceGenaiTokenPath = getEnv("SERVICE_GENAI_TOKEN_PATH")
-	// ServiceGenaiTLS dials the genai service over TLS once ServiceGenaiTokenPath names a token. The
-	// server's certificate is verified for ServiceGenaiHost against the system roots, which SSL_CERT_DIR
-	// extends.
-	ServiceGenaiTLS = config.LoadEnv(getEnv("SERVICE_GENAI_TLS"), false, strconv.ParseBool)
+	// ServiceJSONKeys locates the JSON Keys gRPC server through the SERVICE_JSON_KEYS_* variables.
+	ServiceJSONKeys = grpcf.LoadClientConfig(getEnv, "SERVICE_JSON_KEYS", grpcf.ClientConfig{
+		Host: ServiceJSONKeysHostDefault,
+		Port: ServiceJSONKeysPortDefault,
+	})
+	// ServiceGenai locates the genai gRPC server through the SERVICE_GENAI_* variables. Without a host,
+	// genai stays unconfigured, and the generation routes answer 503.
+	ServiceGenai = grpcf.LoadClientConfig(getEnv, "SERVICE_GENAI", grpcf.ClientConfig{Port: ServiceGenaiPortDefault})
 
 	// AppName is the name of the application, as it appears in logs and tracing.
 	AppName = cmp.Or(getEnv("APP_NAME"), AppNameDefault)
