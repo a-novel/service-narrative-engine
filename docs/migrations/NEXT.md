@@ -8,6 +8,8 @@ A request that fails validation answers 422 Unprocessable Entity, where it answe
 
 **Required** for a deployment that still sets `POSTGRES_DSN`: the service no longer reads it. A deployment that sets `POSTGRES_HOST` already works as before.
 
+**Required** for a project that installs `@a-novel/service-narrative-engine-rest`: it needs `@a-novel-kit/nodelib-browser` 2.13.0 or later.
+
 ## Read 422 for an invalid request
 
 Every route answers 422 to a request that parses but breaks a rule of the contract: a blank title, a negative position, a page over 500 items, or content off its layer's schema. The body is unchanged apart from its status and title: a field that breaks its rule still answers a problem whose `tags.invalidFields` names it, with `status` 422. The service now answers as Authentication does.
@@ -20,6 +22,10 @@ Every route answers 422 to a request that parses but breaks a rule of the contra
 ```
 
 The logo write and the generation submit already answered 422, to a refused logo and to a generation that outgrows its calls. Their 422 now also answers an invalid request. A refused logo still carries the problem's `reason` tag, and an outgrown generation now carries one too, `contextTooLarge`, so a client tells "narrow the request" from "fix the request". A generation on a project past its 16 MiB budget answers the same 422 with a `limit` tag of `projectBytes` instead: no narrower request fits until the project shrinks. An invalid request whose rule spans several fields, such as a range past the cell's end or a repeated target, answers the status text alone.
+
+## Install nodelib-browser 2.13.0 or later beside the JS client
+
+`@a-novel/service-narrative-engine-rest` builds `NarrativeEngineApi` on the `RestClient` that `@a-novel-kit/nodelib-browser` ships from 2.13.0, so its peer range is now `^2.13.0`. A request without a body no longer sends `Content-Type`. The constructor takes an optional `fetcher`, so a server-side caller can pass `serviceFetch(identity)` instead of subclassing the client.
 
 ## Set the discrete PostgreSQL variables
 
