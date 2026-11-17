@@ -556,31 +556,31 @@ func generationPlanCases() []*generationPlanCase {
 			expect: func(t *testing.T, call *core.ContextCall) {
 				t.Helper()
 
-				scene, ok := call.Scene("S3")
+				scene, ok := contextScene(call, "S3")
 				require.True(t, ok)
 				require.Equal(t, fixtureSceneID(2), scene.SceneID)
 
-				_, ok = call.Scene("S4")
+				_, ok = contextScene(call, "S4")
 				require.False(t, ok)
 
-				first, ok := call.Target("M1")
+				first, ok := contextTarget(call, "M1")
 				require.True(t, ok)
 
-				position, ok := first.Block("B4")
-				require.True(t, ok)
-				require.Equal(t, 3, position)
-
-				second, ok := call.Target("M2")
-				require.True(t, ok)
-
-				position, ok = second.Block("B5")
+				position, ok := targetBlock(first, "B4")
 				require.True(t, ok)
 				require.Equal(t, 3, position)
 
-				_, ok = second.Block("B1")
+				second, ok := contextTarget(call, "M2")
+				require.True(t, ok)
+
+				position, ok = targetBlock(second, "B5")
+				require.True(t, ok)
+				require.Equal(t, 3, position)
+
+				_, ok = targetBlock(second, "B1")
 				require.False(t, ok, "a block of another target")
 
-				_, ok = call.Target("M3")
+				_, ok = contextTarget(call, "M3")
 				require.False(t, ok)
 			},
 		},

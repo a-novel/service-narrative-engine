@@ -72,12 +72,6 @@ const (
 	GenerationStatusCancelled = "cancelled"
 )
 
-// GenerationStatuses lists where a genai generation may stand.
-var GenerationStatuses = []string{
-	GenerationStatusPending, GenerationStatusRunning, GenerationStatusSucceeded, GenerationStatusFailed,
-	GenerationStatusCancelled,
-}
-
 const (
 	// GenerationFailureRejected is a call the provider refused, such as for an unknown model. The same call
 	// fails again.
@@ -94,12 +88,6 @@ const (
 	// output schema, or was cut short or refused. A resend runs it again at the next variant.
 	GenerationFailureInvalidOutput = "invalid_output"
 )
-
-// GenerationFailures lists why a generation may fail, so a client decides whether to resend it.
-var GenerationFailures = []string{
-	GenerationFailureRejected, GenerationFailureProviderFailed, GenerationFailureNotStarted,
-	GenerationFailureOutcomeUnknown, GenerationFailureInvalidOutput,
-}
 
 // Generation is a generation as submit leaves it: each of its calls with its genai generation, or with
 // the cap it waits on.
@@ -123,13 +111,14 @@ type GenerationCall struct {
 // GenerationResult is one genai generation, as a submit, a read or a cancel finds it.
 type GenerationResult struct {
 	ID uuid.UUID
-	// Status is where the generation stands, one of [GenerationStatuses].
+	// Status is where the generation stands, a GenerationStatus constant such as [GenerationStatusRunning].
 	Status string
 
 	// Error says why a failed generation failed: genai's reason, or why its output was refused.
 	Error string
-	// FailureClass says why a failed generation failed, one of [GenerationFailures]. It is empty unless the
-	// generation failed, and for a failure genai did not classify.
+	// FailureClass says why a failed generation failed, a GenerationFailure constant such as
+	// [GenerationFailureRejected], so a client decides whether to resend it. It is empty unless the generation
+	// failed, and for a failure genai did not classify.
 	FailureClass string
 	// Output is the model's output, which passed the full output schema of its kind. It is empty unless
 	// the generation succeeded.

@@ -512,12 +512,12 @@ func requireOutput(t *testing.T, kind string, call *core.ContextCall, snapshot *
 	}
 
 	for _, suggestion := range suggestions {
-		target, ok := call.Target(suggestion.Target)
+		target, ok := contextTarget(call, suggestion.Target)
 		require.True(t, ok, suggestion.Target)
 
 		for _, edit := range suggestion.Edits {
 			if edit.Block != nil {
-				_, ok = target.Block(*edit.Block)
+				_, ok = targetBlock(target, *edit.Block)
 				require.True(t, ok, *edit.Block)
 			}
 
@@ -539,11 +539,32 @@ func requireOutput(t *testing.T, kind string, call *core.ContextCall, snapshot *
 
 	for _, finding := range parsed.Findings {
 		for _, quote := range finding.Evidence {
-			scene, ok := call.Scene(quote.Scene)
+			scene, ok := contextScene(call, quote.Scene)
 			require.True(t, ok, quote.Scene)
 			require.Equal(t, core.ContextLevelFull, scene.Level, "a quote cites a full scene")
 		}
 	}
+}
+
+// contextScene returns the scene a call names by handle, such as S1.
+func contextScene(call *core.ContextCall, handle string) (*core.ContextScene, bool) {
+	return lo.Find(call.Scenes, func(scene *core.ContextScene) bool { return scene.Handle == handle })
+}
+
+// contextTarget returns the target a call names by handle, such as T1.
+func contextTarget(call *core.ContextCall, handle string) (*core.ContextTarget, bool) {
+	return lo.Find(call.Targets, func(target *core.ContextTarget) bool { return target.Handle == handle })
+}
+
+// targetBlock returns the position of the block a target names by handle, such as B3, among the blocks it
+// shows inside its range.
+func targetBlock(target *core.ContextTarget, handle string) (int, bool) {
+	block, ok := lo.Find(target.Blocks, func(block *core.ContextBlock) bool { return block.Handle == handle })
+	if !ok {
+		return 0, false
+	}
+
+	return block.Position, true
 }
 
 // requireHandles fails unless every handle keeps one meaning across the calls of a plan: a scene or a target
