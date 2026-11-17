@@ -31,9 +31,10 @@ import (
 )
 
 // updateGoldens rewrites the golden files of [TestGenerationPlan] from the current code instead of checking
-// them, when GOLIB_UPDATE_SNAPSHOTS is set, as golib's snapshot tests do. pnpm generate:go sets it.
+// them, when GOLIB_UPDATE_SNAPSHOTS is set, as golib's snapshot tests do. pnpm generate:go sets it, and runs
+// only the subtests that hold a golden: the split successes and the golden prompts.
 //
-//go:generate env GOLIB_UPDATE_SNAPSHOTS=1 go test -run ^TestGenerationPlan$
+//go:generate env GOLIB_UPDATE_SNAPSHOTS=1 go test -run "^TestGenerationPlan$/^(Split|Success)$/^(Success|Golden)$"
 var updateGoldens = os.Getenv("GOLIB_UPDATE_SNAPSHOTS") != ""
 
 // fixtures holds the projects, outputs and goldens of [TestGenerationPlan].
@@ -624,7 +625,7 @@ func requireGolden(t *testing.T, name, text string) {
 
 	golden, err := fixtures.ReadFile(name)
 	require.NoError(t, err)
-	require.Equal(t, string(golden), text)
+	require.Equal(t, string(golden), text, "%s changed: review the diff, then refresh it with pnpm generate:go", name)
 }
 
 // goldenPrompt lays a prompt out as its golden file holds it.
@@ -835,6 +836,7 @@ func TestGenerationPlan(t *testing.T) {
 
 			if request.Kind == core.GenerationKindCheck {
 				require.Len(t, lo.Uniq(reads.contents), len(request.cells))
+				require.Len(t, checkWindows(plan), 72, "the check splits the scenes into windows")
 			} else {
 				require.Less(t, len(reads.contents), len(request.cells)/10, request.Kind)
 			}
@@ -890,6 +892,18 @@ func TestGenerationPlan(t *testing.T) {
 			for _, call := range plan.Calls {
 				require.LessOrEqual(t, call.Estimate, settings.LongLimit, request.Kind)
 			}
+
+			switch request.Kind {
+			case core.GenerationKindSuggest:
+				// Each target splits into two calls, in the order of the request.
+				require.Equal(t, lo.FlatMap(targets, func(_ *core.GenerationTarget, index int) []string {
+					handle := "M" + strconv.Itoa(index+1)
+
+					return []string{handle, handle}
+				}), callTargets(plan))
+			case core.GenerationKindCheck:
+				require.Len(t, checkWindows(plan), 102, "the check splits the scenes into windows")
+			}
 		}
 	})
 
@@ -912,6 +926,10 @@ func TestGenerationPlan(t *testing.T) {
 
 			// The allocator reads ahead, so the scenes past the edge of the budget share a few queries.
 			require.LessOrEqual(t, reads.queries, 10)
+
+			if story.windows != nil {
+				require.Equal(t, story.windows, checkWindows(plan))
+			}
 
 			if story.request.Scenes == nil && story.request.Kind == core.GenerationKindCheck {
 				return
