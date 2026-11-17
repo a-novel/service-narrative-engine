@@ -87,6 +87,8 @@ func TestRestBeatRecapWrite(t *testing.T) {
 			expectResponse: limitProblem("projectBytes"),
 		},
 		{
+			// Wiring case: a sentinel only recapErrors holds, to prove the handler uses that map (see
+			// CONTRIBUTING, "Handler tests"), whether or not the route produces it.
 			name: "Error/Conflict",
 
 			request: validRequest,

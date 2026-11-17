@@ -144,8 +144,9 @@ func TestProjectReadGateMemory(t *testing.T) {
 		t.Cleanup(holdGate(t, gate))
 	}
 
-	ctx, cancel := context.WithCancel(t.Context())
-	cancel()
+	// A fifth slot would run the read at once; with four, the read waits past its deadline.
+	ctx, cancel := context.WithTimeout(t.Context(), 20*time.Millisecond)
+	defer cancel()
 
 	var ran bool
 
@@ -154,6 +155,6 @@ func TestProjectReadGateMemory(t *testing.T) {
 
 		return nil
 	})
-	require.ErrorIs(t, err, context.Canceled)
+	require.ErrorIs(t, err, context.DeadlineExceeded)
 	require.False(t, ran)
 }

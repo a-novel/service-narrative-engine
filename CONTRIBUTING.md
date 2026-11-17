@@ -89,6 +89,10 @@ err := service.transactor.WithinTx(ctx, func(ctx context.Context) error {
 
 `TestProjectWriteLock` in `internal/core/projectWriteLock_test.go` enforces the rule. It fails when the `Exec` method of a service builds a DAO request that inserts, updates, upserts, deletes or moves before it calls `lockOwnedProject`. The services that write without the lock, such as `ProjectCreate` and the logo writes, are listed with their reason in its `projectWriteLockExempt` map, and a new exemption goes there.
 
+## Handler tests
+
+Each shared error map in `internal/handlers/rest.errors.go` is tested sentinel by sentinel once, through one representative handler: `BeatsCreate` for `composerErrors`, `CellRecapWrite` for `recapErrors`, `GenerationSubmit` for `generationErrors`, `ProjectLogoUpdate` for `logoErrors`. Every other handler keeps one wiring case: it raises a sentinel only its own map holds, to prove which map it uses, even when its route never produces that error.
+
 ## Refresh goldens
 
 `pnpm generate:go` rewrites every golden file from the current code: the generation prompts and plans under `internal/core/testdata`, and the schema snapshots of the migrations. Review its diff before you commit it.
