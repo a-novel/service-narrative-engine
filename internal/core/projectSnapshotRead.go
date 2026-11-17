@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
 
 	"github.com/google/uuid"
 	"github.com/samber/lo"
@@ -160,34 +159,19 @@ func (service *ProjectSnapshotRead) Exec(
 	return snapshot, nil
 }
 
-// readPages reads a paged list whole, from offset 0, until it holds the total its rows carry. Read reads
-// the page at an offset, and convert turns each row into its item and the list's total.
+// readPages reads a paged list whole, from offset 0, as [pages] does.
 func readPages[Row, Item any](
-	read func(offset int) ([]Row, error), convert func(row Row) (*Item, int),
-) ([]*Item, error) {
-	var items []*Item
+	read func(offset int) ([]Row, error), convert func(row Row) (Item, int),
+) ([]Item, error) {
+	var items []Item
 
-	for {
-		rows, err := read(len(items))
+	for item, err := range pages(0, read, convert) {
 		if err != nil {
 			return nil, err
 		}
 
-		var total int
-
-		items = slices.Grow(items, len(rows))
-
-		for _, row := range rows {
-			var item *Item
-
-			item, total = convert(row)
-			items = append(items, item)
-		}
-
-		// A page past the end comes back empty, and a page that reaches the total ends the list. A page may
-		// stop short of the limit, at its byte bound.
-		if len(rows) == 0 || len(items) >= total {
-			return items, nil
-		}
+		items = append(items, item)
 	}
+
+	return items, nil
 }
