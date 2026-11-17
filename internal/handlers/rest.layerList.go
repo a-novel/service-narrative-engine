@@ -54,7 +54,7 @@ func (handler *RestLayerList) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 	err = muxDecoder.Decode(&request, r.URL.Query())
 	if err != nil {
-		httpf.HandleError(ctx, handler.logger, w, span, httpf.ErrMap{nil: http.StatusBadRequest}, err)
+		httpf.HandleError(ctx, handler.logger, w, span, decodeErrors, err)
 
 		return
 	}

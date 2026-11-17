@@ -16,7 +16,7 @@ const (
 // isViolation reports whether err comes from a write that broke the named constraint, which code
 // classifies.
 func isViolation(err error, code, constraint string) bool {
-	var pgErr pgdriver.Error
+	pgErr, ok := errors.AsType[pgdriver.Error](err)
 
-	return errors.As(err, &pgErr) && pgErr.Field('C') == code && pgErr.Field('n') == constraint
+	return ok && pgErr.Field('C') == code && pgErr.Field('n') == constraint
 }

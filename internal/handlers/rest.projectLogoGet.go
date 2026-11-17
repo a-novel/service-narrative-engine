@@ -56,7 +56,7 @@ func (handler *RestProjectLogoGet) ServeHTTP(w http.ResponseWriter, r *http.Requ
 
 	err = muxDecoder.Decode(&request, r.URL.Query())
 	if err != nil {
-		httpf.HandleError(ctx, handler.logger, w, span, httpf.ErrMap{nil: http.StatusBadRequest}, err)
+		httpf.HandleError(ctx, handler.logger, w, span, decodeErrors, err)
 
 		return
 	}

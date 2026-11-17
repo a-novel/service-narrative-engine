@@ -122,7 +122,6 @@ func TestRestCellList(t *testing.T) {
 			handlers.NewRestCellList(service, config.LoggerDev).ServeHTTP(w, testCase.request(t))
 
 			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
-			service.AssertExpectations(t)
 		})
 	}
 }

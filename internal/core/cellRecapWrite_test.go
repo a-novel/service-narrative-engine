@@ -190,10 +190,6 @@ func TestCellRecapWrite(t *testing.T) {
 
 			err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
-
-			mockLock.AssertExpectations(t)
-			mockDao.AssertExpectations(t)
-			mockBytes.AssertExpectations(t)
 		})
 	}
 }

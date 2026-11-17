@@ -8,7 +8,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -78,7 +77,7 @@ func TestRestGenerationStream(t *testing.T) {
 
 			request: resumed,
 
-			expectAfter: lo.ToPtr[int64](4),
+			expectAfter: new(int64(4)),
 			serviceMock: &serviceMock[iter.Seq2[*core.GenerationEvent, error]]{resp: sequence([]*core.GenerationEvent{
 				{Sequence: 5, Result: succeeded},
 			}, nil)},
@@ -114,7 +113,7 @@ func TestRestGenerationStream(t *testing.T) {
 
 			request: resumed,
 
-			expectAfter: lo.ToPtr[int64](4),
+			expectAfter: new(int64(4)),
 			serviceMock: &serviceMock[iter.Seq2[*core.GenerationEvent, error]]{err: core.ErrStreamEnded},
 
 			expectStatus: http.StatusNoContent,
@@ -205,8 +204,6 @@ func TestRestGenerationStream(t *testing.T) {
 				require.Equal(t, testCase.expectStatus, w.Code)
 				require.Equal(t, testCase.expectLocation, w.Header().Get("Location"))
 			}
-
-			service.AssertExpectations(t)
 		})
 	}
 }

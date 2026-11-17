@@ -24,9 +24,9 @@ type RestProjectLogosDriftRequest struct {
 	Logos map[string]string `json:"logos"`
 }
 
-// RestProjectLogosDriftResult is the REST representation of the drift between the logos a client holds and those
+// ProjectLogosDriftResult is the REST representation of the drift between the logos a client holds and those
 // of the caller's projects.
-type RestProjectLogosDriftResult struct {
+type ProjectLogosDriftResult struct {
 	// Logos maps each project of the caller whose logo the request leaves out, or names with another checksum, to
 	// the logo's checksum.
 	Logos map[uuid.UUID]string `json:"logos"`
@@ -61,7 +61,7 @@ func (handler *RestProjectLogosDrift) ServeHTTP(w http.ResponseWriter, r *http.R
 
 	err = httpf.DecodeJSON(r.Body, &request)
 	if err != nil {
-		httpf.HandleError(ctx, handler.logger, w, span, httpf.ErrMap{nil: http.StatusBadRequest}, err)
+		httpf.HandleError(ctx, handler.logger, w, span, decodeErrors, err)
 
 		return
 	}
@@ -78,5 +78,5 @@ func (handler *RestProjectLogosDrift) ServeHTTP(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	httpf.SendJSONStatus(w, span, http.StatusOK, RestProjectLogosDriftResult{Logos: result.Logos, Removed: result.Removed})
+	httpf.SendJSONStatus(w, span, http.StatusOK, ProjectLogosDriftResult{Logos: result.Logos, Removed: result.Removed})
 }

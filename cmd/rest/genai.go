@@ -24,7 +24,7 @@ type genaiClient interface {
 	core.GenerationCancelServiceGenai
 	core.GenerationStreamServiceGenai
 	core.GenerationUsageServiceGenai
-	handlers.RestHealthApiGenai
+	handlers.RestHealthAPIGenai
 
 	Close()
 }
@@ -47,7 +47,7 @@ func newGenaiClient(ctx context.Context, dependencies config.Dependencies) genai
 
 // genaiHealth is what the health check probes on genai: the client, or nil while no genai host is
 // configured, which leaves genai out of the report.
-func genaiHealth(client genaiClient, dependencies config.Dependencies) handlers.RestHealthApiGenai {
+func genaiHealth(client genaiClient, dependencies config.Dependencies) handlers.RestHealthAPIGenai {
 	if dependencies.ServiceGenaiHost == "" {
 		return nil
 	}

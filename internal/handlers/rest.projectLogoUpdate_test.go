@@ -162,7 +162,6 @@ func TestRestProjectLogoUpdate(t *testing.T) {
 			handlers.NewRestProjectLogoUpdate(service, config.LoggerDev).ServeHTTP(w, asUser(request, testCase.caller))
 
 			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
-			service.AssertExpectations(t)
 		})
 	}
 }

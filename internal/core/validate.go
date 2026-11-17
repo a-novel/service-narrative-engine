@@ -2,6 +2,7 @@ package core
 
 import (
 	"errors"
+	"reflect"
 	"regexp"
 	"slices"
 	"strings"
@@ -114,7 +115,7 @@ func ValidateInstant(fl validator.FieldLevel) bool {
 // ValidateUniqueCells reports whether a list of [CellsWriteItem] names each pair of a scene and a layer
 // once. The package registers it as the "uniquecells" struct tag.
 func ValidateUniqueCells(fl validator.FieldLevel) bool {
-	cells, ok := fl.Field().Interface().([]CellsWriteItem)
+	cells, ok := reflect.TypeAssert[[]CellsWriteItem](fl.Field())
 	if !ok {
 		return false
 	}

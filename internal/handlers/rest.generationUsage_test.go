@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/mock"
 
 	"github.com/a-novel/service-narrative-engine/internal/config"
@@ -47,10 +46,10 @@ func TestRestGenerationUsage(t *testing.T) {
 			roles: []string{"auth:user"},
 			serviceMock: &serviceMock[*core.GenerationUsageSummary]{resp: &core.GenerationUsageSummary{
 				Caps: &core.GenerationCaps{
-					Concurrency: lo.ToPtr[int32](2),
+					Concurrency: new(int32(2)),
 					Windows: []*core.GenerationCapWindow{
-						{Duration: 5 * time.Hour, InputTokens: lo.ToPtr[int64](2000), OutputTokens: lo.ToPtr[int64](200)},
-						{Duration: 720 * time.Hour, OutputTokens: lo.ToPtr[int64](5000)},
+						{Duration: 5 * time.Hour, InputTokens: new(int64(2000)), OutputTokens: new(int64(200))},
+						{Duration: 720 * time.Hour, OutputTokens: new(int64(5000))},
 					},
 				},
 				InFlight: 1,
@@ -153,7 +152,6 @@ func TestRestGenerationUsage(t *testing.T) {
 			handlers.NewRestGenerationUsage(service, config.LoggerDev).ServeHTTP(w, testCase.request(t))
 
 			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
-			service.AssertExpectations(t)
 		})
 	}
 }

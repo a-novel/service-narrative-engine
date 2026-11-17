@@ -29,8 +29,8 @@ type RestGenerationStreamRequest struct {
 	ID uuid.UUID `schema:"id"`
 }
 
-// RestGenerationDelta is the content of a delta event: text the model appended to its output.
-type RestGenerationDelta struct {
+// GenerationDelta is the content of a delta event: text the model appended to its output.
+type GenerationDelta struct {
 	Text string `json:"text"`
 }
 
@@ -65,14 +65,14 @@ func (handler *RestGenerationStream) ServeHTTP(w http.ResponseWriter, r *http.Re
 
 	err = muxDecoder.Decode(&request, r.URL.Query())
 	if err != nil {
-		httpf.HandleError(ctx, handler.logger, w, span, httpf.ErrMap{nil: http.StatusBadRequest}, err)
+		httpf.HandleError(ctx, handler.logger, w, span, decodeErrors, err)
 
 		return
 	}
 
 	after, err := parseSequence(r.Header.Get(lastEventIDHeader))
 	if err != nil {
-		httpf.HandleError(ctx, handler.logger, w, span, httpf.ErrMap{nil: http.StatusBadRequest}, err)
+		httpf.HandleError(ctx, handler.logger, w, span, decodeErrors, err)
 
 		return
 	}
@@ -119,7 +119,7 @@ func (handler *RestGenerationStream) ServeHTTP(w http.ResponseWriter, r *http.Re
 		if event.Result != nil {
 			err = sendEvent(stream, id, "result", loadGenerationResult(event.Result))
 		} else {
-			err = sendEvent(stream, id, "delta", RestGenerationDelta{Text: event.Delta})
+			err = sendEvent(stream, id, "delta", GenerationDelta{Text: event.Delta})
 		}
 
 		// A write fails once the client left.

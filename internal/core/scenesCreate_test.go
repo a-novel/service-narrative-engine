@@ -294,10 +294,6 @@ func TestScenesCreate(t *testing.T) {
 			}
 
 			require.Equal(t, testCase.expect, result)
-
-			mockLock.AssertExpectations(t)
-			mockInsert.AssertExpectations(t)
-			mockBytes.AssertExpectations(t)
 		})
 	}
 }

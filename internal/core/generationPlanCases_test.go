@@ -194,9 +194,7 @@ func longBeats(snapshot *storedProject, stale int) *storedProject {
 		}
 
 		snapshot.BeatRecaps = append(snapshot.BeatRecaps, &core.BeatRecap{
-			Recap: core.Recap{
-				Compact: strings.Repeat("The boats come back. ", 57), Essentials: "The boats return.",
-			},
+			Compact: strings.Repeat("The boats come back. ", 57), Essentials: "The boats return.",
 			BeatID: beat.ID, BeatUpdatedAt: read, Sources: sources,
 		})
 	}
@@ -1162,7 +1160,7 @@ func storyProject() *storedProject {
 		if beat%2 == 0 {
 			read := lo.Ternary(beat == 6, updatedAt.Add(-time.Hour), updatedAt)
 			snapshot.BeatRecaps = append(snapshot.BeatRecaps, &core.BeatRecap{
-				Recap:  core.Recap{Compact: strings.Repeat("The boats come back. ", 4+beat), Essentials: "The boats return."},
+				Compact: strings.Repeat("The boats come back. ", 4+beat), Essentials: "The boats return.",
 				BeatID: fixtureBeatID(beat), BeatUpdatedAt: read, Sources: sources,
 			})
 		}

@@ -54,7 +54,7 @@ func (handler *RestProjectLogoUpdate) ServeHTTP(w http.ResponseWriter, r *http.R
 
 	err = muxDecoder.Decode(&request, r.URL.Query())
 	if err != nil {
-		httpf.HandleError(ctx, handler.logger, w, span, httpf.ErrMap{nil: http.StatusBadRequest}, err)
+		httpf.HandleError(ctx, handler.logger, w, span, decodeErrors, err)
 
 		return
 	}
@@ -62,7 +62,7 @@ func (handler *RestProjectLogoUpdate) ServeHTTP(w http.ResponseWriter, r *http.R
 	// The logo is decoded whole, so the body is read whole, within the router's limit.
 	data, err := io.ReadAll(r.Body)
 	if err != nil {
-		httpf.HandleError(ctx, handler.logger, w, span, httpf.ErrMap{nil: http.StatusBadRequest}, err)
+		httpf.HandleError(ctx, handler.logger, w, span, decodeErrors, err)
 
 		return
 	}
@@ -73,8 +73,7 @@ func (handler *RestProjectLogoUpdate) ServeHTTP(w http.ResponseWriter, r *http.R
 		Data:      data,
 	})
 
-	var refused picture.RefusedError
-	if errors.As(err, &refused) {
+	if refused, ok := errors.AsType[picture.RefusedError](err); ok {
 		err = httpf.WithTag(err, "reason", string(refused))
 	}
 

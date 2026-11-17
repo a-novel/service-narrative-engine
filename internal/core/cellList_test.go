@@ -38,7 +38,7 @@ func TestCellList(t *testing.T) {
 			ownerMock:   &daoMock[bool]{resp: true},
 			listRequest: &dao.CellListRequest{ProjectID: projectID, Limit: 50, Offset: 100, MaxBytes: core.ListPageBytesMax},
 			listMock: &daoMock[[]*dao.CellListRow]{resp: []*dao.CellListRow{
-				{Cell: dao.Cell{SceneID: sceneID1, LayerID: layerID1, UpdatedAt: updatedAt}, Total: 120},
+				{SceneID: sceneID1, LayerID: layerID1, UpdatedAt: updatedAt, Total: 120},
 			}},
 
 			expect: &core.CellPage{
@@ -137,9 +137,6 @@ func TestCellList(t *testing.T) {
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
-
-			mockOwner.AssertExpectations(t)
-			mockList.AssertExpectations(t)
 		})
 	}
 }

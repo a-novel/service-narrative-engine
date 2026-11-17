@@ -66,8 +66,8 @@ func main() {
 	// =================================================================================================================
 
 	jsonKeysClient := lo.Must(servicejsonkeys.NewClient(
-		net.JoinHostPort(cfg.Dependencies.ServiceJsonKeysHost, strconv.Itoa(cfg.Dependencies.ServiceJsonKeysPort)),
-		lo.Must(cfg.Dependencies.ServiceJsonKeysCredentials.Options(ctx))...,
+		net.JoinHostPort(cfg.Dependencies.ServiceJSONKeysHost, strconv.Itoa(cfg.Dependencies.ServiceJSONKeysPort)),
+		lo.Must(cfg.Dependencies.ServiceJSONKeysCredentials.Options(ctx))...,
 	))
 	defer jsonKeysClient.Close()
 
@@ -131,7 +131,7 @@ func main() {
 	daoBeatRecapUpdate := dao.NewPgBeatRecapUpdate()
 	daoManuscriptSelect := dao.NewPgManuscriptSelect()
 	transactor := postgres.NewTransactor(nil)
-	projectReadGate := core.NewProjectReadGate(cfg.Limits.ProjectReadMaxConcurrent)
+	projectReadGate := core.NewProjectReadGate(cfg.Limits.MaxConcurrentProjectReads)
 	generationCaps := lo.Must(core.NewGenerationCapsPolicy(cfg.Permissions, cfg.Caps))
 
 	// =================================================================================================================
@@ -267,7 +267,7 @@ func main() {
 	router.Route("/v1", func(api chi.Router) {
 		// The router's body limit fits a batch; a route that writes one item, or compares what a client holds,
 		// caps its body lower.
-		item := api.With(middleware.RequestSize(cfg.Limits.ItemMaxRequestSize))
+		item := api.With(middleware.RequestSize(cfg.Limits.MaxItemRequestSize))
 		// A stream outlives the request timeout, and ends at shutdown: its client resumes on another
 		// instance. One cap counts a caller's open streams across both stream routes.
 		stream := api.With(httpf.Streaming(cfg.Limits.MaxStreamDuration), httpf.EndOnShutdown(ctx))

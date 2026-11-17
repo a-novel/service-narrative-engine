@@ -146,7 +146,6 @@ func TestRestSceneMove(t *testing.T) {
 			handlers.NewRestSceneMove(service, config.LoggerDev).ServeHTTP(w, testCase.request(t))
 
 			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
-			service.AssertExpectations(t)
 		})
 	}
 }

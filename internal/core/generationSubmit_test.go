@@ -38,17 +38,17 @@ const (
 
 // userCaps are the caps genai receives for a user of the default caps.
 var userCaps = &servicegenai.GenerationCaps{
-	Concurrency: lo.ToPtr[int32](2),
+	Concurrency: new(int32(2)),
 	Windows: []*servicegenai.GenerationCapWindow{
 		{
 			Duration:     durationpb.New(5 * time.Hour),
-			InputTokens:  lo.ToPtr[int64](2_000_000),
-			OutputTokens: lo.ToPtr[int64](200_000),
+			InputTokens:  new(int64(2_000_000)),
+			OutputTokens: new(int64(200_000)),
 		},
 		{
 			Duration:     durationpb.New(720 * time.Hour),
-			InputTokens:  lo.ToPtr[int64](50_000_000),
-			OutputTokens: lo.ToPtr[int64](5_000_000),
+			InputTokens:  new(int64(50_000_000)),
+			OutputTokens: new(int64(5_000_000)),
 		},
 	},
 }
@@ -528,10 +528,6 @@ func TestGenerationSubmit(t *testing.T) {
 				require.ErrorAs(t, err, &quota)
 				require.Equal(t, testCase.expectQuota, quota)
 			}
-
-			mockSnapshot.AssertExpectations(t)
-			mockPlan.AssertExpectations(t)
-			mockGenai.AssertExpectations(t)
 		})
 	}
 }

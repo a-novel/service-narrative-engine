@@ -19,8 +19,8 @@ type RestProjectEditsListService interface {
 	Exec(ctx context.Context, request *core.ProjectEditsListRequest) (*core.ProjectEdits, error)
 }
 
-// RestProjectEdits is the REST representation of when each project of the caller last changed.
-type RestProjectEdits struct {
+// ProjectEdits is the REST representation of when each project of the caller last changed.
+type ProjectEdits struct {
 	// Edits maps the ID of each project of the caller to its editedAt.
 	Edits map[uuid.UUID]time.Time `json:"edits"`
 }
@@ -54,5 +54,5 @@ func (handler *RestProjectEditsList) ServeHTTP(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	httpf.SendJSONStatus(w, span, http.StatusOK, RestProjectEdits{Edits: result.Edits})
+	httpf.SendJSONStatus(w, span, http.StatusOK, ProjectEdits{Edits: result.Edits})
 }

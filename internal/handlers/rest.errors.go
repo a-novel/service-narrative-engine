@@ -13,6 +13,9 @@ import (
 // ownerErrors maps a request that names no user to its status.
 var ownerErrors = httpf.ErrMap{nil: http.StatusForbidden}
 
+// decodeErrors maps a request whose body or parameters do not parse to its status.
+var decodeErrors = httpf.ErrMap{nil: http.StatusBadRequest}
+
 // composerErrors maps the refusals of the Scenes Composer operations to their status. A 409 answers a write
 // that conflicts with the project's state: a full project or beat, a project past its byte budget, a user
 // who owns as many projects as they may, or a delete of the last layer of a required kind.

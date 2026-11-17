@@ -146,7 +146,6 @@ func TestRestBeatCreate(t *testing.T) {
 			handlers.NewRestBeatCreate(service, config.LoggerDev).ServeHTTP(w, testCase.request(t))
 
 			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
-			service.AssertExpectations(t)
 		})
 	}
 }

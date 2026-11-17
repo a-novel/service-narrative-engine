@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -46,7 +45,7 @@ func TestProjectUpdate(t *testing.T) {
 		ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr", Tags: []string{"noir"},
 		Genres:    []string{"thriller"},
 		CreatedAt: createdAt, UpdatedAt: updatedAt, EditedAt: editedAt,
-		LogoChecksum: lo.ToPtr(logoChecksum),
+		LogoChecksum: new(logoChecksum),
 	}
 
 	testCases := []struct {
@@ -451,10 +450,6 @@ func TestProjectUpdate(t *testing.T) {
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
-
-			mockLock.AssertExpectations(t)
-			mockDao.AssertExpectations(t)
-			mockBytes.AssertExpectations(t)
 		})
 	}
 }

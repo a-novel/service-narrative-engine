@@ -268,12 +268,6 @@ func TestManuscriptExport(t *testing.T) {
 			result, err := service.Exec(ctx, testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
-
-			mockOwner.AssertExpectations(t)
-			mockKind.AssertExpectations(t)
-			mockProject.AssertExpectations(t)
-			mockDao.AssertExpectations(t)
-			mockBytes.AssertExpectations(t)
 		})
 	}
 }

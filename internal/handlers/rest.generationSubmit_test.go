@@ -293,7 +293,6 @@ func TestRestGenerationSubmit(t *testing.T) {
 
 			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
 			require.Equal(t, testCase.expectRetryAfter, w.Result().Header.Get("Retry-After"))
-			service.AssertExpectations(t)
 		})
 	}
 }

@@ -6,7 +6,6 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
 	"github.com/a-novel-kit/golib/postgres/postgrestest"
@@ -40,7 +39,7 @@ func TestPgCellsSelect(t *testing.T) {
 			expect: []*dao.CellsSelectRow{
 				{
 					SceneID: sceneID1, LayerID: manuscriptLayerID, Content: recapped.Content, RecapVersion: "compact",
-					Recap: lo.ToPtr("Rires."),
+					Recap: new("Rires."),
 				},
 				{SceneID: sceneID1, LayerID: notesLayerID, Content: notes.Content},
 			},
@@ -56,7 +55,7 @@ func TestPgCellsSelect(t *testing.T) {
 			}},
 
 			expect: []*dao.CellsSelectRow{
-				{SceneID: sceneID1, LayerID: manuscriptLayerID, RecapVersion: "essentials", Recap: lo.ToPtr("Rire.")},
+				{SceneID: sceneID1, LayerID: manuscriptLayerID, RecapVersion: "essentials", Recap: new("Rire.")},
 				{SceneID: sceneID2, LayerID: manuscriptLayerID, RecapVersion: "condensed"},
 			},
 		},

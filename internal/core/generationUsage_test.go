@@ -26,12 +26,12 @@ func TestGenerationUsage(t *testing.T) {
 	errFoo := errors.New("foo")
 
 	expectUserCaps := &core.GenerationCaps{
-		Concurrency: lo.ToPtr[int32](2),
+		Concurrency: new(int32(2)),
 		Windows: []*core.GenerationCapWindow{
-			{Duration: 5 * time.Hour, InputTokens: lo.ToPtr[int64](2_000_000), OutputTokens: lo.ToPtr[int64](200_000)},
+			{Duration: 5 * time.Hour, InputTokens: new(int64(2_000_000)), OutputTokens: new(int64(200_000))},
 			{
 				Duration:    720 * time.Hour,
-				InputTokens: lo.ToPtr[int64](50_000_000), OutputTokens: lo.ToPtr[int64](5_000_000),
+				InputTokens: new(int64(50_000_000)), OutputTokens: new(int64(5_000_000)),
 			},
 		},
 	}
@@ -150,8 +150,6 @@ func TestGenerationUsage(t *testing.T) {
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
-
-			mockGenai.AssertExpectations(t)
 		})
 	}
 }

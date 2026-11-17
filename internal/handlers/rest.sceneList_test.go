@@ -122,7 +122,6 @@ func TestRestSceneList(t *testing.T) {
 			handlers.NewRestSceneList(service, config.LoggerDev).ServeHTTP(w, testCase.request(t))
 
 			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
-			service.AssertExpectations(t)
 		})
 	}
 }

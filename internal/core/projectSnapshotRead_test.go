@@ -41,8 +41,8 @@ func TestProjectSnapshotRead(t *testing.T) {
 
 	// The first cell holds a recap, and the beat too, which the snapshot also lists apart for the planner.
 	cellRows[0].RecapNames, cellRows[0].RecapCellUpdatedAt = []string{"Marie"}, &createdAt
-	cellRows[0].RecapCondensedSize, cellRows[0].RecapCompactSize, cellRows[0].RecapEssentialsSize = lo.ToPtr(9),
-		lo.ToPtr(7), lo.ToPtr(5)
+	cellRows[0].RecapCondensedSize, cellRows[0].RecapCompactSize, cellRows[0].RecapEssentialsSize = new(9),
+		new(7), new(5)
 
 	recap := &dao.Recap{Condensed: "Notes.", Compact: "Notes.", Essentials: "Notes.", Names: []string{"Marie"}}
 
@@ -58,7 +58,7 @@ func TestProjectSnapshotRead(t *testing.T) {
 			ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr", Tags: []string{"noir"},
 			Genres:    []string{"thriller"},
 			CreatedAt: createdAt, UpdatedAt: updatedAt, EditedAt: editedAt,
-			LogoChecksum: lo.ToPtr(logoChecksum),
+			LogoChecksum: new(logoChecksum),
 		},
 		Beats: []*core.Beat{with(coreBeat(beatID1, 0), func(beat *core.Beat) {
 			beat.Recap, beat.RecapBeatUpdatedAt, beat.RecapSources = &coreRecap, createdAt, sources
@@ -241,14 +241,6 @@ func TestProjectSnapshotRead(t *testing.T) {
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
-
-			mockOwner.AssertExpectations(t)
-			mockBytes.AssertExpectations(t)
-			mockProject.AssertExpectations(t)
-			mockBeats.AssertExpectations(t)
-			mockScenes.AssertExpectations(t)
-			mockLayers.AssertExpectations(t)
-			mockCells.AssertExpectations(t)
 		})
 	}
 }

@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -49,7 +48,7 @@ func TestProjectLogosDrift(t *testing.T) {
 			daoRequest: &dao.ProjectLogosDriftRequest{OwnerID: ownerID, Logos: held, Limit: 101},
 			daoMock: &daoMock[[]*dao.ProjectLogosDriftRow]{
 				resp: []*dao.ProjectLogosDriftRow{
-					{ProjectID: projectID, Checksum: lo.ToPtr(logoChecksum)},
+					{ProjectID: projectID, Checksum: new(logoChecksum)},
 					{ProjectID: removedID},
 				},
 			},
@@ -144,8 +143,6 @@ func TestProjectLogosDrift(t *testing.T) {
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
-
-			mockDao.AssertExpectations(t)
 		})
 	}
 }
