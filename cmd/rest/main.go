@@ -183,7 +183,6 @@ func main() {
 	// HANDLERS
 	// =================================================================================================================
 
-	handlerPing := handlers.NewRestPing()
 	handlerHealth := handlers.NewRestHealth(jsonKeysClient, genaiHealth(genaiClient, cfg.Dependencies))
 	handlerProjectCreate := handlers.NewRestProjectCreate(serviceProjectCreate, cfg.Logger)
 	handlerProjectGet := handlers.NewRestProjectGet(serviceProjectGet, cfg.Logger)
@@ -247,8 +246,8 @@ func main() {
 		// instance. One cap counts a caller's open streams across both stream routes.
 		stream := api.With(httpf.Streaming(cfg.Limits.MaxStreamDuration), httpf.EndOnShutdown(ctx))
 
-		api.Get("/ping", handlerPing.ServeHTTP)
-		api.Get("/healthcheck", handlerHealth.ServeHTTP)
+		api.Get("/ping", httpf.Ping)
+		api.Get("/healthcheck", handlerHealth)
 
 		withAuth(item, config.PermissionProjectWrite).Post("/projects", handlerProjectCreate.ServeHTTP)
 		withAuth(item, config.PermissionProjectRead).Post("/projects/fields/drift", handlerProjectFieldsDrift.ServeHTTP)
