@@ -27,6 +27,23 @@ The routes are described in [`openapi.yaml`](./openapi.yaml).
 
 ---
 
+## Where things live
+
+`internal/core` is one flat package. Its file names group it:
+
+| Files                                                                            | What they hold                                                                                                                                                                |
+| -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `beat.go`, `scene.go`, `layer.go`, `cell.go`, `project.go`                       | Each entity's model and its page.                                                                                                                                             |
+| `beats*.go`, `scenes*.go`, `layers*.go`, `cellsWrite.go`, `*Move.go`, `*List.go` | One Scenes Composer operation per file. A route that writes one item sends the batch operation a list of one.                                                                 |
+| `project*.go`, `manuscriptExport.go`                                             | The project's own operations, its logo, the drift and edit lists, and the reads of a whole project, which `projectReadGate.go` bounds.                                        |
+| `common.go`                                                                      | The sentinels, the size limits, and the checks every operation shares: `lockOwnedProject`, `checkProjectOwnership`, `keepProjectBudget`.                                      |
+| `validate.go`                                                                    | The request validator and its custom tags.                                                                                                                                    |
+| `generation*.go`                                                                 | The generation operations. A submit reads a project snapshot, plans its calls, and sends them to genai; get, stream and cancel follow them.                                   |
+| `generationPlan.go`, `context*.go`                                               | The planner: `contextSplit` splits a generation into calls, `contextDraft` and `contextRead` hold what a call reads, `contextPrompt` renders it, `contextPlan` is the result. |
+| `openaiResponses.go`                                                             | The OpenAI request and response formats.                                                                                                                                      |
+
+`internal/dao` holds one statement per file, `pg.<operation>.sql` beside its `pg.<operation>.go`, and `internal/handlers` one route per `rest.<operation>.go`, with the shared error maps in `rest.errors.go`.
+
 ## Transactions
 
 Writes that must land together run in a `transaction.Transactor`. The service that needs one takes it as a constructor dependency, and `cmd` injects it. The transactor names no database, so business code says "these writes are one unit" without knowing what stores them:
