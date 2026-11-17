@@ -1,6 +1,6 @@
 # Upgrading to NEXT
 
-A request that fails validation answers 422 Unprocessable Entity, where it answered 400 Bad Request. The service also reads its PostgreSQL connection from the discrete `POSTGRES_*` variables only.
+A request that fails validation answers 422 Unprocessable Entity, where it answered 400 Bad Request. The service also reads its PostgreSQL connection from the discrete `POSTGRES_*` variables only, and the JS client needs `@a-novel-kit/nodelib-browser` 2.13.0 or later.
 
 ## Do I need to act?
 
@@ -8,7 +8,7 @@ A request that fails validation answers 422 Unprocessable Entity, where it answe
 
 **Required** for a deployment that still sets `POSTGRES_DSN`: the service no longer reads it. A deployment that sets `POSTGRES_HOST` already works as before.
 
-**Required** for a project that installs `@a-novel/service-narrative-engine-rest`: it needs `@a-novel-kit/nodelib-browser` 2.13.0 or later.
+**Required** for a project that installs `@a-novel/service-narrative-engine-rest`: it needs `@a-novel-kit/nodelib-browser` 2.13.0 or later. A lockfile that holds an older nodelib-browser fails to load the client, on the missing `RestClient` export.
 
 ## Read 422 for an invalid request
 
@@ -25,7 +25,7 @@ The logo write and the generation submit already answered 422, to a refused logo
 
 ## Install nodelib-browser 2.13.0 or later beside the JS client
 
-`@a-novel/service-narrative-engine-rest` builds `NarrativeEngineApi` on the `RestClient` that `@a-novel-kit/nodelib-browser` ships from 2.13.0, so its peer range is now `^2.13.0`. A request without a body no longer sends `Content-Type`. The constructor takes an optional `fetcher`, so a server-side caller can pass `serviceFetch(identity)` instead of subclassing the client.
+`@a-novel/service-narrative-engine-rest` builds `NarrativeEngineApi` on the `RestClient` that `@a-novel-kit/nodelib-browser` ships from 2.13.0, so its peer range is now `^2.13.0`. A request without a body no longer sends `Content-Type`. The constructor takes an optional `fetcher`: a server-side caller passes one that wraps `fetch` to add its service token or a deadline, instead of subclassing the client.
 
 ## Set the discrete PostgreSQL variables
 
