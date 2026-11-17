@@ -1,6 +1,6 @@
 import type { ManuscriptContent, NotesContent } from "./content";
 import type { GenerationContext } from "./generation";
-import { maxChars } from "./text";
+import { maxChars } from "./schema";
 
 import { z } from "zod";
 

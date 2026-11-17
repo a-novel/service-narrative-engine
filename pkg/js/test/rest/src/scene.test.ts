@@ -1,4 +1,4 @@
-import { superAdminAccessToken } from "./token";
+import { ABSENT_ID, COLOR, accessToken, api } from "./fixtures";
 
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
@@ -6,7 +6,6 @@ import { expectStatus } from "@a-novel-kit/nodelib-test/http";
 import {
   type Beat,
   Language,
-  NarrativeEngineApi,
   type ProjectComposer,
   type Scene,
   beatCreate,
@@ -23,12 +22,6 @@ import {
   scenesDelete,
   scenesUpdate,
 } from "@a-novel/service-narrative-engine-rest";
-
-const api = new NarrativeEngineApi(process.env.REST_URL!);
-const accessToken = await superAdminAccessToken();
-
-const ABSENT_ID = "01920000-0000-7000-8000-000000000000";
-const COLOR = "#4a90d9";
 
 let project: ProjectComposer;
 // The test project's beats: scenes go to the first unless a test names the second.

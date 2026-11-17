@@ -1,6 +1,6 @@
 import { type Block, DialogueBlockSchema, type ManuscriptContent, NarrationBlockSchema } from "./content";
 import { type ContextTarget, type GenerationContext, type GenerationRange, TargetMode } from "./generation";
-import { maxChars } from "./text";
+import { maxChars } from "./schema";
 
 import { z } from "zod";
 

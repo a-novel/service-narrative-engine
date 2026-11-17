@@ -1,4 +1,5 @@
-import { anonymousAccessToken, superAdminAccessToken, userAccessToken } from "./token";
+import { COLOR, accessToken, api } from "./fixtures";
+import { anonymousAccessToken, userAccessToken } from "./token";
 
 import { afterAll, describe, expect, it, onTestFinished } from "vitest";
 
@@ -8,7 +9,6 @@ import {
   GenerationKind,
   type GenerationSubmitRequest,
   Language,
-  NarrativeEngineApi,
   type Recap,
   beatCreate,
   beatList,
@@ -23,9 +23,6 @@ import {
   scenesCreate,
 } from "@a-novel/service-narrative-engine-rest";
 
-const api = new NarrativeEngineApi(process.env.REST_URL!);
-
-const COLOR = "#4a90d9";
 const RECAP: Recap = {
   condensed: "Marie attend Paul sur le quai, et le train entre en gare.",
   compact: "Marie attend Paul.",
@@ -35,7 +32,6 @@ const RECAP: Recap = {
 
 // genai never reaches a provider in this stack, so a consolidation fails before it starts, and the suite
 // writes the recap a client would write once it succeeded, with the stamps its context reports.
-const accessToken = await superAdminAccessToken();
 const userToken = await userAccessToken();
 
 const project = await projectCreate(api, accessToken, { title: "Les Heures claires", language: Language.Fr });

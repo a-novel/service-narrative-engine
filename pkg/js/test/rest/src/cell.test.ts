@@ -1,4 +1,4 @@
-import { superAdminAccessToken } from "./token";
+import { ABSENT_ID, COLOR, accessToken, api } from "./fixtures";
 
 import { afterAll, beforeAll, describe, expect, it, onTestFinished } from "vitest";
 
@@ -11,7 +11,6 @@ import {
   type Layer,
   LayerKind,
   ManuscriptContentSchema,
-  NarrativeEngineApi,
   type ProjectComposer,
   type Scene,
   beatCreate,
@@ -23,12 +22,6 @@ import {
   projectDelete,
   scenesCreate,
 } from "@a-novel/service-narrative-engine-rest";
-
-const api = new NarrativeEngineApi(process.env.REST_URL!);
-
-const ABSENT_ID = "01920000-0000-7000-8000-000000000000";
-const COLOR = "#4a90d9";
-const accessToken = await superAdminAccessToken();
 
 let project: ProjectComposer;
 let scenes: Scene[];

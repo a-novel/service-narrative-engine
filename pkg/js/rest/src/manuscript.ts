@@ -1,6 +1,6 @@
 import type { NarrativeEngineApi } from "./api";
 import { ManuscriptContentSchema } from "./content";
-import { maxChars } from "./text";
+import { maxChars } from "./schema";
 
 import { HTTP_HEADERS } from "@a-novel-kit/nodelib-browser/http";
 

@@ -1,6 +1,7 @@
 import type { NarrativeEngineApi } from "./api";
 import { ManuscriptContentSchema, NotesContentSchema } from "./content";
 import { RecapSchema } from "./recap";
+import { DateSchema } from "./schema";
 
 import { HTTP_HEADERS } from "@a-novel-kit/nodelib-browser/http";
 
@@ -17,12 +18,9 @@ export const CellSchema = z.object({
   sceneID: z.uuid(),
   layerID: z.uuid(),
   content: z.record(z.string(), z.unknown()),
-  updatedAt: z.iso.datetime().transform((value) => new Date(value)),
+  updatedAt: DateSchema,
   recap: RecapSchema.optional(),
-  recapCellUpdatedAt: z.iso
-    .datetime()
-    .transform((value) => new Date(value))
-    .optional(),
+  recapCellUpdatedAt: DateSchema.optional(),
 });
 
 /** The value {@link CellSchema} validates. */
@@ -32,7 +30,7 @@ export type Cell = z.infer<typeof CellSchema>;
 export const WrittenCellSchema = z.object({
   sceneID: z.uuid(),
   layerID: z.uuid(),
-  updatedAt: z.iso.datetime().transform((value) => new Date(value)),
+  updatedAt: DateSchema,
 });
 
 /** The value {@link WrittenCellSchema} validates. */

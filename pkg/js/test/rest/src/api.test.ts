@@ -1,8 +1,6 @@
+import { api } from "./fixtures";
+
 import { describe, expect, it } from "vitest";
-
-import { NarrativeEngineApi } from "@a-novel/service-narrative-engine-rest";
-
-const api = new NarrativeEngineApi(process.env.REST_URL!);
 
 describe("ping", () => {
   it("returns success", async () => {

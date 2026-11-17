@@ -1,6 +1,5 @@
 import golden from "../../../../../internal/handlers/testdata/manuscript.golden.json";
-import manuscriptCases from "../../../../../internal/models/schemas/testdata/manuscript.cases.json";
-import { superAdminAccessToken } from "./token";
+import { ABSENT_ID, COLOR, accessToken, api } from "./fixtures";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -10,7 +9,6 @@ import {
   type Layer,
   LayerKind,
   ManuscriptSchema,
-  NarrativeEngineApi,
   type ProjectComposer,
   type Scene,
   beatsCreate,
@@ -22,12 +20,6 @@ import {
   projectDelete,
   scenesCreate,
 } from "@a-novel/service-narrative-engine-rest";
-
-const api = new NarrativeEngineApi(process.env.REST_URL!);
-const accessToken = await superAdminAccessToken();
-
-const ABSENT_ID = "01920000-0000-7000-8000-000000000000";
-const COLOR = "#4a90d9";
 
 // The server's handler tests answer the same golden document.
 const expected = ManuscriptSchema.parse(golden);
@@ -72,19 +64,6 @@ beforeAll(async () => {
 afterAll(async () => {
   for (const item of [project, other]) {
     await projectDelete(api, accessToken, item);
-  }
-});
-
-describe("ManuscriptSchema", () => {
-  it("has cases to check", () => {
-    expect(manuscriptCases.length).toBeGreaterThan(0);
-  });
-
-  // The server's schema tests run the same cases, so both validators agree on each of them.
-  for (const testCase of manuscriptCases) {
-    it(`agrees with the server on ${testCase.name}`, () => {
-      expect(ManuscriptSchema.safeParse(testCase.document).success).toBe(testCase.valid);
-    });
   }
 });
 

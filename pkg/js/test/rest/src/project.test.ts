@@ -1,5 +1,6 @@
+import { ABSENT_ID, accessToken, api, collect } from "./fixtures";
 // @vitest-environment node
-import { anonymousAccessToken, superAdminAccessToken, userAccessToken } from "./token";
+import { anonymousAccessToken, userAccessToken } from "./token";
 
 import { createHash, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
@@ -10,7 +11,6 @@ import { expectStatus } from "@a-novel-kit/nodelib-test/http";
 import {
   Language,
   LayerKind,
-  NarrativeEngineApi,
   PictureRefusal,
   type ProjectComposer,
   type ProjectCreateRequest,
@@ -33,11 +33,6 @@ import {
   sceneCreate,
 } from "@a-novel/service-narrative-engine-rest";
 
-const api = new NarrativeEngineApi(process.env.REST_URL!);
-const accessToken = await superAdminAccessToken();
-
-const ABSENT_ID = "01920000-0000-7000-8000-000000000000";
-
 /** A 16 px square WebP, a logo the server accepts. */
 const logo = new Blob([readFileSync(new URL("../testdata/logo.webp", import.meta.url))], { type: "image/webp" });
 /** A 64 by 36 px JPEG, a wide logo the server accepts. */
@@ -54,13 +49,6 @@ const pngLogo = new Blob([readFileSync(new URL("../testdata/logo.png", import.me
 const animatedLogo = new Blob([readFileSync(new URL("../testdata/animated-logo.png", import.meta.url))], {
   type: "image/png",
 });
-
-/** Reads a stream to its end. */
-async function collect<T>(stream: AsyncIterable<T>): Promise<T[]> {
-  const items: T[] = [];
-  for await (const item of stream) items.push(item);
-  return items;
-}
 
 /** Creates a project of the session the test deletes when it finishes, whatever its outcome. */
 async function createProject(request: ProjectCreateRequest, token = accessToken): Promise<ProjectComposer> {

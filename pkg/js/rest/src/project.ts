@@ -3,7 +3,7 @@ import { type Beat, BeatSchema } from "./beat";
 import { type Cell, CellSchema } from "./cell";
 import { type Layer, LayerSchema } from "./layer";
 import { type Scene, SceneSchema } from "./scene";
-import { maxChars } from "./text";
+import { DateSchema, maxChars } from "./schema";
 
 import { HTTP_HEADERS } from "@a-novel-kit/nodelib-browser/http";
 
@@ -49,11 +49,11 @@ export const ProjectSchema = z.object({
   tags: z.array(z.string()),
   /** The genres the author names, in order. Empty until the author adds one. */
   genres: z.array(z.string()),
-  createdAt: z.iso.datetime().transform((value) => new Date(value)),
+  createdAt: DateSchema,
   /** When the project's own fields, its title, premise, language, tags and genres, last changed. */
-  updatedAt: z.iso.datetime().transform((value) => new Date(value)),
+  updatedAt: DateSchema,
   /** When the project's content last changed, its logo aside. */
-  editedAt: z.iso.datetime().transform((value) => new Date(value)),
+  editedAt: DateSchema,
   /**
    * The checksum of the logo, absent while the project has no logo. A logo URL that carries it names the logo's
    * bytes, which a cache keeps for good.
@@ -228,10 +228,7 @@ export type ProjectFieldsDriftResponse = z.infer<typeof ProjectFieldsDriftRespon
 
 /** The `editedAt` of every project of the caller, by ID. */
 export const ProjectEditsListResponseSchema = z.object({
-  edits: z.record(
-    z.uuid(),
-    z.iso.datetime().transform((value) => new Date(value))
-  ),
+  edits: z.record(z.uuid(), DateSchema),
 });
 
 /** The value {@link ProjectEditsListResponseSchema} validates. */

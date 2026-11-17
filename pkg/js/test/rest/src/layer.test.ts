@@ -1,4 +1,4 @@
-import { superAdminAccessToken } from "./token";
+import { ABSENT_ID, accessToken, api } from "./fixtures";
 
 import { afterAll, afterEach, beforeAll, describe, expect, it, onTestFinished } from "vitest";
 
@@ -7,7 +7,6 @@ import {
   Language,
   type Layer,
   LayerKind,
-  NarrativeEngineApi,
   type ProjectComposer,
   layerCreate,
   layerDelete,
@@ -20,11 +19,6 @@ import {
   projectCreate,
   projectDelete,
 } from "@a-novel/service-narrative-engine-rest";
-
-const api = new NarrativeEngineApi(process.env.REST_URL!);
-const accessToken = await superAdminAccessToken();
-
-const ABSENT_ID = "01920000-0000-7000-8000-000000000000";
 
 let project: ProjectComposer;
 let manuscript: Layer;

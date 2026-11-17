@@ -1,4 +1,5 @@
-import { anonymousAccessToken, superAdminAccessToken, userAccessToken } from "./token";
+import { ABSENT_ID, COLOR, accessToken, api, collect } from "./fixtures";
+import { anonymousAccessToken, userAccessToken } from "./token";
 
 import { afterAll, describe, expect, it, onTestFinished } from "vitest";
 
@@ -10,7 +11,6 @@ import {
   GenerationStatus,
   type GenerationSubmitRequest,
   Language,
-  NarrativeEngineApi,
   type ProjectComposer,
   type Scene,
   SceneField,
@@ -27,20 +27,7 @@ import {
   sceneCreate,
 } from "@a-novel/service-narrative-engine-rest";
 
-const api = new NarrativeEngineApi(process.env.REST_URL!);
-
-const ABSENT_ID = "01920000-0000-7000-8000-000000000000";
-const COLOR = "#4a90d9";
-
-/** Reads a stream to its end. */
-async function collect<T>(stream: AsyncIterable<T>): Promise<T[]> {
-  const items: T[] = [];
-  for await (const item of stream) items.push(item);
-  return items;
-}
-
 // genai never reaches a provider in this stack, so every admitted call fails before it starts.
-const accessToken = await superAdminAccessToken();
 const userToken = await userAccessToken();
 
 /** Creates a project of the caller with one scene. */
