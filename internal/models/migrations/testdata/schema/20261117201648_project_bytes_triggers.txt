@@ -1,4 +1,4 @@
-migration-history	sha256:8239e7435946286ff655e1664b4f93ae30cd3cf10f4add14bbbdc015dd2fdd03
+migration-history	sha256:c05117df961d2880a9648982389c5b3061f49f40372cec0c3de571fd8f6d42c5
 column	beats.bytes	bigint DEFAULT ((((octet_length(title) + octet_length(description)) + octet_length(prompt)) + COALESCE(octet_length((recap)::text), 0)) + COALESCE(octet_length((recap_sources)::text), 0)) GENERATED s
 column	beats.color	text NOT NULL
 column	beats.description	text NOT NULL DEFAULT ''::text

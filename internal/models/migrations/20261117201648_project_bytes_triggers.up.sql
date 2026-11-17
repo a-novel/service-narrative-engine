@@ -10,6 +10,11 @@
 -- A delete's cascade to scenes and cells runs within the delete's statement and fires the triggers of those
 -- tables. Every trigger fires before the statement returns, so a check later in the transaction reads the count
 -- with the write.
+--
+-- The previous release keeps serving while the new pods start, and its statements still add their own bytes,
+-- so a write it serves during the roll counts twice. The count only errs high, which refuses a write early but
+-- never lets one past the budget. A migration of the release after this one recounts every project to correct
+-- it.
 CREATE FUNCTION keep_stored_bytes () RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   IF TG_OP = 'INSERT' THEN
