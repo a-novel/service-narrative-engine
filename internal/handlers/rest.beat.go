@@ -32,7 +32,7 @@ type Beat struct {
 	// Recap is the beat's latest recap. It is absent until one is written.
 	Recap *Recap `json:"recap,omitempty"`
 	// RecapBeatUpdatedAt is the beat's updatedAt the recap read. It is absent without a recap.
-	RecapBeatUpdatedAt *time.Time `json:"recapBeatUpdatedAt,omitempty"`
+	RecapBeatUpdatedAt time.Time `json:"recapBeatUpdatedAt,omitzero"`
 	// RecapSources lists, for each scene of the beat in order, the manuscript cell the recap read. The recap
 	// is fresh while the beat, its scenes and those cells all hold the versions it read.
 	RecapSources []*BeatRecapSource `json:"recapSources,omitempty"`
@@ -50,7 +50,7 @@ func loadBeat(beat *core.Beat) Beat {
 		UpdatedAt:   beat.UpdatedAt,
 
 		Recap:              loadRecap(beat.Recap),
-		RecapBeatUpdatedAt: optionalTime(beat.RecapBeatUpdatedAt),
+		RecapBeatUpdatedAt: beat.RecapBeatUpdatedAt,
 		RecapSources:       loadBeatRecapSources(beat.RecapSources),
 	}
 }

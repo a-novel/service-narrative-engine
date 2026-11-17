@@ -91,10 +91,7 @@ func (service *ProjectCreate) Exec(ctx context.Context, request *ProjectCreateRe
 	}
 
 	// The project takes the first ID, then its required layers.
-	ids, err := newIDs(ctx, 1+len(requiredLayers))
-	if err != nil {
-		return nil, otel.ReportError(span, err)
-	}
+	ids := newIDs(1 + len(requiredLayers))
 
 	kinds := slices.Sorted(maps.Keys(requiredLayers))
 	layerItems := make([]dao.LayersInsertItem, len(kinds))

@@ -82,10 +82,7 @@ func (service *BeatsCreate) Exec(ctx context.Context, request *BeatsCreateReques
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	ids, err := newIDs(ctx, len(request.Beats))
-	if err != nil {
-		return nil, otel.ReportError(span, err)
-	}
+	ids := newIDs(len(request.Beats))
 
 	insertItems := make([]dao.BeatsInsertItem, len(request.Beats))
 
