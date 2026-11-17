@@ -130,8 +130,6 @@ jobs:
     permissions:
       contents: read
       packages: read
-    outputs:
-      artifact-id: ${{ steps.test.outputs.artifact-id }}
     env:
       POSTGRES_DSN: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
     steps:
@@ -141,7 +139,6 @@ jobs:
       - *start-local-database
       - uses: $/.github/actions/run-migrations
       - uses: a-novel-kit/workflows/go-actions/test-go@v1.87.1
-        id: test
         with:
           include: /internal|/cmd
           skip_setup: true
@@ -157,8 +154,6 @@ jobs:
     permissions:
       contents: read
       packages: read
-    outputs:
-      artifact-id: ${{ steps.test.outputs.artifact-id }}
     env:
       REST_URL: "http://localhost:8080"
       SERVICE_AUTHENTICATION_URL: "http://localhost:4000"
@@ -174,7 +169,6 @@ jobs:
           standalone_rest_image: ghcr.io/${{ github.repository }}/standalone-rest@${{ needs.build-standalone-rest.outputs.digest }}
           registry_login: "true"
       - uses: a-novel-kit/workflows/node-actions/test-node@v1.87.1
-        id: test
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           coverage_artifact: jscover
@@ -199,8 +193,7 @@ jobs:
           run_args: -e POSTGRES_PASSWORD=postgres
 
   # Infra tells a real database change from a version bump by digest alone, so the image must
-  # rebuild to the same digest. The two builds run at once, each on a fresh builder: both start
-  # cold, as a release does, and a shared builder would run their common steps only once.
+  # rebuild to the same digest.
   test-reproducible-database:
     runs-on: ubuntu-latest
     permissions:
@@ -295,8 +288,6 @@ jobs:
       - uses: a-novel-kit/workflows/generic-actions/codecov@v1.87.1
         with:
           codecov_token: ${{ secrets.CODECOV_TOKEN }}
-          coverage_files: coverage.txt,coverage/*
-          coverage_artifact_ids: ${{ needs.test-go.outputs.artifact-id }},${{ needs.test-pkg-js.outputs.artifact-id }}
 
   publish-docs:
     runs-on: ubuntu-latest
