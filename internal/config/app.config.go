@@ -74,11 +74,9 @@ type App struct {
 	Caps Caps
 	// Rest configures the REST server.
 	Rest httpf.ServerConfig
-	// ServiceToken names the service tokens the REST server accepts.
+	// ServiceToken names the service tokens the REST server accepts. Without an issuer, the server
+	// refuses to start unless its IssuerOptional field lets it take every request.
 	ServiceToken servicetoken.Config
-	// ServiceIssuerOptional lets the REST server start with no ServiceToken issuer, and take every
-	// request without a service token. Without it, a ServiceToken with no issuer refuses to start.
-	ServiceIssuerOptional bool
 	// Limits bounds what one request carries, below the REST server's own limits.
 	Limits Limits
 	// Generations configures the model calls of generations.

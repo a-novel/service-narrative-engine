@@ -1,5 +1,6 @@
-// Command rest serves the public REST API, for any HTTP client. cmd/migrations applies the
-// database schema.
+// Command rest serves the public REST API to the callers its service tokens allow. It refuses to start
+// without a token issuer unless SERVICE_ISSUER_OPTIONAL opts a local stack out. cmd/migrations applies
+// the database schema.
 package main
 
 import (
@@ -36,10 +37,9 @@ import (
 func main() {
 	cfg := config.AppPresetDefault
 
-	// Without an issuer, every caller reaches the routes, so only the standalone image starts so.
-	if cfg.ServiceToken.Issuer == "" && !cfg.ServiceIssuerOptional {
-		log.Fatalln("SERVICE_TOKEN_ISSUER is empty: set it, or SERVICE_ISSUER_OPTIONAL=true outside production")
-	}
+	withServiceToken := lo.Must(httpf.ServiceTokenGate(
+		cfg.ServiceToken, httpf.NewPoolClient(httpf.PoolOptions{}), cfg.Logger, cfg.Rest.Liveness,
+	))
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -238,9 +238,6 @@ func main() {
 
 	router := httpf.NewRouter(cfg.Rest, cfg.Otel, cfg.RestLogger, cfg.App.DowntimeStart)
 	limit := handlers.NewRestLimits(cfg.Rest, cfg.Limits)
-	withServiceToken := handlers.RestServiceToken(
-		cfg.ServiceToken, httpf.NewPoolClient(httpf.PoolOptions{}), cfg.Logger, cfg.Rest.Liveness,
-	)
 
 	router.Route("/v1", func(api chi.Router) {
 		// The router's body limit fits a batch; a route that writes one item, or compares what a client holds,

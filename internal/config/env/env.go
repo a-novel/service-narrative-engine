@@ -9,6 +9,7 @@ import (
 	"github.com/a-novel-kit/golib/config"
 	"github.com/a-novel-kit/golib/downtime"
 	"github.com/a-novel-kit/golib/httpf"
+	"github.com/a-novel-kit/golib/servicetoken"
 )
 
 // prefix is prepended to every configuration variable name that this package reads.
@@ -149,19 +150,9 @@ var (
 	// core.NewProjectReadGate size them to the instance's memory.
 	MaxConcurrentProjectReads = config.LoadEnv(getEnv("MAX_CONCURRENT_PROJECT_READS"), 0, strconv.Atoi)
 
-	// ServiceTokenIssuer is the issuer of the service tokens the REST server accepts, as a token's "iss"
-	// claim names it. Empty, the server refuses to start unless ServiceIssuerOptional is set.
-	ServiceTokenIssuer = getEnv("SERVICE_TOKEN_ISSUER")
-	// ServiceTokenAudience is the audience the REST server answers to. Each caller requests its token
-	// for it.
-	ServiceTokenAudience = getEnv("SERVICE_TOKEN_AUDIENCE")
-	// ServiceIssuerOptional lets a server with no ServiceTokenIssuer start and take every request,
-	// as the standalone image does for local, test and consumer stacks. A set issuer keeps the gate
-	// whatever it says.
-	ServiceIssuerOptional = config.LoadEnv(getEnv("SERVICE_ISSUER_OPTIONAL"), false, strconv.ParseBool)
-	// ServiceTokenCallers are the service accounts allowed to call, as a comma-separated list of
-	// system:serviceaccount:<namespace>:<name>.
-	ServiceTokenCallers = config.LoadEnv(getEnv("SERVICE_TOKEN_CALLERS"), nil, config.SliceParser(config.StringParser))
+	// ServiceToken names the service tokens the REST server accepts. Without an issuer, the server
+	// refuses to start unless SERVICE_ISSUER_OPTIONAL is set.
+	ServiceToken = servicetoken.LoadConfig(getEnv)
 
 	// OTLPEndpoint is the standard OTEL_EXPORTER_OTLP_ENDPOINT. When set, traces and logs export
 	// over OTLP/HTTP, which the OTEL_EXPORTER_OTLP_* variables configure. When empty, they go to

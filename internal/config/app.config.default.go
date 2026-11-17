@@ -11,7 +11,6 @@ import (
 	loggingpresets "github.com/a-novel-kit/golib/logging/presets"
 	"github.com/a-novel-kit/golib/otel"
 	otelpresets "github.com/a-novel-kit/golib/otel/presets"
-	"github.com/a-novel-kit/golib/servicetoken"
 
 	"github.com/a-novel/service-narrative-engine/internal/config/env"
 )
@@ -53,15 +52,10 @@ var AppPresetDefault = App{
 		ServiceGenaiPort:           env.ServiceGenaiPort,
 		ServiceGenaiCredentials:    newCredentials(env.ServiceGenaiTokenPath, env.ServiceGenaiTLS),
 	},
-	Permissions: PermissionsConfigDefault,
-	Caps:        CapsConfigDefault,
-	Rest:        env.Rest,
-	ServiceToken: servicetoken.Config{
-		Issuer:   env.ServiceTokenIssuer,
-		Audience: env.ServiceTokenAudience,
-		Callers:  env.ServiceTokenCallers,
-	},
-	ServiceIssuerOptional: env.ServiceIssuerOptional,
+	Permissions:  PermissionsConfigDefault,
+	Caps:         CapsConfigDefault,
+	Rest:         env.Rest,
+	ServiceToken: env.ServiceToken,
 	Limits: Limits{
 		MaxItemRequestSize:        env.RestMaxItemRequestSize,
 		MaxStreamDuration:         env.RestMaxStreamDuration,
