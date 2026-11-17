@@ -20,12 +20,11 @@ const streamHeartbeat = 15 * time.Second
 // received.
 const lastEventIDHeader = "Last-Event-ID"
 
-// streamEvents answers with a server-sent event stream that sends each item of a sequence as an event. Event
-// returns an item's event ID, type and content. The stream ends with the sequence, at its first error, or at
-// the first send that fails.
+// streamEvents answers with a server-sent event stream that sends each item of a sequence as its event. The
+// stream ends with the sequence, at its first error, or at the first send that fails.
 func streamEvents[Item any](
 	ctx context.Context, w http.ResponseWriter, logger logging.Log, items iter.Seq2[Item, error],
-	event func(item Item) (string, string, any),
+	event func(item Item) (id, eventType string, data any),
 ) {
 	ctx, span := otel.Tracer().Start(ctx, "rest.streamEvents")
 	defer span.End()
