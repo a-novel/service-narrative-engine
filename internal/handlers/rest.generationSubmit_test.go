@@ -204,6 +204,10 @@ func TestRestGenerationSubmit(t *testing.T) {
 			serviceMock: &serviceMock[*core.Generation]{err: core.ErrContextTooLarge},
 
 			expectStatus: http.StatusUnprocessableEntity,
+			expectResponse: map[string]any{
+				"type": "about:blank", "title": "Unprocessable Entity", "status": 422.0,
+				"tags": map[string]any{"reason": "contextTooLarge"},
+			},
 		},
 		{
 			name: "Error/Quota",

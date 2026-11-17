@@ -1,5 +1,4 @@
 import { ABSENT_ID, accessToken, api, collect } from "./fixtures";
-// @vitest-environment node
 import { anonymousAccessToken, userAccessToken } from "./token";
 
 import { createHash, randomUUID } from "node:crypto";

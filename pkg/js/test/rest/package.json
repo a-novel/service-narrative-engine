@@ -8,12 +8,6 @@
   },
   "license": "RPL-1.5",
   "type": "module",
-  "devDependencies": {
-    "@a-novel-kit/nodelib-browser": "^2.0.0",
-    "@a-novel-kit/nodelib-test": "^2.0.0",
-    "@a-novel/service-authentication-rest": "^2.18.4",
-    "@a-novel/service-narrative-engine-rest": "workspace:*"
-  },
   "engines": {
     "node": ">=23.11.0",
     "npm": ">=10.9.2"

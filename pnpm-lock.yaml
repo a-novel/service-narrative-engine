@@ -232,6 +232,12 @@ importers:
       '@a-novel-kit/nodelib-test':
         specifier: ^2.0.0
         version: 2.13.0(@a-novel-kit/nodelib-browser@2.13.0(@grafana/faro-web-sdk@2.14.0)(@grafana/faro-web-tracing@2.14.0(supports-color@7.2.0))(zod@4.6.7))(jsdom@31.0.1)(playwright@1.65.1)
+      '@a-novel/service-authentication-rest':
+        specifier: ^2.18.4
+        version: 2.26.0(@a-novel-kit/nodelib-browser@2.13.0(@grafana/faro-web-sdk@2.14.0)(@grafana/faro-web-tracing@2.14.0(supports-color@7.2.0))(zod@4.6.7))(zod@4.6.7)
+      '@a-novel/service-narrative-engine-rest':
+        specifier: workspace:*
+        version: link:pkg/js/rest
       '@eslint/js':
         specifier: ^10.0.1
         version: 10.0.1(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))
@@ -299,20 +305,7 @@ importers:
         specifier: ^4.1.12
         version: 4.6.7
 
-  pkg/js/test/rest:
-    devDependencies:
-      '@a-novel-kit/nodelib-browser':
-        specifier: ^2.0.0
-        version: 2.13.0(@grafana/faro-web-sdk@2.14.0)(@grafana/faro-web-tracing@2.14.0(supports-color@7.2.0))(zod@4.6.7)
-      '@a-novel-kit/nodelib-test':
-        specifier: ^2.0.0
-        version: 2.13.0(@a-novel-kit/nodelib-browser@2.13.0(@grafana/faro-web-sdk@2.14.0)(@grafana/faro-web-tracing@2.14.0(supports-color@7.2.0))(zod@4.6.7))(jsdom@31.0.1)(playwright@1.65.1)
-      '@a-novel/service-authentication-rest':
-        specifier: ^2.18.4
-        version: 2.26.0(@a-novel-kit/nodelib-browser@2.13.0(@grafana/faro-web-sdk@2.14.0)(@grafana/faro-web-tracing@2.14.0(supports-color@7.2.0))(zod@4.6.7))(zod@4.6.7)
-      '@a-novel/service-narrative-engine-rest':
-        specifier: workspace:*
-        version: link:../../rest
+  pkg/js/test/rest: {}
 
 packages:
 

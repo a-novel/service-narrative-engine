@@ -385,8 +385,8 @@ export type GenerationGetRequest = z.infer<typeof GenerationGetRequestSchema>;
  * consolidation. genai counts the calls against the caps of the caller's roles, which `generationUsage`
  * reports: resend the same request as calls settle, and genai admits the calls that wait, replays those it
  * admitted or that succeeded, and runs again those that failed or were cancelled. A call whose output read as
- * failed runs again too, under a new id. Throws on HTTP 422 when the request is invalid or the generation
- * outgrows every call its kind allows, 403 when the caller's roles set no caps, 404 when the caller owns no such
+ * failed runs again too, under a new id. Throws on HTTP 422 when the request is invalid, or when the generation
+ * outgrows every call its kind allows, with `contextTooLarge` in the error's `tags.reason`, 403 when the caller's roles set no caps, 404 when the caller owns no such
  * project or it lacks a target's scene, layer or beat, 429 when genai admitted none of its calls, with the cap in
  * the error's `tags.cap` and `Retry-After` when a token window frees usage at a known time, and 503 when genai is
  * unavailable.

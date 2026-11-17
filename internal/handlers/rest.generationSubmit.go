@@ -158,6 +158,11 @@ func (handler *RestGenerationSubmit) ServeHTTP(w http.ResponseWriter, r *http.Re
 		}
 	}
 
+	// The outgrown generation shares 422 with an invalid request; its tag tells a client to narrow the request.
+	if errors.Is(err, core.ErrContextTooLarge) {
+		err = httpf.WithTag(err, "reason", "contextTooLarge")
+	}
+
 	if err != nil {
 		httpf.HandleError(ctx, handler.logger, w, span, generationErrors, err)
 

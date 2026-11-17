@@ -2207,14 +2207,17 @@ components:
     contextTooLarge:
       description: |
         The request did not pass validation, as for `unprocessableEntity`, or the generation outgrows every call
-        its kind allows, which answers the status text alone. A generation outgrows its calls when the parts
-        that always enter pass its long limit, or a single text or block would rewrite past the output cap. A
-        narrower range, fewer targets or excluded layers fit. A project past its 16 MiB budget of stored bytes
-        answers the same.
+        its kind allows, which answers a problem whose `reason` tag is `contextTooLarge`. A generation outgrows
+        its calls when the parts that always enter pass its long limit, or a single text or block would rewrite
+        past the output cap. A narrower range, fewer targets or excluded layers fit. A project past its 16 MiB
+        budget of stored bytes answers the same. An invalid request whose rule spans several fields, such as a
+        range past the cell's end or a repeated target, answers the status text alone.
       content:
         application/problem+json:
           schema:
-            $ref: "#/components/schemas/invalidRequest"
+            anyOf:
+              - $ref: "#/components/schemas/invalidRequest"
+              - $ref: "#/components/schemas/contextTooLargeProblem"
         text/plain:
           schema:
             type: string
@@ -3172,7 +3175,7 @@ components:
       properties:
         kind:
           type: string
-          description: The content schema the cells of the layer follow, such as `manuscript` or `notes`. A kind with no content schema answers 400.
+          description: The content schema the cells of the layer follow, such as `manuscript` or `notes`. A kind with no content schema answers 422.
           examples: [notes]
         name:
           type: string
@@ -3974,6 +3977,35 @@ components:
                 or do not decode whole; `dimensions` for a side under 1 pixel, or a logo past its tallest; `size` for a
                 logo past its largest size, in bytes.
               enum: [format, dimensions, size]
+
+    contextTooLargeProblem:
+      type: object
+      description: An RFC 9457 problem details body answering a generation that outgrows every call its kind allows.
+      required: [type, title, status, tags]
+      additionalProperties: false
+      properties:
+        type:
+          type: string
+          description: The problem type; about:blank makes the title the HTTP status text.
+          const: about:blank
+        title:
+          type: string
+          description: The HTTP status text.
+          examples: [Unprocessable Entity]
+        status:
+          type: integer
+          description: The HTTP status code.
+          const: 422
+        tags:
+          type: object
+          description: Public details about the failure. Clients ignore tags they do not know.
+          required: [reason]
+          additionalProperties: true
+          properties:
+            reason:
+              type: string
+              description: The generation outgrows every call its kind allows; a narrower request fits.
+              enum: [contextTooLarge]
 
     plannedDowntimeProblem:
       type: object
