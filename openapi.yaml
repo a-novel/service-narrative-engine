@@ -2210,8 +2210,9 @@ components:
         its kind allows, which answers a problem whose `reason` tag is `contextTooLarge`. A generation outgrows
         its calls when the parts that always enter pass its long limit, or a single text or block would rewrite
         past the output cap. A narrower range, fewer targets or excluded layers fit. A project past its 16 MiB
-        budget of stored bytes answers the same. An invalid request whose rule spans several fields, such as a
-        range past the cell's end or a repeated target, answers the status text alone.
+        budget of stored bytes outgrows every call whatever the request, and answers a problem whose `limit`
+        tag is `projectBytes` instead. An invalid request whose rule spans several fields, such as a range past
+        the cell's end or a repeated target, answers the status text alone.
       content:
         application/problem+json:
           schema:
@@ -3980,7 +3981,9 @@ components:
 
     contextTooLargeProblem:
       type: object
-      description: An RFC 9457 problem details body answering a generation that outgrows every call its kind allows.
+      description: |
+        An RFC 9457 problem details body answering a generation that outgrows every call its kind allows. Its tags
+        hold `reason` for a request a narrower one fixes, or `limit` for a project past its byte budget.
       required: [type, title, status, tags]
       additionalProperties: false
       properties:
@@ -3999,13 +4002,17 @@ components:
         tags:
           type: object
           description: Public details about the failure. Clients ignore tags they do not know.
-          required: [reason]
+          minProperties: 1
           additionalProperties: true
           properties:
             reason:
               type: string
-              description: The generation outgrows every call its kind allows; a narrower request fits.
+              description: The request outgrows every call its kind allows; a narrower range, fewer targets or excluded layers fit.
               enum: [contextTooLarge]
+            limit:
+              type: string
+              description: The project stores more than its 16 MiB budget, which no request fits until the project shrinks.
+              enum: [projectBytes]
 
     plannedDowntimeProblem:
       type: object
