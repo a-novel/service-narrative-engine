@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
-	"github.com/uptrace/bun/driver/pgdriver"
 
 	"github.com/a-novel-kit/golib/postgres"
 	"github.com/a-novel-kit/golib/postgres/postgrestest"
@@ -81,10 +80,8 @@ func TestPgOwnerLock(t *testing.T) {
 					return
 				}
 
-				var pgErr pgdriver.Error
-
-				require.ErrorAs(t, err, &pgErr)
-				require.Equal(t, pgLockNotAvailable, pgErr.Field('C'))
+				code, _ := postgres.SQLState(err)
+				require.Equal(t, pgLockNotAvailable, code)
 			})
 		})
 	}

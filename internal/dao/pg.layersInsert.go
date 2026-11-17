@@ -80,7 +80,9 @@ func (dao *PgLayersInsert) Exec(ctx context.Context, request *LayersInsertReques
 		request.ProjectID, request.Position, bun.List(ids), bun.List(kinds), bun.List(names),
 		bun.List(descriptions), request.Now,
 	).Scan(ctx, &entities)
-	if isViolation(err, pgCheckViolation, "layers_position_check") {
+
+	code, constraint := postgres.SQLState(err)
+	if code == pgCheckViolation && constraint == "layers_position_check" {
 		err = errors.Join(err, ErrLayersInsertFull)
 	}
 

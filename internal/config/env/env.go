@@ -11,6 +11,7 @@ import (
 	"github.com/a-novel-kit/golib/grpcf"
 	"github.com/a-novel-kit/golib/httpf"
 	otelpresets "github.com/a-novel-kit/golib/otel/presets"
+	postgrespresets "github.com/a-novel-kit/golib/postgres/presets"
 	"github.com/a-novel-kit/golib/servicetoken"
 )
 
@@ -30,18 +31,6 @@ const (
 	// TimeoutShutdownDefault ends a server's drain 6 seconds after SIGTERM, so its OpenTelemetry
 	// flush, up to 2 seconds, finishes long before Kubernetes kills the pod at 30 seconds.
 	TimeoutShutdownDefault = 6 * time.Second
-
-	// PostgresMaxOpenConnsDefault caps the connections one instance opens. Multiplied by the replica
-	// count, the cap stays well under PostgreSQL's default max_connections of 100. That leaves room
-	// for the migration job and a psql session. A spike waits inside the process for a free connection.
-	PostgresMaxOpenConnsDefault = 20
-	// PostgresMaxIdleConnsDefault matches the open limit, so a burst keeps the connections it is about
-	// to reuse.
-	PostgresMaxIdleConnsDefault = 20
-	// PostgresPortDefault is PostgreSQL's standard port.
-	PostgresPortDefault = 5432
-	// PostgresTLSEnabledDefault encrypts the connection unless a deployment turns it off.
-	PostgresTLSEnabledDefault = true
 
 	// ServiceJSONKeysHostDefault reaches a JSON Keys service on the same host.
 	ServiceJSONKeysHostDefault = "localhost"
@@ -78,23 +67,8 @@ var (
 )
 
 var (
-	// PostgresHost is the PostgreSQL server hostname or IP address.
-	PostgresHost = getEnv("POSTGRES_HOST")
-	// PostgresPort is the PostgreSQL server port.
-	PostgresPort = config.LoadEnv(getEnv("POSTGRES_PORT"), PostgresPortDefault, strconv.Atoi)
-	// PostgresUser is the PostgreSQL login role.
-	PostgresUser = getEnv("POSTGRES_USER")
-	// PostgresPassword is the PostgreSQL login credential.
-	PostgresPassword = getEnv("POSTGRES_PASSWORD")
-	// PostgresDatabase is the PostgreSQL database name.
-	PostgresDatabase = getEnv("POSTGRES_DATABASE")
-	// PostgresTLSEnabled controls transport encryption for the PostgreSQL connection.
-	PostgresTLSEnabled = config.LoadEnv(getEnv("POSTGRES_TLS_ENABLED"), PostgresTLSEnabledDefault, strconv.ParseBool)
-
-	// PostgresMaxOpenConns is the maximum number of open connections to the database.
-	PostgresMaxOpenConns = config.LoadEnv(getEnv("POSTGRES_MAX_OPEN_CONNS"), PostgresMaxOpenConnsDefault, strconv.Atoi)
-	// PostgresMaxIdleConns is the maximum number of connections kept open while idle.
-	PostgresMaxIdleConns = config.LoadEnv(getEnv("POSTGRES_MAX_IDLE_CONNS"), PostgresMaxIdleConnsDefault, strconv.Atoi)
+	// Postgres reaches PostgreSQL through the POSTGRES_* variables, with the fleet's pool bounds.
+	Postgres = postgrespresets.LoadConnection(getEnv, postgrespresets.ConnectionDefault)
 
 	// ServiceJSONKeys locates the JSON Keys gRPC server through the SERVICE_JSON_KEYS_* variables.
 	ServiceJSONKeys = grpcf.LoadClientConfig(getEnv, "SERVICE_JSON_KEYS", grpcf.ClientConfig{

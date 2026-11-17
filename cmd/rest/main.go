@@ -5,7 +5,6 @@ package main
 
 import (
 	"context"
-	"io"
 	"log"
 	"os"
 	"os/signal"
@@ -50,9 +49,7 @@ func main() {
 	// A server started during a planned downtime refuses work, so it leaves the database alone.
 	if !downtime.Started(cfg.App.DowntimeStart, time.Now()) {
 		ctx = lo.Must(postgres.NewContext(ctx, cfg.Postgres))
-
-		database := lo.Must(cfg.Postgres.DB(ctx))
-		defer closeDatabase(database)
+		defer cfg.Postgres.Close()
 	}
 
 	// =================================================================================================================
@@ -309,11 +306,4 @@ func main() {
 	log.Println("Starting REST server on :" + strconv.Itoa(cfg.Rest.Port))
 
 	lo.Must0(httpf.ListenAndServe(ctx, cfg.Rest, withServiceToken(router)))
-}
-
-func closeDatabase(database io.Closer) {
-	err := database.Close()
-	if err != nil {
-		log.Println("Close Postgres: " + err.Error())
-	}
 }
