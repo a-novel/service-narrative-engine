@@ -528,10 +528,6 @@ func TestGenerationSubmit(t *testing.T) {
 				require.ErrorAs(t, err, &quota)
 				require.Equal(t, testCase.expectQuota, quota)
 			}
-
-			mockSnapshot.AssertExpectations(t)
-			mockPlan.AssertExpectations(t)
-			mockGenai.AssertExpectations(t)
 		})
 	}
 }

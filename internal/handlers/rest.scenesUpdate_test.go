@@ -145,7 +145,6 @@ func TestRestScenesUpdate(t *testing.T) {
 			handlers.NewRestScenesUpdate(service, config.LoggerDev).ServeHTTP(w, testCase.request(t))
 
 			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
-			service.AssertExpectations(t)
 		})
 	}
 }

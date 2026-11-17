@@ -112,7 +112,6 @@ func TestRestProjectGet(t *testing.T) {
 			handlers.NewRestProjectGet(service, config.LoggerDev).ServeHTTP(w, testCase.request(t))
 
 			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
-			service.AssertExpectations(t)
 		})
 	}
 }

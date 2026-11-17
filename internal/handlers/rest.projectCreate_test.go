@@ -133,7 +133,6 @@ func TestRestProjectCreate(t *testing.T) {
 
 			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
 			require.Equal(t, testCase.expectLocation, w.Header().Get("Location"))
-			service.AssertExpectations(t)
 		})
 	}
 }

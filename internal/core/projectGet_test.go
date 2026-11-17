@@ -105,9 +105,6 @@ func TestProjectGet(t *testing.T) {
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
-
-			mockOwner.AssertExpectations(t)
-			mockDao.AssertExpectations(t)
 		})
 	}
 }

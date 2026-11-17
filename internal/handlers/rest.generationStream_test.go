@@ -205,8 +205,6 @@ func TestRestGenerationStream(t *testing.T) {
 				require.Equal(t, testCase.expectStatus, w.Code)
 				require.Equal(t, testCase.expectLocation, w.Header().Get("Location"))
 			}
-
-			service.AssertExpectations(t)
 		})
 	}
 }

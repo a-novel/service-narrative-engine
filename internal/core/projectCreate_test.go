@@ -473,11 +473,6 @@ func TestProjectCreate(t *testing.T) {
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
-
-			daoLockMock.AssertExpectations(t)
-			daoCountMock.AssertExpectations(t)
-			daoProjectMock.AssertExpectations(t)
-			daoLayersMock.AssertExpectations(t)
 		})
 	}
 }

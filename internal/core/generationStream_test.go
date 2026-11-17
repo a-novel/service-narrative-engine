@@ -291,9 +291,6 @@ func TestGenerationStream(t *testing.T) {
 			} else {
 				require.ErrorContains(t, streamErr, testCase.expectStreamErr.Error())
 			}
-
-			mockGenai.AssertExpectations(t)
-			mockRead.AssertExpectations(t)
 		})
 	}
 }

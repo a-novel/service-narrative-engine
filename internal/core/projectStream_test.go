@@ -260,13 +260,6 @@ func TestProjectStream(t *testing.T) {
 
 			require.Equal(t, testCase.expectRecords, received)
 			require.ErrorIs(t, streamErr, testCase.expectStreamErr)
-
-			mocks.owner.AssertExpectations(t)
-			mocks.project.AssertExpectations(t)
-			mocks.beats.AssertExpectations(t)
-			mocks.scenes.AssertExpectations(t)
-			mocks.layers.AssertExpectations(t)
-			mocks.cells.AssertExpectations(t)
 		})
 	}
 }

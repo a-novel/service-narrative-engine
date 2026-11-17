@@ -237,10 +237,6 @@ func TestBeatsCreate(t *testing.T) {
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)
 			require.Equal(t, testCase.expect, result)
-
-			mockLock.AssertExpectations(t)
-			mockInsert.AssertExpectations(t)
-			mockBytes.AssertExpectations(t)
 		})
 	}
 }

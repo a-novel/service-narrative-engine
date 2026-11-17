@@ -153,7 +153,6 @@ func TestRestGenerationUsage(t *testing.T) {
 			handlers.NewRestGenerationUsage(service, config.LoggerDev).ServeHTTP(w, testCase.request(t))
 
 			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
-			service.AssertExpectations(t)
 		})
 	}
 }

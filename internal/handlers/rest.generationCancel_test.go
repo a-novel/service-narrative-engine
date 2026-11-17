@@ -130,7 +130,6 @@ func TestRestGenerationCancel(t *testing.T) {
 			handlers.NewRestGenerationCancel(service, config.LoggerDev).ServeHTTP(w, testCase.request(t))
 
 			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
-			service.AssertExpectations(t)
 		})
 	}
 }

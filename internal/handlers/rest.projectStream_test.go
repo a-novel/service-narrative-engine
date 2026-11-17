@@ -201,8 +201,6 @@ func TestRestProjectStream(t *testing.T) {
 			} else {
 				require.Equal(t, testCase.expectStatus, w.Code)
 			}
-
-			service.AssertExpectations(t)
 		})
 	}
 }

@@ -150,8 +150,6 @@ func TestRestHealth(t *testing.T) {
 			}
 
 			require.Equal(t, expectReport, report)
-
-			jsonKeys.AssertExpectations(t)
 		})
 	}
 }

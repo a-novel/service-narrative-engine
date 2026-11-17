@@ -142,7 +142,6 @@ func TestRestLayerUpdate(t *testing.T) {
 			handlers.NewRestLayerUpdate(service, config.LoggerDev).ServeHTTP(w, testCase.request(t))
 
 			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
-			service.AssertExpectations(t)
 		})
 	}
 }

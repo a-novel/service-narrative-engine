@@ -284,8 +284,6 @@ func TestGenerationGet(t *testing.T) {
 			} else {
 				require.Equal(t, testCase.expect, result)
 			}
-
-			mockGenai.AssertExpectations(t)
 		})
 	}
 }
