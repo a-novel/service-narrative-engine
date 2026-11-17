@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/a-novel-kit/golib/httpf"
 	"github.com/a-novel-kit/golib/logging"
@@ -55,6 +56,10 @@ func (handler *RestSceneDelete) ServeHTTP(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	span.SetAttributes(
+		attribute.String("scene.id", request.ID.String()),
+	)
+
 	serviceRequest := &core.ScenesDeleteRequest{
 		OwnerID:   ownerID,
 		ProjectID: request.ProjectID,
@@ -63,7 +68,7 @@ func (handler *RestSceneDelete) ServeHTTP(w http.ResponseWriter, r *http.Request
 
 	result, err := handler.service.Exec(ctx, serviceRequest)
 	if err != nil {
-		httpf.HandleError(ctx, handler.logger, w, span, composerErrors, err)
+		httpf.HandleError(ctx, handler.logger, w, span, composerErrors, itemFields(err))
 
 		return
 	}

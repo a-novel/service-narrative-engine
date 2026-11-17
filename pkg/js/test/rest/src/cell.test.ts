@@ -131,6 +131,13 @@ describe("cellWrite", () => {
     });
   });
 
+  it("names the invalid field of a missing content", async () => {
+    const request = { projectID: project.id, sceneID: scenes[0].id, layerID: notes.id };
+    await expect(cellWrite(api, accessToken, request as Parameters<typeof cellWrite>[2])).rejects.toThrow(
+      '"invalidFields":{"content":"required"}'
+    );
+  });
+
   it("returns 400 for content outside the schema of the layer's kind", async () => {
     const request = { projectID: project.id, sceneID: scenes[0].id, layerID: notes.id, content: { blocks: [] } };
     await expectStatus(cellWrite(api, accessToken, request), 400);

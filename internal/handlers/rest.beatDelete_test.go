@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
 
@@ -94,6 +95,19 @@ func TestRestBeatDelete(t *testing.T) {
 			serviceMock: &serviceMock[[]*core.Beat]{err: core.ErrInvalidRequest},
 
 			expectStatus: http.StatusBadRequest,
+		},
+		{
+			// The batch request names the ID IDs[0]; the route names it as its own query does.
+			name: "Error/InvalidFields",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[[]*core.Beat]{err: errors.Join(validator.New().Struct(&core.BeatsDeleteRequest{
+				OwnerID: ownerID, ProjectID: projectID, IDs: []uuid.UUID{uuid.Nil},
+			}), core.ErrInvalidRequest)},
+
+			expectStatus:   http.StatusBadRequest,
+			expectResponse: invalidFieldsProblem(map[string]any{"id": "required"}),
 		},
 		{
 			name: "Error/Internal",

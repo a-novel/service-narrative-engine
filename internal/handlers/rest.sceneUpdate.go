@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/a-novel-kit/golib/httpf"
 	"github.com/a-novel-kit/golib/logging"
@@ -62,6 +63,10 @@ func (handler *RestSceneUpdate) ServeHTTP(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	span.SetAttributes(
+		attribute.String("scene.id", request.ID.String()),
+	)
+
 	serviceRequest := &core.ScenesUpdateRequest{
 		OwnerID:   ownerID,
 		ProjectID: request.ProjectID,
@@ -75,7 +80,7 @@ func (handler *RestSceneUpdate) ServeHTTP(w http.ResponseWriter, r *http.Request
 
 	result, err := handler.service.Exec(ctx, serviceRequest)
 	if err != nil {
-		httpf.HandleError(ctx, handler.logger, w, span, composerErrors, tagLimit(err))
+		httpf.HandleError(ctx, handler.logger, w, span, composerErrors, tagLimit(itemFields(err)))
 
 		return
 	}

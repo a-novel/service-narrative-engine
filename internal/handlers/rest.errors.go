@@ -3,6 +3,9 @@ package handlers
 import (
 	"errors"
 	"net/http"
+	"strings"
+
+	"github.com/go-playground/validator/v10"
 
 	"github.com/a-novel-kit/golib/httpf"
 	"github.com/a-novel-kit/golib/picture"
@@ -80,4 +83,29 @@ var generationErrors = httpf.ErrMap{
 	core.ErrContextTooLarge:    http.StatusUnprocessableEntity,
 	core.ErrGenerationQuota:    http.StatusTooManyRequests,
 	core.ErrGenaiUnavailable:   http.StatusServiceUnavailable,
+}
+
+// itemFields names the invalid fields of a one-item batch request as the single-item route's body names them,
+// so its invalidFields stay those of its own request: title for Beats[0].Title, id for IDs[0]. Every
+// single-item body is flat, so a field's own name is its path. golib names the fields only when this tag is
+// unset.
+func itemFields(err error) error {
+	fields, ok := errors.AsType[validator.ValidationErrors](err)
+	if !ok {
+		return err
+	}
+
+	paths := make(map[string]string, len(fields))
+
+	for _, field := range fields {
+		// A field is a capitalized word, or ends in ID: Title, ProjectID, and ID itself, which IDs[0] becomes.
+		name := strings.TrimSuffix(field.StructField(), "s[0]")
+		if name == "ID" {
+			name = "id"
+		}
+
+		paths[strings.ToLower(name[:1])+name[1:]] = field.Tag()
+	}
+
+	return httpf.WithTag(err, httpf.InvalidFieldsTag, paths)
 }

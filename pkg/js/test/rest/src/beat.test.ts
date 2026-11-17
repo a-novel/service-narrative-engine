@@ -90,6 +90,10 @@ describe("beatCreate", () => {
     await expectStatus(createBeat("Beat", -1), 400);
   });
 
+  it("names the invalid field of a blank title", async () => {
+    await expect(createBeat(" ")).rejects.toThrow('"invalidFields":{"title":"notblank"}');
+  });
+
   it("returns 404 for an absent project", async () => {
     await expectStatus(beatCreate(api, accessToken, { projectID: ABSENT_ID, title: "Beat", color: COLOR }), 404);
   });

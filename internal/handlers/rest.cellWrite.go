@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/a-novel-kit/golib/httpf"
 	"github.com/a-novel-kit/golib/logging"
@@ -62,6 +63,12 @@ func (handler *RestCellWrite) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	span.SetAttributes(
+		attribute.String("cell.scene_id", request.SceneID.String()),
+		attribute.String("cell.layer_id", request.LayerID.String()),
+		attribute.Int("cell.size", len(request.Content)),
+	)
+
 	serviceRequest := &core.CellsWriteRequest{
 		OwnerID:   ownerID,
 		ProjectID: request.ProjectID,
@@ -74,7 +81,7 @@ func (handler *RestCellWrite) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 	result, err := handler.service.Exec(ctx, serviceRequest)
 	if err != nil {
-		httpf.HandleError(ctx, handler.logger, w, span, composerErrors, tagLimit(err))
+		httpf.HandleError(ctx, handler.logger, w, span, composerErrors, tagLimit(itemFields(err)))
 
 		return
 	}

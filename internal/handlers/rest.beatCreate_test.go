@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/stretchr/testify/mock"
 
 	"github.com/a-novel/service-narrative-engine/internal/config"
@@ -110,6 +111,23 @@ func TestRestBeatCreate(t *testing.T) {
 			serviceMock: &serviceMock[[]*core.Beat]{err: core.ErrInvalidRequest},
 
 			expectStatus: http.StatusBadRequest,
+		},
+		{
+			// The batch request names the title Beats[0].Title; the route names it as its own body does.
+			name: "Error/InvalidFields",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[[]*core.Beat]{err: errors.Join(validator.New().Struct(&struct {
+				Beats []struct {
+					Title string `validate:"required"`
+				} `validate:"dive"`
+			}{Beats: make([]struct {
+				Title string `validate:"required"`
+			}, 1)}), core.ErrInvalidRequest)},
+
+			expectStatus:   http.StatusBadRequest,
+			expectResponse: invalidFieldsProblem(map[string]any{"title": "required"}),
 		},
 		{
 			name: "Error/Internal",

@@ -149,6 +149,13 @@ func newProbeContext(t *testing.T, setup probeSetup) context.Context {
 	return ctx
 }
 
+// invalidFieldsProblem is the body of a refusal for invalid request fields, each named by its path.
+func invalidFieldsProblem(fields map[string]any) any {
+	return map[string]any{
+		"type": "about:blank", "title": "Bad Request", "status": 400.0, "tags": map[string]any{"invalidFields": fields},
+	}
+}
+
 // limitProblem is the body of a refusal for a storage limit, whose limit tag names the limit reached.
 func limitProblem(limit string) any {
 	return map[string]any{

@@ -89,7 +89,7 @@ describe("layerCreate", () => {
   });
 
   it("names the invalid field of a blank name", async () => {
-    await expect(createNotes(" ")).rejects.toThrow('"notblank"');
+    await expect(createNotes(" ")).rejects.toThrow('"invalidFields":{"name":"notblank"}');
   });
 
   it("returns 400 for a kind with no content schema", async () => {
