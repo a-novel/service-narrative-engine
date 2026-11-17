@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
 
+import { mailLinks, searchMail } from "@a-novel-kit/nodelib-test/mailpit";
 import {
   AuthenticationApi,
   Lang,
@@ -9,19 +10,6 @@ import {
   tokenCreate,
   tokenCreateAnon,
 } from "@a-novel/service-authentication-rest";
-
-/** A Mailpit search result, reduced to the message IDs. */
-type MailpitSearchResponse = {
-  messages: Array<{ ID: string }>;
-};
-
-/** A Mailpit message, reduced to its HTML body. */
-type MailpitMessage = {
-  HTML: string;
-};
-
-/** Matches the account-creation link of an invitation email, its `&` still escaped as in HTML. */
-const REGISTRATION_LINK = /href="([^"]*\/ext\/account\/create\?[^"]*)"/;
 
 /** Returns the integration super-admin's sign-in, which the suite's global setup completes once. */
 export function superAdminCredentials(): { email: string; password: string } {
@@ -70,20 +58,19 @@ export async function userAccessToken(): Promise<string> {
   return accessToken;
 }
 
-/** Waits up to 15 seconds for the invitation mailed to email, and returns the short code of its link. */
+/**
+ * Waits up to 15 seconds for the invitation mailed to email, and returns the short code of its link. It polls
+ * Mailpit itself: the suite's global setup calls it outside any test, where `vi.waitFor` cannot run.
+ */
 export async function registrationShortCode(email: string): Promise<string> {
   const deadline = Date.now() + 15_000;
 
   while (Date.now() < deadline) {
-    const query = new URLSearchParams({ query: `to:"${email}"`, limit: "10" });
-    const { messages } = (await fetch(`${mailURL()}/api/v1/search?${query}`).then(readJSON)) as MailpitSearchResponse;
+    const links = (await searchMail(mailURL(), `to:"${email}"`)).flatMap(({ HTML }) => mailLinks(HTML));
+    const link = links.find((href) => new URL(href).pathname === "/ext/account/create");
 
-    for (const { ID } of messages) {
-      const { HTML } = (await fetch(`${mailURL()}/api/v1/message/${ID}`).then(readJSON)) as MailpitMessage;
-      const link = REGISTRATION_LINK.exec(HTML)?.[1];
-      if (!link) continue;
-
-      const shortCode = new URL(link.replaceAll("&amp;", "&")).searchParams.get("shortCode");
+    if (link) {
+      const shortCode = new URL(link).searchParams.get("shortCode");
       if (!shortCode) throw new Error("the invitation link carries no short code");
       return shortCode;
     }
@@ -92,14 +79,4 @@ export async function registrationShortCode(email: string): Promise<string> {
   }
 
   throw new Error(`no invitation reached ${email}`);
-}
-
-/** Returns the JSON body of a successful Mailpit response. */
-async function readJSON(response: Response): Promise<unknown> {
-  if (!response.ok) {
-    await response.body?.cancel();
-    throw new Error(`Mailpit answered ${response.status}`);
-  }
-
-  return await response.json();
 }
