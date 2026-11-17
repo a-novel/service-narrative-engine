@@ -9,9 +9,8 @@ COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod \
     go mod download
 
-COPY ./cmd/migrations ./cmd/migrations
-COPY ./internal/config ./internal/config
-COPY ./internal/models/migrations ./internal/models/migrations
+COPY ./cmd ./cmd
+COPY ./internal ./internal
 
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
