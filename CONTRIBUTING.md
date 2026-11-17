@@ -19,7 +19,7 @@ Check that it answers:
 # Liveness
 curl "http://localhost:${REST_PORT}/v1/ping"
 
-# Dependency check (Postgres and JSON Keys)
+# Dependency check (Postgres, JSON Keys, and genai once SERVICE_GENAI_HOST is set)
 curl "http://localhost:${REST_PORT}/v1/healthcheck"
 ```
 
@@ -70,15 +70,7 @@ err := service.transactor.WithinTx(ctx, func(ctx context.Context) error {
 })
 ```
 
-Four services write without the project lock:
-
-| Service                                  | Reason                                                                 |
-| ---------------------------------------- | ---------------------------------------------------------------------- |
-| `ProjectCreate`                          | It creates the project, stamped at creation, with its required layers. |
-| `ProjectDelete`                          | It removes the project.                                                |
-| `ProjectLogoUpdate`, `ProjectLogoDelete` | A logo is cosmetic, so its write leaves `edited_at` as it was.         |
-
-`TestProjectWriteLock` in `internal/core/projectWriteLock_test.go` enforces the rule. It fails when the `Exec` method of a service builds a DAO request that inserts, updates, upserts, deletes or moves before it calls `lockOwnedProject`. An exemption goes in its `projectWriteLockExempt` map, with its reason.
+`TestProjectWriteLock` in `internal/core/projectWriteLock_test.go` enforces the rule. It fails when the `Exec` method of a service builds a DAO request that inserts, updates, upserts, deletes or moves before it calls `lockOwnedProject`. The services that write without the lock, such as `ProjectCreate` and the logo writes, are listed with their reason in its `projectWriteLockExempt` map, and a new exemption goes there.
 
 ## Refresh goldens
 

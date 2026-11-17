@@ -35,8 +35,6 @@ Deploy the images with any container orchestrator. The composition below shows w
 
 Pin every image to the same release tag. A production deployment runs `database`, then `migrations` to completion, then any number of `rest` replicas. The server reaches a JSON Keys gRPC server, deployed from that service's own images. Provide `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DATABASE` through the orchestrator; store the password as a secret.
 
-<!-- TODO(project-docs): replace v0.0.0 with the new service's release tag -->
-
 ```yaml
 services:
   postgres-narrative-engine:

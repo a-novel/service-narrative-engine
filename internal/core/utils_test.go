@@ -113,7 +113,7 @@ func coreProject() *core.Project {
 	}
 }
 
-// newJPEG encodes a gray gradient of the given size as a JPEG.
+// newPNG encodes a black image of the given size as a PNG.
 func newPNG(width, height int) []byte {
 	var buf bytes.Buffer
 
@@ -125,6 +125,7 @@ func newPNG(width, height int) []byte {
 	return buf.Bytes()
 }
 
+// newJPEG encodes a gray gradient of the given size as a JPEG.
 func newJPEG(width, height int) []byte {
 	img := image.NewGray(image.Rect(0, 0, width, height))
 
