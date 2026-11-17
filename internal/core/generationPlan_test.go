@@ -2,16 +2,12 @@ package core_test
 
 import (
 	"context"
-	"crypto/sha256"
 	"embed"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"flag"
 	"fmt"
-	"maps"
 	"os"
-	"path/filepath"
+	"path"
 	"slices"
 	"strconv"
 	"strings"
@@ -34,11 +30,16 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/models/schemas"
 )
 
-// updateGolden rewrites the golden prompt files from the current templates: go test ./internal/core -update.
-var updateGolden = flag.Bool("update", false, "rewrite the golden prompt files")
+// updateGoldens rewrites the golden files of [TestGenerationPlan] from the current code instead of checking
+// them, when GOLIB_UPDATE_SNAPSHOTS is set, as golib's snapshot tests do. pnpm generate:go sets it.
+//
+//go:generate env GOLIB_UPDATE_SNAPSHOTS=1 go test -run ^TestGenerationPlan$
+var updateGoldens = os.Getenv("GOLIB_UPDATE_SNAPSHOTS") != ""
 
-//go:embed testdata/prompts
-var promptFixtures embed.FS
+// fixtures holds the projects, outputs and goldens of [TestGenerationPlan].
+//
+//go:embed testdata
+var fixtures embed.FS
 
 // promptProject is a project fixture of testdata/prompts, with a request of each generation kind.
 // Scenes, layers and cells refer to each other by position.
@@ -322,7 +323,7 @@ func (reads *cellReads) serve(stored map[storedKey]*core.Cell, read *dao.CellsSe
 func loadPromptProject(t *testing.T, language string) (*promptProject, *storedProject) {
 	t.Helper()
 
-	data, err := promptFixtures.ReadFile("testdata/prompts/project." + language + ".yaml")
+	data, err := fixtures.ReadFile("testdata/prompts/project." + language + ".yaml")
 	require.NoError(t, err)
 
 	fixture := &promptProject{}
@@ -589,14 +590,56 @@ func requireContent(t *testing.T, kind, content string) {
 	require.NoError(t, schema.Validate(json.RawMessage(content)))
 }
 
+// requireGolden fails unless text matches the golden file of a name, under testdata, or rewrites the file with
+// [updateGoldens].
+func requireGolden(t *testing.T, name, text string) {
+	t.Helper()
+
+	if updateGoldens {
+		require.NoError(t, os.WriteFile(name, []byte(text), 0o600))
+
+		return
+	}
+
+	golden, err := fixtures.ReadFile(name)
+	require.NoError(t, err)
+	require.Equal(t, string(golden), text)
+}
+
 // goldenPrompt lays a prompt out as its golden file holds it.
 func goldenPrompt(prompt *core.Prompt) string {
 	call := fmt.Sprintf("model %s, reasoning %s, at most %d output tokens", prompt.Model, prompt.Reasoning,
 		prompt.MaxOutputTokens)
 
 	return "=== call\n" + call + "\n\n=== developer\n" + prompt.Developer + "\n\n=== schema\n" +
-		string(prompt.Schema) + "\n\n=== frame\n" + prompt.Frame + "\n\n=== neighborhood\n" + prompt.Neighborhood +
-		"\n\n=== task\n" + prompt.Task + "\n"
+		string(prompt.Schema) + "\n\n" + goldenSections(prompt)
+}
+
+// goldenSections lays out the sections of a prompt that change with each call.
+func goldenSections(prompt *core.Prompt) string {
+	return "=== frame\n" + prompt.Frame + "\n\n=== neighborhood\n" + prompt.Neighborhood + "\n\n=== task\n" +
+		prompt.Task + "\n"
+}
+
+// goldenPlan lays a plan of several calls out as its golden file holds it: what each call reads, as JSON,
+// then the sections of its prompt. The prompt goldens hold the settings, the developer message and the schema
+// each call of a kind shares.
+func goldenPlan(t *testing.T, plan *core.ContextPlan) string {
+	t.Helper()
+
+	var builder strings.Builder
+
+	for index, call := range plan.Calls {
+		reads := *call
+		reads.Prompt = nil
+
+		data, err := json.MarshalIndent(&reads, "", "  ") //nolint:musttag // a test layout, not a wire format
+		require.NoError(t, err)
+
+		fmt.Fprintf(&builder, "=== call %d\n%s\n\n%s\n", index+1, data, goldenSections(call.Prompt))
+	}
+
+	return builder.String()
 }
 
 // sections joins what the prompt sends after its developer message.
@@ -604,79 +647,11 @@ func sections(prompt *core.Prompt) string {
 	return prompt.Frame + "\n" + prompt.Neighborhood + "\n" + prompt.Task
 }
 
-// planGoldensPath holds the SHA-256 of every plan [TestGenerationPlan] makes, one line per subtest.
-const planGoldensPath = "testdata/plans.golden"
-
-// planGoldens pins each plan of [TestGenerationPlan] whole, its contexts and its prompts, by the SHA-256 of
-// its JSON. With -update, the test records the plans it makes instead.
-type planGoldens struct {
-	mu     sync.Mutex
-	hashes map[string]string
-}
-
-// loadPlanGoldens reads [planGoldensPath]. With -update, it rewrites the file once the test ends, keeping the
-// lines of the subtests a filter skipped.
-func loadPlanGoldens(t *testing.T) *planGoldens {
-	t.Helper()
-
-	goldens := &planGoldens{hashes: map[string]string{}}
-
-	data, err := os.ReadFile(planGoldensPath)
-	require.NoError(t, err)
-
-	for line := range strings.Lines(string(data)) {
-		hash, name, ok := strings.Cut(strings.TrimSpace(line), "  ")
-		require.True(t, ok, line)
-
-		goldens.hashes[name] = hash
-	}
-
-	if *updateGolden {
-		t.Cleanup(func() {
-			names := slices.Sorted(maps.Keys(goldens.hashes))
-
-			var builder strings.Builder
-
-			for _, name := range names {
-				builder.WriteString(goldens.hashes[name] + "  " + name + "\n")
-			}
-
-			require.NoError(t, os.WriteFile(planGoldensPath, []byte(builder.String()), 0o600))
-		})
-	}
-
-	return goldens
-}
-
-// check fails unless the plan a subtest made matches its golden, or records it with -update.
-func (goldens *planGoldens) check(t *testing.T, name string, plan *core.ContextPlan) {
-	t.Helper()
-
-	data, err := json.Marshal(plan) //nolint:musttag // a test fingerprint, not a wire format
-	require.NoError(t, err)
-
-	sum := sha256.Sum256(data)
-	hash := hex.EncodeToString(sum[:])
-
-	goldens.mu.Lock()
-	defer goldens.mu.Unlock()
-
-	if *updateGolden {
-		goldens.hashes[name] = hash
-
-		return
-	}
-
-	require.Equal(t, goldens.hashes[name], hash, "the plan of %s changed", name)
-}
-
 // longContextTokens is the input size past which OpenAI bills long context at twice the rate.
 const longContextTokens = 272000
 
 func TestGenerationPlan(t *testing.T) {
 	t.Parallel()
-
-	goldens := loadPlanGoldens(t)
 
 	t.Run("Error/KindNotConfigured", func(t *testing.T) {
 		t.Parallel()
@@ -823,12 +798,11 @@ func TestGenerationPlan(t *testing.T) {
 			planOf(snapshot, &core.GenerationPlanRequest{Kind: core.GenerationKindCheck}),
 		}
 
-		for index, request := range requests {
+		for _, request := range requests {
 			settings := config.GenerationsConfigDefault.Kinds[request.Kind]
 
 			plan, reads, err := request.plan(t, settings)
 			require.NoError(t, err, request.Kind)
-			goldens.check(t, t.Name()+"/"+strconv.Itoa(index), plan)
 
 			for _, call := range plan.Calls {
 				require.LessOrEqual(t, call.Estimate, settings.Budget, request.Kind)
@@ -885,13 +859,12 @@ func TestGenerationPlan(t *testing.T) {
 			planOf(snapshot, &core.GenerationPlanRequest{Kind: core.GenerationKindCheck}),
 		}
 
-		for index, request := range requests {
+		for _, request := range requests {
 			settings := config.GenerationsConfigDefault.Kinds[request.Kind]
 
 			plan, _, err := request.plan(t, settings)
 			require.NoError(t, err, request.Kind)
 			requireHandles(t, plan)
-			goldens.check(t, t.Name()+"/"+strconv.Itoa(index), plan)
 
 			for _, call := range plan.Calls {
 				require.LessOrEqual(t, call.Estimate, settings.LongLimit, request.Kind)
@@ -911,7 +884,6 @@ func TestGenerationPlan(t *testing.T) {
 			plan, reads, err := story.request.plan(t, settings)
 			require.NoError(t, err)
 			requireHandles(t, plan)
-			goldens.check(t, t.Name(), plan)
 
 			for _, call := range plan.Calls {
 				require.LessOrEqual(t, call.Estimate, plan.Budget)
@@ -952,8 +924,13 @@ func TestGenerationPlan(t *testing.T) {
 
 			require.NoError(t, err)
 			requireHandles(t, plan)
-			goldens.check(t, t.Name(), plan)
 			testCase.expect(t, plan)
+
+			// The golden of a plan of several calls shows how the calls share the generation.
+			if len(plan.Calls) > 1 {
+				requireGolden(t, path.Join("testdata", "plans", path.Base(testCase.name)+".golden"),
+					goldenPlan(t, plan))
+			}
 		})
 	}
 
@@ -990,7 +967,6 @@ func TestGenerationPlan(t *testing.T) {
 			again, _, err := testCase.request.plan(t, settings)
 			require.NoError(t, err)
 			require.Equal(t, plan, again, "the same request gives the same plan")
-			goldens.check(t, t.Name(), plan)
 
 			if testCase.expectLevels != nil {
 				require.Equal(t, testCase.expectLevels, lo.Map(call.Scenes, func(scene *core.ContextScene, _ int) string {
@@ -1036,23 +1012,14 @@ func TestGenerationPlan(t *testing.T) {
 				plan, _, err := request.plan(t, settings)
 				require.NoError(t, err)
 				require.Len(t, plan.Calls, 1)
-				goldens.check(t, t.Name(), plan)
 
 				call := plan.Calls[0]
-
-				name := variant.name + "." + language + ".golden"
-				if *updateGolden {
-					path := filepath.Join("testdata", "prompts", name)
-					require.NoError(t, os.WriteFile(path, []byte(goldenPrompt(call.Prompt)), 0o600))
-				} else {
-					golden, err := promptFixtures.ReadFile("testdata/prompts/" + name)
-					require.NoError(t, err)
-					require.Equal(t, string(golden), goldenPrompt(call.Prompt))
-				}
+				requireGolden(t, path.Join("testdata", "prompts", variant.name+"."+language+".golden"),
+					goldenPrompt(call.Prompt))
 
 				require.LessOrEqual(t, call.Estimate, plan.Budget)
 
-				output, err := promptFixtures.ReadFile("testdata/prompts/" + kind + ".output.json")
+				output, err := fixtures.ReadFile("testdata/prompts/" + kind + ".output.json")
 				require.NoError(t, err)
 				requireOutput(t, kind, call, snapshot.ProjectSnapshot, output)
 			})
