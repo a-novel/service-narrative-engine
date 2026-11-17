@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/a-novel-kit/golib/httpf"
 	"github.com/a-novel-kit/golib/logging"
@@ -14,9 +15,9 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/core"
 )
 
-// RestCellWriteService is the core operation [RestCellWrite] delegates to.
+// RestCellWriteService is the batch operation [RestCellWrite] delegates to, with a list of one.
 type RestCellWriteService interface {
-	Exec(ctx context.Context, request *core.CellWriteRequest) (*core.WrittenCell, error)
+	Exec(ctx context.Context, request *core.CellsWriteRequest) ([]*core.WrittenCell, error)
 }
 
 // RestCellWriteRequest is the JSON body the write-cell endpoint accepts.
@@ -62,20 +63,28 @@ func (handler *RestCellWrite) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	serviceRequest := &core.CellWriteRequest{
+	span.SetAttributes(
+		attribute.String("cell.scene_id", request.SceneID.String()),
+		attribute.String("cell.layer_id", request.LayerID.String()),
+		attribute.Int("cell.size", len(request.Content)),
+	)
+
+	serviceRequest := &core.CellsWriteRequest{
 		OwnerID:   ownerID,
 		ProjectID: request.ProjectID,
-		SceneID:   request.SceneID,
-		LayerID:   request.LayerID,
-		Content:   request.Content,
+		Cells: []core.CellsWriteItem{{
+			SceneID: request.SceneID,
+			LayerID: request.LayerID,
+			Content: request.Content,
+		}},
 	}
 
 	result, err := handler.service.Exec(ctx, serviceRequest)
 	if err != nil {
-		httpf.HandleError(ctx, handler.logger, w, span, composerErrors, tagLimit(err))
+		httpf.HandleError(ctx, handler.logger, w, span, composerErrors, tagLimit(itemFields(err)))
 
 		return
 	}
 
-	httpf.SendJSONStatus(w, span, http.StatusOK, loadWrittenCell(result))
+	httpf.SendJSONStatus(w, span, http.StatusOK, loadWrittenCell(result[0]))
 }

@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/a-novel-kit/golib/httpf"
 	"github.com/a-novel-kit/golib/logging"
@@ -13,9 +14,9 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/core"
 )
 
-// RestLayerCreateService is the core operation [RestLayerCreate] delegates to.
+// RestLayerCreateService is the batch operation [RestLayerCreate] delegates to, with a list of one.
 type RestLayerCreateService interface {
-	Exec(ctx context.Context, request *core.LayerCreateRequest) (*core.Layer, error)
+	Exec(ctx context.Context, request *core.LayersCreateRequest) ([]*core.Layer, error)
 }
 
 // RestLayerCreateRequest is the JSON body the create-layer endpoint accepts.
@@ -65,21 +66,27 @@ func (handler *RestLayerCreate) ServeHTTP(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	serviceRequest := &core.LayerCreateRequest{
-		OwnerID:     ownerID,
-		ProjectID:   request.ProjectID,
-		Position:    request.Position,
-		Kind:        request.Kind,
-		Name:        request.Name,
-		Description: request.Description,
+	span.SetAttributes(
+		attribute.String("layer.kind", request.Kind),
+	)
+
+	serviceRequest := &core.LayersCreateRequest{
+		OwnerID:   ownerID,
+		ProjectID: request.ProjectID,
+		Position:  request.Position,
+		Layers: []core.LayersCreateItem{{
+			Kind:        request.Kind,
+			Name:        request.Name,
+			Description: request.Description,
+		}},
 	}
 
 	result, err := handler.service.Exec(ctx, serviceRequest)
 	if err != nil {
-		httpf.HandleError(ctx, handler.logger, w, span, composerErrors, tagLimit(err))
+		httpf.HandleError(ctx, handler.logger, w, span, composerErrors, tagLimit(itemFields(err)))
 
 		return
 	}
 
-	httpf.SendJSONStatus(w, span, http.StatusOK, loadLayer(result))
+	httpf.SendJSONStatus(w, span, http.StatusOK, loadLayer(result[0]))
 }

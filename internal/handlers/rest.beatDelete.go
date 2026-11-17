@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/a-novel-kit/golib/httpf"
 	"github.com/a-novel-kit/golib/logging"
@@ -13,9 +14,9 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/core"
 )
 
-// RestBeatDeleteService is the core operation [RestBeatDelete] delegates to.
+// RestBeatDeleteService is the batch operation [RestBeatDelete] delegates to, with a list of one.
 type RestBeatDeleteService interface {
-	Exec(ctx context.Context, request *core.BeatDeleteRequest) (*core.Beat, error)
+	Exec(ctx context.Context, request *core.BeatsDeleteRequest) ([]*core.Beat, error)
 }
 
 // RestBeatDeleteRequest is the query parameters the delete-beat endpoint accepts.
@@ -55,18 +56,22 @@ func (handler *RestBeatDelete) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	serviceRequest := &core.BeatDeleteRequest{
+	span.SetAttributes(
+		attribute.String("beat.id", request.ID.String()),
+	)
+
+	serviceRequest := &core.BeatsDeleteRequest{
 		OwnerID:   ownerID,
 		ProjectID: request.ProjectID,
-		ID:        request.ID,
+		IDs:       []uuid.UUID{request.ID},
 	}
 
 	result, err := handler.service.Exec(ctx, serviceRequest)
 	if err != nil {
-		httpf.HandleError(ctx, handler.logger, w, span, composerErrors, err)
+		httpf.HandleError(ctx, handler.logger, w, span, composerErrors, itemFields(err))
 
 		return
 	}
 
-	httpf.SendJSONStatus(w, span, http.StatusOK, loadBeat(result))
+	httpf.SendJSONStatus(w, span, http.StatusOK, loadBeat(result[0]))
 }

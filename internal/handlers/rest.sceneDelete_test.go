@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
 
 	"github.com/a-novel/service-narrative-engine/internal/config"
@@ -30,7 +31,7 @@ func TestRestSceneDelete(t *testing.T) {
 
 		request func(t *testing.T) *http.Request
 
-		serviceMock *serviceMock[*core.Scene]
+		serviceMock *serviceMock[[]*core.Scene]
 
 		expectStatus   int
 		expectResponse any
@@ -40,7 +41,7 @@ func TestRestSceneDelete(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Scene]{resp: coreScene},
+			serviceMock: &serviceMock[[]*core.Scene]{resp: []*core.Scene{coreScene}},
 
 			expectStatus:   http.StatusOK,
 			expectResponse: jsonScene,
@@ -72,7 +73,7 @@ func TestRestSceneDelete(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Scene]{err: core.ErrProjectNotFound},
+			serviceMock: &serviceMock[[]*core.Scene]{err: core.ErrProjectNotFound},
 
 			expectStatus: http.StatusNotFound,
 		},
@@ -81,7 +82,7 @@ func TestRestSceneDelete(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Scene]{err: core.ErrSceneNotFound},
+			serviceMock: &serviceMock[[]*core.Scene]{err: core.ErrSceneNotFound},
 
 			expectStatus: http.StatusNotFound,
 		},
@@ -90,7 +91,7 @@ func TestRestSceneDelete(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Scene]{err: core.ErrInvalidRequest},
+			serviceMock: &serviceMock[[]*core.Scene]{err: core.ErrInvalidRequest},
 
 			expectStatus: http.StatusBadRequest,
 		},
@@ -99,7 +100,7 @@ func TestRestSceneDelete(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Scene]{err: errFoo},
+			serviceMock: &serviceMock[[]*core.Scene]{err: errFoo},
 
 			expectStatus: http.StatusInternalServerError,
 		},
@@ -113,7 +114,7 @@ func TestRestSceneDelete(t *testing.T) {
 
 			if testCase.serviceMock != nil {
 				service.EXPECT().
-					Exec(mock.Anything, &core.SceneDeleteRequest{OwnerID: ownerID, ProjectID: projectID, ID: sceneID}).
+					Exec(mock.Anything, &core.ScenesDeleteRequest{OwnerID: ownerID, ProjectID: projectID, IDs: []uuid.UUID{sceneID}}).
 					Return(testCase.serviceMock.resp, testCase.serviceMock.err)
 			}
 

@@ -14,11 +14,6 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// LayerListDaoOwner checks that the user owns the project.
-type LayerListDaoOwner interface {
-	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
-}
-
 // LayerListDao reads a page of the project's layers.
 type LayerListDao interface {
 	Exec(ctx context.Context, request *dao.LayerListRequest) ([]*dao.LayerListRow, error)
@@ -42,11 +37,11 @@ type LayerListRequest struct {
 // client knows when it holds every layer. A page stops early once it holds [ListPageBytesMax] bytes, and
 // the next starts at the offset plus the layers received.
 type LayerList struct {
-	daoOwner LayerListDaoOwner
+	daoOwner ProjectOwnerDao
 	dao      LayerListDao
 }
 
-func NewLayerList(daoOwner LayerListDaoOwner, dao LayerListDao) *LayerList {
+func NewLayerList(daoOwner ProjectOwnerDao, dao LayerListDao) *LayerList {
 	return &LayerList{daoOwner: daoOwner, dao: dao}
 }
 

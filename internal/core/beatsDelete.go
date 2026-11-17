@@ -17,11 +17,6 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// BeatsDeleteDaoLock locks the project its owner names, so changes to its order run one at a time.
-type BeatsDeleteDaoLock interface {
-	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
-}
-
 // BeatsDeleteDao removes the beats, and moves the beats after them up.
 type BeatsDeleteDao interface {
 	Exec(ctx context.Context, request *dao.BeatsDeleteRequest) ([]*dao.Beat, error)
@@ -38,13 +33,13 @@ type BeatsDeleteRequest struct {
 // BeatsDelete deletes beats with their scenes and cells, and moves the beats after them up to close the
 // gaps. It deletes all of them or none.
 type BeatsDelete struct {
-	daoLock    BeatsDeleteDaoLock
+	daoLock    ProjectLockDao
 	dao        BeatsDeleteDao
 	transactor transaction.Transactor
 }
 
 func NewBeatsDelete(
-	daoLock BeatsDeleteDaoLock,
+	daoLock ProjectLockDao,
 	dao BeatsDeleteDao,
 	transactor transaction.Transactor,
 ) *BeatsDelete {

@@ -17,19 +17,9 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/models/schemas"
 )
 
-// CellRecapWriteDaoLock locks the project its owner names, so the writes to its bytes run one at a time.
-type CellRecapWriteDaoLock interface {
-	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
-}
-
 // CellRecapWriteDao writes the recap of a cell of the project.
 type CellRecapWriteDao interface {
 	Exec(ctx context.Context, request *dao.CellRecapUpdateRequest) error
-}
-
-// CellRecapWriteDaoBytes reads how many bytes the project stores, the recap included.
-type CellRecapWriteDaoBytes interface {
-	Exec(ctx context.Context, request *dao.ProjectBytesRequest) (*dao.ProjectBytes, error)
 }
 
 // CellRecapWriteRequest carries the recap a consolidation wrote for a cell.
@@ -52,16 +42,16 @@ type CellRecapWriteRequest struct {
 // cell at a version older than the stored recap's, or newer than the cell's own, and one that would bring
 // the project past [ProjectBytesMax] bytes.
 type CellRecapWrite struct {
-	daoLock    CellRecapWriteDaoLock
+	daoLock    ProjectLockDao
 	dao        CellRecapWriteDao
-	daoBytes   CellRecapWriteDaoBytes
+	daoBytes   ProjectBytesDao
 	transactor transaction.Transactor
 }
 
 func NewCellRecapWrite(
-	daoLock CellRecapWriteDaoLock,
+	daoLock ProjectLockDao,
 	dao CellRecapWriteDao,
-	daoBytes CellRecapWriteDaoBytes,
+	daoBytes ProjectBytesDao,
 	transactor transaction.Transactor,
 ) *CellRecapWrite {
 	return &CellRecapWrite{daoLock: daoLock, dao: dao, daoBytes: daoBytes, transactor: transactor}

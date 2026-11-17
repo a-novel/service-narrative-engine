@@ -98,8 +98,8 @@ describe("sceneCreate", () => {
     await expect(sceneTitles()).resolves.toEqual(["First", "Second", "Last"]);
   });
 
-  it("returns 400 for a negative position", async () => {
-    await expectStatus(createScene("Scene", -1), 400);
+  it("names the invalid field of a negative position", async () => {
+    await expect(createScene("Scene", -1)).rejects.toThrow('"invalidFields":{"position":"min"}');
   });
 
   it("returns 404 for an absent project", async () => {

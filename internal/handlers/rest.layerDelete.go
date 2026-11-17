@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/a-novel-kit/golib/httpf"
 	"github.com/a-novel-kit/golib/logging"
@@ -13,9 +14,9 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/core"
 )
 
-// RestLayerDeleteService is the core operation [RestLayerDelete] delegates to.
+// RestLayerDeleteService is the batch operation [RestLayerDelete] delegates to, with a list of one.
 type RestLayerDeleteService interface {
-	Exec(ctx context.Context, request *core.LayerDeleteRequest) (*core.Layer, error)
+	Exec(ctx context.Context, request *core.LayersDeleteRequest) ([]*core.Layer, error)
 }
 
 // RestLayerDeleteRequest is the query parameters the delete-layer endpoint accepts.
@@ -55,18 +56,22 @@ func (handler *RestLayerDelete) ServeHTTP(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	serviceRequest := &core.LayerDeleteRequest{
+	span.SetAttributes(
+		attribute.String("layer.id", request.ID.String()),
+	)
+
+	serviceRequest := &core.LayersDeleteRequest{
 		OwnerID:   ownerID,
 		ProjectID: request.ProjectID,
-		ID:        request.ID,
+		IDs:       []uuid.UUID{request.ID},
 	}
 
 	result, err := handler.service.Exec(ctx, serviceRequest)
 	if err != nil {
-		httpf.HandleError(ctx, handler.logger, w, span, composerErrors, err)
+		httpf.HandleError(ctx, handler.logger, w, span, composerErrors, itemFields(err))
 
 		return
 	}
 
-	httpf.SendJSONStatus(w, span, http.StatusOK, loadLayer(result))
+	httpf.SendJSONStatus(w, span, http.StatusOK, loadLayer(result[0]))
 }

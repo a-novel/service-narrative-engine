@@ -13,9 +13,9 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/core"
 )
 
-// RestBeatCreateService is the core operation [RestBeatCreate] delegates to.
+// RestBeatCreateService is the batch operation [RestBeatCreate] delegates to, with a list of one.
 type RestBeatCreateService interface {
-	Exec(ctx context.Context, request *core.BeatCreateRequest) (*core.Beat, error)
+	Exec(ctx context.Context, request *core.BeatsCreateRequest) ([]*core.Beat, error)
 }
 
 // RestBeatCreateRequest is the JSON body the create-beat endpoint accepts.
@@ -67,22 +67,24 @@ func (handler *RestBeatCreate) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	serviceRequest := &core.BeatCreateRequest{
-		OwnerID:     ownerID,
-		ProjectID:   request.ProjectID,
-		Position:    request.Position,
-		Title:       request.Title,
-		Color:       request.Color,
-		Description: request.Description,
-		Prompt:      request.Prompt,
+	serviceRequest := &core.BeatsCreateRequest{
+		OwnerID:   ownerID,
+		ProjectID: request.ProjectID,
+		Position:  request.Position,
+		Beats: []core.BeatsCreateItem{{
+			Title:       request.Title,
+			Color:       request.Color,
+			Description: request.Description,
+			Prompt:      request.Prompt,
+		}},
 	}
 
 	result, err := handler.service.Exec(ctx, serviceRequest)
 	if err != nil {
-		httpf.HandleError(ctx, handler.logger, w, span, composerErrors, tagLimit(err))
+		httpf.HandleError(ctx, handler.logger, w, span, composerErrors, tagLimit(itemFields(err)))
 
 		return
 	}
 
-	httpf.SendJSONStatus(w, span, http.StatusOK, loadBeat(result))
+	httpf.SendJSONStatus(w, span, http.StatusOK, loadBeat(result[0]))
 }

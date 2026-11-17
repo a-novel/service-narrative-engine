@@ -189,9 +189,9 @@ func TestBeatsUpdate(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockLock := coremocks.NewMockBeatsUpdateDaoLock(t)
+			mockLock := coremocks.NewMockProjectLockDao(t)
 			mockUpdate := coremocks.NewMockBeatsUpdateDao(t)
-			mockBytes := coremocks.NewMockBeatsUpdateDaoBytes(t)
+			mockBytes := coremocks.NewMockProjectBytesDao(t)
 
 			if testCase.lockMock != nil {
 				mockLock.EXPECT().

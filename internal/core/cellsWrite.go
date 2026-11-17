@@ -22,11 +22,6 @@ import (
 // which the layer read rules out. The write rolls back.
 var ErrCellsUnwritten = errors.New("cells not written")
 
-// CellsWriteDaoLock locks the project its owner names, so the writes to its cells run one at a time.
-type CellsWriteDaoLock interface {
-	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
-}
-
 // CellsWriteDaoKind reads the kinds of the cells' layers, which name their content schemas.
 type CellsWriteDaoKind interface {
 	Exec(ctx context.Context, request *dao.LayerKindRequest) ([]*dao.LayerKind, error)
@@ -35,11 +30,6 @@ type CellsWriteDaoKind interface {
 // CellsWriteDao writes the cells. It refuses a scene or a layer of another project.
 type CellsWriteDao interface {
 	Exec(ctx context.Context, request *dao.CellsUpsertRequest) ([]*dao.CellUpsertRow, error)
-}
-
-// CellsWriteDaoLength reads how many characters the cells of the scenes hold.
-type CellsWriteDaoLength interface {
-	Exec(ctx context.Context, request *dao.SceneLengthRequest) ([]*dao.SceneLength, error)
 }
 
 // CellsWriteItem is one cell of a [CellsWriteRequest].
@@ -51,11 +41,6 @@ type CellsWriteItem struct {
 
 	// Content is a JSON document that follows the content schema of the layer's kind, at most 2 MiB.
 	Content json.RawMessage `validate:"required,max=2097152"`
-}
-
-// CellsWriteDaoBytes reads how many bytes the project stores, the write included.
-type CellsWriteDaoBytes interface {
-	Exec(ctx context.Context, request *dao.ProjectBytesRequest) (*dao.ProjectBytes, error)
 }
 
 // CellsWriteRequest carries the new content of cells.
@@ -71,20 +56,20 @@ type CellsWriteRequest struct {
 // of a cell creates it, and it writes all of them or none: none when one of their scenes would hold more
 // than [SceneContentMax] characters, or the project more than [ProjectBytesMax] bytes.
 type CellsWrite struct {
-	daoLock    CellsWriteDaoLock
+	daoLock    ProjectLockDao
 	daoKind    CellsWriteDaoKind
 	dao        CellsWriteDao
-	daoLength  CellsWriteDaoLength
-	daoBytes   CellsWriteDaoBytes
+	daoLength  SceneLengthDao
+	daoBytes   ProjectBytesDao
 	transactor transaction.Transactor
 }
 
 func NewCellsWrite(
-	daoLock CellsWriteDaoLock,
+	daoLock ProjectLockDao,
 	daoKind CellsWriteDaoKind,
 	dao CellsWriteDao,
-	daoLength CellsWriteDaoLength,
-	daoBytes CellsWriteDaoBytes,
+	daoLength SceneLengthDao,
+	daoBytes ProjectBytesDao,
 	transactor transaction.Transactor,
 ) *CellsWrite {
 	return &CellsWrite{

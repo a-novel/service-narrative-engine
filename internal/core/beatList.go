@@ -14,11 +14,6 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// BeatListDaoOwner checks that the user owns the project.
-type BeatListDaoOwner interface {
-	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
-}
-
 // BeatListDao reads a page of the project's beats.
 type BeatListDao interface {
 	Exec(ctx context.Context, request *dao.BeatListRequest) ([]*dao.BeatListRow, error)
@@ -42,11 +37,11 @@ type BeatListRequest struct {
 // so a client knows when it holds every beat. A page stops early once it holds [ListPageBytesMax] bytes,
 // and the next starts at the offset plus the beats received.
 type BeatList struct {
-	daoOwner BeatListDaoOwner
+	daoOwner ProjectOwnerDao
 	dao      BeatListDao
 }
 
-func NewBeatList(daoOwner BeatListDaoOwner, dao BeatListDao) *BeatList {
+func NewBeatList(daoOwner ProjectOwnerDao, dao BeatListDao) *BeatList {
 	return &BeatList{daoOwner: daoOwner, dao: dao}
 }
 

@@ -14,11 +14,6 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// SceneMoveDaoLock locks the project its owner names, so changes to its order run one at a time.
-type SceneMoveDaoLock interface {
-	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
-}
-
 // SceneMoveDao moves the scene, and closes and opens the gaps in its old and new beat.
 type SceneMoveDao interface {
 	Exec(ctx context.Context, request *dao.SceneMoveRequest) (*dao.Scene, error)
@@ -40,13 +35,13 @@ type SceneMoveRequest struct {
 // SceneMove moves a scene to a position in a beat of its project, and returns it there. Its old beat closes
 // the gap and the target beat opens one, so the scene keeps its ID and its cells.
 type SceneMove struct {
-	daoLock    SceneMoveDaoLock
+	daoLock    ProjectLockDao
 	dao        SceneMoveDao
 	transactor transaction.Transactor
 }
 
 func NewSceneMove(
-	daoLock SceneMoveDaoLock,
+	daoLock ProjectLockDao,
 	dao SceneMoveDao,
 	transactor transaction.Transactor,
 ) *SceneMove {

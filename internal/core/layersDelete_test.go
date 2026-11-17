@@ -195,7 +195,7 @@ func TestLayersDelete(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockLock := coremocks.NewMockLayersDeleteDaoLock(t)
+			mockLock := coremocks.NewMockProjectLockDao(t)
 			mockKind := coremocks.NewMockLayersDeleteDaoKind(t)
 			mockDelete := coremocks.NewMockLayersDeleteDao(t)
 

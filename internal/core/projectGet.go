@@ -13,11 +13,6 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// ProjectGetDaoOwner checks that the user owns the project.
-type ProjectGetDaoOwner interface {
-	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
-}
-
 // ProjectGetDao reads the project.
 type ProjectGetDao interface {
 	Exec(ctx context.Context, request *dao.ProjectSelectRequest) (*dao.Project, error)
@@ -32,11 +27,11 @@ type ProjectGetRequest struct {
 // ProjectGet reads a project of the caller. Its beats, scenes, layers and cells come page by page from
 // [BeatList], [SceneList], [LayerList] and [CellList].
 type ProjectGet struct {
-	daoOwner ProjectGetDaoOwner
+	daoOwner ProjectOwnerDao
 	dao      ProjectGetDao
 }
 
-func NewProjectGet(daoOwner ProjectGetDaoOwner, dao ProjectGetDao) *ProjectGet {
+func NewProjectGet(daoOwner ProjectOwnerDao, dao ProjectGetDao) *ProjectGet {
 	return &ProjectGet{daoOwner: daoOwner, dao: dao}
 }
 

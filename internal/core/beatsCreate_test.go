@@ -195,9 +195,9 @@ func TestBeatsCreate(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockLock := coremocks.NewMockBeatsCreateDaoLock(t)
+			mockLock := coremocks.NewMockProjectLockDao(t)
 			mockInsert := coremocks.NewMockBeatsCreateDaoInsert(t)
-			mockBytes := coremocks.NewMockBeatsCreateDaoBytes(t)
+			mockBytes := coremocks.NewMockProjectBytesDao(t)
 
 			if testCase.lockMock != nil {
 				mockLock.EXPECT().

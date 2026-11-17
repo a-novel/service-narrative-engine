@@ -17,11 +17,6 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// LayersDeleteDaoLock locks the project its owner names, so changes to its order run one at a time.
-type LayersDeleteDaoLock interface {
-	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
-}
-
 // LayersDeleteDaoKind reads the kinds of the layers to delete, and how many layers share each.
 type LayersDeleteDaoKind interface {
 	Exec(ctx context.Context, request *dao.LayerKindRequest) ([]*dao.LayerKind, error)
@@ -44,14 +39,14 @@ type LayersDeleteRequest struct {
 // deletes all of them or none, and refuses with [ErrRequiredLayer] to remove the last layer of a
 // required kind, such as the manuscript.
 type LayersDelete struct {
-	daoLock    LayersDeleteDaoLock
+	daoLock    ProjectLockDao
 	daoKind    LayersDeleteDaoKind
 	dao        LayersDeleteDao
 	transactor transaction.Transactor
 }
 
 func NewLayersDelete(
-	daoLock LayersDeleteDaoLock,
+	daoLock ProjectLockDao,
 	daoKind LayersDeleteDaoKind,
 	dao LayersDeleteDao,
 	transactor transaction.Transactor,

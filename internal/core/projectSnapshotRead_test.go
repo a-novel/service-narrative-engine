@@ -180,8 +180,8 @@ func TestProjectSnapshotRead(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockOwner := coremocks.NewMockProjectSnapshotReadDaoOwner(t)
-			mockBytes := coremocks.NewMockProjectSnapshotReadDaoBytes(t)
+			mockOwner := coremocks.NewMockProjectOwnerDao(t)
+			mockBytes := coremocks.NewMockProjectBytesDao(t)
 			mockProject := coremocks.NewMockProjectSnapshotReadDaoProject(t)
 			mockBeats := coremocks.NewMockProjectSnapshotReadDaoBeats(t)
 			mockScenes := coremocks.NewMockProjectSnapshotReadDaoScenes(t)

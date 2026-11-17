@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
 
 	"github.com/a-novel/service-narrative-engine/internal/config"
@@ -30,7 +32,7 @@ func TestRestBeatDelete(t *testing.T) {
 
 		request func(t *testing.T) *http.Request
 
-		serviceMock *serviceMock[*core.Beat]
+		serviceMock *serviceMock[[]*core.Beat]
 
 		expectStatus   int
 		expectResponse any
@@ -40,7 +42,7 @@ func TestRestBeatDelete(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Beat]{resp: coreBeat},
+			serviceMock: &serviceMock[[]*core.Beat]{resp: []*core.Beat{coreBeat}},
 
 			expectStatus:   http.StatusOK,
 			expectResponse: jsonBeat,
@@ -72,7 +74,7 @@ func TestRestBeatDelete(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Beat]{err: core.ErrProjectNotFound},
+			serviceMock: &serviceMock[[]*core.Beat]{err: core.ErrProjectNotFound},
 
 			expectStatus: http.StatusNotFound,
 		},
@@ -81,7 +83,7 @@ func TestRestBeatDelete(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Beat]{err: core.ErrBeatNotFound},
+			serviceMock: &serviceMock[[]*core.Beat]{err: core.ErrBeatNotFound},
 
 			expectStatus: http.StatusNotFound,
 		},
@@ -90,16 +92,29 @@ func TestRestBeatDelete(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Beat]{err: core.ErrInvalidRequest},
+			serviceMock: &serviceMock[[]*core.Beat]{err: core.ErrInvalidRequest},
 
 			expectStatus: http.StatusBadRequest,
+		},
+		{
+			// The batch request names the ID IDs[0]; the route names it as its own query does.
+			name: "Error/InvalidFields",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[[]*core.Beat]{err: errors.Join(validator.New().Struct(&core.BeatsDeleteRequest{
+				OwnerID: ownerID, ProjectID: projectID, IDs: []uuid.UUID{uuid.Nil},
+			}), core.ErrInvalidRequest)},
+
+			expectStatus:   http.StatusBadRequest,
+			expectResponse: invalidFieldsProblem(map[string]any{"id": "required"}),
 		},
 		{
 			name: "Error/Internal",
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Beat]{err: errFoo},
+			serviceMock: &serviceMock[[]*core.Beat]{err: errFoo},
 
 			expectStatus: http.StatusInternalServerError,
 		},
@@ -113,7 +128,7 @@ func TestRestBeatDelete(t *testing.T) {
 
 			if testCase.serviceMock != nil {
 				service.EXPECT().
-					Exec(mock.Anything, &core.BeatDeleteRequest{OwnerID: ownerID, ProjectID: projectID, ID: beatID}).
+					Exec(mock.Anything, &core.BeatsDeleteRequest{OwnerID: ownerID, ProjectID: projectID, IDs: []uuid.UUID{beatID}}).
 					Return(testCase.serviceMock.resp, testCase.serviceMock.err)
 			}
 

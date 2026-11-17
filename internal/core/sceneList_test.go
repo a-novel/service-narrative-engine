@@ -112,7 +112,7 @@ func TestSceneList(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockOwner := coremocks.NewMockSceneListDaoOwner(t)
+			mockOwner := coremocks.NewMockProjectOwnerDao(t)
 			mockList := coremocks.NewMockSceneListDao(t)
 
 			if testCase.ownerMock != nil {

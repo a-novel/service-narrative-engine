@@ -16,79 +16,79 @@ import (
 // Main holds the top-level application settings.
 type Main struct {
 	// Name of the application, as it appears in logs and tracing.
-	Name string `json:"name" yaml:"name"`
+	Name string
 	// DowntimeStart is when a planned downtime starts; nil when none is planned. From then until
 	// it is removed, the service refuses work and leaves its database alone.
-	DowntimeStart *time.Time `json:"downtimeStart" yaml:"downtimeStart"`
+	DowntimeStart *time.Time
 }
 
 // Dependencies configures how the service reaches the services it calls.
 type Dependencies struct {
 	// ServiceJSONKeysHost is the hostname of the JSON Keys service, which verifies access tokens.
-	ServiceJSONKeysHost string `json:"serviceJSONKeysHost" yaml:"serviceJSONKeysHost"`
+	ServiceJSONKeysHost string
 	// ServiceJSONKeysPort is the gRPC port of the JSON Keys service.
-	ServiceJSONKeysPort int `json:"serviceJSONKeysPort" yaml:"serviceJSONKeysPort"`
+	ServiceJSONKeysPort int
 	// ServiceJSONKeysCredentials authenticates the calls to the JSON Keys service.
-	ServiceJSONKeysCredentials grpcf.CredentialsProvider `json:"-" yaml:"-"`
+	ServiceJSONKeysCredentials grpcf.CredentialsProvider
 
 	// ServiceGenaiHost is the hostname of the genai service, which runs the model calls of generations.
 	// Empty leaves genai unconfigured.
-	ServiceGenaiHost string `json:"serviceGenaiHost" yaml:"serviceGenaiHost"`
+	ServiceGenaiHost string
 	// ServiceGenaiPort is the gRPC port of the genai service.
-	ServiceGenaiPort int `json:"serviceGenaiPort" yaml:"serviceGenaiPort"`
+	ServiceGenaiPort int
 	// ServiceGenaiCredentials authenticates the calls to the genai service.
-	ServiceGenaiCredentials grpcf.CredentialsProvider `json:"-" yaml:"-"`
+	ServiceGenaiCredentials grpcf.CredentialsProvider
 }
 
 // Limits bounds what one request carries, below the REST server's own limits. The server's
 // MaxRequestSize fits a batch, so the routes that write one item cap their body lower.
 type Limits struct {
 	// MaxItemRequestSize caps the body of a route that writes one item, in bytes.
-	MaxItemRequestSize int64 `json:"itemMaxRequestSize" yaml:"itemMaxRequestSize"`
+	MaxItemRequestSize int64
 	// MaxStreamDuration bounds a streamed response, past the server's request timeout.
-	MaxStreamDuration time.Duration `json:"maxStreamDuration" yaml:"maxStreamDuration"`
+	MaxStreamDuration time.Duration
 	// MaxStreamsPerCaller caps the streams one caller holds open on an instance, across the stream
 	// routes. A stream past it answers 429.
-	MaxStreamsPerCaller int `json:"maxStreamsPerCaller" yaml:"maxStreamsPerCaller"`
+	MaxStreamsPerCaller int
 	// RateLimitGeneration caps each signed-in user's generation submits, on top of the router's rate. A submit
 	// past it answers 429.
-	RateLimitGeneration httpf.Rate `json:"generationRate" yaml:"generationRate"`
+	RateLimitGeneration httpf.Rate
 	// RateLimitGenerationRead caps each signed-in user's reads of a call, on top of the router's rate. A read and a
 	// stream each count on a budget of their own. A read past it answers 429.
-	RateLimitGenerationRead httpf.Rate `json:"generationReadRate" yaml:"generationReadRate"`
+	RateLimitGenerationRead httpf.Rate
 	// MaxConcurrentProjectReads caps the reads of a whole project an instance runs at once: manuscript exports
 	// and the snapshots generations plan from. A read past it waits for a slot.
-	MaxConcurrentProjectReads int `json:"projectReadMaxConcurrent" yaml:"projectReadMaxConcurrent"`
+	MaxConcurrentProjectReads int
 }
 
 // App is the complete configuration the service reads at startup.
 type App struct {
 	// App holds the top-level application settings.
-	App Main `json:"app" yaml:"app"`
+	App Main
 	// Dependencies configures the services the service calls.
-	Dependencies Dependencies `json:"dependencies" yaml:"dependencies"`
+	Dependencies Dependencies
 	// Permissions maps each role to the permissions it grants.
-	Permissions serviceauthentication.Permissions `json:"permissions" yaml:"permissions"`
+	Permissions serviceauthentication.Permissions
 	// Caps maps roles to the caps genai counts their users' generations against.
-	Caps Caps `json:"caps" yaml:"caps"`
+	Caps Caps
 	// Rest configures the REST server.
-	Rest httpf.ServerConfig `json:"rest" yaml:"rest"`
+	Rest httpf.ServerConfig
 	// ServiceToken names the service tokens the REST server accepts.
-	ServiceToken servicetoken.Config `json:"serviceToken" yaml:"serviceToken"`
+	ServiceToken servicetoken.Config
 	// ServiceIssuerOptional lets the REST server start with no ServiceToken issuer, and take every
 	// request without a service token. Without it, a ServiceToken with no issuer refuses to start.
-	ServiceIssuerOptional bool `json:"serviceIssuerOptional" yaml:"serviceIssuerOptional"`
+	ServiceIssuerOptional bool
 	// Limits bounds what one request carries, below the REST server's own limits.
-	Limits Limits `json:"limits" yaml:"limits"`
+	Limits Limits
 	// Generations configures the model calls of generations.
-	Generations Generations `json:"generations" yaml:"generations"`
+	Generations Generations
 
 	// Otel configures the OpenTelemetry exporter.
-	Otel otel.Config `json:"otel" yaml:"otel"`
+	Otel otel.Config
 	// Logger is the application logger the REST handlers report their errors to.
-	Logger logging.Log `json:"logger" yaml:"logger"`
+	Logger logging.Log
 	// RestLogger configures the REST request logging middleware.
-	RestLogger logging.HTTPConfig `json:"restLogger" yaml:"restLogger"`
+	RestLogger logging.HTTPConfig
 	// Postgres configures the PostgreSQL connection.
-	Postgres postgres.Config `json:"postgres" yaml:"postgres"`
+	Postgres postgres.Config
 }

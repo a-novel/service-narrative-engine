@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/a-novel-kit/golib/httpf"
 	"github.com/a-novel-kit/golib/logging"
@@ -13,9 +14,9 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/core"
 )
 
-// RestSceneCreateService is the core operation [RestSceneCreate] delegates to.
+// RestSceneCreateService is the batch operation [RestSceneCreate] delegates to, with a list of one.
 type RestSceneCreateService interface {
-	Exec(ctx context.Context, request *core.SceneCreateRequest) (*core.Scene, error)
+	Exec(ctx context.Context, request *core.ScenesCreateRequest) ([]*core.Scene, error)
 }
 
 // RestSceneCreateRequest is the JSON body the create-scene endpoint accepts.
@@ -66,22 +67,29 @@ func (handler *RestSceneCreate) ServeHTTP(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	serviceRequest := &core.SceneCreateRequest{
-		OwnerID:     ownerID,
-		ProjectID:   request.ProjectID,
-		BeatID:      request.BeatID,
-		Position:    request.Position,
-		Title:       request.Title,
-		Description: request.Description,
-		Prompt:      request.Prompt,
+	span.SetAttributes(
+		attribute.String("beat.id", request.BeatID.String()),
+		attribute.Int("scene.position", request.Position),
+	)
+
+	serviceRequest := &core.ScenesCreateRequest{
+		OwnerID:   ownerID,
+		ProjectID: request.ProjectID,
+		Scenes: []core.ScenesCreateItem{{
+			BeatID:      request.BeatID,
+			Position:    request.Position,
+			Title:       request.Title,
+			Description: request.Description,
+			Prompt:      request.Prompt,
+		}},
 	}
 
 	result, err := handler.service.Exec(ctx, serviceRequest)
 	if err != nil {
-		httpf.HandleError(ctx, handler.logger, w, span, composerErrors, tagLimit(err))
+		httpf.HandleError(ctx, handler.logger, w, span, composerErrors, tagLimit(itemFields(err)))
 
 		return
 	}
 
-	httpf.SendJSONStatus(w, span, http.StatusOK, loadScene(result))
+	httpf.SendJSONStatus(w, span, http.StatusOK, loadScene(result[0]))
 }

@@ -81,7 +81,7 @@ func TestProjectLogoDelete(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockOwner := coremocks.NewMockProjectLogoDeleteDaoOwner(t)
+			mockOwner := coremocks.NewMockProjectOwnerDao(t)
 			mockDelete := coremocks.NewMockProjectLogoDeleteDao(t)
 
 			if testCase.ownerMock != nil {

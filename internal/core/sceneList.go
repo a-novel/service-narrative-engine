@@ -14,11 +14,6 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// SceneListDaoOwner checks that the user owns the project.
-type SceneListDaoOwner interface {
-	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
-}
-
 // SceneListDao reads a page of the project's scenes.
 type SceneListDao interface {
 	Exec(ctx context.Context, request *dao.SceneListRequest) ([]*dao.SceneListRow, error)
@@ -42,11 +37,11 @@ type SceneListRequest struct {
 // so a client knows when it holds every scene. A page stops early once it holds [ListPageBytesMax] bytes,
 // and the next starts at the offset plus the scenes received.
 type SceneList struct {
-	daoOwner SceneListDaoOwner
+	daoOwner ProjectOwnerDao
 	dao      SceneListDao
 }
 
-func NewSceneList(daoOwner SceneListDaoOwner, dao SceneListDao) *SceneList {
+func NewSceneList(daoOwner ProjectOwnerDao, dao SceneListDao) *SceneList {
 	return &SceneList{daoOwner: daoOwner, dao: dao}
 }
 

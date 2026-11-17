@@ -134,7 +134,7 @@ func TestScenesDelete(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockLock := coremocks.NewMockScenesDeleteDaoLock(t)
+			mockLock := coremocks.NewMockProjectLockDao(t)
 			mockDelete := coremocks.NewMockScenesDeleteDao(t)
 
 			if testCase.lockMock != nil {

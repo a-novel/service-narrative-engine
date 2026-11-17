@@ -19,19 +19,9 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// BeatsCreateDaoLock locks the project its owner names, so changes to its order run one at a time.
-type BeatsCreateDaoLock interface {
-	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
-}
-
 // BeatsCreateDaoInsert inserts the beats, and moves the beats at or after their position down.
 type BeatsCreateDaoInsert interface {
 	Exec(ctx context.Context, request *dao.BeatsInsertRequest) ([]*dao.Beat, error)
-}
-
-// BeatsCreateDaoBytes reads how many bytes the project stores, the new beats included.
-type BeatsCreateDaoBytes interface {
-	Exec(ctx context.Context, request *dao.ProjectBytesRequest) (*dao.ProjectBytes, error)
 }
 
 // BeatsCreateItem is one beat of a [BeatsCreateRequest].
@@ -61,16 +51,16 @@ type BeatsCreateRequest struct {
 // BeatsCreate adds beats to a project at the position the caller names. The beats from that position on
 // move down to make room. It writes nothing when the project would store more than [ProjectBytesMax] bytes.
 type BeatsCreate struct {
-	daoLock    BeatsCreateDaoLock
+	daoLock    ProjectLockDao
 	daoInsert  BeatsCreateDaoInsert
-	daoBytes   BeatsCreateDaoBytes
+	daoBytes   ProjectBytesDao
 	transactor transaction.Transactor
 }
 
 func NewBeatsCreate(
-	daoLock BeatsCreateDaoLock,
+	daoLock ProjectLockDao,
 	daoInsert BeatsCreateDaoInsert,
-	daoBytes BeatsCreateDaoBytes,
+	daoBytes ProjectBytesDao,
 	transactor transaction.Transactor,
 ) *BeatsCreate {
 	return &BeatsCreate{daoLock: daoLock, daoInsert: daoInsert, daoBytes: daoBytes, transactor: transactor}

@@ -17,11 +17,6 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// ScenesDeleteDaoLock locks the project its owner names, so changes to its order run one at a time.
-type ScenesDeleteDaoLock interface {
-	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
-}
-
 // ScenesDeleteDao removes the scenes, and moves the scenes after them in their beats up.
 type ScenesDeleteDao interface {
 	Exec(ctx context.Context, request *dao.ScenesDeleteRequest) ([]*dao.Scene, error)
@@ -38,13 +33,13 @@ type ScenesDeleteRequest struct {
 // ScenesDelete deletes scenes with their cells, and moves the scenes after them in their beats up to close
 // the gaps. It deletes all of them or none.
 type ScenesDelete struct {
-	daoLock    ScenesDeleteDaoLock
+	daoLock    ProjectLockDao
 	dao        ScenesDeleteDao
 	transactor transaction.Transactor
 }
 
 func NewScenesDelete(
-	daoLock ScenesDeleteDaoLock,
+	daoLock ProjectLockDao,
 	dao ScenesDeleteDao,
 	transactor transaction.Transactor,
 ) *ScenesDelete {

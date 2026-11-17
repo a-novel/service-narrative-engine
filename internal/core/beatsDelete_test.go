@@ -134,7 +134,7 @@ func TestBeatsDelete(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockLock := coremocks.NewMockBeatsDeleteDaoLock(t)
+			mockLock := coremocks.NewMockProjectLockDao(t)
 			mockDelete := coremocks.NewMockBeatsDeleteDao(t)
 
 			if testCase.lockMock != nil {

@@ -19,7 +19,7 @@ const streamCells = 101
 
 // projectStreamMocks are the reads of a project stream.
 type projectStreamMocks struct {
-	owner   *coremocks.MockProjectStreamDaoOwner
+	owner   *coremocks.MockProjectOwnerDao
 	project *coremocks.MockProjectStreamDaoProject
 	beats   *coremocks.MockProjectStreamDaoBeats
 	scenes  *coremocks.MockProjectStreamDaoScenes
@@ -227,7 +227,7 @@ func TestProjectStream(t *testing.T) {
 			t.Parallel()
 
 			mocks := &projectStreamMocks{
-				owner:   coremocks.NewMockProjectStreamDaoOwner(t),
+				owner:   coremocks.NewMockProjectOwnerDao(t),
 				project: coremocks.NewMockProjectStreamDaoProject(t),
 				beats:   coremocks.NewMockProjectStreamDaoBeats(t),
 				scenes:  coremocks.NewMockProjectStreamDaoScenes(t),

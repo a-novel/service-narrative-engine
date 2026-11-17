@@ -22,7 +22,7 @@ var projectWriteLockExempt = map[string]string{
 }
 
 // projectWriteOperations end the names of the DAO requests that write a project's content, such as
-// dao.BeatInsertRequest or dao.CellsUpsertRequest.
+// dao.BeatsInsertRequest or dao.CellsUpsertRequest.
 var projectWriteOperations = []string{"Insert", "Update", "Upsert", "Delete", "Move"}
 
 // projectWrites locates the first content write and the first project lock in the Exec method of a service.

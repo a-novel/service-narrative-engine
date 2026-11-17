@@ -37,7 +37,7 @@ func TestRestSceneCreate(t *testing.T) {
 
 		request func(t *testing.T) *http.Request
 
-		serviceMock *serviceMock[*core.Scene]
+		serviceMock *serviceMock[[]*core.Scene]
 
 		expectStatus   int
 		expectResponse any
@@ -47,7 +47,7 @@ func TestRestSceneCreate(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Scene]{resp: coreScene},
+			serviceMock: &serviceMock[[]*core.Scene]{resp: []*core.Scene{coreScene}},
 
 			expectStatus:   http.StatusOK,
 			expectResponse: jsonScene,
@@ -79,7 +79,7 @@ func TestRestSceneCreate(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Scene]{err: core.ErrProjectNotFound},
+			serviceMock: &serviceMock[[]*core.Scene]{err: core.ErrProjectNotFound},
 
 			expectStatus: http.StatusNotFound,
 		},
@@ -88,7 +88,7 @@ func TestRestSceneCreate(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Scene]{err: core.ErrProjectBudget},
+			serviceMock: &serviceMock[[]*core.Scene]{err: core.ErrProjectBudget},
 
 			expectStatus:   http.StatusConflict,
 			expectResponse: limitProblem("projectBytes"),
@@ -98,7 +98,7 @@ func TestRestSceneCreate(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Scene]{err: core.ErrBeatNotFound},
+			serviceMock: &serviceMock[[]*core.Scene]{err: core.ErrBeatNotFound},
 
 			expectStatus: http.StatusNotFound,
 		},
@@ -107,7 +107,7 @@ func TestRestSceneCreate(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Scene]{err: core.ErrProjectFull},
+			serviceMock: &serviceMock[[]*core.Scene]{err: core.ErrProjectFull},
 
 			expectStatus: http.StatusConflict,
 		},
@@ -116,7 +116,7 @@ func TestRestSceneCreate(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Scene]{err: core.ErrInvalidRequest},
+			serviceMock: &serviceMock[[]*core.Scene]{err: core.ErrInvalidRequest},
 
 			expectStatus: http.StatusBadRequest,
 		},
@@ -125,7 +125,7 @@ func TestRestSceneCreate(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Scene]{err: errFoo},
+			serviceMock: &serviceMock[[]*core.Scene]{err: errFoo},
 
 			expectStatus: http.StatusInternalServerError,
 		},
@@ -139,14 +139,16 @@ func TestRestSceneCreate(t *testing.T) {
 
 			if testCase.serviceMock != nil {
 				service.EXPECT().
-					Exec(mock.Anything, &core.SceneCreateRequest{
-						OwnerID:     ownerID,
-						ProjectID:   projectID,
-						BeatID:      beatID,
-						Position:    2,
-						Title:       "Ouverture",
-						Description: "Marie attend.",
-						Prompt:      "Lent.",
+					Exec(mock.Anything, &core.ScenesCreateRequest{
+						OwnerID:   ownerID,
+						ProjectID: projectID,
+						Scenes: []core.ScenesCreateItem{{
+							BeatID:      beatID,
+							Position:    2,
+							Title:       "Ouverture",
+							Description: "Marie attend.",
+							Prompt:      "Lent.",
+						}},
 					}).
 					Return(testCase.serviceMock.resp, testCase.serviceMock.err)
 			}

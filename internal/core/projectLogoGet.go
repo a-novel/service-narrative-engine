@@ -13,11 +13,6 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// ProjectLogoGetDaoOwner checks that the user owns the project.
-type ProjectLogoGetDaoOwner interface {
-	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
-}
-
 // ProjectLogoGetDao reads the logo.
 type ProjectLogoGetDao interface {
 	Exec(ctx context.Context, request *dao.ProjectLogoSelectRequest) (*dao.ProjectLogo, error)
@@ -31,11 +26,11 @@ type ProjectLogoGetRequest struct {
 
 // ProjectLogoGet reads the logo of a project of the caller.
 type ProjectLogoGet struct {
-	daoOwner ProjectLogoGetDaoOwner
+	daoOwner ProjectOwnerDao
 	dao      ProjectLogoGetDao
 }
 
-func NewProjectLogoGet(daoOwner ProjectLogoGetDaoOwner, dao ProjectLogoGetDao) *ProjectLogoGet {
+func NewProjectLogoGet(daoOwner ProjectOwnerDao, dao ProjectLogoGetDao) *ProjectLogoGet {
 	return &ProjectLogoGet{daoOwner: daoOwner, dao: dao}
 }
 

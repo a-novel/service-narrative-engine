@@ -17,19 +17,9 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
-// BeatsUpdateDaoLock locks the project its owner names, so the writes to its bytes run one at a time.
-type BeatsUpdateDaoLock interface {
-	Exec(ctx context.Context, request *dao.ProjectLockRequest) (bool, error)
-}
-
 // BeatsUpdateDao writes the beats' new fields, all of them or none.
 type BeatsUpdateDao interface {
 	Exec(ctx context.Context, request *dao.BeatsUpdateRequest) ([]*dao.Beat, error)
-}
-
-// BeatsUpdateDaoBytes reads how many bytes the project stores, the write included.
-type BeatsUpdateDaoBytes interface {
-	Exec(ctx context.Context, request *dao.ProjectBytesRequest) (*dao.ProjectBytes, error)
 }
 
 // BeatsUpdateItem is one beat of a [BeatsUpdateRequest].
@@ -54,20 +44,19 @@ type BeatsUpdateRequest struct {
 	Beats []BeatsUpdateItem `validate:"required,min=1,max=100,unique=ID,dive"`
 }
 
-// BeatsUpdate replaces the fields of several beats at once, all of them or none, and returns them in the
-// order of the request. [BeatUpdate] updates one. It writes nothing when the project would store more than
-// [ProjectBytesMax] bytes.
+// BeatsUpdate replaces the fields of one or more beats, all of them or none, and returns them in the order
+// of the request. It writes nothing when the project would store more than [ProjectBytesMax] bytes.
 type BeatsUpdate struct {
-	daoLock    BeatsUpdateDaoLock
+	daoLock    ProjectLockDao
 	dao        BeatsUpdateDao
-	daoBytes   BeatsUpdateDaoBytes
+	daoBytes   ProjectBytesDao
 	transactor transaction.Transactor
 }
 
 func NewBeatsUpdate(
-	daoLock BeatsUpdateDaoLock,
+	daoLock ProjectLockDao,
 	dao BeatsUpdateDao,
-	daoBytes BeatsUpdateDaoBytes,
+	daoBytes ProjectBytesDao,
 	transactor transaction.Transactor,
 ) *BeatsUpdate {
 	return &BeatsUpdate{daoLock: daoLock, dao: dao, daoBytes: daoBytes, transactor: transactor}

@@ -18,16 +18,6 @@ import (
 // scenes and layers in one page each, and the summaries of its cells in a few.
 const snapshotPageSize = 2000
 
-// ProjectSnapshotReadDaoOwner checks that the caller owns the project.
-type ProjectSnapshotReadDaoOwner interface {
-	Exec(ctx context.Context, request *dao.ProjectOwnedRequest) (bool, error)
-}
-
-// ProjectSnapshotReadDaoBytes reads how many bytes the project stores.
-type ProjectSnapshotReadDaoBytes interface {
-	Exec(ctx context.Context, request *dao.ProjectBytesRequest) (*dao.ProjectBytes, error)
-}
-
 // ProjectSnapshotReadDaoProject reads the project.
 type ProjectSnapshotReadDaoProject interface {
 	Exec(ctx context.Context, request *dao.ProjectSelectRequest) (*dao.Project, error)
@@ -64,8 +54,8 @@ type ProjectSnapshotReadRequest struct {
 // outside a transaction, so a write between two pages may show. A project past [ProjectBytesMax] stored
 // bytes answers [ErrContextTooLarge] before any page is read.
 type ProjectSnapshotRead struct {
-	daoOwner   ProjectSnapshotReadDaoOwner
-	daoBytes   ProjectSnapshotReadDaoBytes
+	daoOwner   ProjectOwnerDao
+	daoBytes   ProjectBytesDao
 	daoProject ProjectSnapshotReadDaoProject
 	daoBeats   ProjectSnapshotReadDaoBeats
 	daoScenes  ProjectSnapshotReadDaoScenes
@@ -74,8 +64,8 @@ type ProjectSnapshotRead struct {
 }
 
 func NewProjectSnapshotRead(
-	daoOwner ProjectSnapshotReadDaoOwner,
-	daoBytes ProjectSnapshotReadDaoBytes,
+	daoOwner ProjectOwnerDao,
+	daoBytes ProjectBytesDao,
 	daoProject ProjectSnapshotReadDaoProject,
 	daoBeats ProjectSnapshotReadDaoBeats,
 	daoScenes ProjectSnapshotReadDaoScenes,

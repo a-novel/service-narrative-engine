@@ -117,7 +117,7 @@ func TestCellList(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockOwner := coremocks.NewMockCellListDaoOwner(t)
+			mockOwner := coremocks.NewMockProjectOwnerDao(t)
 			mockList := coremocks.NewMockCellListDao(t)
 
 			if testCase.ownerMock != nil {

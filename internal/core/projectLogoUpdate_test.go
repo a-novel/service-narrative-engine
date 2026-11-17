@@ -157,7 +157,7 @@ func TestProjectLogoUpdate(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockOwner := coremocks.NewMockProjectLogoUpdateDaoOwner(t)
+			mockOwner := coremocks.NewMockProjectOwnerDao(t)
 			mockUpsert := coremocks.NewMockProjectLogoUpdateDao(t)
 
 			if testCase.ownerMock != nil {
