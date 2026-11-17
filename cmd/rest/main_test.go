@@ -93,6 +93,16 @@ func TestNewRouter(t *testing.T) {
 			expectStatus: http.StatusUnauthorized,
 		},
 		{
+			// The gate wraps the whole router: an unknown path is refused before the router answers 404,
+			// so a gate mounted inside /v1 fails this case.
+			name: "Error/UnknownPath",
+
+			serviceToken: gated,
+			target:       "/nowhere",
+
+			expectStatus: http.StatusUnauthorized,
+		},
+		{
 			// A deployment that forgets the issuer stops at startup rather than admit every caller.
 			name: "Error/IssuerRequired",
 
