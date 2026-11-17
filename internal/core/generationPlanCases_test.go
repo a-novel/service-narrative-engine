@@ -2,7 +2,7 @@ package core_test
 
 import (
 	"encoding/json"
-	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -556,31 +556,31 @@ func generationPlanCases() []*generationPlanCase {
 			expect: func(t *testing.T, call *core.ContextCall) {
 				t.Helper()
 
-				scene, ok := call.Scene("S3")
+				scene, ok := contextScene(call, "S3")
 				require.True(t, ok)
 				require.Equal(t, fixtureSceneID(2), scene.SceneID)
 
-				_, ok = call.Scene("S4")
+				_, ok = contextScene(call, "S4")
 				require.False(t, ok)
 
-				first, ok := call.Target("M1")
+				first, ok := contextTarget(call, "M1")
 				require.True(t, ok)
 
-				position, ok := first.Block("B4")
-				require.True(t, ok)
-				require.Equal(t, 3, position)
-
-				second, ok := call.Target("M2")
-				require.True(t, ok)
-
-				position, ok = second.Block("B5")
+				position, ok := targetBlock(first, "B4")
 				require.True(t, ok)
 				require.Equal(t, 3, position)
 
-				_, ok = second.Block("B1")
+				second, ok := contextTarget(call, "M2")
+				require.True(t, ok)
+
+				position, ok = targetBlock(second, "B5")
+				require.True(t, ok)
+				require.Equal(t, 3, position)
+
+				_, ok = targetBlock(second, "B1")
 				require.False(t, ok, "a block of another target")
 
-				_, ok = call.Target("M3")
+				_, ok = contextTarget(call, "M3")
 				require.False(t, ok)
 			},
 		},
@@ -1083,14 +1083,12 @@ func generationPlanSplitCases() []*generationSplitCase {
 			settings: checkSettings(true),
 			expect: func(t *testing.T, plan *core.ContextPlan) {
 				t.Helper()
-				require.Len(t, plan.Calls, 3)
+				require.Equal(t, []string{"S1-S2", "S3-S4", "S5-S6"}, checkWindows(plan))
 
 				for index, call := range plan.Calls {
 					require.LessOrEqual(t, call.Estimate, plan.Budget)
 					require.Equal(t, full, call.Scenes[2*index].Level)
 					require.Equal(t, full, call.Scenes[2*index+1].Level)
-					require.Contains(t, call.Prompt.Task,
-						fmt.Sprintf(`<check from="S%d" to="S%d"/>`, 2*index+1, 2*index+2))
 					require.NotContains(t, call.Prompt.Neighborhood, "<prompt>", "a check shows no prompts")
 				}
 			},
@@ -1245,6 +1243,8 @@ type storyRequest struct {
 	name    string
 	request *planRequest
 	budget  int
+	// windows lists the scenes each call of a split check reads, as [checkWindows] gives them.
+	windows []string
 }
 
 // storySuggest revises a range of a manuscript cell of [storyProject], keeping a block, and writes a title
@@ -1301,8 +1301,19 @@ func storyRequests() []*storyRequest {
 			name:    "CheckAll",
 			request: planOf(storyProject(), &core.GenerationPlanRequest{Kind: core.GenerationKindCheck}),
 			budget:  12000,
+			windows: []string{"S1-S19", "S20-S30", "S31-S39", "S40-S46", "S47-S52", "S53-S58", "S59-S60"},
 		},
 	}
+}
+
+// checkWindow matches the first and last scene a check call reads, in its task.
+var checkWindow = regexp.MustCompile(`<check from="(S\d+)" to="(S\d+)"/>`)
+
+// checkWindows returns the scenes each call of a check plan reads, such as "S1-S19", in call order.
+func checkWindows(plan *core.ContextPlan) []string {
+	return lo.Map(plan.Calls, func(call *core.ContextCall, _ int) string {
+		return strings.Join(lo.Drop(checkWindow.FindStringSubmatch(call.Prompt.Task), 1), "-")
+	})
 }
 
 // callTargets returns the handle of each call's targets, in call order.

@@ -6,6 +6,7 @@ import (
 	"io"
 	"iter"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -17,6 +18,20 @@ type streamEvent struct {
 	ID   string
 	Type string
 	Data any
+}
+
+// leftClient answers like a recorder whose client left: every write fails.
+type leftClient struct {
+	*httptest.ResponseRecorder
+}
+
+func (leftClient) Write([]byte) (int, error) {
+	return 0, io.ErrClosedPipe
+}
+
+// WriteString fails as Write does. Without it, io.WriteString reaches the recorder's own.
+func (leftClient) WriteString(string) (int, error) {
+	return 0, io.ErrClosedPipe
 }
 
 // sequence yields items in order, then err when it is not nil.

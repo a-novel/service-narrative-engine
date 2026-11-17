@@ -6,7 +6,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 )
 
 // The levels of detail a scene enters the neighborhood at, and a beat the frame at, richest first.
@@ -69,16 +68,6 @@ type ContextCall struct {
 
 	// Prompt is what the model receives.
 	Prompt *Prompt
-}
-
-// Scene returns the scene the model names by handle, such as S1.
-func (call *ContextCall) Scene(handle string) (*ContextScene, bool) {
-	return lo.Find(call.Scenes, func(scene *ContextScene) bool { return scene.Handle == handle })
-}
-
-// Target returns the target the model names by handle, such as T1.
-func (call *ContextCall) Target(handle string) (*ContextTarget, bool) {
-	return lo.Find(call.Targets, func(target *ContextTarget) bool { return target.Handle == handle })
 }
 
 // ContextBeat is one beat as the frame of a generation shows it.
@@ -160,17 +149,6 @@ type ContextTarget struct {
 	// UpdatedAt is when the target's stored content was written. It is zero for an override, and for a
 	// cell never written.
 	UpdatedAt time.Time
-}
-
-// Block returns the position of the block the model names by handle, such as B3, among the blocks the
-// target shows inside its range.
-func (target *ContextTarget) Block(handle string) (int, bool) {
-	block, ok := lo.Find(target.Blocks, func(block *ContextBlock) bool { return block.Handle == handle })
-	if !ok {
-		return 0, false
-	}
-
-	return block.Position, true
 }
 
 // ContextBlock is a block a target shows the model under a handle.

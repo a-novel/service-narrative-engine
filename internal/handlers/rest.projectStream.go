@@ -89,49 +89,26 @@ func (handler *RestProjectStream) ServeHTTP(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	stream, err := httpf.NewEventStream(ctx, w, streamHeartbeat)
-	if err != nil {
-		handler.logger.Err(ctx, otel.ReportError(span, err).Error())
-
-		return
-	}
-	defer stream.Close()
-
-	for record, err := range records {
-		// The client resumes a cut stream after the last event it received. A client that left cut it.
-		if err != nil {
-			if ctx.Err() == nil {
-				handler.logger.Err(ctx, err.Error())
-			}
-
-			return
-		}
-
-		eventType, data := loadProjectRecord(record)
-
-		err = sendEvent(stream, formatPosition(record.Position), eventType, data)
-		// A write fails once the client left.
-		if err != nil {
-			return
-		}
-	}
+	streamEvents(ctx, w, handler.logger, records, projectEvent)
 }
 
-// loadProjectRecord returns the event type and content of a record.
-func loadProjectRecord(record *core.ProjectRecord) (string, any) {
+// projectEvent returns the event ID of a record, its position, then its event type and content.
+func projectEvent(record *core.ProjectRecord) (string, string, any) {
+	id := formatPosition(record.Position)
+
 	switch {
 	case record.Project != nil:
-		return "project", loadProject(record.Project)
+		return id, "project", loadProject(record.Project)
 	case record.Beat != nil:
-		return "beat", loadBeat(record.Beat)
+		return id, "beat", loadBeat(record.Beat)
 	case record.Scene != nil:
-		return "scene", loadScene(record.Scene)
+		return id, "scene", loadScene(record.Scene)
 	case record.Layer != nil:
-		return "layer", loadLayer(record.Layer)
+		return id, "layer", loadLayer(record.Layer)
 	case record.Cell != nil:
-		return "cell", loadCell(record.Cell)
+		return id, "cell", loadCell(record.Cell)
 	default:
-		return "end", struct{}{}
+		return id, "end", struct{}{}
 	}
 }
 

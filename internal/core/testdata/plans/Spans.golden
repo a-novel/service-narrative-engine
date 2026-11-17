@@ -1,0 +1,774 @@
+=== call 1
+{
+  "Beats": [
+    {
+      "BeatID": "00000000-0000-0000-0000-000000030000",
+      "Level": "full"
+    },
+    {
+      "BeatID": "00000000-0000-0000-0000-000000030001",
+      "Level": "outline"
+    },
+    {
+      "BeatID": "00000000-0000-0000-0000-000000030002",
+      "Level": "outline"
+    }
+  ],
+  "Scenes": [
+    {
+      "Handle": "S1",
+      "SceneID": "00000000-0000-0000-0000-000000010000",
+      "Level": "full",
+      "Override": false,
+      "Cells": [
+        {
+          "LayerID": "00000000-0000-0000-0000-000000020001",
+          "Recap": "",
+          "Override": false,
+          "UpdatedAt": "2021-01-02T00:00:00Z"
+        }
+      ],
+      "UpdatedAt": "2021-01-02T00:00:00Z"
+    },
+    {
+      "Handle": "S2",
+      "SceneID": "00000000-0000-0000-0000-000000010001",
+      "Level": "omitted",
+      "Override": false,
+      "Cells": null,
+      "UpdatedAt": "2021-01-02T00:00:00Z"
+    },
+    {
+      "Handle": "S3",
+      "SceneID": "00000000-0000-0000-0000-000000010002",
+      "Level": "omitted",
+      "Override": false,
+      "Cells": null,
+      "UpdatedAt": "2021-01-02T00:00:00Z"
+    }
+  ],
+  "Layers": [
+    {
+      "Handle": "L1",
+      "LayerID": "00000000-0000-0000-0000-000000020000"
+    },
+    {
+      "Handle": "L2",
+      "LayerID": "00000000-0000-0000-0000-000000020001"
+    }
+  ],
+  "Targets": [
+    {
+      "Handle": "M1",
+      "SceneID": "00000000-0000-0000-0000-000000010000",
+      "LayerID": "00000000-0000-0000-0000-000000020000",
+      "BeatID": "00000000-0000-0000-0000-000000000000",
+      "Sources": null,
+      "Field": "",
+      "Mode": "revise",
+      "Range": {
+        "Start": 0,
+        "End": 2
+      },
+      "Kept": [],
+      "Blocks": [
+        {
+          "Handle": "B1",
+          "Position": 0
+        },
+        {
+          "Handle": "B2",
+          "Position": 1
+        }
+      ],
+      "Override": false,
+      "UpdatedAt": "2021-01-02T00:00:00Z"
+    }
+  ],
+  "Estimate": 2266,
+  "Prompt": null
+}
+
+=== frame
+<frame>
+<project title="Tides" language="en">
+</project>
+<layers>
+<layer handle="L1" kind="manuscript" name="Text"></layer>
+<layer handle="L2" kind="notes" name="Notes"></layer>
+</layers>
+<beats>
+<beat title="Beat 1">
+<scene handle="S1" title="Scene 1"/>
+</beat>
+<beat title="Beat 2" level="outline" scenes="S2"/>
+<beat title="Beat 3" level="outline" scenes="S3"/>
+</beats>
+</frame>
+
+=== neighborhood
+<neighborhood>
+<scene handle="S1" level="full">
+<cell layer="L1" target="M1"/>
+<cell layer="L2">Notes 1. Ana keeps the lighthouse. Ana keeps the lighthouse. Ana keeps the lighthouse. Ana keeps the lighthouse. Ana keeps the lighthouse. Ana keeps the lighthouse. Ana keeps the lighthouse. Ana keeps the lighthouse. </cell>
+</scene>
+</neighborhood>
+
+=== task
+<task>
+<target handle="M1" scene="S1" layer="L1" mode="revise">
+<range>
+<narration handle="B1">Block 0. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. </narration>
+<narration handle="B2">Block 1. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. </narration>
+</range>
+<after omitted="7">
+</after>
+</target>
+<rules>Write one suggestion for each target. Change only the blocks inside a range, never a kept block. Write in English, without dialogue punctuation.</rules>
+</task>
+
+=== call 2
+{
+  "Beats": [
+    {
+      "BeatID": "00000000-0000-0000-0000-000000030000",
+      "Level": "full"
+    },
+    {
+      "BeatID": "00000000-0000-0000-0000-000000030001",
+      "Level": "outline"
+    },
+    {
+      "BeatID": "00000000-0000-0000-0000-000000030002",
+      "Level": "outline"
+    }
+  ],
+  "Scenes": [
+    {
+      "Handle": "S1",
+      "SceneID": "00000000-0000-0000-0000-000000010000",
+      "Level": "full",
+      "Override": false,
+      "Cells": [
+        {
+          "LayerID": "00000000-0000-0000-0000-000000020001",
+          "Recap": "",
+          "Override": false,
+          "UpdatedAt": "2021-01-02T00:00:00Z"
+        }
+      ],
+      "UpdatedAt": "2021-01-02T00:00:00Z"
+    },
+    {
+      "Handle": "S2",
+      "SceneID": "00000000-0000-0000-0000-000000010001",
+      "Level": "omitted",
+      "Override": false,
+      "Cells": null,
+      "UpdatedAt": "2021-01-02T00:00:00Z"
+    },
+    {
+      "Handle": "S3",
+      "SceneID": "00000000-0000-0000-0000-000000010002",
+      "Level": "omitted",
+      "Override": false,
+      "Cells": null,
+      "UpdatedAt": "2021-01-02T00:00:00Z"
+    }
+  ],
+  "Layers": [
+    {
+      "Handle": "L1",
+      "LayerID": "00000000-0000-0000-0000-000000020000"
+    },
+    {
+      "Handle": "L2",
+      "LayerID": "00000000-0000-0000-0000-000000020001"
+    }
+  ],
+  "Targets": [
+    {
+      "Handle": "M1",
+      "SceneID": "00000000-0000-0000-0000-000000010000",
+      "LayerID": "00000000-0000-0000-0000-000000020000",
+      "BeatID": "00000000-0000-0000-0000-000000000000",
+      "Sources": null,
+      "Field": "",
+      "Mode": "revise",
+      "Range": {
+        "Start": 2,
+        "End": 5
+      },
+      "Kept": [
+        3
+      ],
+      "Blocks": [
+        {
+          "Handle": "B3",
+          "Position": 2
+        },
+        {
+          "Handle": "B4",
+          "Position": 3
+        },
+        {
+          "Handle": "B5",
+          "Position": 4
+        }
+      ],
+      "Override": false,
+      "UpdatedAt": "2021-01-02T00:00:00Z"
+    }
+  ],
+  "Estimate": 2386,
+  "Prompt": null
+}
+
+=== frame
+<frame>
+<project title="Tides" language="en">
+</project>
+<layers>
+<layer handle="L1" kind="manuscript" name="Text"></layer>
+<layer handle="L2" kind="notes" name="Notes"></layer>
+</layers>
+<beats>
+<beat title="Beat 1">
+<scene handle="S1" title="Scene 1"/>
+</beat>
+<beat title="Beat 2" level="outline" scenes="S2"/>
+<beat title="Beat 3" level="outline" scenes="S3"/>
+</beats>
+</frame>
+
+=== neighborhood
+<neighborhood>
+<scene handle="S1" level="full">
+<cell layer="L1" target="M1"/>
+<cell layer="L2">Notes 1. Ana keeps the lighthouse. Ana keeps the lighthouse. Ana keeps the lighthouse. Ana keeps the lighthouse. Ana keeps the lighthouse. Ana keeps the lighthouse. Ana keeps the lighthouse. Ana keeps the lighthouse. </cell>
+</scene>
+</neighborhood>
+
+=== task
+<task>
+<target handle="M1" scene="S1" layer="L1" mode="revise">
+<before omitted="2">
+</before>
+<range>
+<narration handle="B3">Block 2. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. </narration>
+<narration handle="B4" kept="true">Block 3. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. </narration>
+<narration handle="B5">Block 4. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. </narration>
+</range>
+<after omitted="4">
+</after>
+</target>
+<rules>Write one suggestion for each target. Change only the blocks inside a range, never a kept block. Write in English, without dialogue punctuation.</rules>
+</task>
+
+=== call 3
+{
+  "Beats": [
+    {
+      "BeatID": "00000000-0000-0000-0000-000000030000",
+      "Level": "full"
+    },
+    {
+      "BeatID": "00000000-0000-0000-0000-000000030001",
+      "Level": "outline"
+    },
+    {
+      "BeatID": "00000000-0000-0000-0000-000000030002",
+      "Level": "outline"
+    }
+  ],
+  "Scenes": [
+    {
+      "Handle": "S1",
+      "SceneID": "00000000-0000-0000-0000-000000010000",
+      "Level": "full",
+      "Override": false,
+      "Cells": [
+        {
+          "LayerID": "00000000-0000-0000-0000-000000020001",
+          "Recap": "",
+          "Override": false,
+          "UpdatedAt": "2021-01-02T00:00:00Z"
+        }
+      ],
+      "UpdatedAt": "2021-01-02T00:00:00Z"
+    },
+    {
+      "Handle": "S2",
+      "SceneID": "00000000-0000-0000-0000-000000010001",
+      "Level": "omitted",
+      "Override": false,
+      "Cells": null,
+      "UpdatedAt": "2021-01-02T00:00:00Z"
+    },
+    {
+      "Handle": "S3",
+      "SceneID": "00000000-0000-0000-0000-000000010002",
+      "Level": "omitted",
+      "Override": false,
+      "Cells": null,
+      "UpdatedAt": "2021-01-02T00:00:00Z"
+    }
+  ],
+  "Layers": [
+    {
+      "Handle": "L1",
+      "LayerID": "00000000-0000-0000-0000-000000020000"
+    },
+    {
+      "Handle": "L2",
+      "LayerID": "00000000-0000-0000-0000-000000020001"
+    }
+  ],
+  "Targets": [
+    {
+      "Handle": "M1",
+      "SceneID": "00000000-0000-0000-0000-000000010000",
+      "LayerID": "00000000-0000-0000-0000-000000020000",
+      "BeatID": "00000000-0000-0000-0000-000000000000",
+      "Sources": null,
+      "Field": "",
+      "Mode": "revise",
+      "Range": {
+        "Start": 5,
+        "End": 7
+      },
+      "Kept": [],
+      "Blocks": [
+        {
+          "Handle": "B6",
+          "Position": 5
+        },
+        {
+          "Handle": "B7",
+          "Position": 6
+        }
+      ],
+      "Override": false,
+      "UpdatedAt": "2021-01-02T00:00:00Z"
+    }
+  ],
+  "Estimate": 2274,
+  "Prompt": null
+}
+
+=== frame
+<frame>
+<project title="Tides" language="en">
+</project>
+<layers>
+<layer handle="L1" kind="manuscript" name="Text"></layer>
+<layer handle="L2" kind="notes" name="Notes"></layer>
+</layers>
+<beats>
+<beat title="Beat 1">
+<scene handle="S1" title="Scene 1"/>
+</beat>
+<beat title="Beat 2" level="outline" scenes="S2"/>
+<beat title="Beat 3" level="outline" scenes="S3"/>
+</beats>
+</frame>
+
+=== neighborhood
+<neighborhood>
+<scene handle="S1" level="full">
+<cell layer="L1" target="M1"/>
+<cell layer="L2">Notes 1. Ana keeps the lighthouse. Ana keeps the lighthouse. Ana keeps the lighthouse. Ana keeps the lighthouse. Ana keeps the lighthouse. Ana keeps the lighthouse. Ana keeps the lighthouse. Ana keeps the lighthouse. </cell>
+</scene>
+</neighborhood>
+
+=== task
+<task>
+<target handle="M1" scene="S1" layer="L1" mode="revise">
+<before omitted="5">
+</before>
+<range>
+<narration handle="B6">Block 5. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. </narration>
+<narration handle="B7">Block 6. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. </narration>
+</range>
+<after omitted="2">
+</after>
+</target>
+<rules>Write one suggestion for each target. Change only the blocks inside a range, never a kept block. Write in English, without dialogue punctuation.</rules>
+</task>
+
+=== call 4
+{
+  "Beats": [
+    {
+      "BeatID": "00000000-0000-0000-0000-000000030000",
+      "Level": "full"
+    },
+    {
+      "BeatID": "00000000-0000-0000-0000-000000030001",
+      "Level": "outline"
+    },
+    {
+      "BeatID": "00000000-0000-0000-0000-000000030002",
+      "Level": "outline"
+    }
+  ],
+  "Scenes": [
+    {
+      "Handle": "S1",
+      "SceneID": "00000000-0000-0000-0000-000000010000",
+      "Level": "full",
+      "Override": false,
+      "Cells": [
+        {
+          "LayerID": "00000000-0000-0000-0000-000000020001",
+          "Recap": "",
+          "Override": false,
+          "UpdatedAt": "2021-01-02T00:00:00Z"
+        }
+      ],
+      "UpdatedAt": "2021-01-02T00:00:00Z"
+    },
+    {
+      "Handle": "S2",
+      "SceneID": "00000000-0000-0000-0000-000000010001",
+      "Level": "omitted",
+      "Override": false,
+      "Cells": null,
+      "UpdatedAt": "2021-01-02T00:00:00Z"
+    },
+    {
+      "Handle": "S3",
+      "SceneID": "00000000-0000-0000-0000-000000010002",
+      "Level": "omitted",
+      "Override": false,
+      "Cells": null,
+      "UpdatedAt": "2021-01-02T00:00:00Z"
+    }
+  ],
+  "Layers": [
+    {
+      "Handle": "L1",
+      "LayerID": "00000000-0000-0000-0000-000000020000"
+    },
+    {
+      "Handle": "L2",
+      "LayerID": "00000000-0000-0000-0000-000000020001"
+    }
+  ],
+  "Targets": [
+    {
+      "Handle": "M1",
+      "SceneID": "00000000-0000-0000-0000-000000010000",
+      "LayerID": "00000000-0000-0000-0000-000000020000",
+      "BeatID": "00000000-0000-0000-0000-000000000000",
+      "Sources": null,
+      "Field": "",
+      "Mode": "revise",
+      "Range": {
+        "Start": 7,
+        "End": 9
+      },
+      "Kept": [],
+      "Blocks": [
+        {
+          "Handle": "B8",
+          "Position": 7
+        },
+        {
+          "Handle": "B9",
+          "Position": 8
+        }
+      ],
+      "Override": false,
+      "UpdatedAt": "2021-01-02T00:00:00Z"
+    }
+  ],
+  "Estimate": 2267,
+  "Prompt": null
+}
+
+=== frame
+<frame>
+<project title="Tides" language="en">
+</project>
+<layers>
+<layer handle="L1" kind="manuscript" name="Text"></layer>
+<layer handle="L2" kind="notes" name="Notes"></layer>
+</layers>
+<beats>
+<beat title="Beat 1">
+<scene handle="S1" title="Scene 1"/>
+</beat>
+<beat title="Beat 2" level="outline" scenes="S2"/>
+<beat title="Beat 3" level="outline" scenes="S3"/>
+</beats>
+</frame>
+
+=== neighborhood
+<neighborhood>
+<scene handle="S1" level="full">
+<cell layer="L1" target="M1"/>
+<cell layer="L2">Notes 1. Ana keeps the lighthouse. Ana keeps the lighthouse. Ana keeps the lighthouse. Ana keeps the lighthouse. Ana keeps the lighthouse. Ana keeps the lighthouse. Ana keeps the lighthouse. Ana keeps the lighthouse. </cell>
+</scene>
+</neighborhood>
+
+=== task
+<task>
+<target handle="M1" scene="S1" layer="L1" mode="revise">
+<before omitted="7">
+</before>
+<range>
+<narration handle="B8">Block 7. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. </narration>
+<narration handle="B9">Block 8. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. Waves. </narration>
+</range>
+</target>
+<rules>Write one suggestion for each target. Change only the blocks inside a range, never a kept block. Write in English, without dialogue punctuation.</rules>
+</task>
+
+=== call 5
+{
+  "Beats": [
+    {
+      "BeatID": "00000000-0000-0000-0000-000000030000",
+      "Level": "outline"
+    },
+    {
+      "BeatID": "00000000-0000-0000-0000-000000030001",
+      "Level": "full"
+    },
+    {
+      "BeatID": "00000000-0000-0000-0000-000000030002",
+      "Level": "outline"
+    }
+  ],
+  "Scenes": [
+    {
+      "Handle": "S1",
+      "SceneID": "00000000-0000-0000-0000-000000010000",
+      "Level": "omitted",
+      "Override": false,
+      "Cells": null,
+      "UpdatedAt": "2021-01-02T00:00:00Z"
+    },
+    {
+      "Handle": "S2",
+      "SceneID": "00000000-0000-0000-0000-000000010001",
+      "Level": "full",
+      "Override": false,
+      "Cells": [
+        {
+          "LayerID": "00000000-0000-0000-0000-000000020000",
+          "Recap": "",
+          "Override": false,
+          "UpdatedAt": "2021-01-02T00:00:00Z"
+        },
+        {
+          "LayerID": "00000000-0000-0000-0000-000000020001",
+          "Recap": "",
+          "Override": false,
+          "UpdatedAt": "2021-01-02T00:00:00Z"
+        }
+      ],
+      "UpdatedAt": "2021-01-02T00:00:00Z"
+    },
+    {
+      "Handle": "S3",
+      "SceneID": "00000000-0000-0000-0000-000000010002",
+      "Level": "omitted",
+      "Override": false,
+      "Cells": null,
+      "UpdatedAt": "2021-01-02T00:00:00Z"
+    }
+  ],
+  "Layers": [
+    {
+      "Handle": "L1",
+      "LayerID": "00000000-0000-0000-0000-000000020000"
+    },
+    {
+      "Handle": "L2",
+      "LayerID": "00000000-0000-0000-0000-000000020001"
+    }
+  ],
+  "Targets": [
+    {
+      "Handle": "T1",
+      "SceneID": "00000000-0000-0000-0000-000000010001",
+      "LayerID": "00000000-0000-0000-0000-000000000000",
+      "BeatID": "00000000-0000-0000-0000-000000000000",
+      "Sources": null,
+      "Field": "title",
+      "Mode": "revise",
+      "Range": null,
+      "Kept": null,
+      "Blocks": null,
+      "Override": false,
+      "UpdatedAt": "2021-01-02T00:00:00Z"
+    }
+  ],
+  "Estimate": 3092,
+  "Prompt": null
+}
+
+=== frame
+<frame>
+<project title="Tides" language="en">
+</project>
+<layers>
+<layer handle="L1" kind="manuscript" name="Text"></layer>
+<layer handle="L2" kind="notes" name="Notes"></layer>
+</layers>
+<beats>
+<beat title="Beat 1" level="outline" scenes="S1"/>
+<beat title="Beat 2">
+<scene handle="S2" title="Scene 2"/>
+</beat>
+<beat title="Beat 3" level="outline" scenes="S3"/>
+</beats>
+</frame>
+
+=== neighborhood
+<neighborhood>
+<scene handle="S2" level="full">
+<cell layer="L1">
+<narration>The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. The sea rolled in. </narration>
+</cell>
+<cell layer="L2">Notes 2. Ana keeps the lighthouse. Ana keeps the lighthouse. Ana keeps the lighthouse. Ana keeps the lighthouse. Ana keeps the lighthouse. Ana keeps the lighthouse. Ana keeps the lighthouse. Ana keeps the lighthouse. </cell>
+</scene>
+</neighborhood>
+
+=== task
+<task>
+<target handle="T1" scene="S2" field="title" mode="revise">
+<text>Scene 2</text>
+</target>
+<rules>Write one suggestion for each target. Change only the blocks inside a range, never a kept block. Write in English, without dialogue punctuation.</rules>
+</task>
+
+=== call 6
+{
+  "Beats": [
+    {
+      "BeatID": "00000000-0000-0000-0000-000000030000",
+      "Level": "outline"
+    },
+    {
+      "BeatID": "00000000-0000-0000-0000-000000030001",
+      "Level": "outline"
+    },
+    {
+      "BeatID": "00000000-0000-0000-0000-000000030002",
+      "Level": "full"
+    }
+  ],
+  "Scenes": [
+    {
+      "Handle": "S1",
+      "SceneID": "00000000-0000-0000-0000-000000010000",
+      "Level": "omitted",
+      "Override": false,
+      "Cells": null,
+      "UpdatedAt": "2021-01-02T00:00:00Z"
+    },
+    {
+      "Handle": "S2",
+      "SceneID": "00000000-0000-0000-0000-000000010001",
+      "Level": "omitted",
+      "Override": false,
+      "Cells": null,
+      "UpdatedAt": "2021-01-02T00:00:00Z"
+    },
+    {
+      "Handle": "S3",
+      "SceneID": "00000000-0000-0000-0000-000000010002",
+      "Level": "full",
+      "Override": false,
+      "Cells": [
+        {
+          "LayerID": "00000000-0000-0000-0000-000000020001",
+          "Recap": "",
+          "Override": false,
+          "UpdatedAt": "2021-01-02T00:00:00Z"
+        }
+      ],
+      "UpdatedAt": "2021-01-02T00:00:00Z"
+    }
+  ],
+  "Layers": [
+    {
+      "Handle": "L1",
+      "LayerID": "00000000-0000-0000-0000-000000020000"
+    },
+    {
+      "Handle": "L2",
+      "LayerID": "00000000-0000-0000-0000-000000020001"
+    }
+  ],
+  "Targets": [
+    {
+      "Handle": "M2",
+      "SceneID": "00000000-0000-0000-0000-000000010002",
+      "LayerID": "00000000-0000-0000-0000-000000020000",
+      "BeatID": "00000000-0000-0000-0000-000000000000",
+      "Sources": null,
+      "Field": "",
+      "Mode": "revise",
+      "Range": {
+        "Start": 0,
+        "End": 2
+      },
+      "Kept": [],
+      "Blocks": [
+        {
+          "Handle": "B10",
+          "Position": 0
+        },
+        {
+          "Handle": "B11",
+          "Position": 1
+        }
+      ],
+      "Override": false,
+      "UpdatedAt": "2021-01-02T00:00:00Z"
+    }
+  ],
+  "Estimate": 2061,
+  "Prompt": null
+}
+
+=== frame
+<frame>
+<project title="Tides" language="en">
+</project>
+<layers>
+<layer handle="L1" kind="manuscript" name="Text"></layer>
+<layer handle="L2" kind="notes" name="Notes"></layer>
+</layers>
+<beats>
+<beat title="Beat 1" level="outline" scenes="S1"/>
+<beat title="Beat 2" level="outline" scenes="S2"/>
+<beat title="Beat 3">
+<scene handle="S3" title="Scene 3"/>
+</beat>
+</beats>
+</frame>
+
+=== neighborhood
+<neighborhood>
+<scene handle="S3" level="full">
+<cell layer="L1" target="M2"/>
+<cell layer="L2">Notes 3. Ana keeps the lighthouse. Ana keeps the lighthouse. Ana keeps the lighthouse. Ana keeps the lighthouse. Ana keeps the lighthouse. Ana keeps the lighthouse. Ana keeps the lighthouse. Ana keeps the lighthouse. </cell>
+</scene>
+</neighborhood>
+
+=== task
+<task>
+<target handle="M2" scene="S3" layer="L1" mode="revise">
+<range>
+<narration handle="B10">Dawn.</narration>
+<narration handle="B11">Dusk.</narration>
+</range>
+</target>
+<rules>Write one suggestion for each target. Change only the blocks inside a range, never a kept block. Write in English, without dialogue punctuation.</rules>
+</task>
+

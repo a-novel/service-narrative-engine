@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"iter"
 	"time"
 
 	"github.com/google/uuid"
@@ -207,4 +208,43 @@ func newIDs(ctx context.Context, count int) ([]uuid.UUID, error) {
 	}
 
 	return ids, nil
+}
+
+// pages yields the items of a paged list from offset on, one page at a time. Read reads the page at an
+// offset, and convert turns each row into its item and the size of the list. A failed read yields its error
+// and ends the sequence.
+func pages[Row, Item any](
+	offset int, read func(offset int) ([]Row, error), convert func(row Row) (Item, int),
+) iter.Seq2[Item, error] {
+	return func(yield func(Item, error) bool) {
+		for {
+			rows, err := read(offset)
+			if err != nil {
+				var zero Item
+
+				yield(zero, err)
+
+				return
+			}
+
+			var total int
+
+			for _, row := range rows {
+				var item Item
+
+				item, total = convert(row)
+				if !yield(item, nil) {
+					return
+				}
+			}
+
+			offset += len(rows)
+
+			// A page past the end comes back empty, and a page that reaches the total ends the list. A page may
+			// stop short of the limit, at its byte bound.
+			if len(rows) == 0 || offset >= total {
+				return
+			}
+		}
+	}
 }

@@ -50,7 +50,7 @@ type ProjectCreateRequest struct {
 	// Language is the language the project is written in, one of [ProjectLanguages].
 	Language string `validate:"required,language"`
 	// Tags are the author's custom labels, in order, none when nil. A tag holds 1 to 24 runes in lower kebab
-	// case, as [ValidateProjectTag] checks, and appears once.
+	// case, as "années-50" is, and appears once.
 	Tags []string `validate:"max=10,unique,dive,required,max=24,projecttag"`
 	// Genres are the genres the author names, in order, none when nil. A genre holds 1 to 24 runes and no
 	// whitespace at either end, and appears once.

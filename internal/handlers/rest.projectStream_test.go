@@ -203,4 +203,62 @@ func TestRestProjectStream(t *testing.T) {
 			}
 		})
 	}
+
+	// A client the handler cannot write to ends the stream, and the handler reads no further record.
+	clientCases := []struct {
+		name string
+
+		// client wraps the recorder as the writer the handler answers.
+		client func(w *httptest.ResponseRecorder) http.ResponseWriter
+
+		// expectPulled is how many records the handler reads from the service.
+		expectPulled int
+	}{
+		{
+			// Every write fails once the client left: the first event fails to send.
+			name: "Success/ClientLeft",
+
+			client: func(w *httptest.ResponseRecorder) http.ResponseWriter { return leftClient{w} },
+
+			expectPulled: 1,
+		},
+		{
+			// A writer that cannot flush cannot open the stream.
+			name: "Error/CannotFlush",
+
+			client: func(w *httptest.ResponseRecorder) http.ResponseWriter { return struct{ http.ResponseWriter }{w} },
+
+			expectPulled: 0,
+		},
+	}
+
+	for _, testCase := range clientCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			var pulled int
+
+			records := func(yield func(*core.ProjectRecord, error) bool) {
+				for _, record := range []*core.ProjectRecord{
+					{Position: at(core.ProjectStreamProject, 1), Project: coreProject},
+					{Position: at(core.ProjectStreamEnd, 0)},
+				} {
+					pulled++
+
+					if !yield(record, nil) {
+						return
+					}
+				}
+			}
+
+			service := handlersmocks.NewMockRestProjectStreamService(t)
+			service.EXPECT().
+				Exec(mock.Anything, &core.ProjectStreamRequest{OwnerID: ownerID, ProjectID: projectID}).
+				Return(records, nil)
+
+			w := testCase.client(httptest.NewRecorder())
+			handlers.NewRestProjectStream(service, config.LoggerDev).ServeHTTP(w, validRequest(t))
+			require.Equal(t, testCase.expectPulled, pulled)
+		})
+	}
 }

@@ -206,10 +206,8 @@ func (service *ProjectStream) records(
 						ProjectID: projectID, Limit: projectStreamPageSize, Offset: offset, MaxBytes: ListPageBytesMax,
 					})
 				},
-				func(row *dao.BeatListRow, record *ProjectRecord) int {
-					record.Beat = newBeat(&row.Beat)
-
-					return row.Total
+				func(row *dao.BeatListRow) (*ProjectRecord, int) {
+					return &ProjectRecord{Beat: newBeat(&row.Beat)}, row.Total
 				},
 			)
 		},
@@ -220,10 +218,8 @@ func (service *ProjectStream) records(
 						ProjectID: projectID, Limit: projectStreamPageSize, Offset: offset, MaxBytes: ListPageBytesMax,
 					})
 				},
-				func(row *dao.SceneListRow, record *ProjectRecord) int {
-					record.Scene = newScene(&row.Scene)
-
-					return row.Total
+				func(row *dao.SceneListRow) (*ProjectRecord, int) {
+					return &ProjectRecord{Scene: newScene(&row.Scene)}, row.Total
 				},
 			)
 		},
@@ -234,10 +230,8 @@ func (service *ProjectStream) records(
 						ProjectID: projectID, Limit: projectStreamPageSize, Offset: offset, MaxBytes: ListPageBytesMax,
 					})
 				},
-				func(row *dao.LayerListRow, record *ProjectRecord) int {
-					record.Layer = newLayer(&row.Layer)
-
-					return row.Total
+				func(row *dao.LayerListRow) (*ProjectRecord, int) {
+					return &ProjectRecord{Layer: newLayer(&row.Layer)}, row.Total
 				},
 			)
 		},
@@ -248,10 +242,8 @@ func (service *ProjectStream) records(
 						ProjectID: projectID, Limit: projectStreamPageSize, Offset: offset, MaxBytes: ListPageBytesMax,
 					})
 				},
-				func(row *dao.CellListRow, record *ProjectRecord) int {
-					record.Cell = newCell(&row.Cell)
-
-					return row.Total
+				func(row *dao.CellListRow) (*ProjectRecord, int) {
+					return &ProjectRecord{Cell: newCell(&row.Cell)}, row.Total
 				},
 			)
 		},
@@ -279,41 +271,30 @@ func reportErrors[Item any](span trace.Span, yield func(Item, error) bool) func(
 	}
 }
 
-// streamPages yields the records of a paged list from offset on, one page at a time. Read reads the page
-// at an offset, and fill sets the record's item from a row and returns the list's total. It returns false
-// once the caller stops or a read fails.
+// streamPages yields the records of a section from offset on, as [pages] reads them. Read reads the page at
+// an offset, and convert turns each row into its record and the size of the section. It returns false once
+// the caller stops or a read fails.
 func streamPages[Row any](
 	section string,
 	offset int,
 	yield func(*ProjectRecord, error) bool,
 	read func(offset int) ([]Row, error),
-	fill func(row Row, record *ProjectRecord) int,
+	convert func(row Row) (*ProjectRecord, int),
 ) bool {
-	for {
-		rows, err := read(offset)
+	for record, err := range pages(offset, read, convert) {
 		if err != nil {
 			yield(nil, fmt.Errorf("list %s: %w", section, err))
 
 			return false
 		}
 
-		var total int
+		offset++
+		record.Position = ProjectStreamPosition{Section: section, Count: offset}
 
-		for _, row := range rows {
-			offset++
-
-			record := &ProjectRecord{Position: ProjectStreamPosition{Section: section, Count: offset}}
-			total = fill(row, record)
-
-			if !yield(record, nil) {
-				return false
-			}
-		}
-
-		// A page past the end comes back empty, and a page that reaches the total ends the list. A page may
-		// stop short of the limit, at its byte bound.
-		if len(rows) == 0 || offset >= total {
-			return true
+		if !yield(record, nil) {
+			return false
 		}
 	}
+
+	return true
 }

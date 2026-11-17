@@ -96,37 +96,18 @@ func (handler *RestGenerationStream) ServeHTTP(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	stream, err := httpf.NewEventStream(ctx, w, streamHeartbeat)
-	if err != nil {
-		handler.logger.Err(ctx, otel.ReportError(span, err).Error())
+	streamEvents(ctx, w, handler.logger, events, generationEvent)
+}
 
-		return
+// generationEvent returns the event ID of an event, its sequence number, then its event type and content.
+func generationEvent(event *core.GenerationEvent) (string, string, any) {
+	id := strconv.FormatInt(event.Sequence, 10)
+
+	if event.Result != nil {
+		return id, "result", loadGenerationResult(event.Result)
 	}
-	defer stream.Close()
 
-	for event, err := range events {
-		// The client resumes a cut stream after the last event it received. A client that left cut it.
-		if err != nil {
-			if ctx.Err() == nil {
-				handler.logger.Err(ctx, err.Error())
-			}
-
-			return
-		}
-
-		id := strconv.FormatInt(event.Sequence, 10)
-
-		if event.Result != nil {
-			err = sendEvent(stream, id, "result", loadGenerationResult(event.Result))
-		} else {
-			err = sendEvent(stream, id, "delta", GenerationDelta{Text: event.Delta})
-		}
-
-		// A write fails once the client left.
-		if err != nil {
-			return
-		}
-	}
+	return id, "delta", GenerationDelta{Text: event.Delta}
 }
 
 // parseSequence reads the sequence number a client resumes a generation stream after. An empty value

@@ -80,6 +80,10 @@ Four services write without the project lock:
 
 `TestProjectWriteLock` in `internal/core/projectWriteLock_test.go` enforces the rule. It fails when the `Exec` method of a service builds a DAO request that inserts, updates, upserts, deletes or moves before it calls `lockOwnedProject`. An exemption goes in its `projectWriteLockExempt` map, with its reason.
 
+## Refresh goldens
+
+`pnpm generate:go` rewrites every golden file from the current code: the generation prompts and plans under `internal/core/testdata`, and the schema snapshots of the migrations. Review its diff before you commit it.
+
 ---
 
 ## Code license

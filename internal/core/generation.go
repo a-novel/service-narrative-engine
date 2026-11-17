@@ -11,8 +11,6 @@ import (
 	"google.golang.org/grpc/status"
 
 	servicegenai "github.com/a-novel/service-genai/pkg/go"
-
-	"github.com/a-novel/service-narrative-engine/internal/models/schemas"
 )
 
 const (
@@ -72,12 +70,6 @@ const (
 	GenerationStatusCancelled = "cancelled"
 )
 
-// GenerationStatuses lists where a genai generation may stand.
-var GenerationStatuses = []string{
-	GenerationStatusPending, GenerationStatusRunning, GenerationStatusSucceeded, GenerationStatusFailed,
-	GenerationStatusCancelled,
-}
-
 const (
 	// GenerationFailureRejected is a call the provider refused, such as for an unknown model. The same call
 	// fails again.
@@ -94,12 +86,6 @@ const (
 	// output schema, or was cut short or refused. A resend runs it again at the next variant.
 	GenerationFailureInvalidOutput = "invalid_output"
 )
-
-// GenerationFailures lists why a generation may fail, so a client decides whether to resend it.
-var GenerationFailures = []string{
-	GenerationFailureRejected, GenerationFailureProviderFailed, GenerationFailureNotStarted,
-	GenerationFailureOutcomeUnknown, GenerationFailureInvalidOutput,
-}
 
 // Generation is a generation as submit leaves it: each of its calls with its genai generation, or with
 // the cap it waits on.
@@ -123,13 +109,14 @@ type GenerationCall struct {
 // GenerationResult is one genai generation, as a submit, a read or a cancel finds it.
 type GenerationResult struct {
 	ID uuid.UUID
-	// Status is where the generation stands, one of [GenerationStatuses].
+	// Status is where the generation stands, a GenerationStatus constant such as [GenerationStatusRunning].
 	Status string
 
 	// Error says why a failed generation failed: genai's reason, or why its output was refused.
 	Error string
-	// FailureClass says why a failed generation failed, one of [GenerationFailures]. It is empty unless the
-	// generation failed, and for a failure genai did not classify.
+	// FailureClass says why a failed generation failed, a GenerationFailure constant such as
+	// [GenerationFailureRejected], so a client decides whether to resend it. It is empty unless the generation
+	// failed, and for a failure genai did not classify.
 	FailureClass string
 	// Output is the model's output, which passed the full output schema of its kind. It is empty unless
 	// the generation succeeded.
@@ -207,79 +194,4 @@ func invalidOutput(id uuid.UUID, reason string) *GenerationResult {
 	return &GenerationResult{
 		ID: id, Status: GenerationStatusFailed, Error: reason, FailureClass: GenerationFailureInvalidOutput,
 	}
-}
-
-// openaiResponse is the part of an OpenAI Responses object a read checks: whether the model finished,
-// what it wrote, and the output format the call asked for, named after the kind of the generation.
-//
-//nolint:tagliatelle // OpenAI's own field names.
-type openaiResponse struct {
-	Model             string `json:"model"`
-	Status            string `json:"status"`
-	IncompleteDetails *struct {
-		Reason string `json:"reason"`
-	} `json:"incomplete_details"`
-	Output []struct {
-		Type    string `json:"type"`
-		Content []struct {
-			Type    string `json:"type"`
-			Text    string `json:"text"`
-			Refusal string `json:"refusal"`
-		} `json:"content"`
-	} `json:"output"`
-	Text struct {
-		Format struct {
-			Name string `json:"name"`
-		} `json:"format"`
-	} `json:"text"`
-}
-
-// providerOutput is the valid output of a provider's response, with the model that wrote it.
-type providerOutput struct {
-	text  json.RawMessage
-	model string
-}
-
-// readOutput returns the output a provider's response holds once it passed the full output schema of its
-// kind. It returns instead the reason the response holds no valid output: cut short, refused or malformed.
-func readOutput(raw []byte) (*providerOutput, string) {
-	response := &openaiResponse{}
-
-	err := json.Unmarshal(raw, response)
-	if err != nil {
-		return nil, "malformed response: " + err.Error()
-	}
-
-	if response.IncompleteDetails != nil {
-		return nil, "incomplete output: " + response.IncompleteDetails.Reason
-	}
-
-	if response.Status != "completed" {
-		return nil, "response " + response.Status
-	}
-
-	var text json.RawMessage
-
-	for _, item := range response.Output {
-		for _, content := range item.Content {
-			switch content.Type {
-			case "refusal":
-				return nil, "refused: " + content.Refusal
-			case "output_text":
-				text = append(text, content.Text...)
-			}
-		}
-	}
-
-	schema, err := schemas.Output(response.Text.Format.Name)
-	if err != nil {
-		return nil, "unknown output format: " + response.Text.Format.Name
-	}
-
-	err = schema.Validate(text)
-	if err != nil {
-		return nil, "malformed output: " + err.Error()
-	}
-
-	return &providerOutput{text: text, model: response.Model}, ""
 }

@@ -73,6 +73,9 @@ func TestProjectStream(t *testing.T) {
 		request *core.ProjectStreamRequest
 		setup   func(mocks *projectStreamMocks)
 
+		// stopAfter stops reading the stream after that many records, as a client that leaves, when positive.
+		stopAfter int
+
 		expectRecords []string
 		// expectErr is returned before the stream opens.
 		expectErr error
@@ -171,6 +174,24 @@ func TestProjectStream(t *testing.T) {
 			expectRecords: append(append([]string{"scenes:1", "layers:1"}, cellNames...), "end:0"),
 		},
 		{
+			// A client that leaves stops the reads: the second page of beats stays unread.
+			name: "Success/ClientLeft",
+
+			request: &core.ProjectStreamRequest{
+				OwnerID: ownerID, ProjectID: projectID,
+				After: &core.ProjectStreamPosition{Section: core.ProjectStreamProject, Count: 1},
+			},
+			setup: func(mocks *projectStreamMocks) {
+				expectOwner(mocks)
+				mocks.beats.EXPECT().
+					Exec(mock.Anything, &dao.BeatListRequest{ProjectID: projectID, Limit: 100, MaxBytes: core.ListPageBytesMax}).
+					Return([]*dao.BeatListRow{{Beat: *daoBeat(beatID1, 0), Total: 2}}, nil)
+			},
+			stopAfter: 1,
+
+			expectRecords: []string{"beats:1"},
+		},
+		{
 			name: "Error/Ended",
 
 			request: &core.ProjectStreamRequest{
@@ -255,6 +276,10 @@ func TestProjectStream(t *testing.T) {
 					}
 
 					received = append(received, recordName(record))
+
+					if len(received) == testCase.stopAfter {
+						break
+					}
 				}
 			}
 
