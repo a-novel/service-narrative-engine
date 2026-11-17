@@ -94,7 +94,7 @@ func TestRestBeatDelete(t *testing.T) {
 
 			serviceMock: &serviceMock[[]*core.Beat]{err: core.ErrInvalidRequest},
 
-			expectStatus: http.StatusBadRequest,
+			expectStatus: http.StatusUnprocessableEntity,
 		},
 		{
 			// The batch request names the ID IDs[0]; the route names it as its own query does.
@@ -106,7 +106,7 @@ func TestRestBeatDelete(t *testing.T) {
 				OwnerID: ownerID, ProjectID: projectID, IDs: []uuid.UUID{uuid.Nil},
 			}), core.ErrInvalidRequest)},
 
-			expectStatus:   http.StatusBadRequest,
+			expectStatus:   http.StatusUnprocessableEntity,
 			expectResponse: invalidFieldsProblem(map[string]any{"id": "required"}),
 		},
 		{

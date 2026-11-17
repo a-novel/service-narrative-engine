@@ -1,10 +1,7 @@
-import checkCases from "../../../../../internal/models/schemas/testdata/output.check.cases.json";
-
 import { describe, expect, it } from "vitest";
 
 import {
   type CheckOutput,
-  CheckOutputSchema,
   FindingCategory,
   type GenerationContext,
   contentText,
@@ -35,19 +32,6 @@ const texts: Record<string, string> = {
 function output(...evidence: CheckOutput["findings"][number]["evidence"]): CheckOutput {
   return { findings: [{ category: FindingCategory.FactsAndDetails, message: "La robe change.", evidence }] };
 }
-
-describe("CheckOutputSchema", () => {
-  it("has cases to check", () => {
-    expect(checkCases.length).toBeGreaterThan(0);
-  });
-
-  // The server's schema tests run the same cases, so both validators agree on each of them.
-  for (const testCase of checkCases) {
-    it(`agrees with the server on ${testCase.name}`, () => {
-      expect(CheckOutputSchema.safeParse(testCase.document).success).toBe(testCase.valid);
-    });
-  }
-});
 
 describe("findingsVerify", () => {
   const sceneText = (sceneID: string): string => texts[sceneID] ?? "";

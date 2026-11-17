@@ -1,6 +1,6 @@
 import type { NarrativeEngineApi } from "./api";
 import { BeatRecapSourceSchema, RecapSchema } from "./recap";
-import { maxChars } from "./text";
+import { DateSchema, PositionSchema, maxChars } from "./schema";
 
 import { HTTP_HEADERS } from "@a-novel-kit/nodelib-browser/http";
 
@@ -19,12 +19,9 @@ export const BeatSchema = z.object({
   color: z.string(),
   description: z.string(),
   prompt: z.string(),
-  updatedAt: z.iso.datetime().transform((value) => new Date(value)),
+  updatedAt: DateSchema,
   recap: RecapSchema.optional(),
-  recapBeatUpdatedAt: z.iso
-    .datetime()
-    .transform((value) => new Date(value))
-    .optional(),
+  recapBeatUpdatedAt: DateSchema.optional(),
   recapSources: z.array(BeatRecapSourceSchema).optional(),
 });
 
@@ -57,7 +54,7 @@ export const BeatFieldsSchema = z.object({
 /** The beat to add at `position`, first when omitted. A position past the last beat appends it. */
 export const BeatCreateRequestSchema = BeatFieldsSchema.extend({
   projectID: z.uuid(),
-  position: z.int().min(0).max(2147483647).optional(),
+  position: PositionSchema.optional(),
 });
 
 /** The value {@link BeatCreateRequestSchema} validates. */
@@ -69,7 +66,7 @@ export type BeatCreateRequest = z.infer<typeof BeatCreateRequestSchema>;
  */
 export const BeatsCreateRequestSchema = z.object({
   projectID: z.uuid(),
-  position: z.int().min(0).max(2147483647).optional(),
+  position: PositionSchema.optional(),
   beats: z.array(BeatFieldsSchema).min(1).max(100),
 });
 
@@ -101,7 +98,7 @@ export type BeatsUpdateRequest = z.infer<typeof BeatsUpdateRequestSchema>;
 export const BeatMoveRequestSchema = z.object({
   projectID: z.uuid(),
   id: z.uuid(),
-  position: z.int().min(0).max(2147483647),
+  position: PositionSchema,
 });
 
 /** The value {@link BeatMoveRequestSchema} validates. */

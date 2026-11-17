@@ -86,7 +86,7 @@ func TestRestProjectCreate(t *testing.T) {
 
 			serviceMock: &serviceMock[*core.ProjectComposer]{err: core.ErrInvalidRequest},
 
-			expectStatus: http.StatusBadRequest,
+			expectStatus: http.StatusUnprocessableEntity,
 		},
 		{
 			name: "Error/ProjectsFull",

@@ -1,4 +1,4 @@
-import { superAdminAccessToken } from "./token";
+import { ABSENT_ID, accessToken, api } from "./fixtures";
 
 import { afterAll, afterEach, beforeAll, describe, expect, it, onTestFinished } from "vitest";
 
@@ -7,7 +7,6 @@ import {
   Language,
   type Layer,
   LayerKind,
-  NarrativeEngineApi,
   type ProjectComposer,
   layerCreate,
   layerDelete,
@@ -20,11 +19,6 @@ import {
   projectCreate,
   projectDelete,
 } from "@a-novel/service-narrative-engine-rest";
-
-const api = new NarrativeEngineApi(process.env.REST_URL!);
-const accessToken = await superAdminAccessToken();
-
-const ABSENT_ID = "01920000-0000-7000-8000-000000000000";
 
 let project: ProjectComposer;
 let manuscript: Layer;
@@ -92,10 +86,10 @@ describe("layerCreate", () => {
     await expect(createNotes(" ")).rejects.toThrow('"invalidFields":{"name":"notblank"}');
   });
 
-  it("returns 400 for a kind with no content schema", async () => {
+  it("returns 422 for a kind with no content schema", async () => {
     await expectStatus(
       layerCreate(api, accessToken, { projectID: project.id, kind: "chapter", name: "Chapters" }),
-      400
+      422
     );
   });
 
@@ -129,8 +123,8 @@ describe("layersCreate", () => {
     await expect(layerNames()).resolves.toEqual([manuscript.name, "Characters", "Draft"]);
   });
 
-  it("returns 400 for an empty list", async () => {
-    await expectStatus(layersCreate(api, accessToken, { projectID: project.id, layers: [] }), 400);
+  it("returns 422 for an empty list", async () => {
+    await expectStatus(layersCreate(api, accessToken, { projectID: project.id, layers: [] }), 422);
   });
 
   it("returns 404 for an absent project", async () => {
@@ -192,11 +186,11 @@ describe("layersUpdate", () => {
     await expect(layerNames()).resolves.toEqual(["Text", "Characters"]);
   });
 
-  it("returns 400 for a layer named twice", async () => {
+  it("returns 422 for a layer named twice", async () => {
     const notes = await createNotes("Twice", 1);
 
     const item = { id: notes.id, name: "Renamed" };
-    await expectStatus(layersUpdate(api, accessToken, { projectID: project.id, layers: [item, item] }), 400);
+    await expectStatus(layersUpdate(api, accessToken, { projectID: project.id, layers: [item, item] }), 422);
   });
 
   it("updates none of the layers when one is absent", async () => {
@@ -224,10 +218,10 @@ describe("layerMove", () => {
     await expect(layerNames()).resolves.toEqual([manuscript.name, "Notes"]);
   });
 
-  it("returns 400 for a negative position", async () => {
+  it("returns 422 for a negative position", async () => {
     const notes = await createNotes("Notes", 1);
 
-    await expectStatus(layerMove(api, accessToken, { projectID: project.id, id: notes.id, position: -1 }), 400);
+    await expectStatus(layerMove(api, accessToken, { projectID: project.id, id: notes.id, position: -1 }), 422);
   });
 
   it("returns 404 for an absent layer", async () => {
@@ -303,8 +297,8 @@ describe("layerList", () => {
     expect(second).toEqual({ layers: [expect.objectContaining({ id: notes.id })], total: 2 });
   });
 
-  it("returns 400 for a page over 500 layers", async () => {
-    await expectStatus(layerList(api, accessToken, { projectID: project.id, limit: 501 }), 400);
+  it("returns 422 for a page over 500 layers", async () => {
+    await expectStatus(layerList(api, accessToken, { projectID: project.id, limit: 501 }), 422);
   });
 
   it("returns 404 for an absent project", async () => {

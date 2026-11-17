@@ -100,7 +100,7 @@ func TestRestProjectUpdate(t *testing.T) {
 			expectGenres: genres,
 			serviceMock:  &serviceMock[*core.Project]{err: core.ErrInvalidRequest},
 
-			expectStatus: http.StatusBadRequest,
+			expectStatus: http.StatusUnprocessableEntity,
 		},
 		{
 			name: "Success/ClearGenres",
@@ -136,7 +136,7 @@ func TestRestProjectUpdate(t *testing.T) {
 			expectTags:  tags,
 			serviceMock: &serviceMock[*core.Project]{err: core.ErrInvalidRequest},
 
-			expectStatus: http.StatusBadRequest,
+			expectStatus: http.StatusUnprocessableEntity,
 		},
 		{
 			name: "Error/Anonymous",
@@ -192,7 +192,7 @@ func TestRestProjectUpdate(t *testing.T) {
 			expectGenres: genres,
 			serviceMock:  &serviceMock[*core.Project]{err: core.ErrInvalidRequest},
 
-			expectStatus: http.StatusBadRequest,
+			expectStatus: http.StatusUnprocessableEntity,
 		},
 		{
 			name: "Error/Internal",

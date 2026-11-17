@@ -185,7 +185,7 @@ func TestRestGenerationSubmit(t *testing.T) {
 
 			serviceMock: &serviceMock[*core.Generation]{err: core.ErrInvalidRequest},
 
-			expectStatus: http.StatusBadRequest,
+			expectStatus: http.StatusUnprocessableEntity,
 		},
 		{
 			name: "Error/ProjectNotFound",
@@ -204,6 +204,24 @@ func TestRestGenerationSubmit(t *testing.T) {
 			serviceMock: &serviceMock[*core.Generation]{err: core.ErrContextTooLarge},
 
 			expectStatus: http.StatusUnprocessableEntity,
+			expectResponse: map[string]any{
+				"type": "about:blank", "title": "Unprocessable Entity", "status": 422.0,
+				"tags": map[string]any{"reason": "contextTooLarge"},
+			},
+		},
+		{
+			// A project past its budget would outgrow every call, and names the limit it reached.
+			name: "Error/ProjectBudget",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[*core.Generation]{err: errors.Join(core.ErrProjectBudget, core.ErrContextTooLarge)},
+
+			expectStatus: http.StatusUnprocessableEntity,
+			expectResponse: map[string]any{
+				"type": "about:blank", "title": "Unprocessable Entity", "status": 422.0,
+				"tags": map[string]any{"limit": "projectBytes"},
+			},
 		},
 		{
 			name: "Error/Quota",

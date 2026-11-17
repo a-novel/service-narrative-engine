@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"errors"
+	"fmt"
 	"iter"
 	"net/http"
 	"strconv"
@@ -119,7 +120,7 @@ func parseSequence(value string) (*int64, error) {
 
 	sequence, err := strconv.ParseInt(value, 10, 64)
 	if err != nil {
-		return nil, errors.Join(err, core.ErrInvalidRequest)
+		return nil, fmt.Errorf("parse sequence: %w", err)
 	}
 
 	return &sequence, nil

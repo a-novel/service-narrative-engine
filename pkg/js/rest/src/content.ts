@@ -1,4 +1,4 @@
-import { maxChars } from "./text";
+import { maxChars } from "./schema";
 
 import { z } from "zod";
 

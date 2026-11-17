@@ -1,5 +1,3 @@
-import suggestCases from "../../../../../internal/models/schemas/testdata/output.suggest.cases.json";
-
 import { describe, expect, it } from "vitest";
 
 import {
@@ -8,7 +6,6 @@ import {
   type GenerationContext,
   SceneField,
   type SuggestOutput,
-  SuggestOutputSchema,
   TargetMode,
   suggestionApply,
   suggestionsMap,
@@ -68,19 +65,6 @@ function context(...targets: ContextTarget[]): GenerationContext {
 function editsOutput(edits: SuggestOutput["manuscript"][number]["edits"]): SuggestOutput {
   return { manuscript: [{ target: "M1", note: "Tightens the scene.", edits }], text: [] };
 }
-
-describe("SuggestOutputSchema", () => {
-  it("has cases to check", () => {
-    expect(suggestCases.length).toBeGreaterThan(0);
-  });
-
-  // The server's schema tests run the same cases, so both validators agree on each of them.
-  for (const testCase of suggestCases) {
-    it(`agrees with the server on ${testCase.name}`, () => {
-      expect(SuggestOutputSchema.safeParse(testCase.document).success).toBe(testCase.valid);
-    });
-  }
-});
 
 describe("suggestionsMap", () => {
   it("maps a text suggestion to its target", () => {

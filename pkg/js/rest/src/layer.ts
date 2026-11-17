@@ -1,5 +1,5 @@
 import type { NarrativeEngineApi } from "./api";
-import { maxChars } from "./text";
+import { DateSchema, PositionSchema, maxChars } from "./schema";
 
 import { HTTP_HEADERS } from "@a-novel-kit/nodelib-browser/http";
 
@@ -24,7 +24,7 @@ export const LayerSchema = z.object({
   kind: z.string(),
   name: z.string(),
   description: z.string(),
-  updatedAt: z.iso.datetime().transform((value) => new Date(value)),
+  updatedAt: DateSchema,
 });
 
 /** The value {@link LayerSchema} validates. */
@@ -49,7 +49,7 @@ export const LayerFieldsSchema = z.object({
 /** The layer to add at `position`, first when omitted. A position past the last layer appends it. */
 export const LayerCreateRequestSchema = LayerFieldsSchema.extend({
   projectID: z.uuid(),
-  position: z.int().min(0).max(2147483647).optional(),
+  position: PositionSchema.optional(),
 });
 
 /** The value {@link LayerCreateRequestSchema} validates. */
@@ -61,7 +61,7 @@ export type LayerCreateRequest = z.infer<typeof LayerCreateRequestSchema>;
  */
 export const LayersCreateRequestSchema = z.object({
   projectID: z.uuid(),
-  position: z.int().min(0).max(2147483647).optional(),
+  position: PositionSchema.optional(),
   layers: z.array(LayerFieldsSchema).min(1).max(100),
 });
 
@@ -95,7 +95,7 @@ export type LayersUpdateRequest = z.infer<typeof LayersUpdateRequestSchema>;
 export const LayerMoveRequestSchema = z.object({
   projectID: z.uuid(),
   id: z.uuid(),
-  position: z.int().min(0).max(2147483647),
+  position: PositionSchema,
 });
 
 /** The value {@link LayerMoveRequestSchema} validates. */
@@ -140,7 +140,7 @@ export type LayerListRequest = z.infer<typeof LayerListRequestSchema>;
 
 /**
  * Adds one layer of any kind to a project and returns it at its place; the layers from there on move down one
- * place. Throws on HTTP 400 for a kind with no content schema, 404 when the caller owns no such project, 409
+ * place. Throws on HTTP 422 for a kind with no content schema, 404 when the caller owns no such project, 409
  * when the project holds 1000 layers already, and 409 with `projectBytes` in the error's `tags.limit` when the
  * project would pass its 16 MiB budget of stored bytes. {@link layersCreate} adds several at once.
  */
@@ -158,7 +158,7 @@ export async function layerCreate(
 
 /**
  * Adds layers of any kind to a project and returns them in order; the layers from there on move down. They are
- * all added, or none are. Throws on HTTP 400 for a kind with no content schema, 404 when the caller owns no such
+ * all added, or none are. Throws on HTTP 422 for a kind with no content schema, 404 when the caller owns no such
  * project, 409 when the project would hold more than 1000 layers, and 409 with `projectBytes` in the error's
  * `tags.limit` when the project would pass its 16 MiB budget of stored bytes.
  */

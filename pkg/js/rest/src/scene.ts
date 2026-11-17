@@ -1,5 +1,5 @@
 import type { NarrativeEngineApi } from "./api";
-import { maxChars } from "./text";
+import { DateSchema, PositionSchema, maxChars } from "./schema";
 
 import { HTTP_HEADERS } from "@a-novel-kit/nodelib-browser/http";
 
@@ -14,7 +14,7 @@ export const SceneSchema = z.object({
   title: z.string(),
   description: z.string(),
   prompt: z.string(),
-  updatedAt: z.iso.datetime().transform((value) => new Date(value)),
+  updatedAt: DateSchema,
 });
 
 /** The value {@link SceneSchema} validates. */
@@ -46,7 +46,7 @@ export const SceneFieldsSchema = z.object({
 export const SceneCreateRequestSchema = SceneFieldsSchema.extend({
   projectID: z.uuid(),
   beatID: z.uuid(),
-  position: z.int().min(0).max(2147483647).optional(),
+  position: PositionSchema.optional(),
 });
 
 /** The value {@link SceneCreateRequestSchema} validates. */
@@ -59,7 +59,7 @@ export type SceneCreateRequest = z.infer<typeof SceneCreateRequestSchema>;
 export const ScenesCreateRequestSchema = z.object({
   projectID: z.uuid(),
   scenes: z
-    .array(SceneFieldsSchema.extend({ beatID: z.uuid(), position: z.int().min(0).max(2147483647).optional() }))
+    .array(SceneFieldsSchema.extend({ beatID: z.uuid(), position: PositionSchema.optional() }))
     .min(1)
     .max(100),
 });
@@ -96,7 +96,7 @@ export const SceneMoveRequestSchema = z.object({
   projectID: z.uuid(),
   id: z.uuid(),
   beatID: z.uuid(),
-  position: z.int().min(0).max(2147483647),
+  position: PositionSchema,
 });
 
 /** The value {@link SceneMoveRequestSchema} validates. */

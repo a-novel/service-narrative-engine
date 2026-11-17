@@ -3,7 +3,7 @@ import { type Beat, BeatSchema } from "./beat";
 import { type Cell, CellSchema } from "./cell";
 import { type Layer, LayerSchema } from "./layer";
 import { type Scene, SceneSchema } from "./scene";
-import { maxChars } from "./text";
+import { DateSchema, maxChars } from "./schema";
 
 import { HTTP_HEADERS } from "@a-novel-kit/nodelib-browser/http";
 
@@ -49,11 +49,11 @@ export const ProjectSchema = z.object({
   tags: z.array(z.string()),
   /** The genres the author names, in order. Empty until the author adds one. */
   genres: z.array(z.string()),
-  createdAt: z.iso.datetime().transform((value) => new Date(value)),
+  createdAt: DateSchema,
   /** When the project's own fields, its title, premise, language, tags and genres, last changed. */
-  updatedAt: z.iso.datetime().transform((value) => new Date(value)),
+  updatedAt: DateSchema,
   /** When the project's content last changed, its logo aside. */
-  editedAt: z.iso.datetime().transform((value) => new Date(value)),
+  editedAt: DateSchema,
   /**
    * The checksum of the logo, absent while the project has no logo. A logo URL that carries it names the logo's
    * bytes, which a cache keeps for good.
@@ -228,10 +228,7 @@ export type ProjectFieldsDriftResponse = z.infer<typeof ProjectFieldsDriftRespon
 
 /** The `editedAt` of every project of the caller, by ID. */
 export const ProjectEditsListResponseSchema = z.object({
-  edits: z.record(
-    z.uuid(),
-    z.iso.datetime().transform((value) => new Date(value))
-  ),
+  edits: z.record(z.uuid(), DateSchema),
 });
 
 /** The value {@link ProjectEditsListResponseSchema} validates. */
@@ -264,7 +261,7 @@ export type ProjectLogosDriftResponse = z.infer<typeof ProjectLogosDriftResponse
 /**
  * Compares the fields of the projects a client holds with the caller's. It returns every project of the caller the
  * request leaves out or names with another `updatedAt`, and every ID of the request that names no project of the
- * caller. An empty map returns every project. Throws on HTTP 400 for a request past {@link PROJECTS_MAX} projects.
+ * caller. An empty map returns every project. Throws on HTTP 422 for a request past {@link PROJECTS_MAX} projects.
  */
 export async function projectFieldsDrift(
   api: NarrativeEngineApi,
@@ -295,7 +292,7 @@ export async function projectEditsList(
 /**
  * Compares the logos a client holds with those of the caller's projects, by checksum. It returns the checksum of every
  * logo of the caller the request leaves out or names with another checksum, and every ID of the request whose project
- * is not the caller's or holds no logo now. Read a drifted logo with {@link projectLogoGet}. Throws on HTTP 400 for a
+ * is not the caller's or holds no logo now. Read a drifted logo with {@link projectLogoGet}. Throws on HTTP 422 for a
  * request past {@link PROJECTS_MAX} logos.
  */
 export async function projectLogosDrift(

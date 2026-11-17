@@ -93,7 +93,7 @@ func TestRestLayerList(t *testing.T) {
 
 			serviceMock: &serviceMock[*core.LayerPage]{err: core.ErrInvalidRequest},
 
-			expectStatus: http.StatusBadRequest,
+			expectStatus: http.StatusUnprocessableEntity,
 		},
 		{
 			name: "Error/Internal",

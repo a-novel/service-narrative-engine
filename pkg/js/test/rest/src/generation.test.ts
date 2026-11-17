@@ -1,4 +1,5 @@
-import { anonymousAccessToken, superAdminAccessToken, userAccessToken } from "./token";
+import { ABSENT_ID, COLOR, accessToken, api, collect } from "./fixtures";
+import { anonymousAccessToken, userAccessToken } from "./token";
 
 import { afterAll, describe, expect, it, onTestFinished } from "vitest";
 
@@ -10,7 +11,6 @@ import {
   GenerationStatus,
   type GenerationSubmitRequest,
   Language,
-  NarrativeEngineApi,
   type ProjectComposer,
   type Scene,
   SceneField,
@@ -27,20 +27,7 @@ import {
   sceneCreate,
 } from "@a-novel/service-narrative-engine-rest";
 
-const api = new NarrativeEngineApi(process.env.REST_URL!);
-
-const ABSENT_ID = "01920000-0000-7000-8000-000000000000";
-const COLOR = "#4a90d9";
-
-/** Reads a stream to its end. */
-async function collect<T>(stream: AsyncIterable<T>): Promise<T[]> {
-  const items: T[] = [];
-  for await (const item of stream) items.push(item);
-  return items;
-}
-
 // genai never reaches a provider in this stack, so every admitted call fails before it starts.
-const accessToken = await superAdminAccessToken();
 const userToken = await userAccessToken();
 
 /** Creates a project of the caller with one scene. */
@@ -257,7 +244,7 @@ describe("generationSubmit", () => {
     expect(generation.calls[0].context.scenes.map(({ sceneID }) => sceneID)).toEqual([scene.id]);
   });
 
-  it("returns 400 for a consolidation with an instruction", async () => {
+  it("returns 422 for a consolidation with an instruction", async () => {
     const request = {
       projectID: project.id,
       kind: GenerationKind.Consolidate,
@@ -265,7 +252,7 @@ describe("generationSubmit", () => {
       instruction: "Plus court.",
     };
 
-    await expectStatus(generationSubmit(api, accessToken, request as GenerationSubmitRequest), 400);
+    await expectStatus(generationSubmit(api, accessToken, request as GenerationSubmitRequest), 422);
   });
 
   it("runs an admin's calls past a user's concurrency", async () => {
@@ -274,7 +261,7 @@ describe("generationSubmit", () => {
     }
   });
 
-  it("returns 400 for a range past the end of the cell", async () => {
+  it("returns 422 for a range past the end of the cell", async () => {
     await expectStatus(
       generationSubmit(api, accessToken, {
         projectID: project.id,
@@ -283,7 +270,7 @@ describe("generationSubmit", () => {
           { sceneID: scene.id, layerID: manuscriptLayerID, mode: TargetMode.Revise, range: { start: 0, end: 4 } },
         ],
       }),
-      400
+      422
     );
   });
 

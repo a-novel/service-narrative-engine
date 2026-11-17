@@ -1,4 +1,4 @@
-import { superAdminAccessToken } from "./token";
+import { ABSENT_ID, COLOR, accessToken, api } from "./fixtures";
 
 import { afterAll, beforeAll, describe, expect, it, onTestFinished } from "vitest";
 
@@ -11,7 +11,6 @@ import {
   type Layer,
   LayerKind,
   ManuscriptContentSchema,
-  NarrativeEngineApi,
   type ProjectComposer,
   type Scene,
   beatCreate,
@@ -23,12 +22,6 @@ import {
   projectDelete,
   scenesCreate,
 } from "@a-novel/service-narrative-engine-rest";
-
-const api = new NarrativeEngineApi(process.env.REST_URL!);
-
-const ABSENT_ID = "01920000-0000-7000-8000-000000000000";
-const COLOR = "#4a90d9";
-const accessToken = await superAdminAccessToken();
 
 let project: ProjectComposer;
 let scenes: Scene[];
@@ -138,15 +131,15 @@ describe("cellWrite", () => {
     );
   });
 
-  it("returns 400 for content outside the schema of the layer's kind", async () => {
+  it("returns 422 for content outside the schema of the layer's kind", async () => {
     const request = { projectID: project.id, sceneID: scenes[0].id, layerID: notes.id, content: { blocks: [] } };
-    await expectStatus(cellWrite(api, accessToken, request), 400);
+    await expectStatus(cellWrite(api, accessToken, request), 422);
   });
 
-  it("returns 400 for a block whose generated mark names no model", async () => {
+  it("returns 422 for a block whose generated mark names no model", async () => {
     const content = { blocks: [{ kind: "narration" as const, text: "Il pleuvait.", generated: { model: "" } }] };
     const request = { projectID: project.id, sceneID: scenes[0].id, layerID: project.layers[0].id, content };
-    await expectStatus(cellWrite(api, accessToken, request), 400);
+    await expectStatus(cellWrite(api, accessToken, request), 422);
   });
 
   it("returns 404 for a scene of another project", async () => {
@@ -187,20 +180,20 @@ describe("cellsWrite", () => {
     await expect(storedCell(scenes[1].id, notes.id)).resolves.toMatchObject({ content: { text: "Marie" } });
   });
 
-  it("returns 400 for content outside the schema of the layer's kind, and writes none of the cells", async () => {
+  it("returns 422 for content outside the schema of the layer's kind, and writes none of the cells", async () => {
     const cells = [
       { sceneID: scenes[0].id, layerID: notes.id, content: { text: "Kept out" } },
       { sceneID: scenes[0].id, layerID: project.layers[0].id, content: { text: "Not a manuscript" } },
     ];
-    await expectStatus(cellsWrite(api, accessToken, { projectID: project.id, cells }), 400);
+    await expectStatus(cellsWrite(api, accessToken, { projectID: project.id, cells }), 422);
 
     const stored = (await cellList(api, accessToken, { projectID: project.id })).cells;
     expect(stored.find((cell) => cell.sceneID === scenes[0].id && cell.layerID === notes.id)).toBeUndefined();
   });
 
-  it("returns 400 for a scene and a layer named twice", async () => {
+  it("returns 422 for a scene and a layer named twice", async () => {
     const cell = { sceneID: scenes[0].id, layerID: notes.id, content: { text: "Marie" } };
-    await expectStatus(cellsWrite(api, accessToken, { projectID: project.id, cells: [cell, cell] }), 400);
+    await expectStatus(cellsWrite(api, accessToken, { projectID: project.id, cells: [cell, cell] }), 422);
   });
 
   it("returns 404 for a scene of another project, and writes none of the cells", async () => {
@@ -248,8 +241,8 @@ describe("cellList", () => {
     expect(keys(second.cells)).toEqual(keys(written.slice(2)));
   });
 
-  it("returns 400 for a page over 500 cells", async () => {
-    await expectStatus(cellList(api, accessToken, { projectID: project.id, limit: 501 }), 400);
+  it("returns 422 for a page over 500 cells", async () => {
+    await expectStatus(cellList(api, accessToken, { projectID: project.id, limit: 501 }), 422);
   });
 
   it("returns 404 for an absent project", async () => {

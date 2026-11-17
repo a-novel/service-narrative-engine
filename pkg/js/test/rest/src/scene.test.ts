@@ -1,4 +1,4 @@
-import { superAdminAccessToken } from "./token";
+import { ABSENT_ID, COLOR, accessToken, api } from "./fixtures";
 
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
@@ -6,7 +6,6 @@ import { expectStatus } from "@a-novel-kit/nodelib-test/http";
 import {
   type Beat,
   Language,
-  NarrativeEngineApi,
   type ProjectComposer,
   type Scene,
   beatCreate,
@@ -23,12 +22,6 @@ import {
   scenesDelete,
   scenesUpdate,
 } from "@a-novel/service-narrative-engine-rest";
-
-const api = new NarrativeEngineApi(process.env.REST_URL!);
-const accessToken = await superAdminAccessToken();
-
-const ABSENT_ID = "01920000-0000-7000-8000-000000000000";
-const COLOR = "#4a90d9";
 
 let project: ProjectComposer;
 // The test project's beats: scenes go to the first unless a test names the second.
@@ -190,11 +183,11 @@ describe("scenesCreate", () => {
     await expectStatus(scenesCreate(api, accessToken, request), 409);
   });
 
-  it("returns 400 for an empty list or more than 100 scenes", async () => {
+  it("returns 422 for an empty list or more than 100 scenes", async () => {
     const scenes = Array.from({ length: 101 }, () => ({ beatID: first.id, title: "Scene" }));
 
-    await expectStatus(scenesCreate(api, accessToken, { projectID: project.id, scenes: [] }), 400);
-    await expectStatus(scenesCreate(api, accessToken, { projectID: project.id, scenes }), 400);
+    await expectStatus(scenesCreate(api, accessToken, { projectID: project.id, scenes: [] }), 422);
+    await expectStatus(scenesCreate(api, accessToken, { projectID: project.id, scenes }), 422);
   });
 
   it("adds none of the scenes when one is invalid", async () => {
@@ -203,7 +196,7 @@ describe("scenesCreate", () => {
       { beatID: first.id, title: " " },
     ];
 
-    await expectStatus(scenesCreate(api, accessToken, { projectID: project.id, scenes }), 400);
+    await expectStatus(scenesCreate(api, accessToken, { projectID: project.id, scenes }), 422);
     await expect(storedScenes()).resolves.toEqual([]);
   });
 });
@@ -269,11 +262,11 @@ describe("scenesUpdate", () => {
     await expect(sceneTitles()).resolves.toEqual(["Kept"]);
   });
 
-  it("returns 400 for a scene named twice", async () => {
+  it("returns 422 for a scene named twice", async () => {
     const scene = await createScene("Twice");
 
     const item = { id: scene.id, title: "Renamed" };
-    await expectStatus(scenesUpdate(api, accessToken, { projectID: project.id, scenes: [item, item] }), 400);
+    await expectStatus(scenesUpdate(api, accessToken, { projectID: project.id, scenes: [item, item] }), 422);
   });
 });
 
@@ -357,11 +350,11 @@ describe("sceneMove", () => {
     expect(new Set(stored.map((scene) => scene.id))).toEqual(new Set(scenes.map((scene) => scene.id)));
   });
 
-  it("returns 400 for a negative position", async () => {
+  it("returns 422 for a negative position", async () => {
     const scene = await createScene("Scene");
 
     const request = { projectID: project.id, id: scene.id, beatID: first.id, position: -1 };
-    await expectStatus(sceneMove(api, accessToken, request), 400);
+    await expectStatus(sceneMove(api, accessToken, request), 422);
   });
 
   it("returns 404 for an absent scene", async () => {
@@ -425,8 +418,8 @@ describe("scenesDelete", () => {
     await expect(sceneTitles()).resolves.toEqual(["Kept"]);
   });
 
-  it("returns 400 for an empty list", async () => {
-    await expectStatus(scenesDelete(api, accessToken, { projectID: project.id, ids: [] }), 400);
+  it("returns 422 for an empty list", async () => {
+    await expectStatus(scenesDelete(api, accessToken, { projectID: project.id, ids: [] }), 422);
   });
 });
 
@@ -455,8 +448,8 @@ describe("sceneList", () => {
     });
   });
 
-  it("returns 400 for a page over 500 scenes", async () => {
-    await expectStatus(sceneList(api, accessToken, { projectID: project.id, limit: 501 }), 400);
+  it("returns 422 for a page over 500 scenes", async () => {
+    await expectStatus(sceneList(api, accessToken, { projectID: project.id, limit: 501 }), 422);
   });
 
   it("returns 404 for an absent project", async () => {

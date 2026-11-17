@@ -158,6 +158,15 @@ func (handler *RestGenerationSubmit) ServeHTTP(w http.ResponseWriter, r *http.Re
 		}
 	}
 
+	// An outgrown generation shares 422 with an invalid request. A project past its byte budget names that limit,
+	// and any other outgrown generation tells a client to narrow the request.
+	switch {
+	case errors.Is(err, core.ErrProjectBudget):
+		err = tagLimit(err)
+	case errors.Is(err, core.ErrContextTooLarge):
+		err = httpf.WithTag(err, "reason", "contextTooLarge")
+	}
+
 	if err != nil {
 		httpf.HandleError(ctx, handler.logger, w, span, generationErrors, err)
 

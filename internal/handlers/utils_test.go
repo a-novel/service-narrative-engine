@@ -152,7 +152,8 @@ func newProbeContext(t *testing.T, setup probeSetup) context.Context {
 // invalidFieldsProblem is the body of a refusal for invalid request fields, each named by its path.
 func invalidFieldsProblem(fields map[string]any) any {
 	return map[string]any{
-		"type": "about:blank", "title": "Bad Request", "status": 400.0, "tags": map[string]any{"invalidFields": fields},
+		"type": "about:blank", "title": "Unprocessable Entity", "status": 422.0,
+		"tags": map[string]any{"invalidFields": fields},
 	}
 }
 
