@@ -9,6 +9,7 @@ import (
 	"github.com/a-novel-kit/golib/config"
 	"github.com/a-novel-kit/golib/downtime"
 	"github.com/a-novel-kit/golib/httpf"
+	otelpresets "github.com/a-novel-kit/golib/otel/presets"
 	"github.com/a-novel-kit/golib/servicetoken"
 )
 
@@ -121,8 +122,9 @@ var (
 
 	// AppName is the name of the application, as it appears in logs and tracing.
 	AppName = cmp.Or(getEnv("APP_NAME"), AppNameDefault)
-	// Otel enables OpenTelemetry tracing.
-	Otel = config.LoadEnv(getEnv("OTEL"), false, strconv.ParseBool)
+	// Telemetry is the OpenTelemetry backend that OTEL and OTEL_EXPORTER_OTLP_ENDPOINT select, with the
+	// loggers that match it.
+	Telemetry = otelpresets.LoadTelemetry(getEnv, otelpresets.ServerFlushTimeout)
 
 	// Rest configures the REST server from the REST_* variables.
 	Rest = httpf.LoadServerConfig(getEnv, restDefaults())
@@ -153,12 +155,6 @@ var (
 	// ServiceToken names the service tokens the REST server accepts. Without an issuer, the server
 	// refuses to start unless SERVICE_ISSUER_OPTIONAL is set.
 	ServiceToken = servicetoken.LoadConfig(getEnv)
-
-	// OTLPEndpoint is the standard OTEL_EXPORTER_OTLP_ENDPOINT. When set, traces and logs export
-	// over OTLP/HTTP, which the OTEL_EXPORTER_OTLP_* variables configure. When empty, they go to
-	// standard output. The OpenTelemetry SDK reads these variables without the prefix, so this one
-	// is read without it too.
-	OTLPEndpoint = os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
 
 	// DowntimeStart is when a planned downtime of this service starts, in RFC 3339. From then
 	// until it is removed, the service refuses work. Nil when none is planned.

@@ -13,7 +13,7 @@ import (
 
 	serviceauthentication "github.com/a-novel/service-authentication/v2/pkg/go"
 
-	"github.com/a-novel/service-narrative-engine/internal/config"
+	"github.com/a-novel/service-narrative-engine/internal/config/configtest"
 	"github.com/a-novel/service-narrative-engine/internal/core"
 	"github.com/a-novel/service-narrative-engine/internal/handlers"
 	handlersmocks "github.com/a-novel/service-narrative-engine/internal/handlers/mocks"
@@ -342,7 +342,7 @@ func TestRestGenerationSubmit(t *testing.T) {
 			}
 
 			w := httptest.NewRecorder()
-			handlers.NewRestGenerationSubmit(service, config.LoggerDev).
+			handlers.NewRestGenerationSubmit(service, configtest.Logger).
 				ServeHTTP(w, testCase.request(t))
 
 			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)

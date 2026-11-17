@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/a-novel/service-narrative-engine/internal/config"
+	"github.com/a-novel/service-narrative-engine/internal/config/configtest"
 	"github.com/a-novel/service-narrative-engine/internal/core"
 	"github.com/a-novel/service-narrative-engine/internal/handlers"
 	handlersmocks "github.com/a-novel/service-narrative-engine/internal/handlers/mocks"
@@ -187,7 +187,7 @@ func TestRestProjectStream(t *testing.T) {
 			}
 
 			w := httptest.NewRecorder()
-			handlers.NewRestProjectStream(service, config.LoggerDev).ServeHTTP(w, testCase.request(t))
+			handlers.NewRestProjectStream(service, configtest.Logger).ServeHTTP(w, testCase.request(t))
 
 			if testCase.expectEvents != nil {
 				requireEvents(t, w.Result(), testCase.expectEvents)
@@ -250,7 +250,7 @@ func TestRestProjectStream(t *testing.T) {
 				Return(records, nil)
 
 			w := testCase.client(httptest.NewRecorder())
-			handlers.NewRestProjectStream(service, config.LoggerDev).ServeHTTP(w, validRequest(t))
+			handlers.NewRestProjectStream(service, configtest.Logger).ServeHTTP(w, validRequest(t))
 			require.Equal(t, testCase.expectPulled, pulled)
 		})
 	}

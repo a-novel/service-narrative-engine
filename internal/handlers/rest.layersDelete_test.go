@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
 
-	"github.com/a-novel/service-narrative-engine/internal/config"
+	"github.com/a-novel/service-narrative-engine/internal/config/configtest"
 	"github.com/a-novel/service-narrative-engine/internal/core"
 	"github.com/a-novel/service-narrative-engine/internal/handlers"
 	handlersmocks "github.com/a-novel/service-narrative-engine/internal/handlers/mocks"
@@ -103,7 +103,7 @@ func TestRestLayersDelete(t *testing.T) {
 			}
 
 			w := httptest.NewRecorder()
-			handlers.NewRestLayersDelete(service, config.LoggerDev).ServeHTTP(w, testCase.request(t))
+			handlers.NewRestLayersDelete(service, configtest.Logger).ServeHTTP(w, testCase.request(t))
 
 			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
 		})

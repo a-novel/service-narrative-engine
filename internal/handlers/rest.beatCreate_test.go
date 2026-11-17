@@ -9,7 +9,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/stretchr/testify/mock"
 
-	"github.com/a-novel/service-narrative-engine/internal/config"
+	"github.com/a-novel/service-narrative-engine/internal/config/configtest"
 	"github.com/a-novel/service-narrative-engine/internal/core"
 	"github.com/a-novel/service-narrative-engine/internal/handlers"
 	handlersmocks "github.com/a-novel/service-narrative-engine/internal/handlers/mocks"
@@ -127,7 +127,7 @@ func TestRestBeatCreate(t *testing.T) {
 			}
 
 			w := httptest.NewRecorder()
-			handlers.NewRestBeatCreate(service, config.LoggerDev).ServeHTTP(w, testCase.request(t))
+			handlers.NewRestBeatCreate(service, configtest.Logger).ServeHTTP(w, testCase.request(t))
 
 			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
 		})

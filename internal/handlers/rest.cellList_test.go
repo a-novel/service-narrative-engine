@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/mock"
 
-	"github.com/a-novel/service-narrative-engine/internal/config"
+	"github.com/a-novel/service-narrative-engine/internal/config/configtest"
 	"github.com/a-novel/service-narrative-engine/internal/core"
 	"github.com/a-novel/service-narrative-engine/internal/handlers"
 	handlersmocks "github.com/a-novel/service-narrative-engine/internal/handlers/mocks"
@@ -100,7 +100,7 @@ func TestRestCellList(t *testing.T) {
 			}
 
 			w := httptest.NewRecorder()
-			handlers.NewRestCellList(service, config.LoggerDev).ServeHTTP(w, testCase.request(t))
+			handlers.NewRestCellList(service, configtest.Logger).ServeHTTP(w, testCase.request(t))
 
 			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
 		})
