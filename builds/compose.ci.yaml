@@ -123,7 +123,12 @@ services:
       postgres-genai:
         condition: service_healthy
     environment:
-      POSTGRES_DSN: postgres://postgres:postgres@postgres-genai:5432/postgres?sslmode=disable
+      POSTGRES_HOST: postgres-genai
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DATABASE: postgres
+      POSTGRES_TLS_ENABLED: "false"
       # A closed port: starts are refused before reaching any provider, so generations stay pending.
       OPENAI_BASE_URL: "http://127.0.0.1:1/v1"
       OPENAI_API_KEY: "test"
@@ -146,7 +151,12 @@ services:
       service-genai:
         condition: service_healthy
     environment:
-      POSTGRES_DSN: postgres://postgres:postgres@postgres:5432/postgres?sslmode=disable
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DATABASE: postgres
+      POSTGRES_TLS_ENABLED: "false"
       SERVICE_JSON_KEYS_HOST: service-json-keys
       SERVICE_JSON_KEYS_PORT: 8080
       SERVICE_GENAI_HOST: service-genai

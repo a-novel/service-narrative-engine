@@ -57,7 +57,8 @@ type Limits struct {
 	// stream each count on a budget of their own. A read past it answers 429.
 	RateLimitGenerationRead httpf.Rate
 	// MaxConcurrentProjectReads caps the reads of a whole project an instance runs at once: manuscript exports
-	// and the snapshots generations plan from. A read past it waits for a slot.
+	// and the snapshots generations plan from. A read past it waits for a slot. 0 sizes it to the instance's
+	// memory.
 	MaxConcurrentProjectReads int
 }
 

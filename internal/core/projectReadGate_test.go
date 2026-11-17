@@ -38,8 +38,8 @@ func TestProjectReadGate(t *testing.T) {
 			expectRan: true,
 		},
 		{
-			// A gate always holds one slot.
-			name: "Success/AtLeastOneSlot",
+			// A gate of size 0 sizes itself to the memory limit, at least one slot.
+			name: "Success/SizedFromMemory",
 
 			expectRan: true,
 		},

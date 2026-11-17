@@ -1,10 +1,12 @@
 # Upgrading to NEXT
 
-A request that fails validation answers 422 Unprocessable Entity, where it answered 400 Bad Request.
+A request that fails validation answers 422 Unprocessable Entity, where it answered 400 Bad Request. The service also reads its PostgreSQL connection from the discrete `POSTGRES_*` variables only.
 
 ## Do I need to act?
 
 **Required** for a client that branches on 400 to catch an invalid request: it reads 422 now. A client that treats every 4xx answer alike keeps working, and the release migrates no data.
+
+**Required** for a deployment that still sets `POSTGRES_DSN`: the service no longer reads it. A deployment that sets `POSTGRES_HOST` already works as before.
 
 ## Read 422 for an invalid request
 
@@ -18,3 +20,22 @@ Every route answers 422 to a request that parses but breaks a rule of the contra
 ```
 
 The logo write and the generation submit already answered 422, to a refused logo and to a generation that outgrows its calls. Their 422 now also answers an invalid request. A refused logo still carries the problem's `reason` tag, and an outgrown generation now carries one too, `contextTooLarge`, so a client tells "narrow the request" from "fix the request". A generation on a project past its 16 MiB budget answers the same 422 with a `limit` tag of `projectBytes` instead: no narrower request fits until the project shrinks. An invalid request whose rule spans several fields, such as a range past the cell's end or a repeated target, answers the status text alone.
+
+## Set the discrete PostgreSQL variables
+
+`POSTGRES_DSN` was the fallback when `POSTGRES_HOST` was empty. Set the fields its URL carried instead:
+
+| Variable               | From the URL                                                                        |
+| ---------------------- | ----------------------------------------------------------------------------------- |
+| `POSTGRES_HOST`        | The host.                                                                           |
+| `POSTGRES_PORT`        | The port, when it is not `5432`.                                                    |
+| `POSTGRES_USER`        | The user.                                                                           |
+| `POSTGRES_PASSWORD`    | The password, as a secret.                                                          |
+| `POSTGRES_DATABASE`    | The database, the URL's path.                                                       |
+| `POSTGRES_TLS_ENABLED` | `false` only where the URL said `sslmode=disable`; the variable defaults to `true`. |
+
+The previous release reads these variables too, so set them before you upgrade. The server and the migrations job start once the connection works.
+
+## Notes
+
+`MAX_CONCURRENT_PROJECT_READS` keeps its meaning and default: unset (or `0`), the service runs 4 whole-project reads per GiB of `GOMEMLIMIT`, or one per CPU without a memory limit.
