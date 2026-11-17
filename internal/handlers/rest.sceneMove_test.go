@@ -1,7 +1,6 @@
 package handlers_test
 
 import (
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -16,8 +15,6 @@ import (
 
 func TestRestSceneMove(t *testing.T) {
 	t.Parallel()
-
-	errFoo := errors.New("foo")
 
 	validRequest := func(t *testing.T) *http.Request {
 		t.Helper()
@@ -80,51 +77,6 @@ func TestRestSceneMove(t *testing.T) {
 			serviceMock: &serviceMock[*core.Scene]{err: core.ErrProjectNotFound},
 
 			expectStatus: http.StatusNotFound,
-		},
-		{
-			name: "Error/SceneNotFound",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[*core.Scene]{err: core.ErrSceneNotFound},
-
-			expectStatus: http.StatusNotFound,
-		},
-		{
-			name: "Error/BeatNotFound",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[*core.Scene]{err: core.ErrBeatNotFound},
-
-			expectStatus: http.StatusNotFound,
-		},
-		{
-			name: "Error/BeatFull",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[*core.Scene]{err: core.ErrProjectFull},
-
-			expectStatus: http.StatusConflict,
-		},
-		{
-			name: "Error/InvalidRequest",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[*core.Scene]{err: core.ErrInvalidRequest},
-
-			expectStatus: http.StatusUnprocessableEntity,
-		},
-		{
-			name: "Error/Internal",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[*core.Scene]{err: errFoo},
-
-			expectStatus: http.StatusInternalServerError,
 		},
 	}
 

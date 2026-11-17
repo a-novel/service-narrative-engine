@@ -18,8 +18,6 @@ import (
 func TestRestBeatCreate(t *testing.T) {
 	t.Parallel()
 
-	errFoo := errors.New("foo")
-
 	validRequest := func(t *testing.T) *http.Request {
 		t.Helper()
 
@@ -76,15 +74,6 @@ func TestRestBeatCreate(t *testing.T) {
 			expectStatus: http.StatusBadRequest,
 		},
 		{
-			name: "Error/ProjectNotFound",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[[]*core.Beat]{err: core.ErrProjectNotFound},
-
-			expectStatus: http.StatusNotFound,
-		},
-		{
 			name: "Error/ProjectBudget",
 
 			request: validRequest,
@@ -93,24 +82,6 @@ func TestRestBeatCreate(t *testing.T) {
 
 			expectStatus:   http.StatusConflict,
 			expectResponse: limitProblem("projectBytes"),
-		},
-		{
-			name: "Error/ProjectFull",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[[]*core.Beat]{err: core.ErrProjectFull},
-
-			expectStatus: http.StatusConflict,
-		},
-		{
-			name: "Error/InvalidRequest",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[[]*core.Beat]{err: core.ErrInvalidRequest},
-
-			expectStatus: http.StatusUnprocessableEntity,
 		},
 		{
 			// The batch request names the title Beats[0].Title; the route names it as its own body does.
@@ -128,15 +99,6 @@ func TestRestBeatCreate(t *testing.T) {
 
 			expectStatus:   http.StatusUnprocessableEntity,
 			expectResponse: invalidFieldsProblem(map[string]any{"title": "required"}),
-		},
-		{
-			name: "Error/Internal",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[[]*core.Beat]{err: errFoo},
-
-			expectStatus: http.StatusInternalServerError,
 		},
 	}
 

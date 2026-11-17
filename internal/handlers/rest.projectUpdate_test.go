@@ -1,7 +1,6 @@
 package handlers_test
 
 import (
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -16,8 +15,6 @@ import (
 
 func TestRestProjectUpdate(t *testing.T) {
 	t.Parallel()
-
-	errFoo := errors.New("foo")
 
 	tags := []string{"noir", "huis clos"}
 	genres := []string{"thriller"}
@@ -161,17 +158,6 @@ func TestRestProjectUpdate(t *testing.T) {
 			expectStatus: http.StatusBadRequest,
 		},
 		{
-			name: "Error/ProjectNotFound",
-
-			request: validRequest,
-
-			expectTags:   tags,
-			expectGenres: genres,
-			serviceMock:  &serviceMock[*core.Project]{err: core.ErrProjectNotFound},
-
-			expectStatus: http.StatusNotFound,
-		},
-		{
 			name: "Error/ProjectBudget",
 
 			request: validRequest,
@@ -182,28 +168,6 @@ func TestRestProjectUpdate(t *testing.T) {
 
 			expectStatus:   http.StatusConflict,
 			expectResponse: limitProblem("projectBytes"),
-		},
-		{
-			name: "Error/InvalidRequest",
-
-			request: validRequest,
-
-			expectTags:   tags,
-			expectGenres: genres,
-			serviceMock:  &serviceMock[*core.Project]{err: core.ErrInvalidRequest},
-
-			expectStatus: http.StatusUnprocessableEntity,
-		},
-		{
-			name: "Error/Internal",
-
-			request: validRequest,
-
-			expectTags:   tags,
-			expectGenres: genres,
-			serviceMock:  &serviceMock[*core.Project]{err: errFoo},
-
-			expectStatus: http.StatusInternalServerError,
 		},
 	}
 

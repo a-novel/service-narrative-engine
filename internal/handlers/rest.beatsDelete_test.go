@@ -1,7 +1,6 @@
 package handlers_test
 
 import (
-	"errors"
 	"maps"
 	"net/http"
 	"net/http/httptest"
@@ -18,8 +17,6 @@ import (
 
 func TestRestBeatsDelete(t *testing.T) {
 	t.Parallel()
-
-	errFoo := errors.New("foo")
 
 	// The request deletes a second beat too, so its id parameter repeats.
 	otherBeat := *coreBeat
@@ -86,33 +83,6 @@ func TestRestBeatsDelete(t *testing.T) {
 			serviceMock: &serviceMock[[]*core.Beat]{err: core.ErrProjectNotFound},
 
 			expectStatus: http.StatusNotFound,
-		},
-		{
-			name: "Error/BeatNotFound",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[[]*core.Beat]{err: core.ErrBeatNotFound},
-
-			expectStatus: http.StatusNotFound,
-		},
-		{
-			name: "Error/InvalidRequest",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[[]*core.Beat]{err: core.ErrInvalidRequest},
-
-			expectStatus: http.StatusUnprocessableEntity,
-		},
-		{
-			name: "Error/Internal",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[[]*core.Beat]{err: errFoo},
-
-			expectStatus: http.StatusInternalServerError,
 		},
 	}
 

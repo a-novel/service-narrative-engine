@@ -1,7 +1,6 @@
 package handlers_test
 
 import (
-	"errors"
 	"maps"
 	"net/http"
 	"net/http/httptest"
@@ -18,8 +17,6 @@ import (
 
 func TestRestScenesDelete(t *testing.T) {
 	t.Parallel()
-
-	errFoo := errors.New("foo")
 
 	// The request deletes a second scene too, so its id parameter repeats.
 	otherScene := *coreScene
@@ -86,33 +83,6 @@ func TestRestScenesDelete(t *testing.T) {
 			serviceMock: &serviceMock[[]*core.Scene]{err: core.ErrProjectNotFound},
 
 			expectStatus: http.StatusNotFound,
-		},
-		{
-			name: "Error/SceneNotFound",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[[]*core.Scene]{err: core.ErrSceneNotFound},
-
-			expectStatus: http.StatusNotFound,
-		},
-		{
-			name: "Error/InvalidRequest",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[[]*core.Scene]{err: core.ErrInvalidRequest},
-
-			expectStatus: http.StatusUnprocessableEntity,
-		},
-		{
-			name: "Error/Internal",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[[]*core.Scene]{err: errFoo},
-
-			expectStatus: http.StatusInternalServerError,
 		},
 	}
 

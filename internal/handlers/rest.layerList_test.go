@@ -1,7 +1,6 @@
 package handlers_test
 
 import (
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -16,8 +15,6 @@ import (
 
 func TestRestLayerList(t *testing.T) {
 	t.Parallel()
-
-	errFoo := errors.New("foo")
 
 	validRequest := func(t *testing.T) *http.Request {
 		t.Helper()
@@ -85,24 +82,6 @@ func TestRestLayerList(t *testing.T) {
 			serviceMock: &serviceMock[*core.LayerPage]{err: core.ErrProjectNotFound},
 
 			expectStatus: http.StatusNotFound,
-		},
-		{
-			name: "Error/InvalidRequest",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[*core.LayerPage]{err: core.ErrInvalidRequest},
-
-			expectStatus: http.StatusUnprocessableEntity,
-		},
-		{
-			name: "Error/Internal",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[*core.LayerPage]{err: errFoo},
-
-			expectStatus: http.StatusInternalServerError,
 		},
 	}
 

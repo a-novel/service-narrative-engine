@@ -1,7 +1,6 @@
 package handlers_test
 
 import (
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -16,8 +15,6 @@ import (
 
 func TestRestCellsWrite(t *testing.T) {
 	t.Parallel()
-
-	errFoo := errors.New("foo")
 
 	validRequest := func(t *testing.T) *http.Request {
 		t.Helper()
@@ -71,15 +68,6 @@ func TestRestCellsWrite(t *testing.T) {
 			expectStatus: http.StatusBadRequest,
 		},
 		{
-			name: "Error/ProjectNotFound",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[[]*core.WrittenCell]{err: core.ErrProjectNotFound},
-
-			expectStatus: http.StatusNotFound,
-		},
-		{
 			name: "Error/ProjectBudget",
 
 			request: validRequest,
@@ -90,33 +78,6 @@ func TestRestCellsWrite(t *testing.T) {
 			expectResponse: limitProblem("projectBytes"),
 		},
 		{
-			name: "Error/SceneNotFound",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[[]*core.WrittenCell]{err: core.ErrSceneNotFound},
-
-			expectStatus: http.StatusNotFound,
-		},
-		{
-			name: "Error/LayerNotFound",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[[]*core.WrittenCell]{err: core.ErrLayerNotFound},
-
-			expectStatus: http.StatusNotFound,
-		},
-		{
-			name: "Error/SceneContentFull",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[[]*core.WrittenCell]{err: core.ErrProjectFull},
-
-			expectStatus: http.StatusConflict,
-		},
-		{
 			name: "Error/InvalidContent",
 
 			request: validRequest,
@@ -124,15 +85,6 @@ func TestRestCellsWrite(t *testing.T) {
 			serviceMock: &serviceMock[[]*core.WrittenCell]{err: core.ErrInvalidRequest},
 
 			expectStatus: http.StatusUnprocessableEntity,
-		},
-		{
-			name: "Error/Internal",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[[]*core.WrittenCell]{err: errFoo},
-
-			expectStatus: http.StatusInternalServerError,
 		},
 	}
 

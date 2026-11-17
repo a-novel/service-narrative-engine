@@ -272,6 +272,42 @@ func TestRestGenerationSubmit(t *testing.T) {
 			expectStatus: http.StatusServiceUnavailable,
 		},
 		{
+			name: "Error/BeatNotFound",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[*core.Generation]{err: core.ErrBeatNotFound},
+
+			expectStatus: http.StatusNotFound,
+		},
+		{
+			name: "Error/SceneNotFound",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[*core.Generation]{err: core.ErrSceneNotFound},
+
+			expectStatus: http.StatusNotFound,
+		},
+		{
+			name: "Error/LayerNotFound",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[*core.Generation]{err: core.ErrLayerNotFound},
+
+			expectStatus: http.StatusNotFound,
+		},
+		{
+			name: "Error/GenerationNotFound",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[*core.Generation]{err: core.ErrGenerationNotFound},
+
+			expectStatus: http.StatusNotFound,
+		},
+		{
 			name: "Error/Internal",
 
 			request: validRequest,

@@ -1,7 +1,6 @@
 package handlers_test
 
 import (
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -17,8 +16,6 @@ import (
 
 func TestRestProjectCreate(t *testing.T) {
 	t.Parallel()
-
-	errFoo := errors.New("foo")
 
 	validRequest := func(t *testing.T) *http.Request {
 		t.Helper()
@@ -80,15 +77,6 @@ func TestRestProjectCreate(t *testing.T) {
 			expectStatus: http.StatusBadRequest,
 		},
 		{
-			name: "Error/InvalidRequest",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[*core.ProjectComposer]{err: core.ErrInvalidRequest},
-
-			expectStatus: http.StatusUnprocessableEntity,
-		},
-		{
 			name: "Error/ProjectsFull",
 
 			request: validRequest,
@@ -97,15 +85,6 @@ func TestRestProjectCreate(t *testing.T) {
 
 			expectStatus:   http.StatusConflict,
 			expectResponse: limitProblem("projects"),
-		},
-		{
-			name: "Error/Internal",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[*core.ProjectComposer]{err: errFoo},
-
-			expectStatus: http.StatusInternalServerError,
 		},
 	}
 

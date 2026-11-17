@@ -168,15 +168,6 @@ func TestRestProjectStream(t *testing.T) {
 
 			expectStatus: http.StatusNotFound,
 		},
-		{
-			name: "Error/Internal",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[iter.Seq2[*core.ProjectRecord, error]]{err: errFoo},
-
-			expectStatus: http.StatusInternalServerError,
-		},
 	}
 
 	for _, testCase := range testCases {

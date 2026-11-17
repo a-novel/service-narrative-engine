@@ -144,6 +144,15 @@ func TestRestCellRecapWrite(t *testing.T) {
 			expectStatus: http.StatusConflict,
 		},
 		{
+			name: "Error/BeatNotFound",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[struct{}]{err: core.ErrBeatNotFound},
+
+			expectStatus: http.StatusNotFound,
+		},
+		{
 			name: "Error/Internal",
 
 			request: validRequest,

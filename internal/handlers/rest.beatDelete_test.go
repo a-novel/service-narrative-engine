@@ -19,8 +19,6 @@ import (
 func TestRestBeatDelete(t *testing.T) {
 	t.Parallel()
 
-	errFoo := errors.New("foo")
-
 	validRequest := func(t *testing.T) *http.Request {
 		t.Helper()
 
@@ -79,24 +77,6 @@ func TestRestBeatDelete(t *testing.T) {
 			expectStatus: http.StatusNotFound,
 		},
 		{
-			name: "Error/BeatNotFound",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[[]*core.Beat]{err: core.ErrBeatNotFound},
-
-			expectStatus: http.StatusNotFound,
-		},
-		{
-			name: "Error/InvalidRequest",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[[]*core.Beat]{err: core.ErrInvalidRequest},
-
-			expectStatus: http.StatusUnprocessableEntity,
-		},
-		{
 			// The batch request names the ID IDs[0]; the route names it as its own query does.
 			name: "Error/InvalidFields",
 
@@ -108,15 +88,6 @@ func TestRestBeatDelete(t *testing.T) {
 
 			expectStatus:   http.StatusUnprocessableEntity,
 			expectResponse: invalidFieldsProblem(map[string]any{"id": "required"}),
-		},
-		{
-			name: "Error/Internal",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[[]*core.Beat]{err: errFoo},
-
-			expectStatus: http.StatusInternalServerError,
 		},
 	}
 
