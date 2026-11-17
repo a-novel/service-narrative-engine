@@ -31,9 +31,8 @@ type ProjectBytes struct {
 	StoredBytes int64 `bun:"stored_bytes"`
 }
 
-// PgProjectBytes reads how many bytes a project stores. Every write to a row the project holds keeps the
-// project's count in the statement that changes the bytes, so a read in the write's transaction sees the
-// write.
+// PgProjectBytes reads how many bytes a project stores. The schema's triggers update the count at the end of
+// each statement that changes the bytes, so a read later in the write's transaction sees the write.
 type PgProjectBytes struct{}
 
 func NewPgProjectBytes() *PgProjectBytes {

@@ -71,7 +71,7 @@ GROUP BY projects.id`
 // storedBytes is the count of the bytes a project's rows hold, beside a fresh sum of them.
 type storedBytes struct {
 	ProjectID uuid.UUID `bun:"project_id,type:uuid"`
-	// Stored is the count the writes keep.
+	// Stored is the count the schema's triggers keep.
 	Stored int64 `bun:"stored"`
 	// Bytes is the fresh sum.
 	Bytes int64 `bun:"bytes"`
@@ -248,13 +248,6 @@ func insertFixtures(ctx context.Context, t *testing.T, data fixtures) {
 		_, err = db.NewInsert().Model(&data.cells).Exec(ctx)
 		require.NoError(t, err)
 	}
-
-	// The inserts skip the writes that keep the stored bytes, so the count starts from a fresh sum.
-	_, err = db.NewRaw(
-		"UPDATE projects SET stored_bytes = fresh.bytes FROM (" + storedBytesQuery + ") AS fresh " +
-			"WHERE projects.id = fresh.project_id",
-	).Exec(ctx)
-	require.NoError(t, err)
 }
 
 // requireStoredBytes checks that the stored bytes of every project match a fresh sum over its rows.
