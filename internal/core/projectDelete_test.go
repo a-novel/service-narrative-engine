@@ -4,7 +4,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -43,7 +42,7 @@ func TestProjectDelete(t *testing.T) {
 				ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr", Tags: []string{"noir"},
 				Genres:    []string{"thriller"},
 				CreatedAt: createdAt, UpdatedAt: updatedAt, EditedAt: editedAt,
-				LogoChecksum: lo.ToPtr(logoChecksum),
+				LogoChecksum: new(logoChecksum),
 			},
 		},
 		{

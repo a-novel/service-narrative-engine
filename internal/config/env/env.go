@@ -1,6 +1,7 @@
 package env
 
 import (
+	"cmp"
 	"math"
 	"os"
 	"runtime"
@@ -42,10 +43,10 @@ const (
 	// PostgresTLSEnabledDefault encrypts the connection unless a deployment turns it off.
 	PostgresTLSEnabledDefault = true
 
-	// ServiceJsonKeysHostDefault reaches a JSON Keys service on the same host.
-	ServiceJsonKeysHostDefault = "localhost"
-	// ServiceJsonKeysPortDefault is the JSON Keys service's default gRPC port.
-	ServiceJsonKeysPortDefault = 8080
+	// ServiceJSONKeysHostDefault reaches a JSON Keys service on the same host.
+	ServiceJSONKeysHostDefault = "localhost"
+	// ServiceJSONKeysPortDefault is the JSON Keys service's default gRPC port.
+	ServiceJSONKeysPortDefault = 8080
 	// ServiceGenaiPortDefault is the genai service's default gRPC port.
 	ServiceGenaiPortDefault = 8080
 
@@ -104,17 +105,17 @@ var (
 	// PostgresMaxIdleConns is the maximum number of connections kept open while idle.
 	PostgresMaxIdleConns = config.LoadEnv(getEnv("POSTGRES_MAX_IDLE_CONNS"), PostgresMaxIdleConnsDefault, strconv.Atoi)
 
-	// ServiceJsonKeysHost is the hostname of the JSON Keys service, without scheme or port.
-	ServiceJsonKeysHost = config.LoadEnv(getEnv("SERVICE_JSON_KEYS_HOST"), ServiceJsonKeysHostDefault, config.StringParser)
-	// ServiceJsonKeysPort is the gRPC port of the JSON Keys service.
-	ServiceJsonKeysPort = config.LoadEnv(getEnv("SERVICE_JSON_KEYS_PORT"), ServiceJsonKeysPortDefault, strconv.Atoi)
-	// ServiceJsonKeysTokenPath is the file the kubelet projects this service's token for JSON Keys into.
+	// ServiceJSONKeysHost is the hostname of the JSON Keys service, without scheme or port.
+	ServiceJSONKeysHost = cmp.Or(getEnv("SERVICE_JSON_KEYS_HOST"), ServiceJSONKeysHostDefault)
+	// ServiceJSONKeysPort is the gRPC port of the JSON Keys service.
+	ServiceJSONKeysPort = config.LoadEnv(getEnv("SERVICE_JSON_KEYS_PORT"), ServiceJSONKeysPortDefault, strconv.Atoi)
+	// ServiceJSONKeysTokenPath is the file the kubelet projects this service's token for JSON Keys into.
 	// When set, the JSON Keys connection sends that token with every call.
-	ServiceJsonKeysTokenPath = getEnv("SERVICE_JSON_KEYS_TOKEN_PATH")
-	// ServiceJsonKeysTLS dials the JSON Keys service over TLS once ServiceJsonKeysTokenPath names a token.
-	// The server's certificate is verified for ServiceJsonKeysHost against the system roots, which
+	ServiceJSONKeysTokenPath = getEnv("SERVICE_JSON_KEYS_TOKEN_PATH")
+	// ServiceJSONKeysTLS dials the JSON Keys service over TLS once ServiceJSONKeysTokenPath names a token.
+	// The server's certificate is verified for ServiceJSONKeysHost against the system roots, which
 	// SSL_CERT_DIR extends.
-	ServiceJsonKeysTLS = config.LoadEnv(getEnv("SERVICE_JSON_KEYS_TLS"), false, strconv.ParseBool)
+	ServiceJSONKeysTLS = config.LoadEnv(getEnv("SERVICE_JSON_KEYS_TLS"), false, strconv.ParseBool)
 
 	// ServiceGenaiHost is the hostname of the genai service, without scheme or port. Empty leaves genai
 	// unconfigured, and the generation routes answer 503.
@@ -130,7 +131,7 @@ var (
 	ServiceGenaiTLS = config.LoadEnv(getEnv("SERVICE_GENAI_TLS"), false, strconv.ParseBool)
 
 	// AppName is the name of the application, as it appears in logs and tracing.
-	AppName = config.LoadEnv(getEnv("APP_NAME"), AppNameDefault, config.StringParser)
+	AppName = cmp.Or(getEnv("APP_NAME"), AppNameDefault)
 	// Otel enables OpenTelemetry tracing.
 	Otel = config.LoadEnv(getEnv("OTEL"), false, strconv.ParseBool)
 

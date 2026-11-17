@@ -54,7 +54,7 @@ func (handler *RestBeatMove) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	err = httpf.DecodeJSON(r.Body, &request)
 	if err != nil {
-		httpf.HandleError(ctx, handler.logger, w, span, httpf.ErrMap{nil: http.StatusBadRequest}, err)
+		httpf.HandleError(ctx, handler.logger, w, span, decodeErrors, err)
 
 		return
 	}

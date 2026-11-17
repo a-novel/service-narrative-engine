@@ -50,7 +50,7 @@ func TestProjectCreate(t *testing.T) {
 			ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr", Tags: []string{"noir"},
 			Genres:    []string{"thriller"},
 			CreatedAt: createdAt, UpdatedAt: updatedAt, EditedAt: editedAt,
-			LogoChecksum: lo.ToPtr(logoChecksum),
+			LogoChecksum: new(logoChecksum),
 		},
 		Layers: []*core.Layer{
 			{

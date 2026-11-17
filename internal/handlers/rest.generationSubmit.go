@@ -35,7 +35,7 @@ type RestGenerationSubmitRequest struct {
 	// BeatID names the beat a consolidate generation recaps.
 	BeatID uuid.UUID `json:"beatID"`
 	// Scenes narrows a check generation to a range of scene positions. Null checks every scene.
-	Scenes *RestRange `json:"scenes"`
+	Scenes *Range `json:"scenes"`
 
 	// Instruction is what the author asks of the generation.
 	Instruction string `json:"instruction"`
@@ -67,7 +67,7 @@ type RestGenerationTarget struct {
 	// Mode is how the generation writes the target: write or revise.
 	Mode string `json:"mode"`
 	// Range narrows a manuscript target to the blocks the generation may change. Null covers the cell.
-	Range *RestRange `json:"range"`
+	Range *Range `json:"range"`
 	// Kept lists the positions of blocks in the range that stay unchanged.
 	Kept []int `json:"kept"`
 }
@@ -126,7 +126,7 @@ func (handler *RestGenerationSubmit) ServeHTTP(w http.ResponseWriter, r *http.Re
 
 	err = httpf.DecodeJSON(r.Body, &request)
 	if err != nil {
-		httpf.HandleError(ctx, handler.logger, w, span, httpf.ErrMap{nil: http.StatusBadRequest}, err)
+		httpf.HandleError(ctx, handler.logger, w, span, decodeErrors, err)
 
 		return
 	}
@@ -150,13 +150,12 @@ func (handler *RestGenerationSubmit) ServeHTTP(w http.ResponseWriter, r *http.Re
 
 	result, err := handler.service.Exec(ctx, serviceRequest)
 
-	var quota *core.GenerationQuotaError
-	if errors.As(err, &quota) {
+	if quota, ok := errors.AsType[*core.GenerationQuotaError](err); ok {
 		err = httpf.WithTag(err, "cap", quota.Cap)
-	}
 
-	if quota != nil && quota.RetryAfter > 0 {
-		err = httpf.WithRetryAfter(err, quota.RetryAfter)
+		if quota.RetryAfter > 0 {
+			err = httpf.WithRetryAfter(err, quota.RetryAfter)
+		}
 	}
 
 	if err != nil {
@@ -199,7 +198,7 @@ func saveGenerationCell(cell *RestGenerationCell) *core.GenerationCell {
 	return &core.GenerationCell{SceneID: cell.SceneID, LayerID: cell.LayerID}
 }
 
-func saveRange(span *RestRange) *core.Range {
+func saveRange(span *Range) *core.Range {
 	if span == nil {
 		return nil
 	}

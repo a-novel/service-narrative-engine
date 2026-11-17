@@ -165,7 +165,7 @@ func logoFixtures() fixtures {
 func logoChecksum(data []byte) *string {
 	sum := sha256.Sum256(data)
 
-	return lo.ToPtr(hex.EncodeToString(sum[:]))
+	return new(hex.EncodeToString(sum[:]))
 }
 
 // fillerID derives a stable ID from a filler row's position.

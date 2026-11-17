@@ -24,12 +24,12 @@ type Main struct {
 
 // Dependencies configures how the service reaches the services it calls.
 type Dependencies struct {
-	// ServiceJsonKeysHost is the hostname of the JSON Keys service, which verifies access tokens.
-	ServiceJsonKeysHost string `json:"serviceJSONKeysHost" yaml:"serviceJSONKeysHost"`
-	// ServiceJsonKeysPort is the gRPC port of the JSON Keys service.
-	ServiceJsonKeysPort int `json:"serviceJSONKeysPort" yaml:"serviceJSONKeysPort"`
-	// ServiceJsonKeysCredentials authenticates the calls to the JSON Keys service.
-	ServiceJsonKeysCredentials grpcf.CredentialsProvider `json:"-" yaml:"-"`
+	// ServiceJSONKeysHost is the hostname of the JSON Keys service, which verifies access tokens.
+	ServiceJSONKeysHost string `json:"serviceJSONKeysHost" yaml:"serviceJSONKeysHost"`
+	// ServiceJSONKeysPort is the gRPC port of the JSON Keys service.
+	ServiceJSONKeysPort int `json:"serviceJSONKeysPort" yaml:"serviceJSONKeysPort"`
+	// ServiceJSONKeysCredentials authenticates the calls to the JSON Keys service.
+	ServiceJSONKeysCredentials grpcf.CredentialsProvider `json:"-" yaml:"-"`
 
 	// ServiceGenaiHost is the hostname of the genai service, which runs the model calls of generations.
 	// Empty leaves genai unconfigured.
@@ -43,22 +43,22 @@ type Dependencies struct {
 // Limits bounds what one request carries, below the REST server's own limits. The server's
 // MaxRequestSize fits a batch, so the routes that write one item cap their body lower.
 type Limits struct {
-	// ItemMaxRequestSize caps the body of a route that writes one item, in bytes.
-	ItemMaxRequestSize int64 `json:"itemMaxRequestSize" yaml:"itemMaxRequestSize"`
+	// MaxItemRequestSize caps the body of a route that writes one item, in bytes.
+	MaxItemRequestSize int64 `json:"itemMaxRequestSize" yaml:"itemMaxRequestSize"`
 	// MaxStreamDuration bounds a streamed response, past the server's request timeout.
 	MaxStreamDuration time.Duration `json:"maxStreamDuration" yaml:"maxStreamDuration"`
 	// MaxStreamsPerCaller caps the streams one caller holds open on an instance, across the stream
 	// routes. A stream past it answers 429.
 	MaxStreamsPerCaller int `json:"maxStreamsPerCaller" yaml:"maxStreamsPerCaller"`
-	// GenerationRate caps each signed-in user's generation submits, on top of the router's rate. A submit
+	// RateLimitGeneration caps each signed-in user's generation submits, on top of the router's rate. A submit
 	// past it answers 429.
-	GenerationRate httpf.Rate `json:"generationRate" yaml:"generationRate"`
-	// GenerationReadRate caps each signed-in user's reads of a call, on top of the router's rate. A read and a
+	RateLimitGeneration httpf.Rate `json:"generationRate" yaml:"generationRate"`
+	// RateLimitGenerationRead caps each signed-in user's reads of a call, on top of the router's rate. A read and a
 	// stream each count on a budget of their own. A read past it answers 429.
-	GenerationReadRate httpf.Rate `json:"generationReadRate" yaml:"generationReadRate"`
-	// ProjectReadMaxConcurrent caps the reads of a whole project an instance runs at once: manuscript exports
+	RateLimitGenerationRead httpf.Rate `json:"generationReadRate" yaml:"generationReadRate"`
+	// MaxConcurrentProjectReads caps the reads of a whole project an instance runs at once: manuscript exports
 	// and the snapshots generations plan from. A read past it waits for a slot.
-	ProjectReadMaxConcurrent int `json:"projectReadMaxConcurrent" yaml:"projectReadMaxConcurrent"`
+	MaxConcurrentProjectReads int `json:"projectReadMaxConcurrent" yaml:"projectReadMaxConcurrent"`
 }
 
 // App is the complete configuration the service reads at startup.

@@ -25,9 +25,9 @@ type RestProjectFieldsDriftRequest struct {
 	Projects map[string]string `json:"projects"`
 }
 
-// RestProjectFieldsDriftResult is the REST representation of the drift between the projects a client holds and
+// ProjectFieldsDriftResult is the REST representation of the drift between the projects a client holds and
 // the caller's.
-type RestProjectFieldsDriftResult struct {
+type ProjectFieldsDriftResult struct {
 	// Projects are the caller's projects the request leaves out, or names with another updatedAt.
 	Projects []ProjectFields `json:"projects"`
 	// Removed are the IDs of the request that name no project of the caller.
@@ -60,7 +60,7 @@ func (handler *RestProjectFieldsDrift) ServeHTTP(w http.ResponseWriter, r *http.
 
 	err = httpf.DecodeJSON(r.Body, &request)
 	if err != nil {
-		httpf.HandleError(ctx, handler.logger, w, span, httpf.ErrMap{nil: http.StatusBadRequest}, err)
+		httpf.HandleError(ctx, handler.logger, w, span, decodeErrors, err)
 
 		return
 	}
@@ -77,7 +77,7 @@ func (handler *RestProjectFieldsDrift) ServeHTTP(w http.ResponseWriter, r *http.
 		return
 	}
 
-	httpf.SendJSONStatus(w, span, http.StatusOK, RestProjectFieldsDriftResult{
+	httpf.SendJSONStatus(w, span, http.StatusOK, ProjectFieldsDriftResult{
 		Projects: lo.Map(result.Projects, func(project *core.Project, _ int) ProjectFields {
 			return loadProjectFields(project)
 		}),

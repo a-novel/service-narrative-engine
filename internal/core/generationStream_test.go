@@ -92,7 +92,7 @@ func TestGenerationStream(t *testing.T) {
 		{
 			name: "Success/Resume",
 
-			request: &core.GenerationStreamRequest{OwnerID: ownerID, ID: genaiID, After: lo.ToPtr[int64](2)},
+			request: &core.GenerationStreamRequest{OwnerID: ownerID, ID: genaiID, After: new(int64(2))},
 
 			stream: &genaiStream{messages: []*servicegenai.GenerationStreamResponse{
 				providerMessage(3, `{"type":"response.output_text.delta","delta":"."}`),
@@ -149,7 +149,7 @@ func TestGenerationStream(t *testing.T) {
 		{
 			name: "Error/Ended",
 
-			request: &core.GenerationStreamRequest{OwnerID: ownerID, ID: genaiID, After: lo.ToPtr[int64](3)},
+			request: &core.GenerationStreamRequest{OwnerID: ownerID, ID: genaiID, After: new(int64(3))},
 
 			stream: &genaiStream{},
 			read:   &daoMock[*core.GenerationResult]{resp: succeeded},

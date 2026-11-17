@@ -99,7 +99,7 @@ func daoProject() *dao.Project {
 		ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr", Tags: []string{"noir"},
 		Genres:    []string{"thriller"},
 		CreatedAt: createdAt, UpdatedAt: updatedAt, EditedAt: editedAt,
-		LogoChecksum: lo.ToPtr(logoChecksum),
+		LogoChecksum: new(logoChecksum),
 	}
 }
 
@@ -109,7 +109,7 @@ func coreProject() *core.Project {
 		ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr", Tags: []string{"noir"},
 		Genres:    []string{"thriller"},
 		CreatedAt: createdAt, UpdatedAt: updatedAt, EditedAt: editedAt,
-		LogoChecksum: lo.ToPtr(logoChecksum),
+		LogoChecksum: new(logoChecksum),
 	}
 }
 

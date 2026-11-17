@@ -4,7 +4,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
 	serviceauthentication "github.com/a-novel/service-authentication/v2/pkg/go"
@@ -27,20 +26,20 @@ func TestGenerationCapsPolicy(t *testing.T) {
 	}}
 
 	userCaps := config.RoleCaps{
-		Concurrency: lo.ToPtr[int32](2),
+		Concurrency: new(int32(2)),
 		Windows: map[time.Duration]config.CapsWindow{
-			720 * time.Hour: {InputTokens: lo.ToPtr[int64](50_000_000)},
-			5 * time.Hour:   {InputTokens: lo.ToPtr[int64](2_000_000), OutputTokens: lo.ToPtr[int64](200_000)},
+			720 * time.Hour: {InputTokens: new(int64(50_000_000))},
+			5 * time.Hour:   {InputTokens: new(int64(2_000_000)), OutputTokens: new(int64(200_000))},
 		},
 	}
-	premiumCaps := config.RoleCaps{Concurrency: lo.ToPtr[int32](4)}
+	premiumCaps := config.RoleCaps{Concurrency: new(int32(4))}
 
 	// The windows come out shortest first.
 	expectUserCaps := &core.GenerationCaps{
-		Concurrency: lo.ToPtr[int32](2),
+		Concurrency: new(int32(2)),
 		Windows: []*core.GenerationCapWindow{
-			{Duration: 5 * time.Hour, InputTokens: lo.ToPtr[int64](2_000_000), OutputTokens: lo.ToPtr[int64](200_000)},
-			{Duration: 720 * time.Hour, InputTokens: lo.ToPtr[int64](50_000_000)},
+			{Duration: 5 * time.Hour, InputTokens: new(int64(2_000_000)), OutputTokens: new(int64(200_000))},
+			{Duration: 720 * time.Hour, InputTokens: new(int64(50_000_000))},
 		},
 	}
 
@@ -83,7 +82,7 @@ func TestGenerationCapsPolicy(t *testing.T) {
 			}},
 			roles: []string{"auth:user", "premium"},
 
-			expect: &core.GenerationCaps{Concurrency: lo.ToPtr[int32](4)},
+			expect: &core.GenerationCaps{Concurrency: new(int32(4))},
 		},
 		{
 			name: "Success/Defaults",
@@ -93,15 +92,15 @@ func TestGenerationCapsPolicy(t *testing.T) {
 			roles:       []string{"auth:user"},
 
 			expect: &core.GenerationCaps{
-				Concurrency: lo.ToPtr[int32](2),
+				Concurrency: new(int32(2)),
 				Windows: []*core.GenerationCapWindow{
 					{
 						Duration:    5 * time.Hour,
-						InputTokens: lo.ToPtr[int64](2_000_000), OutputTokens: lo.ToPtr[int64](200_000),
+						InputTokens: new(int64(2_000_000)), OutputTokens: new(int64(200_000)),
 					},
 					{
 						Duration:    720 * time.Hour,
-						InputTokens: lo.ToPtr[int64](50_000_000), OutputTokens: lo.ToPtr[int64](5_000_000),
+						InputTokens: new(int64(50_000_000)), OutputTokens: new(int64(5_000_000)),
 					},
 				},
 			},

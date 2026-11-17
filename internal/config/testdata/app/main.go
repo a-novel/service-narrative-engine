@@ -14,6 +14,6 @@ func main() {
 
 	fmt.Printf(
 		"%v %#v %#v\n",
-		cfg.Rest.Timeouts.Read, cfg.Dependencies.ServiceJsonKeysCredentials, cfg.Dependencies.ServiceGenaiCredentials,
+		cfg.Rest.Timeouts.Read, cfg.Dependencies.ServiceJSONKeysCredentials, cfg.Dependencies.ServiceGenaiCredentials,
 	)
 }

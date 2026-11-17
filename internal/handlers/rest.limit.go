@@ -32,8 +32,8 @@ func NewRestLimits(rest httpf.ServerConfig, policies config.Limits) RestLimits {
 	limits := httpf.NewLimits(rest)
 
 	streams := httpf.LimitConcurrencyBy(policies.MaxStreamsPerCaller, serviceauthentication.CallerKey)
-	generation := limits.By(policies.GenerationRate, serviceauthentication.CallerKey)
-	generationRead := limits.By(policies.GenerationReadRate, serviceauthentication.CallerKey)
+	generation := limits.By(policies.RateLimitGeneration, serviceauthentication.CallerKey)
+	generationRead := limits.By(policies.RateLimitGenerationRead, serviceauthentication.CallerKey)
 
 	return RestLimits{
 		Stream:           streams,

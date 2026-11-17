@@ -19,26 +19,26 @@ type RestGenerationUsageService interface {
 	Exec(ctx context.Context, request *core.GenerationUsageRequest) (*core.GenerationUsageSummary, error)
 }
 
-// RestGenerationUsageSummary is the caller's caps, and what the caller consumed under each.
-type RestGenerationUsageSummary struct {
+// GenerationUsageSummary is the caller's caps, and what the caller consumed under each.
+type GenerationUsageSummary struct {
 	// Caps are the caps genai counts the caller's generations against. Empty caps limit nothing.
-	Caps *RestGenerationCaps `json:"caps"`
+	Caps *GenerationCaps `json:"caps"`
 	// InFlight is how many of the caller's calls count against the concurrency.
 	InFlight int64 `json:"inFlight"`
 	// Windows holds the tokens the caller's calls consumed over each window of the caps, in their order.
-	Windows []*RestGenerationUsageWindow `json:"windows"`
+	Windows []*GenerationUsageWindow `json:"windows"`
 }
 
-// RestGenerationCaps limit a caller's generations. A limit left out does not apply.
-type RestGenerationCaps struct {
+// GenerationCaps limit a caller's generations. A limit left out does not apply.
+type GenerationCaps struct {
 	// Concurrency caps the calls the caller may have in flight at once.
 	Concurrency *int32 `json:"concurrency,omitempty"`
 	// Windows cap the tokens the caller's calls consume over rolling windows, shortest first.
-	Windows []*RestGenerationCapWindow `json:"windows,omitempty"`
+	Windows []*GenerationCapWindow `json:"windows,omitempty"`
 }
 
-// RestGenerationCapWindow caps the tokens a caller's calls consume over one rolling window.
-type RestGenerationCapWindow struct {
+// GenerationCapWindow caps the tokens a caller's calls consume over one rolling window.
+type GenerationCapWindow struct {
 	// DurationSeconds is how far back the window reaches, in seconds.
 	DurationSeconds int64 `json:"durationSeconds"`
 
@@ -48,8 +48,8 @@ type RestGenerationCapWindow struct {
 	OutputTokens *int64 `json:"outputTokens,omitempty"`
 }
 
-// RestGenerationUsageWindow is what a caller's calls consumed over one rolling window.
-type RestGenerationUsageWindow struct {
+// GenerationUsageWindow is what a caller's calls consumed over one rolling window.
+type GenerationUsageWindow struct {
 	// DurationSeconds is how far back the window reaches, in seconds.
 	DurationSeconds int64 `json:"durationSeconds"`
 
@@ -91,12 +91,12 @@ func (handler *RestGenerationUsage) ServeHTTP(w http.ResponseWriter, r *http.Req
 	httpf.SendJSONStatus(w, span, http.StatusOK, loadGenerationUsage(summary))
 }
 
-func loadGenerationUsage(summary *core.GenerationUsageSummary) *RestGenerationUsageSummary {
-	return &RestGenerationUsageSummary{
-		Caps: &RestGenerationCaps{
+func loadGenerationUsage(summary *core.GenerationUsageSummary) *GenerationUsageSummary {
+	return &GenerationUsageSummary{
+		Caps: &GenerationCaps{
 			Concurrency: summary.Caps.Concurrency,
-			Windows: lo.Map(summary.Caps.Windows, func(window *core.GenerationCapWindow, _ int) *RestGenerationCapWindow {
-				return &RestGenerationCapWindow{
+			Windows: lo.Map(summary.Caps.Windows, func(window *core.GenerationCapWindow, _ int) *GenerationCapWindow {
+				return &GenerationCapWindow{
 					DurationSeconds: int64(window.Duration / time.Second),
 					InputTokens:     window.InputTokens,
 					OutputTokens:    window.OutputTokens,
@@ -104,8 +104,8 @@ func loadGenerationUsage(summary *core.GenerationUsageSummary) *RestGenerationUs
 			}),
 		},
 		InFlight: summary.InFlight,
-		Windows: lo.Map(summary.Windows, func(window *core.GenerationUsageWindow, _ int) *RestGenerationUsageWindow {
-			return &RestGenerationUsageWindow{
+		Windows: lo.Map(summary.Windows, func(window *core.GenerationUsageWindow, _ int) *GenerationUsageWindow {
+			return &GenerationUsageWindow{
 				DurationSeconds: int64(window.Duration / time.Second),
 				InputTokens:     window.InputTokens,
 				OutputTokens:    window.OutputTokens,

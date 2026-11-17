@@ -88,9 +88,9 @@ func TestRestLimits(t *testing.T) {
 
 			// The default rate lets 2 reads through each second, and the case sends its reads at once.
 			limit := handlers.NewRestLimits(httpf.ServerConfig{RateLimitsEnabled: true}, config.Limits{
-				MaxStreamsPerCaller: env.RestMaxStreamsPerCallerDefault,
-				GenerationRate:      env.RestRateLimitGenerationDefault,
-				GenerationReadRate:  env.RestRateLimitGenerationReadDefault,
+				MaxStreamsPerCaller:     env.RestMaxStreamsPerCallerDefault,
+				RateLimitGeneration:     env.RestRateLimitGenerationDefault,
+				RateLimitGenerationRead: env.RestRateLimitGenerationReadDefault,
 			})
 
 			answer := func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) }

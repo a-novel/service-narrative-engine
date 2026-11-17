@@ -555,7 +555,7 @@ func (scene *draftScene) view(level string, prompts bool, recaps map[recapKey]st
 		case shown.cell.target != nil:
 			cell.Target = shown.cell.target.handle
 		case shown.version != "":
-			cell.Recap = lo.ToPtr(recaps[recapKey{shown.cell.key, shown.version}])
+			cell.Recap = new(recaps[recapKey{shown.cell.key, shown.version}])
 		default:
 			cell.Content = shown.cell.content
 		}
@@ -785,7 +785,7 @@ func (target *draftTarget) beatView(recaps map[recapKey]string) *promptRecapBeat
 			}
 
 			if cell.recap != nil {
-				line.Recap = lo.ToPtr(recaps[recapKey{cell.key, ContextLevelCompact}])
+				line.Recap = new(recaps[recapKey{cell.key, ContextLevelCompact}])
 			} else {
 				line.Content = cell.content
 			}

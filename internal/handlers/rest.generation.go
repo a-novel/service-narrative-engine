@@ -10,27 +10,27 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/core"
 )
 
-// RestGeneration is a generation as the submit endpoint returns it: each of its calls with the genai
+// Generation is a generation as the submit endpoint returns it: each of its calls with the genai
 // generation that runs it, or with the cap it waits on.
-type RestGeneration struct {
+type Generation struct {
 	// Kind is the kind of the generation, such as suggest.
 	Kind string `json:"kind"`
 	// Calls lists the generation's model calls, in order.
-	Calls []*RestGenerationCall `json:"calls"`
+	Calls []*GenerationCall `json:"calls"`
 }
 
-// RestGenerationCall is one model call of a generation.
-type RestGenerationCall struct {
+// GenerationCall is one model call of a generation.
+type GenerationCall struct {
 	// Generation is the genai generation that runs the call. It is null while the call waits.
-	Generation *RestGenerationResult `json:"generation"`
+	Generation *GenerationResult `json:"generation"`
 	// Waiting names the cap genai refused the call for. It is empty once genai admitted the call.
 	Waiting string `json:"waiting,omitempty"`
 	// Context says what the call reads, with the handles that map its output back.
-	Context *RestGenerationContext `json:"context"`
+	Context *GenerationContext `json:"context"`
 }
 
-// RestGenerationResult is one genai generation, as a submit, a read or a cancel finds it.
-type RestGenerationResult struct {
+// GenerationResult is one genai generation, as a submit, a read or a cancel finds it.
+type GenerationResult struct {
 	ID uuid.UUID `json:"id"`
 	// Status is where the generation stands: pending, running, succeeded, failed or cancelled.
 	Status string `json:"status"`
@@ -47,22 +47,22 @@ type RestGenerationResult struct {
 	Model string `json:"model,omitempty"`
 }
 
-// RestGenerationContext is what one call reads: its targets with their handles, and the scenes and
+// GenerationContext is what one call reads: its targets with their handles, and the scenes and
 // layers it shows.
-type RestGenerationContext struct {
+type GenerationContext struct {
 	// Targets lists what the call writes, with the handles of the blocks the model may name.
-	Targets []*RestContextTarget `json:"targets"`
+	Targets []*ContextTarget `json:"targets"`
 	// Scenes lists the scenes the call shows, in narrative order, with the level each enters at.
-	Scenes []*RestContextScene `json:"scenes"`
+	Scenes []*ContextScene `json:"scenes"`
 	// Layers lists the layers the call shows, in order.
-	Layers []*RestContextLayer `json:"layers"`
+	Layers []*ContextLayer `json:"layers"`
 
 	// Estimate is the token estimate of the call's prompt.
 	Estimate int `json:"estimate"`
 }
 
-// RestContextTarget is one target of a call, as the model names it.
-type RestContextTarget struct {
+// ContextTarget is one target of a call, as the model names it.
+type ContextTarget struct {
 	Handle string `json:"handle"`
 
 	// SceneID names the target's scene. It is null for a beat.
@@ -77,11 +77,11 @@ type RestContextTarget struct {
 	// Mode is how a suggest call writes the target: write or revise. It is empty for a recap.
 	Mode string `json:"mode,omitempty"`
 	// Range is the span of a manuscript target's blocks the call may change.
-	Range *RestRange `json:"range,omitempty"`
+	Range *Range `json:"range,omitempty"`
 	// Kept lists the positions of the blocks in the range that stay unchanged.
 	Kept []int `json:"kept,omitempty"`
 	// Blocks maps the handle of each block the target shows inside its range to the block's position.
-	Blocks []*RestContextBlock `json:"blocks,omitempty"`
+	Blocks []*ContextBlock `json:"blocks,omitempty"`
 
 	// Override marks a target whose current content came from the request.
 	Override bool `json:"override"`
@@ -93,15 +93,15 @@ type RestContextTarget struct {
 	Sources []*BeatRecapSource `json:"sources,omitempty"`
 }
 
-// RestContextBlock is a block a target shows the model under a handle.
-type RestContextBlock struct {
+// ContextBlock is a block a target shows the model under a handle.
+type ContextBlock struct {
 	Handle string `json:"handle"`
 	// Position is the block's position in the target's cell, from 0.
 	Position int `json:"position"`
 }
 
-// RestContextScene is one scene a call shows.
-type RestContextScene struct {
+// ContextScene is one scene a call shows.
+type ContextScene struct {
 	Handle  string    `json:"handle"`
 	SceneID uuid.UUID `json:"sceneID"`
 
@@ -109,23 +109,23 @@ type RestContextScene struct {
 	Level string `json:"level"`
 }
 
-// RestContextLayer is one layer a call shows.
-type RestContextLayer struct {
+// ContextLayer is one layer a call shows.
+type ContextLayer struct {
 	Handle  string    `json:"handle"`
 	LayerID uuid.UUID `json:"layerID"`
 }
 
-// RestRange is a span of positions, from start up to end excluded.
-type RestRange struct {
+// Range is a span of positions, from start up to end excluded.
+type Range struct {
 	Start int `json:"start"`
 	End   int `json:"end"`
 }
 
-func loadGeneration(generation *core.Generation) *RestGeneration {
-	return &RestGeneration{
+func loadGeneration(generation *core.Generation) *Generation {
+	return &Generation{
 		Kind: generation.Kind,
-		Calls: lo.Map(generation.Calls, func(call *core.GenerationCall, _ int) *RestGenerationCall {
-			return &RestGenerationCall{
+		Calls: lo.Map(generation.Calls, func(call *core.GenerationCall, _ int) *GenerationCall {
+			return &GenerationCall{
 				Generation: loadGenerationResult(call.Result),
 				Waiting:    call.Waiting,
 				Context:    loadGenerationContext(call.Context),
@@ -135,34 +135,34 @@ func loadGeneration(generation *core.Generation) *RestGeneration {
 }
 
 // loadGenerationResult returns nil for a call genai has not admitted.
-func loadGenerationResult(result *core.GenerationResult) *RestGenerationResult {
+func loadGenerationResult(result *core.GenerationResult) *GenerationResult {
 	if result == nil {
 		return nil
 	}
 
-	return &RestGenerationResult{
+	return &GenerationResult{
 		ID: result.ID, Status: result.Status, Error: result.Error, FailureClass: result.FailureClass,
 		Output: result.Output, Model: result.Model,
 	}
 }
 
 // loadGenerationContext keeps the scenes the call shows, and leaves out those it omits.
-func loadGenerationContext(call *core.ContextCall) *RestGenerationContext {
-	scenes := make([]*RestContextScene, 0, len(call.Scenes))
+func loadGenerationContext(call *core.ContextCall) *GenerationContext {
+	scenes := make([]*ContextScene, 0, len(call.Scenes))
 
 	for _, scene := range call.Scenes {
 		if scene.Level != core.ContextLevelOmitted {
-			scenes = append(scenes, &RestContextScene{Handle: scene.Handle, SceneID: scene.SceneID, Level: scene.Level})
+			scenes = append(scenes, &ContextScene{Handle: scene.Handle, SceneID: scene.SceneID, Level: scene.Level})
 		}
 	}
 
-	return &RestGenerationContext{
-		Targets: lo.Map(call.Targets, func(target *core.ContextTarget, _ int) *RestContextTarget {
+	return &GenerationContext{
+		Targets: lo.Map(call.Targets, func(target *core.ContextTarget, _ int) *ContextTarget {
 			return loadContextTarget(target)
 		}),
 		Scenes: scenes,
-		Layers: lo.Map(call.Layers, func(layer *core.ContextLayer, _ int) *RestContextLayer {
-			return &RestContextLayer{Handle: layer.Handle, LayerID: layer.LayerID}
+		Layers: lo.Map(call.Layers, func(layer *core.ContextLayer, _ int) *ContextLayer {
+			return &ContextLayer{Handle: layer.Handle, LayerID: layer.LayerID}
 		}),
 		Estimate: call.Estimate,
 	}
@@ -177,19 +177,19 @@ func optionalID(id uuid.UUID) *uuid.UUID {
 	return &id
 }
 
-func loadContextTarget(target *core.ContextTarget) *RestContextTarget {
-	loaded := &RestContextTarget{
+func loadContextTarget(target *core.ContextTarget) *ContextTarget {
+	loaded := &ContextTarget{
 		Handle: target.Handle, SceneID: optionalID(target.SceneID), LayerID: optionalID(target.LayerID),
 		BeatID: optionalID(target.BeatID), Field: target.Field, Mode: target.Mode,
 		Kept: target.Kept, Override: target.Override, UpdatedAt: optionalTime(target.UpdatedAt),
 		Sources: loadBeatRecapSources(target.Sources),
-		Blocks: lo.Map(target.Blocks, func(block *core.ContextBlock, _ int) *RestContextBlock {
-			return &RestContextBlock{Handle: block.Handle, Position: block.Position}
+		Blocks: lo.Map(target.Blocks, func(block *core.ContextBlock, _ int) *ContextBlock {
+			return &ContextBlock{Handle: block.Handle, Position: block.Position}
 		}),
 	}
 
 	if target.Range != nil {
-		loaded.Range = &RestRange{Start: target.Range.Start, End: target.Range.End}
+		loaded.Range = &Range{Start: target.Range.Start, End: target.Range.End}
 	}
 
 	return loaded
