@@ -106,6 +106,16 @@ func TestRestProjectLogoUpdate(t *testing.T) {
 			expectStatus: http.StatusNotFound,
 		},
 		{
+			name: "Error/LogoNotFound",
+
+			target: target,
+			caller: &ownerID,
+
+			serviceMock: &serviceMock[*core.Project]{err: core.ErrProjectLogoNotFound},
+
+			expectStatus: http.StatusNotFound,
+		},
+		{
 			name: "Error/Format",
 
 			target: target,
