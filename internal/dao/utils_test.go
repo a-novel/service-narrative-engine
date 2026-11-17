@@ -212,7 +212,9 @@ func fillerLayers() []*dao.Layer {
 	return layers
 }
 
-// insertFixtures seeds data in the order its foreign keys need.
+// insertFixtures seeds data in the order its foreign keys need. Parallel tests insert the same fixture values, so
+// each insert returns nothing: scanning the returned rows into the shared values would race with another test
+// reading them.
 func insertFixtures(ctx context.Context, t *testing.T, data fixtures) {
 	t.Helper()
 
@@ -220,32 +222,32 @@ func insertFixtures(ctx context.Context, t *testing.T, data fixtures) {
 	require.NoError(t, err)
 
 	if len(data.projects) > 0 {
-		_, err = db.NewInsert().Model(&data.projects).Exec(ctx)
+		_, err = db.NewInsert().Model(&data.projects).Returning("NULL").Exec(ctx)
 		require.NoError(t, err)
 	}
 
 	if len(data.logos) > 0 {
-		_, err = db.NewInsert().Model(&data.logos).Exec(ctx)
+		_, err = db.NewInsert().Model(&data.logos).Returning("NULL").Exec(ctx)
 		require.NoError(t, err)
 	}
 
 	if len(data.beats) > 0 {
-		_, err = db.NewInsert().Model(&data.beats).Exec(ctx)
+		_, err = db.NewInsert().Model(&data.beats).Returning("NULL").Exec(ctx)
 		require.NoError(t, err)
 	}
 
 	if len(data.scenes) > 0 {
-		_, err = db.NewInsert().Model(&data.scenes).Exec(ctx)
+		_, err = db.NewInsert().Model(&data.scenes).Returning("NULL").Exec(ctx)
 		require.NoError(t, err)
 	}
 
 	if len(data.layers) > 0 {
-		_, err = db.NewInsert().Model(&data.layers).Exec(ctx)
+		_, err = db.NewInsert().Model(&data.layers).Returning("NULL").Exec(ctx)
 		require.NoError(t, err)
 	}
 
 	if len(data.cells) > 0 {
-		_, err = db.NewInsert().Model(&data.cells).Exec(ctx)
+		_, err = db.NewInsert().Model(&data.cells).Returning("NULL").Exec(ctx)
 		require.NoError(t, err)
 	}
 }
