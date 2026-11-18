@@ -1,7 +1,7 @@
-github.com/a-novel-kit/golib v0.66.1 h1:5b4ZTVucmAPkxICPZByMEDPQkATlzFXS68/fRjs/5KI=
-github.com/a-novel-kit/golib v0.66.1/go.mod h1:9HfOVU3v4X1ah51UWMTSN+LOajgyLRk044N+SBn5ph4=
-github.com/a-novel-kit/jwt/v2 v2.6.1 h1:8iQ8ZcvU4L2CKReYeCX8ctK9ABgYEvAOycrggKgl4cM=
-github.com/a-novel-kit/jwt/v2 v2.6.1/go.mod h1:pkDVhDrwshhk8U2FJiZciPHVh8zq5WYDJCMBKOmd1PQ=
+github.com/a-novel-kit/golib v0.67.0 h1:Dgij+mDQ5jUJsWPy9MEnS8oWIa7BQ2uS4Ch0j8syzLE=
+github.com/a-novel-kit/golib v0.67.0/go.mod h1:0mN9M++MzmZwQPfqTm2K40vfUqZqwu7rPMIwFbadxX0=
+github.com/a-novel-kit/jwt/v2 v2.7.0 h1:JUXqgXAvvuvcuuyIpxm8b1ZA0g7S4hnOKyLS99Lq17Q=
+github.com/a-novel-kit/jwt/v2 v2.7.0/go.mod h1:f2i8dJYYdIxTZbT+UOy9awRSZz/YsRHgCxCbnC/coGY=
 github.com/a-novel/service-authentication/v2 v2.28.0 h1:T9v/Yx9it7IGXwOJpbw8G2+FLV/VhVYlB6vdpt4FciY=
 github.com/a-novel/service-authentication/v2 v2.28.0/go.mod h1:YIzSqKz5E0HmtRlvRUBFr4huEkrqDMM/6B3czDy/Ef0=
 github.com/a-novel/service-genai v0.12.1 h1:RYrzi/odBPOmKHTrWE2FsakVihuEONW5xMSztQlM3xc=

@@ -3,7 +3,7 @@ module github.com/a-novel/service-narrative-engine
 go 1.27.4
 
 require (
-	github.com/a-novel-kit/golib v0.66.1
+	github.com/a-novel-kit/golib v0.67.0
 	github.com/a-novel/service-authentication/v2 v2.28.0
 	github.com/a-novel/service-genai v0.12.1
 	github.com/a-novel/service-json-keys/v2 v2.17.0
@@ -27,7 +27,7 @@ require (
 )
 
 require (
-	github.com/a-novel-kit/jwt/v2 v2.6.1 // indirect
+	github.com/a-novel-kit/jwt/v2 v2.7.0 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/felixge/httpsnoop v1.1.0 // indirect
