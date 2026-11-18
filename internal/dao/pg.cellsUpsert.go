@@ -87,10 +87,12 @@ func (dao *PgCellsUpsert) Exec(ctx context.Context, request *CellsUpsertRequest)
 		cellsUpsertQuery, request.ProjectID, bun.List(scenes), bun.List(layers), bun.List(contents), request.Now,
 	).Scan(ctx, &entities)
 
+	code, constraint := postgres.SQLState(err)
+
 	switch {
-	case isViolation(err, pgForeignKeyViolation, "cells_scene_fkey"):
+	case code == pgForeignKeyViolation && constraint == "cells_scene_fkey":
 		err = errors.Join(err, ErrCellsUpsertSceneNotFound)
-	case isViolation(err, pgForeignKeyViolation, "cells_layer_fkey"):
+	case code == pgForeignKeyViolation && constraint == "cells_layer_fkey":
 		err = errors.Join(err, ErrCellsUpsertLayerNotFound)
 	}
 

@@ -1,8 +1,6 @@
 import type { NarrativeEngineApi } from "./api";
 import { DateSchema, PositionSchema, maxChars } from "./schema";
 
-import { HTTP_HEADERS } from "@a-novel-kit/nodelib-browser/http";
-
 import { z } from "zod";
 
 /** A subcolumn of the Scenes Composer: a part of a beat, at its place in the beat. */
@@ -152,8 +150,8 @@ export async function sceneCreate(
 ): Promise<Scene> {
   return await api.fetch("/v1/scene", SceneSchema, {
     method: "POST",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
-    body: JSON.stringify(request),
+    accessToken,
+    json: request,
   });
 }
 
@@ -170,8 +168,8 @@ export async function scenesCreate(
 ): Promise<Scene[]> {
   return await api.fetch("/v1/scenes", ScenesSchema, {
     method: "POST",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
-    body: JSON.stringify(request),
+    accessToken,
+    json: request,
   });
 }
 
@@ -187,8 +185,8 @@ export async function sceneUpdate(
 ): Promise<Scene> {
   return await api.fetch("/v1/scene", SceneSchema, {
     method: "PUT",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
-    body: JSON.stringify(request),
+    accessToken,
+    json: request,
   });
 }
 
@@ -205,8 +203,8 @@ export async function scenesUpdate(
 ): Promise<Scene[]> {
   return await api.fetch("/v1/scenes", ScenesSchema, {
     method: "PUT",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
-    body: JSON.stringify(request),
+    accessToken,
+    json: request,
   });
 }
 
@@ -222,8 +220,8 @@ export async function sceneMove(
 ): Promise<Scene> {
   return await api.fetch("/v1/scene/move", SceneSchema, {
     method: "POST",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
-    body: JSON.stringify(request),
+    accessToken,
+    json: request,
   });
 }
 
@@ -239,7 +237,7 @@ export async function sceneDelete(
   const params = new URLSearchParams({ projectID: request.projectID, id: request.id });
   return await api.fetch(`/v1/scene?${params.toString()}`, SceneSchema, {
     method: "DELETE",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
+    accessToken,
   });
 }
 
@@ -257,7 +255,7 @@ export async function scenesDelete(
   for (const id of request.ids) params.append("id", id);
   return await api.fetch(`/v1/scenes?${params.toString()}`, ScenesSchema, {
     method: "DELETE",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
+    accessToken,
   });
 }
 
@@ -276,6 +274,6 @@ export async function sceneList(
   if (request.offset) params.set("offset", `${request.offset}`);
   return await api.fetch(`/v1/scenes?${params.toString()}`, ScenePageSchema, {
     method: "GET",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
+    accessToken,
   });
 }

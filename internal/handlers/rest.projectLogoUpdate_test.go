@@ -13,7 +13,7 @@ import (
 
 	"github.com/a-novel-kit/golib/picture"
 
-	"github.com/a-novel/service-narrative-engine/internal/config"
+	"github.com/a-novel/service-narrative-engine/internal/config/configtest"
 	"github.com/a-novel/service-narrative-engine/internal/core"
 	"github.com/a-novel/service-narrative-engine/internal/handlers"
 	handlersmocks "github.com/a-novel/service-narrative-engine/internal/handlers/mocks"
@@ -169,7 +169,7 @@ func TestRestProjectLogoUpdate(t *testing.T) {
 			}
 
 			request := httptest.NewRequestWithContext(t.Context(), http.MethodPut, testCase.target, body)
-			handlers.NewRestProjectLogoUpdate(service, config.LoggerDev).ServeHTTP(w, asUser(request, testCase.caller))
+			handlers.NewRestProjectLogoUpdate(service, configtest.Logger).ServeHTTP(w, asUser(request, testCase.caller))
 
 			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
 		})

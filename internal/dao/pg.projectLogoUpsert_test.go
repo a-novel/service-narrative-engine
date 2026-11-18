@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/uptrace/bun/driver/pgdriver"
 
 	"github.com/a-novel-kit/golib/postgres"
 	"github.com/a-novel-kit/golib/postgres/postgrestest"
@@ -153,11 +152,9 @@ func TestPgProjectLogoUpsert(t *testing.T) {
 
 			_, err = db.NewInsert().Model(newLogo).Exec(ctx)
 
-			var pgErr pgdriver.Error
-
-			require.ErrorAs(t, err, &pgErr)
-			require.Equal(t, pgUniqueViolation, pgErr.Field('C'))
-			require.Equal(t, "project_logos_pkey", pgErr.Field('n'))
+			code, constraint := postgres.SQLState(err)
+			require.Equal(t, pgUniqueViolation, code)
+			require.Equal(t, "project_logos_pkey", constraint)
 			require.Equal(t, storedLogo, projectLogo(ctx, t))
 		})
 	})

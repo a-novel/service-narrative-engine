@@ -3,8 +3,6 @@ import { ManuscriptContentSchema, NotesContentSchema } from "./content";
 import { RecapSchema } from "./recap";
 import { DateSchema } from "./schema";
 
-import { HTTP_HEADERS } from "@a-novel-kit/nodelib-browser/http";
-
 import { z } from "zod";
 
 /**
@@ -103,8 +101,8 @@ export async function cellWrite(
 ): Promise<WrittenCell> {
   return await api.fetch("/v1/cell", WrittenCellSchema, {
     method: "PUT",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
-    body: JSON.stringify(request),
+    accessToken,
+    json: request,
   });
 }
 
@@ -123,8 +121,8 @@ export async function cellsWrite(
 ): Promise<WrittenCell[]> {
   return await api.fetch("/v1/cells", WrittenCellsSchema, {
     method: "PUT",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
-    body: JSON.stringify(request),
+    accessToken,
+    json: request,
   });
 }
 
@@ -143,6 +141,6 @@ export async function cellList(
   if (request.offset) params.set("offset", `${request.offset}`);
   return await api.fetch(`/v1/cells?${params.toString()}`, CellPageSchema, {
     method: "GET",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
+    accessToken,
   });
 }

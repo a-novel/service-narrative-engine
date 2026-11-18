@@ -60,12 +60,14 @@ func (dao *PgSceneMove) Exec(ctx context.Context, request *SceneMoveRequest) (*S
 
 	err = db.NewRaw(sceneMoveQuery, request.ProjectID, request.ID, request.BeatID, request.Position).Scan(ctx, entity)
 
+	code, constraint := postgres.SQLState(err)
+
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		err = errors.Join(err, ErrSceneMoveNotFound)
-	case isViolation(err, pgForeignKeyViolation, "scenes_beat_fkey"):
+	case code == pgForeignKeyViolation && constraint == "scenes_beat_fkey":
 		err = errors.Join(err, ErrSceneMoveBeatNotFound)
-	case isViolation(err, pgCheckViolation, "scenes_position_check"):
+	case code == pgCheckViolation && constraint == "scenes_position_check":
 		err = errors.Join(err, ErrSceneMoveFull)
 	}
 

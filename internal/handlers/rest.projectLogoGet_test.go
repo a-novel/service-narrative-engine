@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/a-novel/service-narrative-engine/internal/config"
+	"github.com/a-novel/service-narrative-engine/internal/config/configtest"
 	"github.com/a-novel/service-narrative-engine/internal/core"
 	"github.com/a-novel/service-narrative-engine/internal/handlers"
 	handlersmocks "github.com/a-novel/service-narrative-engine/internal/handlers/mocks"
@@ -137,7 +137,7 @@ func TestRestProjectLogoGet(t *testing.T) {
 			}
 
 			w := httptest.NewRecorder()
-			handlers.NewRestProjectLogoGet(service, config.LoggerDev).ServeHTTP(w, request)
+			handlers.NewRestProjectLogoGet(service, configtest.Logger).ServeHTTP(w, request)
 
 			response := w.Result()
 			require.Equal(t, testCase.expectStatus, response.StatusCode)

@@ -90,10 +90,12 @@ func (dao *PgScenesInsert) Exec(ctx context.Context, request *ScenesInsertReques
 		bun.List(descriptions), bun.List(prompts), request.Now,
 	).Scan(ctx, &entities)
 
+	code, constraint := postgres.SQLState(err)
+
 	switch {
-	case isViolation(err, pgCheckViolation, "scenes_position_check"):
+	case code == pgCheckViolation && constraint == "scenes_position_check":
 		err = errors.Join(err, ErrScenesInsertFull)
-	case isViolation(err, pgForeignKeyViolation, "scenes_beat_fkey"):
+	case code == pgForeignKeyViolation && constraint == "scenes_beat_fkey":
 		err = errors.Join(err, ErrScenesInsertBeatNotFound)
 	}
 

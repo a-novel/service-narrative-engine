@@ -42,7 +42,7 @@ The routes are described in [`openapi.yaml`](./openapi.yaml).
 | `generationPlan.go`, `context*.go`                                               | The planner: `contextSplit` splits a generation into calls, `contextDraft` and `contextRead` hold what a call reads, `contextPrompt` renders it, `contextPlan` is the result. |
 | `openaiResponses.go`                                                             | The OpenAI request and response formats.                                                                                                                                      |
 
-`internal/dao` holds one statement per file, `pg.<operation>.sql` beside its `pg.<operation>.go`, and `internal/handlers` one route per `rest.<operation>.go`, with the shared error maps in `rest.errors.go`.
+`internal/dao` holds one statement per file, `pg.<operation>.sql` beside its `pg.<operation>.go`, and `internal/handlers` one route per `rest.<operation>.go`, with the shared error maps in `rest.errors.go`. golib's `httpf` answers the ping and runs the health probes, which `rest.health.go` lists: `postgres.Health`, JSON Keys and, once configured, genai.
 
 ## Transactions
 

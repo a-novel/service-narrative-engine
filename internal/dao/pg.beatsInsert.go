@@ -82,7 +82,9 @@ func (dao *PgBeatsInsert) Exec(ctx context.Context, request *BeatsInsertRequest)
 		request.ProjectID, request.Position, bun.List(ids), bun.List(titles), bun.List(colors),
 		bun.List(descriptions), bun.List(prompts), request.Now,
 	).Scan(ctx, &entities)
-	if isViolation(err, pgCheckViolation, "beats_position_check") {
+
+	code, constraint := postgres.SQLState(err)
+	if code == pgCheckViolation && constraint == "beats_position_check" {
 		err = errors.Join(err, ErrBeatsInsertFull)
 	}
 

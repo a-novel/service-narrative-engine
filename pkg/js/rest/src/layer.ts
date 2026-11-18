@@ -1,8 +1,6 @@
 import type { NarrativeEngineApi } from "./api";
 import { DateSchema, PositionSchema, maxChars } from "./schema";
 
-import { HTTP_HEADERS } from "@a-novel-kit/nodelib-browser/http";
-
 import { z } from "zod";
 
 /** The kinds of layer this client knows. A kind names the content schema the cells of a layer follow. */
@@ -151,8 +149,8 @@ export async function layerCreate(
 ): Promise<Layer> {
   return await api.fetch("/v1/layer", LayerSchema, {
     method: "POST",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
-    body: JSON.stringify(request),
+    accessToken,
+    json: request,
   });
 }
 
@@ -169,8 +167,8 @@ export async function layersCreate(
 ): Promise<Layer[]> {
   return await api.fetch("/v1/layers", LayersSchema, {
     method: "POST",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
-    body: JSON.stringify(request),
+    accessToken,
+    json: request,
   });
 }
 
@@ -186,8 +184,8 @@ export async function layerUpdate(
 ): Promise<Layer> {
   return await api.fetch("/v1/layer", LayerSchema, {
     method: "PUT",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
-    body: JSON.stringify(request),
+    accessToken,
+    json: request,
   });
 }
 
@@ -204,8 +202,8 @@ export async function layersUpdate(
 ): Promise<Layer[]> {
   return await api.fetch("/v1/layers", LayersSchema, {
     method: "PUT",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
-    body: JSON.stringify(request),
+    accessToken,
+    json: request,
   });
 }
 
@@ -220,8 +218,8 @@ export async function layerMove(
 ): Promise<Layer> {
   return await api.fetch("/v1/layer/move", LayerSchema, {
     method: "POST",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
-    body: JSON.stringify(request),
+    accessToken,
+    json: request,
   });
 }
 
@@ -238,7 +236,7 @@ export async function layerDelete(
   const params = new URLSearchParams({ projectID: request.projectID, id: request.id });
   return await api.fetch(`/v1/layer?${params.toString()}`, LayerSchema, {
     method: "DELETE",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
+    accessToken,
   });
 }
 
@@ -257,7 +255,7 @@ export async function layersDelete(
   for (const id of request.ids) params.append("id", id);
   return await api.fetch(`/v1/layers?${params.toString()}`, LayersSchema, {
     method: "DELETE",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
+    accessToken,
   });
 }
 
@@ -276,6 +274,6 @@ export async function layerList(
   if (request.offset) params.set("offset", `${request.offset}`);
   return await api.fetch(`/v1/layers?${params.toString()}`, LayerPageSchema, {
     method: "GET",
-    headers: { ...HTTP_HEADERS.JSON, Authorization: `Bearer ${accessToken}` },
+    accessToken,
   });
 }

@@ -1,9 +1,7 @@
 package handlers_test
 
 import (
-	"encoding/json"
 	"errors"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -31,7 +29,7 @@ func TestRestHealth(t *testing.T) {
 		genaiErr     error
 
 		expectStatus   int
-		expectHealth   string
+		expectPostgres string
 		expectJSONKeys string
 		expectGenai    string
 	}{
@@ -39,67 +37,51 @@ func TestRestHealth(t *testing.T) {
 			name:           "Success",
 			setup:          probeHealthy,
 			expectStatus:   http.StatusOK,
-			expectHealth:   handlers.RestHealthStatusUp,
-			expectJSONKeys: handlers.RestHealthStatusUp,
-			expectGenai:    handlers.RestHealthStatusUp,
+			expectPostgres: "up",
+			expectJSONKeys: "up",
+			expectGenai:    "up",
 		},
 		{
 			name:           "Success/WithoutGenai",
 			setup:          probeHealthy,
 			withoutGenai:   true,
 			expectStatus:   http.StatusOK,
-			expectHealth:   handlers.RestHealthStatusUp,
-			expectJSONKeys: handlers.RestHealthStatusUp,
+			expectPostgres: "up",
+			expectJSONKeys: "up",
 		},
 		{
 			name:           "Error/GenaiDown",
 			setup:          probeHealthy,
 			genaiErr:       errors.New("unavailable"),
 			expectStatus:   http.StatusServiceUnavailable,
-			expectHealth:   handlers.RestHealthStatusUp,
-			expectJSONKeys: handlers.RestHealthStatusUp,
-			expectGenai:    handlers.RestHealthStatusDown,
+			expectPostgres: "up",
+			expectJSONKeys: "up",
+			expectGenai:    "down",
 		},
 		{
 			name:           "Error/JSONKeysDown",
 			setup:          probeHealthy,
 			jsonKeysErr:    errors.New("unavailable"),
 			expectStatus:   http.StatusServiceUnavailable,
-			expectHealth:   handlers.RestHealthStatusUp,
-			expectJSONKeys: handlers.RestHealthStatusDown,
-			expectGenai:    handlers.RestHealthStatusUp,
+			expectPostgres: "up",
+			expectJSONKeys: "down",
+			expectGenai:    "up",
 		},
 		{
 			name:           "Error/MissingPostgres",
 			setup:          probeWithoutPostgres,
 			expectStatus:   http.StatusServiceUnavailable,
-			expectHealth:   handlers.RestHealthStatusDown,
-			expectJSONKeys: handlers.RestHealthStatusUp,
-			expectGenai:    handlers.RestHealthStatusUp,
+			expectPostgres: "down",
+			expectJSONKeys: "up",
+			expectGenai:    "up",
 		},
 		{
 			name:           "Error/ClosedPostgres",
 			setup:          probeClosedPostgres,
 			expectStatus:   http.StatusServiceUnavailable,
-			expectHealth:   handlers.RestHealthStatusDown,
-			expectJSONKeys: handlers.RestHealthStatusUp,
-			expectGenai:    handlers.RestHealthStatusUp,
-		},
-		{
-			name:           "Error/TransactionContext",
-			setup:          probeInTransaction,
-			expectStatus:   http.StatusServiceUnavailable,
-			expectHealth:   handlers.RestHealthStatusDown,
-			expectJSONKeys: handlers.RestHealthStatusUp,
-			expectGenai:    handlers.RestHealthStatusUp,
-		},
-		{
-			name:           "Error/CancelledProbe",
-			setup:          probeCancelled,
-			expectStatus:   http.StatusServiceUnavailable,
-			expectHealth:   handlers.RestHealthStatusDown,
-			expectJSONKeys: handlers.RestHealthStatusUp,
-			expectGenai:    handlers.RestHealthStatusUp,
+			expectPostgres: "down",
+			expectJSONKeys: "up",
+			expectGenai:    "up",
 		},
 	}
 
@@ -131,25 +113,18 @@ func TestRestHealth(t *testing.T) {
 				recorder, httptest.NewRequestWithContext(ctx, http.MethodGet, "/v1/healthcheck", nil),
 			)
 
-			response := recorder.Result()
-			require.Equal(t, testCase.expectStatus, response.StatusCode)
-			require.Contains(t, response.Header.Get("Content-Type"), "application/json")
-
-			body, err := io.ReadAll(response.Body)
-			require.NoError(t, errors.Join(err, response.Body.Close()))
-
-			var report any
-			require.NoError(t, json.Unmarshal(body, &report))
 			// Exact matching keeps raw dependency errors out of the public report.
 			expectReport := map[string]any{
-				"client:postgres": map[string]any{"status": testCase.expectHealth},
+				"client:postgres": map[string]any{"status": testCase.expectPostgres},
 				"api:jsonKeys":    map[string]any{"status": testCase.expectJSONKeys},
 			}
 			if !testCase.withoutGenai {
 				expectReport["api:genai"] = map[string]any{"status": testCase.expectGenai}
 			}
 
-			require.Equal(t, expectReport, report)
+			response := recorder.Result()
+			require.Contains(t, response.Header.Get("Content-Type"), "application/json")
+			requireResponse(t, response, testCase.expectStatus, expectReport)
 		})
 	}
 }

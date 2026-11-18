@@ -24,20 +24,12 @@ type Main struct {
 
 // Dependencies configures how the service reaches the services it calls.
 type Dependencies struct {
-	// ServiceJSONKeysHost is the hostname of the JSON Keys service, which verifies access tokens.
-	ServiceJSONKeysHost string
-	// ServiceJSONKeysPort is the gRPC port of the JSON Keys service.
-	ServiceJSONKeysPort int
-	// ServiceJSONKeysCredentials authenticates the calls to the JSON Keys service.
-	ServiceJSONKeysCredentials grpcf.CredentialsProvider
-
-	// ServiceGenaiHost is the hostname of the genai service, which runs the model calls of generations.
-	// Empty leaves genai unconfigured.
-	ServiceGenaiHost string
-	// ServiceGenaiPort is the gRPC port of the genai service.
-	ServiceGenaiPort int
-	// ServiceGenaiCredentials authenticates the calls to the genai service.
-	ServiceGenaiCredentials grpcf.CredentialsProvider
+	// ServiceJSONKeys locates the JSON Keys service, which verifies access tokens, and says how to
+	// dial it.
+	ServiceJSONKeys grpcf.ClientConfig
+	// ServiceGenai locates the genai service, which runs the model calls of generations, and says how
+	// to dial it. An empty host leaves genai unconfigured.
+	ServiceGenai grpcf.ClientConfig
 }
 
 // Limits bounds what one request carries, below the REST server's own limits. The server's
@@ -74,11 +66,9 @@ type App struct {
 	Caps Caps
 	// Rest configures the REST server.
 	Rest httpf.ServerConfig
-	// ServiceToken names the service tokens the REST server accepts.
+	// ServiceToken names the service tokens the REST server accepts. Without an issuer, the server
+	// refuses to start unless its IssuerOptional field lets it take every request.
 	ServiceToken servicetoken.Config
-	// ServiceIssuerOptional lets the REST server start with no ServiceToken issuer, and take every
-	// request without a service token. Without it, a ServiceToken with no issuer refuses to start.
-	ServiceIssuerOptional bool
 	// Limits bounds what one request carries, below the REST server's own limits.
 	Limits Limits
 	// Generations configures the model calls of generations.

@@ -1,12 +1,14 @@
 # Upgrading to NEXT
 
-A request that fails validation answers 422 Unprocessable Entity, where it answered 400 Bad Request. The service also reads its PostgreSQL connection from the discrete `POSTGRES_*` variables only.
+A request that fails validation answers 422 Unprocessable Entity, where it answered 400 Bad Request. The service also reads its PostgreSQL connection from the discrete `POSTGRES_*` variables only, and the JS client needs `@a-novel-kit/nodelib-browser` 2.13.0 or later.
 
 ## Do I need to act?
 
 **Required** for a client that branches on 400 to catch an invalid request: it reads 422 now. A client that treats every 4xx answer alike keeps working, and the release migrates no data.
 
 **Required** for a deployment that still sets `POSTGRES_DSN`: the service no longer reads it. A deployment that sets `POSTGRES_HOST` already works as before.
+
+**Required** for a project that installs `@a-novel/service-narrative-engine-rest`: it needs `@a-novel-kit/nodelib-browser` 2.13.0 or later. A lockfile that holds an older nodelib-browser fails to load the client, on the missing `RestClient` export.
 
 ## Read 422 for an invalid request
 
@@ -20,6 +22,10 @@ Every route answers 422 to a request that parses but breaks a rule of the contra
 ```
 
 The logo write and the generation submit already answered 422, to a refused logo and to a generation that outgrows its calls. Their 422 now also answers an invalid request. A refused logo still carries the problem's `reason` tag, and an outgrown generation now carries one too, `contextTooLarge`, so a client tells "narrow the request" from "fix the request". A generation on a project past its 16 MiB budget answers the same 422 with a `limit` tag of `projectBytes` instead: no narrower request fits until the project shrinks. An invalid request whose rule spans several fields, such as a range past the cell's end or a repeated target, answers the status text alone.
+
+## Install nodelib-browser 2.13.0 or later beside the JS client
+
+`@a-novel/service-narrative-engine-rest` builds `NarrativeEngineApi` on the `RestClient` that `@a-novel-kit/nodelib-browser` ships from 2.13.0, so its peer range is now `^2.13.0`. A request without a body no longer sends `Content-Type`. The constructor takes an optional `fetcher`: a server-side caller passes one that wraps `fetch` to add its service token or a deadline, instead of subclassing the client.
 
 ## Set the discrete PostgreSQL variables
 

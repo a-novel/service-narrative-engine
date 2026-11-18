@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/mock"
 
-	"github.com/a-novel/service-narrative-engine/internal/config"
+	"github.com/a-novel/service-narrative-engine/internal/config/configtest"
 	"github.com/a-novel/service-narrative-engine/internal/core"
 	"github.com/a-novel/service-narrative-engine/internal/handlers"
 	handlersmocks "github.com/a-novel/service-narrative-engine/internal/handlers/mocks"
@@ -105,7 +105,7 @@ func TestRestScenesUpdate(t *testing.T) {
 			}
 
 			w := httptest.NewRecorder()
-			handlers.NewRestScenesUpdate(service, config.LoggerDev).ServeHTTP(w, testCase.request(t))
+			handlers.NewRestScenesUpdate(service, configtest.Logger).ServeHTTP(w, testCase.request(t))
 
 			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
 		})

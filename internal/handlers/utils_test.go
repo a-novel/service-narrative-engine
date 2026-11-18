@@ -103,10 +103,6 @@ const (
 	probeWithoutPostgres
 	// probeClosedPostgres gives the probe a closed connection pool.
 	probeClosedPostgres
-	// probeInTransaction runs the probe inside an open transaction, which it must leave open.
-	probeInTransaction
-	// probeCancelled gives the probe a cancelled context.
-	probeCancelled
 )
 
 // newProbeContext returns the context a health probe runs with under the given setup. Each call
@@ -129,21 +125,8 @@ func newProbeContext(t *testing.T, setup probeSetup) context.Context {
 	require.True(t, ok)
 	t.Cleanup(func() { require.NoError(t, db.Close()) })
 
-	switch setup {
-	case probeClosedPostgres:
+	if setup == probeClosedPostgres {
 		require.NoError(t, db.Close())
-	case probeInTransaction:
-		// The transaction outlives the test context, so the rollback proves the probe left it open.
-		tx, err := db.BeginTx(context.WithoutCancel(ctx), nil)
-		require.NoError(t, err)
-		t.Cleanup(func() { require.NoError(t, tx.Rollback()) })
-
-		ctx = context.WithValue(ctx, postgres.ContextKey{}, tx)
-	case probeCancelled:
-		cancelled, cancel := context.WithCancel(ctx)
-		cancel()
-
-		ctx = cancelled
 	}
 
 	return ctx

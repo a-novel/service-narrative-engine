@@ -224,13 +224,13 @@ importers:
   .:
     devDependencies:
       '@a-novel-kit/nodelib-browser':
-        specifier: ^2.0.0
+        specifier: ^2.13.0
         version: 2.13.0(@grafana/faro-web-sdk@2.14.0)(@grafana/faro-web-tracing@2.14.0)(zod@4.6.7)
       '@a-novel-kit/nodelib-config':
-        specifier: ^2.0.0
+        specifier: ^2.13.0
         version: 2.13.0(953c140df0c95b5e1cdaccca16b43de3)
       '@a-novel-kit/nodelib-test':
-        specifier: ^2.0.0
+        specifier: ^2.13.0
         version: 2.13.0(@a-novel-kit/nodelib-browser@2.13.0(@grafana/faro-web-sdk@2.14.0)(@grafana/faro-web-tracing@2.14.0)(zod@4.6.7))(jsdom@31.0.1)(playwright@1.65.1)
       '@a-novel/service-authentication-rest':
         specifier: ^2.18.4
@@ -268,6 +268,9 @@ importers:
       jiti:
         specifier: ^2.6.1
         version: 2.7.0
+      jsdom:
+        specifier: ^31.0.0
+        version: 31.0.1
       prettier:
         specifier: ^3.6.2
         version: 3.10.1
@@ -293,7 +296,7 @@ importers:
   pkg/js/rest:
     devDependencies:
       '@a-novel-kit/nodelib-browser':
-        specifier: ^2.0.0
+        specifier: ^2.13.0
         version: 2.13.0(@grafana/faro-web-sdk@2.14.0)(@grafana/faro-web-tracing@2.14.0)(zod@4.6.7)
       typescript:
         specifier: ^6.0.0

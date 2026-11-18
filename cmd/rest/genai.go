@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"net"
-	"strconv"
 
 	"github.com/samber/lo"
 	"google.golang.org/grpc"
@@ -12,7 +10,8 @@ import (
 
 	servicegenai "github.com/a-novel/service-genai/pkg/go"
 
-	"github.com/a-novel/service-narrative-engine/internal/config"
+	"github.com/a-novel-kit/golib/grpcf"
+
 	"github.com/a-novel/service-narrative-engine/internal/core"
 	"github.com/a-novel/service-narrative-engine/internal/handlers"
 )
@@ -34,21 +33,18 @@ var errGenaiUnconfigured = status.Error(codes.Unavailable, "genai is not configu
 
 // newGenaiClient connects to genai. Without a configured host, it returns a client whose every call
 // answers that genai is unavailable, so the service runs and its generation routes answer 503.
-func newGenaiClient(ctx context.Context, dependencies config.Dependencies) genaiClient {
-	if dependencies.ServiceGenaiHost == "" {
+func newGenaiClient(genai grpcf.ClientConfig) genaiClient {
+	if genai.Host == "" {
 		return unconfiguredGenai{}
 	}
 
-	return lo.Must(servicegenai.NewClient(
-		net.JoinHostPort(dependencies.ServiceGenaiHost, strconv.Itoa(dependencies.ServiceGenaiPort)),
-		lo.Must(dependencies.ServiceGenaiCredentials.Options(ctx))...,
-	))
+	return lo.Must(servicegenai.NewClient(genai.Address(), genai.DialOptions()...))
 }
 
 // genaiHealth is what the health check probes on genai: the client, or nil while no genai host is
 // configured, which leaves genai out of the report.
-func genaiHealth(client genaiClient, dependencies config.Dependencies) handlers.RestHealthAPIGenai {
-	if dependencies.ServiceGenaiHost == "" {
+func genaiHealth(client genaiClient, genai grpcf.ClientConfig) handlers.RestHealthAPIGenai {
+	if genai.Host == "" {
 		return nil
 	}
 
