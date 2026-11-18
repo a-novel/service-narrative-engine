@@ -171,15 +171,12 @@ var genaiID = uuid.MustParse("00000000-0000-0000-0000-0000000000c1")
 // suggestOutput is a valid suggest output, with one text suggestion.
 const suggestOutput = `{"manuscript":[],"text":[{"target":"T1","note":"Names the scene.","text":"La lettre"}]}`
 
-// genaiGeneration returns the genai generation of the test owner at a status. Its last attempt holds
-// response when set.
+// genaiGeneration returns the genai generation of the test owner at a status, with response as its answer when
+// set.
 func genaiGeneration(status servicegenai.GenerationStatus, response string) *servicegenai.Generation {
 	generation := &servicegenai.Generation{Id: genaiID.String(), OwnerId: ownerID.String(), Status: status}
 	if response != "" {
-		generation.Attempts = []*servicegenai.GenerationAttempt{
-			{Number: 1, Response: []byte(`{"status":"in_progress"}`)},
-			{Number: 2, Response: []byte(response)},
-		}
+		generation.Response = []byte(response)
 	}
 
 	return generation
