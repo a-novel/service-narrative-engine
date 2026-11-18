@@ -1,9 +1,9 @@
-import { COLOR, accessToken, api } from "./fixtures";
-import { anonymousAccessToken, userAccessToken } from "./token";
+import { COLOR, accessToken, api, authApi } from "./fixtures";
 
 import { afterAll, describe, expect, it, onTestFinished } from "vitest";
 
 import { expectStatus } from "@a-novel-kit/nodelib-test/http";
+import { anonymousAccessToken, userAccessToken } from "@a-novel/service-authentication-rest-test";
 import {
   type ContextTarget,
   GenerationKind,
@@ -32,7 +32,7 @@ const RECAP: Recap = {
 
 // genai never reaches a provider in this stack, so a consolidation fails before it starts, and the suite
 // writes the recap a client would write once it succeeded, with the stamps its context reports.
-const userToken = await userAccessToken();
+const userToken = await userAccessToken(authApi);
 
 const project = await projectCreate(api, accessToken, { title: "Les Heures claires", language: Language.Fr });
 afterAll(() => projectDelete(api, accessToken, project).then(() => undefined));
@@ -151,7 +151,7 @@ describe("cellRecapWrite", () => {
   it("returns 403 for an anonymous session", async () => {
     const request = await cellRecapRequest(7);
 
-    await expectStatus(cellRecapWrite(api, await anonymousAccessToken(), request), 403);
+    await expectStatus(cellRecapWrite(api, await anonymousAccessToken(authApi), request), 403);
   });
 });
 

@@ -1,9 +1,9 @@
-import { ABSENT_ID, COLOR, accessToken, api, collect } from "./fixtures";
-import { anonymousAccessToken, userAccessToken } from "./token";
+import { ABSENT_ID, COLOR, accessToken, api, authApi, collect } from "./fixtures";
 
 import { afterAll, describe, expect, it, onTestFinished } from "vitest";
 
 import { expectStatus } from "@a-novel-kit/nodelib-test/http";
+import { anonymousAccessToken, userAccessToken } from "@a-novel/service-authentication-rest-test";
 import {
   type Generation,
   GenerationFailureClass,
@@ -28,7 +28,7 @@ import {
 } from "@a-novel/service-narrative-engine-rest";
 
 // genai never reaches a provider in this stack, so every admitted call fails before it starts.
-const userToken = await userAccessToken();
+const userToken = await userAccessToken(authApi);
 
 /** Creates a project of the caller with one scene. */
 async function projectWithScene(token: string, title: string): Promise<[ProjectComposer, Scene]> {
@@ -283,7 +283,7 @@ describe("generationSubmit", () => {
   });
 
   it("returns 403 for an anonymous session", async () => {
-    await expectStatus(generationSubmit(api, await anonymousAccessToken(), titleRequest("Anonymous")), 403);
+    await expectStatus(generationSubmit(api, await anonymousAccessToken(authApi), titleRequest("Anonymous")), 403);
   });
 });
 
@@ -383,6 +383,6 @@ describe("generationUsage", () => {
   });
 
   it("returns 403 for an anonymous session", async () => {
-    await expectStatus(generationUsage(api, await anonymousAccessToken()), 403);
+    await expectStatus(generationUsage(api, await anonymousAccessToken(authApi)), 403);
   });
 });
