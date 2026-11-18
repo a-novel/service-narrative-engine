@@ -6,6 +6,8 @@ import (
 
 	"github.com/google/uuid"
 
+	serviceauthentication "github.com/a-novel/service-authentication/v2/pkg/go"
+
 	"github.com/a-novel-kit/golib/httpf"
 	"github.com/a-novel-kit/golib/logging"
 	"github.com/a-novel-kit/golib/otel"
@@ -38,7 +40,7 @@ func (handler *RestProjectDelete) ServeHTTP(w http.ResponseWriter, r *http.Reque
 	ctx, span := otel.Tracer().Start(r.Context(), "rest.ProjectDelete")
 	defer span.End()
 
-	ownerID, err := requestOwner(r)
+	ownerID, err := serviceauthentication.RequestUser(r.Context())
 	if err != nil {
 		httpf.HandleError(ctx, handler.logger, w, span, ownerErrors, err)
 

@@ -13,7 +13,8 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/core"
 )
 
-// ownerErrors maps a request that names no user to its status.
+// ownerErrors maps a request that acts for no user to 403: one whose claims name none, such as an anonymous
+// session's (serviceauthentication.ErrAnonymousCaller), or one that carries no claims.
 var ownerErrors = httpf.ErrMap{nil: http.StatusForbidden}
 
 // decodeErrors maps a request whose body, query or Last-Event-ID header cannot be read or parsed to its status.
