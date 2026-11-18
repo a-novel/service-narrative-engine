@@ -7,6 +7,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 
+	serviceauthentication "github.com/a-novel/service-authentication/v2/pkg/go"
+
 	"github.com/a-novel-kit/golib/httpf"
 	"github.com/a-novel-kit/golib/logging"
 	"github.com/a-novel-kit/golib/otel"
@@ -49,7 +51,7 @@ func (handler *RestProjectFieldsDrift) ServeHTTP(w http.ResponseWriter, r *http.
 	ctx, span := otel.Tracer().Start(r.Context(), "rest.ProjectFieldsDrift")
 	defer span.End()
 
-	ownerID, err := requestOwner(r)
+	ownerID, err := serviceauthentication.RequestUser(r.Context())
 	if err != nil {
 		httpf.HandleError(ctx, handler.logger, w, span, ownerErrors, err)
 

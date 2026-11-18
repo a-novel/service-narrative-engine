@@ -2,10 +2,13 @@ package handlers
 
 import (
 	"encoding/json"
+	"net/http"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/samber/lo"
+
+	serviceauthentication "github.com/a-novel/service-authentication/v2/pkg/go"
 
 	"github.com/a-novel/service-narrative-engine/internal/core"
 )
@@ -193,4 +196,15 @@ func loadContextTarget(target *core.ContextTarget) *ContextTarget {
 	}
 
 	return loaded
+}
+
+// requestRoles returns the roles the verified claims of a request carry, none without claims.
+func requestRoles(r *http.Request) []string {
+	// GetClaimsContext never fails: it returns nil claims for a request without them.
+	claims, _ := serviceauthentication.GetClaimsContext(r.Context())
+	if claims == nil {
+		return nil
+	}
+
+	return claims.Roles
 }

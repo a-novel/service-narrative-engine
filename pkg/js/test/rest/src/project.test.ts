@@ -1,5 +1,4 @@
-import { ABSENT_ID, accessToken, api, collect } from "./fixtures";
-import { anonymousAccessToken, userAccessToken } from "./token";
+import { ABSENT_ID, accessToken, api, authApi, collect } from "./fixtures";
 
 import { createHash, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
@@ -7,6 +6,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it, onTestFinished } from "vitest";
 
 import { expectStatus } from "@a-novel-kit/nodelib-test/http";
+import { anonymousAccessToken, userAccessToken } from "@a-novel/service-authentication-rest-test";
 import {
   Language,
   LayerKind,
@@ -207,7 +207,7 @@ describe("projectCreate", () => {
   });
 
   it("returns 403 for an anonymous session", async () => {
-    const anonymous = await anonymousAccessToken();
+    const anonymous = await anonymousAccessToken(authApi);
     await expectStatus(projectCreate(api, anonymous, { title: "Clear Hours", language: Language.En }), 403);
   });
 });
@@ -245,7 +245,7 @@ describe("projectGet", () => {
 
 describe("projectFieldsDrift", () => {
   it("returns every project of the caller when the client holds none", async () => {
-    const user = await userAccessToken();
+    const user = await userAccessToken(authApi);
     const first = await createProject({ title: "First", language: Language.En, tags: ["noir"] }, user);
     const second = await createProject({ title: "Second", language: Language.Fr }, user);
 
@@ -271,7 +271,7 @@ describe("projectFieldsDrift", () => {
   });
 
   it("finds no drift in a project held as a write or a drift returned it", async () => {
-    const user = await userAccessToken();
+    const user = await userAccessToken(authApi);
     const written = await createProject({ title: "Written", language: Language.En }, user);
     await createProject({ title: "Swept", language: Language.En }, user);
 
@@ -283,7 +283,7 @@ describe("projectFieldsDrift", () => {
   });
 
   it("returns a project held with another updatedAt, and one updated since", async () => {
-    const user = await userAccessToken();
+    const user = await userAccessToken(authApi);
     const stale = await createProject({ title: "Stale", language: Language.En }, user);
     const renamed = await createProject({ title: "Draft", language: Language.En }, user);
 
@@ -303,7 +303,7 @@ describe("projectFieldsDrift", () => {
   });
 
   it("lists the IDs that name no project of the caller", async () => {
-    const user = await userAccessToken();
+    const user = await userAccessToken(authApi);
     const deleted = await createProject({ title: "Deleted", language: Language.En }, user);
     await projectDelete(api, user, deleted);
     const foreign = await createProject({ title: "Foreign", language: Language.En });
@@ -325,13 +325,13 @@ describe("projectFieldsDrift", () => {
   });
 
   it("returns 403 for an anonymous session", async () => {
-    await expectStatus(projectFieldsDrift(api, await anonymousAccessToken(), { projects: {} }), 403);
+    await expectStatus(projectFieldsDrift(api, await anonymousAccessToken(authApi), { projects: {} }), 403);
   });
 });
 
 describe("projectEditsList", () => {
   it("returns the editedAt of every project of the caller", async () => {
-    const user = await userAccessToken();
+    const user = await userAccessToken(authApi);
     const first = await createProject({ title: "First", language: Language.En }, user);
     const second = await createProject({ title: "Second", language: Language.En }, user);
 
@@ -341,7 +341,7 @@ describe("projectEditsList", () => {
   });
 
   it("follows a content write, which leaves the project's fields as they were", async () => {
-    const user = await userAccessToken();
+    const user = await userAccessToken(authApi);
     const project = await createProject({ title: "Edited", language: Language.En }, user);
 
     await beatCreate(api, user, { projectID: project.id, title: "Le départ", color: "#4a90d9" });
@@ -352,13 +352,13 @@ describe("projectEditsList", () => {
   });
 
   it("returns 403 for an anonymous session", async () => {
-    await expectStatus(projectEditsList(api, await anonymousAccessToken()), 403);
+    await expectStatus(projectEditsList(api, await anonymousAccessToken(authApi)), 403);
   });
 });
 
 describe("projectLogosDrift", () => {
   it("returns the logos the client lacks, with their checksum", async () => {
-    const user = await userAccessToken();
+    const user = await userAccessToken(authApi);
     const pictured = await createProject({ title: "Pictured", language: Language.En }, user);
     await createProject({ title: "Bare", language: Language.En }, user);
     await projectLogoUpdate(api, user, { projectID: pictured.id }, logo);
@@ -370,7 +370,7 @@ describe("projectLogosDrift", () => {
   });
 
   it("finds no drift in the logos held with their checksum", async () => {
-    const user = await userAccessToken();
+    const user = await userAccessToken(authApi);
     const pictured = await createProject({ title: "Pictured", language: Language.En }, user);
     const { logoChecksum } = await projectLogoUpdate(api, user, { projectID: pictured.id }, logo);
 
@@ -381,7 +381,7 @@ describe("projectLogosDrift", () => {
   });
 
   it("returns a logo held with another checksum, and lists the IDs without a logo of the caller", async () => {
-    const user = await userAccessToken();
+    const user = await userAccessToken(authApi);
     const pictured = await createProject({ title: "Pictured", language: Language.En }, user);
     const bare = await createProject({ title: "Bare", language: Language.En }, user);
     await projectLogoUpdate(api, user, { projectID: pictured.id }, wideLogo);
@@ -401,7 +401,7 @@ describe("projectLogosDrift", () => {
   });
 
   it("returns 403 for an anonymous session", async () => {
-    await expectStatus(projectLogosDrift(api, await anonymousAccessToken(), { logos: {} }), 403);
+    await expectStatus(projectLogosDrift(api, await anonymousAccessToken(authApi), { logos: {} }), 403);
   });
 });
 
@@ -617,7 +617,10 @@ describe("projectLogoUpdate", () => {
   });
 
   it("returns 403 for an anonymous session", async () => {
-    await expectStatus(projectLogoUpdate(api, await anonymousAccessToken(), { projectID: ABSENT_ID }, logo), 403);
+    await expectStatus(
+      projectLogoUpdate(api, await anonymousAccessToken(authApi), { projectID: ABSENT_ID }, logo),
+      403
+    );
   });
 });
 
@@ -642,7 +645,7 @@ describe("projectLogoGet", () => {
     const request = { projectID: created.id };
     await projectLogoUpdate(api, accessToken, request, logo);
 
-    await expectStatus(projectLogoGet(api, await userAccessToken(), request), 404);
+    await expectStatus(projectLogoGet(api, await userAccessToken(authApi), request), 404);
   });
 
   it("returns 400 for a malformed project ID", async () => {

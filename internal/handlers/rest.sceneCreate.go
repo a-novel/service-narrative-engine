@@ -7,6 +7,8 @@ import (
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel/attribute"
 
+	serviceauthentication "github.com/a-novel/service-authentication/v2/pkg/go"
+
 	"github.com/a-novel-kit/golib/httpf"
 	"github.com/a-novel-kit/golib/logging"
 	"github.com/a-novel-kit/golib/otel"
@@ -51,7 +53,7 @@ func (handler *RestSceneCreate) ServeHTTP(w http.ResponseWriter, r *http.Request
 	ctx, span := otel.Tracer().Start(r.Context(), "rest.SceneCreate")
 	defer span.End()
 
-	ownerID, err := requestOwner(r)
+	ownerID, err := serviceauthentication.RequestUser(r.Context())
 	if err != nil {
 		httpf.HandleError(ctx, handler.logger, w, span, ownerErrors, err)
 
