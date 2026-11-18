@@ -1,7 +1,6 @@
 package handlers_test
 
 import (
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -16,8 +15,6 @@ import (
 
 func TestRestSceneCreate(t *testing.T) {
 	t.Parallel()
-
-	errFoo := errors.New("foo")
 
 	validRequest := func(t *testing.T) *http.Request {
 		t.Helper()
@@ -75,59 +72,16 @@ func TestRestSceneCreate(t *testing.T) {
 			expectStatus: http.StatusBadRequest,
 		},
 		{
-			name: "Error/ProjectNotFound",
+			// Wiring case: a sentinel only composerErrors holds, to prove the handler uses that map (see
+			// CONTRIBUTING, "Handler tests"), whether or not the route produces it.
+			name: "Error/ProjectsFull",
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[[]*core.Scene]{err: core.ErrProjectNotFound},
-
-			expectStatus: http.StatusNotFound,
-		},
-		{
-			name: "Error/ProjectBudget",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[[]*core.Scene]{err: core.ErrProjectBudget},
+			serviceMock: &serviceMock[[]*core.Scene]{err: core.ErrProjectsFull},
 
 			expectStatus:   http.StatusConflict,
-			expectResponse: limitProblem("projectBytes"),
-		},
-		{
-			name: "Error/BeatNotFound",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[[]*core.Scene]{err: core.ErrBeatNotFound},
-
-			expectStatus: http.StatusNotFound,
-		},
-		{
-			name: "Error/BeatFull",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[[]*core.Scene]{err: core.ErrProjectFull},
-
-			expectStatus: http.StatusConflict,
-		},
-		{
-			name: "Error/InvalidRequest",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[[]*core.Scene]{err: core.ErrInvalidRequest},
-
-			expectStatus: http.StatusUnprocessableEntity,
-		},
-		{
-			name: "Error/Internal",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[[]*core.Scene]{err: errFoo},
-
-			expectStatus: http.StatusInternalServerError,
+			expectResponse: limitProblem("projects"),
 		},
 	}
 

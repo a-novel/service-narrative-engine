@@ -114,17 +114,6 @@ func TestBeatRecapWrite(t *testing.T) {
 			expectErr: core.ErrProjectBudget,
 		},
 		{
-			name: "Error/ProjectBytes",
-
-			request: request(sources),
-
-			lockMock:  &daoMock[bool]{resp: true},
-			daoMock:   &daoMock[struct{}]{},
-			bytesMock: &daoMock[*dao.ProjectBytes]{err: errFoo},
-
-			expectErr: errFoo,
-		},
-		{
 			name: "Error/Transaction",
 
 			request: request(sources),

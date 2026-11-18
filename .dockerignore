@@ -8,6 +8,7 @@ node_modules
 
 # Test files: excluded from production images.
 **/*_test.go
+**/testdata
 
 # Go client package: not part of any server build.
 pkg/

@@ -1,7 +1,6 @@
 package handlers_test
 
 import (
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -16,8 +15,6 @@ import (
 
 func TestRestCellsWrite(t *testing.T) {
 	t.Parallel()
-
-	errFoo := errors.New("foo")
 
 	validRequest := func(t *testing.T) *http.Request {
 		t.Helper()
@@ -71,50 +68,16 @@ func TestRestCellsWrite(t *testing.T) {
 			expectStatus: http.StatusBadRequest,
 		},
 		{
-			name: "Error/ProjectNotFound",
+			// Wiring case: a sentinel only composerErrors holds, to prove the handler uses that map (see
+			// CONTRIBUTING, "Handler tests"), whether or not the route produces it.
+			name: "Error/ProjectsFull",
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[[]*core.WrittenCell]{err: core.ErrProjectNotFound},
-
-			expectStatus: http.StatusNotFound,
-		},
-		{
-			name: "Error/ProjectBudget",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[[]*core.WrittenCell]{err: core.ErrProjectBudget},
+			serviceMock: &serviceMock[[]*core.WrittenCell]{err: core.ErrProjectsFull},
 
 			expectStatus:   http.StatusConflict,
-			expectResponse: limitProblem("projectBytes"),
-		},
-		{
-			name: "Error/SceneNotFound",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[[]*core.WrittenCell]{err: core.ErrSceneNotFound},
-
-			expectStatus: http.StatusNotFound,
-		},
-		{
-			name: "Error/LayerNotFound",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[[]*core.WrittenCell]{err: core.ErrLayerNotFound},
-
-			expectStatus: http.StatusNotFound,
-		},
-		{
-			name: "Error/SceneContentFull",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[[]*core.WrittenCell]{err: core.ErrProjectFull},
-
-			expectStatus: http.StatusConflict,
+			expectResponse: limitProblem("projects"),
 		},
 		{
 			name: "Error/InvalidContent",
@@ -124,15 +87,6 @@ func TestRestCellsWrite(t *testing.T) {
 			serviceMock: &serviceMock[[]*core.WrittenCell]{err: core.ErrInvalidRequest},
 
 			expectStatus: http.StatusUnprocessableEntity,
-		},
-		{
-			name: "Error/Internal",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[[]*core.WrittenCell]{err: errFoo},
-
-			expectStatus: http.StatusInternalServerError,
 		},
 	}
 

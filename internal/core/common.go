@@ -191,23 +191,16 @@ func checkSceneContent(ctx context.Context, daoLength SceneLengthDao, projectID 
 	return nil
 }
 
-// newIDs generates count UUIDv7 identifiers.
-func newIDs(ctx context.Context, count int) ([]uuid.UUID, error) {
-	_, span := otel.Tracer().Start(ctx, "core.newIDs")
-	defer span.End()
-
+// newIDs generates count UUIDv7 identifiers. uuid.NewV7 fails only when crypto/rand does, which Go documents
+// as never happening on supported platforms.
+func newIDs(count int) []uuid.UUID {
 	ids := make([]uuid.UUID, count)
 
 	for i := range ids {
-		id, err := uuid.NewV7()
-		if err != nil {
-			return nil, otel.ReportError(span, fmt.Errorf("generate id: %w", err))
-		}
-
-		ids[i] = id
+		ids[i] = uuid.Must(uuid.NewV7())
 	}
 
-	return ids, nil
+	return ids
 }
 
 // pages yields the items of a paged list from offset on, one page at a time. Read reads the page at an

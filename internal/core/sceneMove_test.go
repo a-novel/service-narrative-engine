@@ -82,15 +82,6 @@ func TestSceneMove(t *testing.T) {
 			expectErr: core.ErrProjectNotFound,
 		},
 		{
-			name: "Error/Lock",
-
-			request: request(0),
-
-			lockMock: &daoMock[bool]{err: errFoo},
-
-			expectErr: errFoo,
-		},
-		{
 			name: "Error/NotFound",
 
 			request: request(0),

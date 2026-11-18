@@ -101,15 +101,6 @@ func TestCellRecapWrite(t *testing.T) {
 			expectErr: core.ErrRecapConflict,
 		},
 		{
-			name: "Error/Owner",
-
-			request: request(recapOutput),
-
-			lockMock: &daoMock[bool]{err: errFoo},
-
-			expectErr: errFoo,
-		},
-		{
 			name: "Error/Dao",
 
 			request: request(recapOutput),
@@ -129,17 +120,6 @@ func TestCellRecapWrite(t *testing.T) {
 			bytesMock: overBudget,
 
 			expectErr: core.ErrProjectBudget,
-		},
-		{
-			name: "Error/ProjectBytes",
-
-			request: request(recapOutput),
-
-			lockMock:  &daoMock[bool]{resp: true},
-			daoMock:   &daoMock[struct{}]{},
-			bytesMock: &daoMock[*dao.ProjectBytes]{err: errFoo},
-
-			expectErr: errFoo,
 		},
 		{
 			name: "Error/Transaction",

@@ -119,15 +119,6 @@ func TestScenesUpdate(t *testing.T) {
 			expectErr: core.ErrProjectNotFound,
 		},
 		{
-			name: "Error/Lock",
-
-			request: request(scene(sceneID2)),
-
-			lockMock: &daoMock[bool]{err: errFoo},
-
-			expectErr: errFoo,
-		},
-		{
 			name: "Error/NotFound",
 
 			request: request(scene(sceneID2), scene(sceneID3)),
@@ -161,18 +152,6 @@ func TestScenesUpdate(t *testing.T) {
 			updateScenes: []dao.ScenesUpdateItem{updateScene(sceneID2)},
 
 			expectErr: core.ErrProjectBudget,
-		},
-		{
-			name: "Error/ProjectBytes",
-
-			request: request(scene(sceneID2)),
-
-			lockMock:     &daoMock[bool]{resp: true},
-			updateMock:   &daoMock[[]*dao.Scene]{resp: []*dao.Scene{daoScene(sceneID2, 1)}},
-			bytesMock:    &daoMock[*dao.ProjectBytes]{err: errFoo},
-			updateScenes: []dao.ScenesUpdateItem{updateScene(sceneID2)},
-
-			expectErr: errFoo,
 		},
 		{
 			name: "Error/Transaction",

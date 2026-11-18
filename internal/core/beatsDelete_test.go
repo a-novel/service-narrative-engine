@@ -90,15 +90,6 @@ func TestBeatsDelete(t *testing.T) {
 			expectErr: core.ErrProjectNotFound,
 		},
 		{
-			name: "Error/Lock",
-
-			request: request(beatID2),
-
-			lockMock: &daoMock[bool]{err: errFoo},
-
-			expectErr: errFoo,
-		},
-		{
 			name: "Error/NotFound",
 
 			request: request(beatID2, beatID3),

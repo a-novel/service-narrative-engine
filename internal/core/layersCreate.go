@@ -80,10 +80,7 @@ func (service *LayersCreate) Exec(ctx context.Context, request *LayersCreateRequ
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	ids, err := newIDs(ctx, len(request.Layers))
-	if err != nil {
-		return nil, otel.ReportError(span, err)
-	}
+	ids := newIDs(len(request.Layers))
 
 	insertItems := make([]dao.LayersInsertItem, len(request.Layers))
 

@@ -7,7 +7,7 @@ import (
 )
 
 // ProjectComposer is the REST representation of a new project with the layers it starts with. Its
-// scenes come next, from the create-scenes endpoint.
+// beats and scenes come next, from the create-beats and create-scenes endpoints.
 type ProjectComposer struct {
 	Project
 

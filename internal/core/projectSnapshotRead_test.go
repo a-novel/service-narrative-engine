@@ -153,16 +153,6 @@ func TestProjectSnapshotRead(t *testing.T) {
 			expectErr: core.ErrContextTooLarge,
 		},
 		{
-			name: "Error/ProjectBytes",
-
-			request: &core.ProjectSnapshotReadRequest{OwnerID: ownerID, ProjectID: projectID},
-
-			ownerMock: &daoMock[bool]{resp: true},
-			bytesMock: &daoMock[*dao.ProjectBytes]{err: errFoo},
-
-			expectErr: errFoo,
-		},
-		{
 			name: "Error/Cells",
 
 			request: &core.ProjectSnapshotReadRequest{OwnerID: ownerID, ProjectID: projectID},

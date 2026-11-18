@@ -86,6 +86,17 @@ func TestRestProjectLogoDelete(t *testing.T) {
 			expectStatus: http.StatusNotFound,
 		},
 		{
+			// Wiring case: a sentinel only logoErrors holds, to prove the handler uses that map (see
+			// CONTRIBUTING, "Handler tests"), whether or not the route produces it.
+			name: "Error/LogoNotFound",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[*core.Project]{err: core.ErrProjectLogoNotFound},
+
+			expectStatus: http.StatusNotFound,
+		},
+		{
 			name: "Error/Internal",
 
 			request: validRequest,

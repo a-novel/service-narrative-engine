@@ -1,7 +1,6 @@
 package handlers_test
 
 import (
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -18,8 +17,6 @@ import (
 
 func TestRestProjectEditsList(t *testing.T) {
 	t.Parallel()
-
-	errFoo := errors.New("foo")
 
 	validRequest := func(t *testing.T) *http.Request {
 		t.Helper()
@@ -74,13 +71,15 @@ func TestRestProjectEditsList(t *testing.T) {
 			expectStatus: http.StatusForbidden,
 		},
 		{
-			name: "Error/Internal",
+			// Wiring case: a sentinel only composerErrors holds, to prove the handler uses that map (see
+			// CONTRIBUTING, "Handler tests"), whether or not the route produces it.
+			name: "Error/ProjectFull",
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.ProjectEdits]{err: errFoo},
+			serviceMock: &serviceMock[*core.ProjectEdits]{err: core.ErrProjectFull},
 
-			expectStatus: http.StatusInternalServerError,
+			expectStatus: http.StatusConflict,
 		},
 	}
 

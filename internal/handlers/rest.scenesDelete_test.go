@@ -1,7 +1,6 @@
 package handlers_test
 
 import (
-	"errors"
 	"maps"
 	"net/http"
 	"net/http/httptest"
@@ -18,8 +17,6 @@ import (
 
 func TestRestScenesDelete(t *testing.T) {
 	t.Parallel()
-
-	errFoo := errors.New("foo")
 
 	// The request deletes a second scene too, so its id parameter repeats.
 	otherScene := *coreScene
@@ -79,40 +76,15 @@ func TestRestScenesDelete(t *testing.T) {
 			expectStatus: http.StatusBadRequest,
 		},
 		{
-			name: "Error/ProjectNotFound",
+			// Wiring case: a sentinel only composerErrors holds, to prove the handler uses that map (see
+			// CONTRIBUTING, "Handler tests"), whether or not the route produces it.
+			name: "Error/ProjectFull",
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[[]*core.Scene]{err: core.ErrProjectNotFound},
+			serviceMock: &serviceMock[[]*core.Scene]{err: core.ErrProjectFull},
 
-			expectStatus: http.StatusNotFound,
-		},
-		{
-			name: "Error/SceneNotFound",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[[]*core.Scene]{err: core.ErrSceneNotFound},
-
-			expectStatus: http.StatusNotFound,
-		},
-		{
-			name: "Error/InvalidRequest",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[[]*core.Scene]{err: core.ErrInvalidRequest},
-
-			expectStatus: http.StatusUnprocessableEntity,
-		},
-		{
-			name: "Error/Internal",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[[]*core.Scene]{err: errFoo},
-
-			expectStatus: http.StatusInternalServerError,
+			expectStatus: http.StatusConflict,
 		},
 	}
 

@@ -114,6 +114,52 @@ func TestRestBeatsCreate(t *testing.T) {
 			expectStatus: http.StatusUnprocessableEntity,
 		},
 		{
+			name: "Error/BeatNotFound",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[[]*core.Beat]{err: core.ErrBeatNotFound},
+
+			expectStatus: http.StatusNotFound,
+		},
+		{
+			name: "Error/SceneNotFound",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[[]*core.Beat]{err: core.ErrSceneNotFound},
+
+			expectStatus: http.StatusNotFound,
+		},
+		{
+			name: "Error/LayerNotFound",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[[]*core.Beat]{err: core.ErrLayerNotFound},
+
+			expectStatus: http.StatusNotFound,
+		},
+		{
+			name: "Error/ProjectsFull",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[[]*core.Beat]{err: core.ErrProjectsFull},
+
+			expectStatus:   http.StatusConflict,
+			expectResponse: limitProblem("projects"),
+		},
+		{
+			name: "Error/RequiredLayer",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[[]*core.Beat]{err: core.ErrRequiredLayer},
+
+			expectStatus: http.StatusConflict,
+		},
+		{
 			name: "Error/Internal",
 
 			request: validRequest,

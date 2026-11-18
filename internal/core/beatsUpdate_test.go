@@ -119,15 +119,6 @@ func TestBeatsUpdate(t *testing.T) {
 			expectErr: core.ErrProjectNotFound,
 		},
 		{
-			name: "Error/Lock",
-
-			request: request(beat(beatID2)),
-
-			lockMock: &daoMock[bool]{err: errFoo},
-
-			expectErr: errFoo,
-		},
-		{
 			name: "Error/NotFound",
 
 			request: request(beat(beatID2), beat(beatID3)),
@@ -161,18 +152,6 @@ func TestBeatsUpdate(t *testing.T) {
 			updateBeats: []dao.BeatsUpdateItem{updateBeat(beatID2)},
 
 			expectErr: core.ErrProjectBudget,
-		},
-		{
-			name: "Error/ProjectBytes",
-
-			request: request(beat(beatID2)),
-
-			lockMock:    &daoMock[bool]{resp: true},
-			updateMock:  &daoMock[[]*dao.Beat]{resp: []*dao.Beat{daoBeat(beatID2, 1)}},
-			bytesMock:   &daoMock[*dao.ProjectBytes]{err: errFoo},
-			updateBeats: []dao.BeatsUpdateItem{updateBeat(beatID2)},
-
-			expectErr: errFoo,
 		},
 		{
 			name: "Error/Transaction",

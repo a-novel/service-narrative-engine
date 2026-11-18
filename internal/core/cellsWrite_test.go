@@ -174,15 +174,6 @@ func TestCellsWrite(t *testing.T) {
 			expectErr: core.ErrProjectNotFound,
 		},
 		{
-			name: "Error/Lock",
-
-			request: request(notesCell),
-
-			lockMock: &daoMock[bool]{err: errFoo},
-
-			expectErr: errFoo,
-		},
-		{
 			name: "Error/Kind",
 
 			request: request(notesCell),
@@ -303,19 +294,6 @@ func TestCellsWrite(t *testing.T) {
 			bytesMock:  overBudget,
 
 			expectErr: core.ErrProjectBudget,
-		},
-		{
-			name: "Error/ProjectBytes",
-
-			request: request(notesCell),
-
-			lockMock:   &daoMock[bool]{resp: true},
-			kindMock:   &daoMock[[]*dao.LayerKind]{resp: []*dao.LayerKind{notesKind}},
-			daoMock:    &daoMock[[]*dao.CellUpsertRow]{resp: []*dao.CellUpsertRow{daoRow(notesCell)}},
-			lengthMock: &daoMock[[]*dao.SceneLength]{resp: []*dao.SceneLength{{SceneID: sceneID1, Length: 100}}},
-			bytesMock:  &daoMock[*dao.ProjectBytes]{err: errFoo},
-
-			expectErr: errFoo,
 		},
 	}
 

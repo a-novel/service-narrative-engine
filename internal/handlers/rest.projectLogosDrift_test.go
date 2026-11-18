@@ -1,7 +1,6 @@
 package handlers_test
 
 import (
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -17,8 +16,6 @@ import (
 
 func TestRestProjectLogosDrift(t *testing.T) {
 	t.Parallel()
-
-	errFoo := errors.New("foo")
 
 	removedID := uuid.MustParse("00000000-0000-0000-0000-0000000000ff")
 
@@ -92,22 +89,15 @@ func TestRestProjectLogosDrift(t *testing.T) {
 			expectStatus: http.StatusBadRequest,
 		},
 		{
-			name: "Error/InvalidRequest",
+			// Wiring case: a sentinel only composerErrors holds, to prove the handler uses that map (see
+			// CONTRIBUTING, "Handler tests"), whether or not the route produces it.
+			name: "Error/ProjectFull",
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.ProjectLogosDriftResult]{err: core.ErrInvalidRequest},
+			serviceMock: &serviceMock[*core.ProjectLogosDriftResult]{err: core.ErrProjectFull},
 
-			expectStatus: http.StatusUnprocessableEntity,
-		},
-		{
-			name: "Error/Internal",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[*core.ProjectLogosDriftResult]{err: errFoo},
-
-			expectStatus: http.StatusInternalServerError,
+			expectStatus: http.StatusConflict,
 		},
 	}
 

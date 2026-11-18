@@ -2,10 +2,7 @@ package env
 
 import (
 	"cmp"
-	"math"
 	"os"
-	"runtime"
-	"runtime/debug"
 	"strconv"
 	"time"
 
@@ -75,18 +72,9 @@ var (
 	// RestRateLimitGenerationReadDefault caps a user's reads of a call. Each unsettled read asks the provider
 	// for the call's state through genai, and a client polling twice a second sees a finished call at once.
 	RestRateLimitGenerationReadDefault = config.Must(httpf.ParseRate("2/1s"))
-	// MaxConcurrentProjectReadsDefault lets the reads of a whole project take half of GOMEMLIMIT, at
-	// [projectReadBytes] each: 4 reads at 1 GiB, and 1 at least. Without a memory limit, it sizes them to the
-	// CPUs, which they keep busy decoding.
-	MaxConcurrentProjectReadsDefault = maxConcurrentProjectReadsDefault()
 )
 
 var (
-	// PostgresDSN is the legacy URL used when PostgresHost is empty, formatted as
-	//	postgres://<user>:<password>@<host>:<port>/<database>
-	//
-	// Configure the discrete PostgreSQL fields for new deployments.
-	PostgresDSN = getEnv("POSTGRES_DSN")
 	// PostgresHost is the PostgreSQL server hostname or IP address.
 	PostgresHost = getEnv("POSTGRES_HOST")
 	// PostgresPort is the PostgreSQL server port.
@@ -157,10 +145,9 @@ var (
 	RestRateLimitGenerationRead = config.LoadEnv(
 		getEnv("REST_RATE_LIMIT_GENERATION_READ"), RestRateLimitGenerationReadDefault, httpf.ParseRate,
 	)
-	// MaxConcurrentProjectReads caps the reads of a whole project an instance runs at once.
-	MaxConcurrentProjectReads = config.LoadEnv(
-		getEnv("MAX_CONCURRENT_PROJECT_READS"), MaxConcurrentProjectReadsDefault, strconv.Atoi,
-	)
+	// MaxConcurrentProjectReads caps the reads of a whole project an instance runs at once. Unset, 0 lets
+	// core.NewProjectReadGate size them to the instance's memory.
+	MaxConcurrentProjectReads = config.LoadEnv(getEnv("MAX_CONCURRENT_PROJECT_READS"), 0, strconv.Atoi)
 
 	// ServiceTokenIssuer is the issuer of the service tokens the REST server accepts, as a token's "iss"
 	// claim names it. Empty, the server refuses to start unless ServiceIssuerOptional is set.
@@ -186,28 +173,6 @@ var (
 	// until it is removed, the service refuses work. Nil when none is planned.
 	DowntimeStart = config.LoadEnv(getEnv("DOWNTIME_START"), nil, downtime.ParseStart)
 )
-
-const (
-	// projectBytesMax is the 16 MiB a project stores at most, as core.ProjectBytesMax caps it.
-	projectBytesMax = 16 << 20
-	// projectReadAmplification is how many times over a manuscript export holds the bytes it reads, once
-	// decoded and rendered. A generation plan reads a summary of each cell, then only the cells it may show,
-	// every one only for a check of every scene, and keeps no copy of them undecoded: the same bound covers it.
-	projectReadAmplification = 8
-	// projectReadBytes is the memory one read of a whole project takes at most.
-	projectReadBytes = projectBytesMax * projectReadAmplification
-)
-
-// maxConcurrentProjectReadsDefault computes [MaxConcurrentProjectReadsDefault]. debug.SetMemoryLimit with a
-// negative limit reads the limit without changing it, and reports math.MaxInt64 when GOMEMLIMIT is unset.
-func maxConcurrentProjectReadsDefault() int {
-	limit := debug.SetMemoryLimit(-1)
-	if limit == math.MaxInt64 {
-		return runtime.GOMAXPROCS(0)
-	}
-
-	return int(max(limit/2/projectReadBytes, 1))
-}
 
 // restDefaults keeps golib's REST defaults but for the versioned ping path and the request size.
 func restDefaults() httpf.ServerConfig {

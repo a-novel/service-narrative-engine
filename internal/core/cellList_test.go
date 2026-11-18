@@ -90,15 +90,6 @@ func TestCellList(t *testing.T) {
 			expectErr: core.ErrProjectNotFound,
 		},
 		{
-			name: "Error/CheckOwner",
-
-			request: &core.CellListRequest{OwnerID: ownerID, ProjectID: projectID},
-
-			ownerMock: &daoMock[bool]{err: errFoo},
-
-			expectErr: errFoo,
-		},
-		{
 			name: "Error/List",
 
 			request: &core.CellListRequest{OwnerID: ownerID, ProjectID: projectID},

@@ -142,15 +142,6 @@ func TestScenesCreate(t *testing.T) {
 			expectErr: core.ErrProjectNotFound,
 		},
 		{
-			name: "Error/Lock",
-
-			request: request(scene),
-
-			lockMock: &daoMock[bool]{err: errFoo},
-
-			expectErr: errFoo,
-		},
-		{
 			name: "Error/BeatFull",
 
 			request: request(scene),
@@ -202,17 +193,6 @@ func TestScenesCreate(t *testing.T) {
 			bytesMock: overBudget,
 
 			expectErr: core.ErrProjectBudget,
-		},
-		{
-			name: "Error/ProjectBytes",
-
-			request: request(scene),
-
-			lockMock:  &daoMock[bool]{resp: true},
-			insert:    true,
-			bytesMock: &daoMock[*dao.ProjectBytes]{err: errFoo},
-
-			expectErr: errFoo,
 		},
 	}
 

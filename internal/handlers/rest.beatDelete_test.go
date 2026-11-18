@@ -19,8 +19,6 @@ import (
 func TestRestBeatDelete(t *testing.T) {
 	t.Parallel()
 
-	errFoo := errors.New("foo")
-
 	validRequest := func(t *testing.T) *http.Request {
 		t.Helper()
 
@@ -70,31 +68,15 @@ func TestRestBeatDelete(t *testing.T) {
 			expectStatus: http.StatusBadRequest,
 		},
 		{
-			name: "Error/ProjectNotFound",
+			// Wiring case: a sentinel only composerErrors holds, to prove the handler uses that map (see
+			// CONTRIBUTING, "Handler tests"), whether or not the route produces it.
+			name: "Error/ProjectFull",
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[[]*core.Beat]{err: core.ErrProjectNotFound},
+			serviceMock: &serviceMock[[]*core.Beat]{err: core.ErrProjectFull},
 
-			expectStatus: http.StatusNotFound,
-		},
-		{
-			name: "Error/BeatNotFound",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[[]*core.Beat]{err: core.ErrBeatNotFound},
-
-			expectStatus: http.StatusNotFound,
-		},
-		{
-			name: "Error/InvalidRequest",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[[]*core.Beat]{err: core.ErrInvalidRequest},
-
-			expectStatus: http.StatusUnprocessableEntity,
+			expectStatus: http.StatusConflict,
 		},
 		{
 			// The batch request names the ID IDs[0]; the route names it as its own query does.
@@ -108,15 +90,6 @@ func TestRestBeatDelete(t *testing.T) {
 
 			expectStatus:   http.StatusUnprocessableEntity,
 			expectResponse: invalidFieldsProblem(map[string]any{"id": "required"}),
-		},
-		{
-			name: "Error/Internal",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[[]*core.Beat]{err: errFoo},
-
-			expectStatus: http.StatusInternalServerError,
 		},
 	}
 

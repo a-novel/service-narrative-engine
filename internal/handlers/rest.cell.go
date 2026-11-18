@@ -28,7 +28,7 @@ type Cell struct {
 	Recap *Recap `json:"recap,omitempty"`
 	// RecapCellUpdatedAt is the cell's updatedAt the recap read. The recap is fresh while it equals
 	// updatedAt.
-	RecapCellUpdatedAt *time.Time `json:"recapCellUpdatedAt,omitempty"`
+	RecapCellUpdatedAt time.Time `json:"recapCellUpdatedAt,omitzero"`
 }
 
 func loadCell(cell *core.Cell) Cell {
@@ -40,7 +40,7 @@ func loadCell(cell *core.Cell) Cell {
 		UpdatedAt: cell.UpdatedAt,
 
 		Recap:              loadRecap(cell.Recap),
-		RecapCellUpdatedAt: optionalTime(cell.RecapCellUpdatedAt),
+		RecapCellUpdatedAt: cell.RecapCellUpdatedAt,
 	}
 }
 

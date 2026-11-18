@@ -19,13 +19,30 @@ Check that it answers:
 # Liveness
 curl "http://localhost:${REST_PORT}/v1/ping"
 
-# Dependency check (Postgres and JSON Keys)
+# Dependency check (Postgres, JSON Keys, and genai once SERVICE_GENAI_HOST is set)
 curl "http://localhost:${REST_PORT}/v1/healthcheck"
 ```
 
 The routes are described in [`openapi.yaml`](./openapi.yaml).
 
 ---
+
+## Where things live
+
+`internal/core` is one flat package. Its file names group it:
+
+| Files                                                                            | What they hold                                                                                                                                                                |
+| -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `beat.go`, `scene.go`, `layer.go`, `cell.go`, `project.go`                       | Each entity's model and its page.                                                                                                                                             |
+| `beats*.go`, `scenes*.go`, `layers*.go`, `cellsWrite.go`, `*Move.go`, `*List.go` | One Scenes Composer operation per file. A route that writes one item sends the batch operation a list of one.                                                                 |
+| `project*.go`, `manuscript*.go`                                                  | The project's own operations, its logo, the drift and edit lists, and the reads of a whole project, which `projectReadGate.go` bounds.                                        |
+| `common.go`                                                                      | The sentinels, the size limits, and the checks every operation shares: `lockOwnedProject`, `checkProjectOwnership`, `keepProjectBudget`.                                      |
+| `validate.go`                                                                    | The request validator and its custom tags.                                                                                                                                    |
+| `generation*.go`                                                                 | The generation operations. A submit reads a project snapshot, plans its calls, and sends them to genai; get, stream and cancel follow them.                                   |
+| `generationPlan.go`, `context*.go`                                               | The planner: `contextSplit` splits a generation into calls, `contextDraft` and `contextRead` hold what a call reads, `contextPrompt` renders it, `contextPlan` is the result. |
+| `openaiResponses.go`                                                             | The OpenAI request and response formats.                                                                                                                                      |
+
+`internal/dao` holds one statement per file, `pg.<operation>.sql` beside its `pg.<operation>.go`, and `internal/handlers` one route per `rest.<operation>.go`, with the shared error maps in `rest.errors.go`.
 
 ## Transactions
 
@@ -70,15 +87,11 @@ err := service.transactor.WithinTx(ctx, func(ctx context.Context) error {
 })
 ```
 
-Four services write without the project lock:
+`TestProjectWriteLock` in `internal/core/projectWriteLock_test.go` enforces the rule. It fails when the `Exec` method of a service builds a DAO request that inserts, updates, upserts, deletes or moves before it calls `lockOwnedProject`. The services that write without the lock, such as `ProjectCreate` and the logo writes, are listed with their reason in its `projectWriteLockExempt` map, and a new exemption goes there.
 
-| Service                                  | Reason                                                                 |
-| ---------------------------------------- | ---------------------------------------------------------------------- |
-| `ProjectCreate`                          | It creates the project, stamped at creation, with its required layers. |
-| `ProjectDelete`                          | It removes the project.                                                |
-| `ProjectLogoUpdate`, `ProjectLogoDelete` | A logo is cosmetic, so its write leaves `edited_at` as it was.         |
+## Handler tests
 
-`TestProjectWriteLock` in `internal/core/projectWriteLock_test.go` enforces the rule. It fails when the `Exec` method of a service builds a DAO request that inserts, updates, upserts, deletes or moves before it calls `lockOwnedProject`. An exemption goes in its `projectWriteLockExempt` map, with its reason.
+Each shared error map in `internal/handlers/rest.errors.go` is tested sentinel by sentinel once, through one representative handler: `BeatsCreate` for `composerErrors`, `CellRecapWrite` for `recapErrors`, `GenerationSubmit` for `generationErrors`, `ProjectLogoUpdate` for `logoErrors`. Every other handler keeps one wiring case: it raises a sentinel only its own map holds, to prove which map it uses, even when its route never produces that error.
 
 ## Refresh goldens
 

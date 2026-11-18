@@ -30,7 +30,6 @@ func TestNewPostgresPreset(t *testing.T) {
 		{
 			name: "Success/Discrete",
 			connection: postgrespresets.Connection{
-				DSN:        "not-used",
 				Host:       "postgres.internal",
 				Port:       5433,
 				User:       "template",
@@ -59,17 +58,6 @@ func TestNewPostgresPreset(t *testing.T) {
 			expectPassword:   "password",
 			expectDatabase:   "template",
 			expectTLSEnabled: true,
-		},
-		{
-			name: "Success/LegacyDSN",
-			connection: postgrespresets.Connection{
-				DSN: "postgres://legacy-user@legacy.internal:6432/legacy-db?sslmode=disable",
-			},
-			expectAddr:       "legacy.internal:6432",
-			expectUser:       "legacy-user",
-			expectPassword:   "",
-			expectDatabase:   "legacy-db",
-			expectTLSEnabled: false,
 		},
 		{
 			name: "Error/MissingDiscretePassword",

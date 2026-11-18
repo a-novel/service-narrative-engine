@@ -82,10 +82,7 @@ func (service *ScenesCreate) Exec(ctx context.Context, request *ScenesCreateRequ
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	ids, err := newIDs(ctx, len(request.Scenes))
-	if err != nil {
-		return nil, otel.ReportError(span, err)
-	}
+	ids := newIDs(len(request.Scenes))
 
 	insertItems := make([]dao.ScenesInsertItem, len(request.Scenes))
 

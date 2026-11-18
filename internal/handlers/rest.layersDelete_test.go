@@ -1,7 +1,6 @@
 package handlers_test
 
 import (
-	"errors"
 	"maps"
 	"net/http"
 	"net/http/httptest"
@@ -18,8 +17,6 @@ import (
 
 func TestRestLayersDelete(t *testing.T) {
 	t.Parallel()
-
-	errFoo := errors.New("foo")
 
 	// The request deletes a second layer too, so its id parameter repeats.
 	otherLayer := *coreLayer
@@ -79,24 +76,8 @@ func TestRestLayersDelete(t *testing.T) {
 			expectStatus: http.StatusBadRequest,
 		},
 		{
-			name: "Error/ProjectNotFound",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[[]*core.Layer]{err: core.ErrProjectNotFound},
-
-			expectStatus: http.StatusNotFound,
-		},
-		{
-			name: "Error/LayerNotFound",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[[]*core.Layer]{err: core.ErrLayerNotFound},
-
-			expectStatus: http.StatusNotFound,
-		},
-		{
+			// Wiring case: a sentinel only composerErrors holds, to prove the handler uses that map (see
+			// CONTRIBUTING, "Handler tests"), whether or not the route produces it.
 			name: "Error/RequiredLayer",
 
 			request: validRequest,
@@ -104,24 +85,6 @@ func TestRestLayersDelete(t *testing.T) {
 			serviceMock: &serviceMock[[]*core.Layer]{err: core.ErrRequiredLayer},
 
 			expectStatus: http.StatusConflict,
-		},
-		{
-			name: "Error/InvalidRequest",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[[]*core.Layer]{err: core.ErrInvalidRequest},
-
-			expectStatus: http.StatusUnprocessableEntity,
-		},
-		{
-			name: "Error/Internal",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[[]*core.Layer]{err: errFoo},
-
-			expectStatus: http.StatusInternalServerError,
 		},
 	}
 

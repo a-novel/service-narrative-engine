@@ -11,7 +11,6 @@ import (
 
 // postgresConnection reaches PostgreSQL through the POSTGRES_* variables.
 var postgresConnection = postgrespresets.Connection{
-	DSN:        env.PostgresDSN,
 	Host:       env.PostgresHost,
 	Port:       env.PostgresPort,
 	User:       env.PostgresUser,
@@ -35,8 +34,7 @@ var PostgresPresetMigrations = NewPostgresPreset(
 )
 
 // NewPostgresPreset returns a PostgreSQL preset with a pool bounded before it opens. Extra options
-// apply last: connection parameters replace any a DSN carries. It panics when the connection selects
-// the discrete fields without a password.
+// apply last. It panics when the connection names a host without a password.
 //
 // The pool limits are set before the handle is first used: once the handle is cached, later changes
 // to them are silently ignored.

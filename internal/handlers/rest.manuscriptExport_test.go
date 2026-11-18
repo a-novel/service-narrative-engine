@@ -3,7 +3,6 @@ package handlers_test
 import (
 	_ "embed"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -27,8 +26,6 @@ var manuscriptGolden []byte
 
 func TestRestManuscriptExport(t *testing.T) {
 	t.Parallel()
-
-	errFoo := errors.New("foo")
 
 	// The handler answers the golden document, so its answer follows the format v1 schema too.
 	require.NoError(t, schemas.Manuscript.Validate(manuscriptGolden))
@@ -113,50 +110,16 @@ func TestRestManuscriptExport(t *testing.T) {
 			expectStatus: http.StatusBadRequest,
 		},
 		{
-			name: "Error/ProjectNotFound",
+			// Wiring case: a sentinel only composerErrors holds, to prove the handler uses that map (see
+			// CONTRIBUTING, "Handler tests"), whether or not the route produces it.
+			name: "Error/ProjectsFull",
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.Manuscript]{err: core.ErrProjectNotFound},
-
-			expectStatus: http.StatusNotFound,
-		},
-		{
-			name: "Error/ProjectBudget",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[*core.Manuscript]{err: core.ErrProjectBudget},
+			serviceMock: &serviceMock[*core.Manuscript]{err: core.ErrProjectsFull},
 
 			expectStatus:   http.StatusConflict,
-			expectResponse: limitProblem("projectBytes"),
-		},
-		{
-			name: "Error/LayerNotFound",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[*core.Manuscript]{err: core.ErrLayerNotFound},
-
-			expectStatus: http.StatusNotFound,
-		},
-		{
-			name: "Error/InvalidRequest",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[*core.Manuscript]{err: core.ErrInvalidRequest},
-
-			expectStatus: http.StatusUnprocessableEntity,
-		},
-		{
-			name: "Error/Internal",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[*core.Manuscript]{err: errFoo},
-
-			expectStatus: http.StatusInternalServerError,
+			expectResponse: limitProblem("projects"),
 		},
 	}
 

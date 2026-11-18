@@ -1,7 +1,6 @@
 package handlers_test
 
 import (
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -17,8 +16,6 @@ import (
 
 func TestRestGenerationUsage(t *testing.T) {
 	t.Parallel()
-
-	errFoo := errors.New("foo")
 
 	validRequest := func(t *testing.T) *http.Request {
 		t.Helper()
@@ -113,26 +110,6 @@ func TestRestGenerationUsage(t *testing.T) {
 			serviceMock: &serviceMock[*core.GenerationUsageSummary]{err: core.ErrNoGenerationCaps},
 
 			expectStatus: http.StatusForbidden,
-		},
-		{
-			name: "Error/GenaiUnavailable",
-
-			request: validRequest,
-
-			roles:       []string{"auth:user"},
-			serviceMock: &serviceMock[*core.GenerationUsageSummary]{err: core.ErrGenaiUnavailable},
-
-			expectStatus: http.StatusServiceUnavailable,
-		},
-		{
-			name: "Error/Internal",
-
-			request: validRequest,
-
-			roles:       []string{"auth:user"},
-			serviceMock: &serviceMock[*core.GenerationUsageSummary]{err: errFoo},
-
-			expectStatus: http.StatusInternalServerError,
 		},
 	}
 

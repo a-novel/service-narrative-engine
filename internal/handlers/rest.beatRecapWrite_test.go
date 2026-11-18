@@ -1,7 +1,6 @@
 package handlers_test
 
 import (
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -17,8 +16,6 @@ import (
 
 func TestRestBeatRecapWrite(t *testing.T) {
 	t.Parallel()
-
-	errFoo := errors.New("foo")
 
 	// The second scene holds no manuscript, so its source carries no stamp.
 	otherScene := uuid.MustParse("00000000-0000-0000-0000-000000000012")
@@ -80,15 +77,6 @@ func TestRestBeatRecapWrite(t *testing.T) {
 			expectStatus: http.StatusBadRequest,
 		},
 		{
-			name: "Error/ProjectNotFound",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[struct{}]{err: core.ErrProjectNotFound},
-
-			expectStatus: http.StatusNotFound,
-		},
-		{
 			name: "Error/ProjectBudget",
 
 			request: validRequest,
@@ -99,15 +87,8 @@ func TestRestBeatRecapWrite(t *testing.T) {
 			expectResponse: limitProblem("projectBytes"),
 		},
 		{
-			name: "Error/BeatNotFound",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[struct{}]{err: core.ErrBeatNotFound},
-
-			expectStatus: http.StatusNotFound,
-		},
-		{
+			// Wiring case: a sentinel only recapErrors holds, to prove the handler uses that map (see
+			// CONTRIBUTING, "Handler tests"), whether or not the route produces it.
 			name: "Error/Conflict",
 
 			request: validRequest,
@@ -115,15 +96,6 @@ func TestRestBeatRecapWrite(t *testing.T) {
 			serviceMock: &serviceMock[struct{}]{err: core.ErrRecapConflict},
 
 			expectStatus: http.StatusConflict,
-		},
-		{
-			name: "Error/Internal",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[struct{}]{err: errFoo},
-
-			expectStatus: http.StatusInternalServerError,
 		},
 	}
 

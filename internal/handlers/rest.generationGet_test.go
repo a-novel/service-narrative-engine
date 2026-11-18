@@ -2,7 +2,6 @@ package handlers_test
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -17,8 +16,6 @@ import (
 
 func TestRestGenerationGet(t *testing.T) {
 	t.Parallel()
-
-	errFoo := errors.New("foo")
 
 	validRequest := func(t *testing.T) *http.Request {
 		t.Helper()
@@ -108,24 +105,6 @@ func TestRestGenerationGet(t *testing.T) {
 			serviceMock: &serviceMock[*core.GenerationResult]{err: core.ErrGenerationNotFound},
 
 			expectStatus: http.StatusNotFound,
-		},
-		{
-			name: "Error/GenaiUnavailable",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[*core.GenerationResult]{err: core.ErrGenaiUnavailable},
-
-			expectStatus: http.StatusServiceUnavailable,
-		},
-		{
-			name: "Error/Internal",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[*core.GenerationResult]{err: errFoo},
-
-			expectStatus: http.StatusInternalServerError,
 		},
 	}
 

@@ -160,22 +160,15 @@ func TestRestProjectStream(t *testing.T) {
 			expectStatus: http.StatusUnprocessableEntity,
 		},
 		{
-			name: "Error/NotFound",
+			// Wiring case: a sentinel only composerErrors holds, to prove the handler uses that map (see
+			// CONTRIBUTING, "Handler tests"), whether or not the route produces it.
+			name: "Error/ProjectFull",
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[iter.Seq2[*core.ProjectRecord, error]]{err: core.ErrProjectNotFound},
+			serviceMock: &serviceMock[iter.Seq2[*core.ProjectRecord, error]]{err: core.ErrProjectFull},
 
-			expectStatus: http.StatusNotFound,
-		},
-		{
-			name: "Error/Internal",
-
-			request: validRequest,
-
-			serviceMock: &serviceMock[iter.Seq2[*core.ProjectRecord, error]]{err: errFoo},
-
-			expectStatus: http.StatusInternalServerError,
+			expectStatus: http.StatusConflict,
 		},
 	}
 

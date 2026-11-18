@@ -35,8 +35,6 @@ Deploy the images with any container orchestrator. The composition below shows w
 
 Pin every image to the same release tag. A production deployment runs `database`, then `migrations` to completion, then any number of `rest` replicas. The server reaches a JSON Keys gRPC server, deployed from that service's own images. Provide `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DATABASE` through the orchestrator; store the password as a secret.
 
-<!-- TODO(project-docs): replace v0.0.0 with the new service's release tag -->
-
 ```yaml
 services:
   postgres-narrative-engine:
@@ -104,13 +102,12 @@ Every variable is read from the process environment. `SERVICE_NARRATIVE_ENGINE_E
 
 | Name                     | Description                                                                                                                   | Images                    |
 | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
-| `POSTGRES_HOST`          | PostgreSQL hostname or IP address. Selects the discrete connection fields. **Required for new deployments.**                  | all                       |
+| `POSTGRES_HOST`          | PostgreSQL hostname or IP address. **Required.**                                                                              | all                       |
 | `POSTGRES_PORT`          | PostgreSQL port. Defaults to `5432`.                                                                                          | all                       |
-| `POSTGRES_USER`          | PostgreSQL login role. **Required when `POSTGRES_HOST` is set.**                                                              | all                       |
-| `POSTGRES_PASSWORD`      | PostgreSQL login password. **Required when `POSTGRES_HOST` is set; inject it as a secret.**                                   | all                       |
-| `POSTGRES_DATABASE`      | PostgreSQL database name. **Required when `POSTGRES_HOST` is set.**                                                           | all                       |
+| `POSTGRES_USER`          | PostgreSQL login role. **Required.**                                                                                          | all                       |
+| `POSTGRES_PASSWORD`      | PostgreSQL login password. **Required; inject it as a secret.**                                                               | all                       |
+| `POSTGRES_DATABASE`      | PostgreSQL database name. **Required.**                                                                                       | all                       |
 | `POSTGRES_TLS_ENABLED`   | Encrypt the PostgreSQL connection. Defaults to `true`; disable only when another trusted boundary protects the database link. | all                       |
-| `POSTGRES_DSN`           | Connection-URL fallback, read only when `POSTGRES_HOST` is empty.                                                             | all                       |
 | `SERVICE_JSON_KEYS_HOST` | Hostname of the JSON Keys gRPC server, which verifies access tokens. Defaults to `localhost`.                                 | `rest`, `standalone-rest` |
 | `SERVICE_JSON_KEYS_PORT` | Port of the JSON Keys gRPC server. Defaults to `8080`.                                                                        | `rest`, `standalone-rest` |
 
@@ -250,7 +247,11 @@ services:
     depends_on:
       postgres-narrative-engine: { condition: service_healthy }
     environment:
-      POSTGRES_DSN: "postgres://postgres:postgres@postgres-narrative-engine:5432/postgres?sslmode=disable"
+      POSTGRES_HOST: postgres-narrative-engine
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DATABASE: postgres
+      POSTGRES_TLS_ENABLED: "false"
       SERVICE_JSON_KEYS_HOST: service-json-keys
     networks: [api]
 

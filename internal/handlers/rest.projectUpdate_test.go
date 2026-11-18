@@ -1,7 +1,6 @@
 package handlers_test
 
 import (
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -16,8 +15,6 @@ import (
 
 func TestRestProjectUpdate(t *testing.T) {
 	t.Parallel()
-
-	errFoo := errors.New("foo")
 
 	tags := []string{"noir", "huis clos"}
 	genres := []string{"thriller"}
@@ -161,49 +158,18 @@ func TestRestProjectUpdate(t *testing.T) {
 			expectStatus: http.StatusBadRequest,
 		},
 		{
-			name: "Error/ProjectNotFound",
+			// Wiring case: a sentinel only composerErrors holds, to prove the handler uses that map (see
+			// CONTRIBUTING, "Handler tests"), whether or not the route produces it.
+			name: "Error/ProjectsFull",
 
 			request: validRequest,
 
 			expectTags:   tags,
 			expectGenres: genres,
-			serviceMock:  &serviceMock[*core.Project]{err: core.ErrProjectNotFound},
-
-			expectStatus: http.StatusNotFound,
-		},
-		{
-			name: "Error/ProjectBudget",
-
-			request: validRequest,
-
-			expectTags:   tags,
-			expectGenres: genres,
-			serviceMock:  &serviceMock[*core.Project]{err: core.ErrProjectBudget},
+			serviceMock:  &serviceMock[*core.Project]{err: core.ErrProjectsFull},
 
 			expectStatus:   http.StatusConflict,
-			expectResponse: limitProblem("projectBytes"),
-		},
-		{
-			name: "Error/InvalidRequest",
-
-			request: validRequest,
-
-			expectTags:   tags,
-			expectGenres: genres,
-			serviceMock:  &serviceMock[*core.Project]{err: core.ErrInvalidRequest},
-
-			expectStatus: http.StatusUnprocessableEntity,
-		},
-		{
-			name: "Error/Internal",
-
-			request: validRequest,
-
-			expectTags:   tags,
-			expectGenres: genres,
-			serviceMock:  &serviceMock[*core.Project]{err: errFoo},
-
-			expectStatus: http.StatusInternalServerError,
+			expectResponse: limitProblem("projects"),
 		},
 	}
 
