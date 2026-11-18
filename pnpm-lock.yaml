@@ -234,7 +234,7 @@ importers:
         version: 2.13.0(@a-novel-kit/nodelib-browser@2.13.0(@grafana/faro-web-sdk@2.14.0)(@grafana/faro-web-tracing@2.14.0(supports-color@7.2.0))(zod@4.6.7))(jsdom@31.0.1)(playwright@1.65.1)
       '@a-novel/service-authentication-rest':
         specifier: ^2.18.4
-        version: 2.26.0(@a-novel-kit/nodelib-browser@2.13.0(@grafana/faro-web-sdk@2.14.0)(@grafana/faro-web-tracing@2.14.0(supports-color@7.2.0))(zod@4.6.7))(zod@4.6.7)
+        version: 2.27.0(@a-novel-kit/nodelib-browser@2.13.0(@grafana/faro-web-sdk@2.14.0)(@grafana/faro-web-tracing@2.14.0(supports-color@7.2.0))(zod@4.6.7))(zod@4.6.7)
       '@a-novel/service-narrative-engine-rest':
         specifier: workspace:*
         version: link:pkg/js/rest
@@ -361,11 +361,11 @@ packages:
       jsdom: ^30.0.0 || ^31.0.0
       playwright: ^1.63.0
 
-  '@a-novel/service-authentication-rest@2.26.0':
-    resolution: {integrity: sha512-NMFQkiiid54E/tR0MxQpJHIsIPO1fPnBe5kcPewFPhetV57y3h2QyBYutqFGM5nXVSSFSVCxBvwg39njlKDHuA==, tarball: https://npm.pkg.github.com/download/@a-novel/service-authentication-rest/2.26.0/f5ac5414f46816df2d6f5a45fabaabd11becba3d}
+  '@a-novel/service-authentication-rest@2.27.0':
+    resolution: {integrity: sha512-y7MK0TfPPvsBeF2CS6J4FJ76R7sif59YR0Y7Mmxt3ewvm3AMLIWkq8p8UfW1opF5I8q9NRc975vOqMy2tyUOlQ==, tarball: https://npm.pkg.github.com/download/@a-novel/service-authentication-rest/2.27.0/03b3217f535bb08c5b447a3ac6b318326428eaf0}
     engines: {node: '>=23.11.0', npm: '>=10.9.2'}
     peerDependencies:
-      '@a-novel-kit/nodelib-browser': ^1.3.21 || ^2.0.0
+      '@a-novel-kit/nodelib-browser': ^2.13.0
       zod: ^4.3.6
 
   '@adobe/css-tools@4.5.0':
@@ -2957,7 +2957,7 @@ snapshots:
       jsdom: 31.0.1
       playwright: 1.65.1
 
-  '@a-novel/service-authentication-rest@2.26.0(@a-novel-kit/nodelib-browser@2.13.0(@grafana/faro-web-sdk@2.14.0)(@grafana/faro-web-tracing@2.14.0(supports-color@7.2.0))(zod@4.6.7))(zod@4.6.7)':
+  '@a-novel/service-authentication-rest@2.27.0(@a-novel-kit/nodelib-browser@2.13.0(@grafana/faro-web-sdk@2.14.0)(@grafana/faro-web-tracing@2.14.0(supports-color@7.2.0))(zod@4.6.7))(zod@4.6.7)':
     dependencies:
       '@a-novel-kit/nodelib-browser': 2.13.0(@grafana/faro-web-sdk@2.14.0)(@grafana/faro-web-tracing@2.14.0(supports-color@7.2.0))(zod@4.6.7)
       zod: 4.6.7
