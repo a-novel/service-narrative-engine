@@ -1,5 +1,6 @@
 # Migration guides
 
+- [v1.9.0](./v1.9.0.md): A request that fails validation answers 422 Unprocessable Entity, where it answered 400 Bad Request. The service also reads its PostgreSQL connection from the discrete `POSTGRES_*` variables only, and the JS client needs `@a-novel-kit/nodelib-browser` 2.13.0 or later.
 - [v1.8.0](./v1.8.0.md): Keep the caller's projects in sync with the three project sweeps instead of `projectList`, and name a logo by `logoChecksum` instead of `logoVersion`: both are removed.
 - [v1.6.0](./v1.6.0.md): NEXT accepts only project tags in lower kebab case, such as `huis-clos` or `années-50`, and refuses any other tag.
 - [v1.5.0](v1.5.0.md): Send tags and genres on project updates, and move to the logo routes.
