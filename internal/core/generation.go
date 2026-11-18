@@ -174,12 +174,12 @@ func newGenerationResult(generation *servicegenai.Generation) (*GenerationResult
 		return result, nil
 	}
 
-	attempts := generation.GetAttempts()
-	if len(attempts) == 0 {
+	response := generation.GetResponse()
+	if len(response) == 0 {
 		return invalidOutput(id, "no response"), nil
 	}
 
-	output, reason := readOutput(attempts[len(attempts)-1].GetResponse())
+	output, reason := readOutput(response)
 	if reason != "" {
 		return invalidOutput(id, reason), nil
 	}
