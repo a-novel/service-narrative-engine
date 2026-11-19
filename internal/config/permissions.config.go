@@ -5,6 +5,9 @@ const (
 	PermissionProjectRead = "narrative:project:read"
 	// PermissionProjectWrite grants creating, changing and deleting the caller's own projects.
 	PermissionProjectWrite = "narrative:project:write"
+	// PermissionPluginRead grants reading the plugin registry: its plugins, and the manifest, the modules and the
+	// translations of each version.
+	PermissionPluginRead = "narrative:plugin:read"
 	// PermissionGenerationUncapped sends the caller's generations to genai with empty caps, which limit
 	// nothing.
 	PermissionGenerationUncapped = "narrative:generation:uncapped"
