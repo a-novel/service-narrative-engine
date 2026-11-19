@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strconv"
 	"testing"
 	"time"
@@ -77,6 +78,25 @@ type storedBytes struct {
 	Bytes int64 `bun:"bytes"`
 }
 
+// The versions the plugin fixtures publish. The composer's releases prove that versions order by number: as
+// text, 1.10.0 would come before 1.2.0.
+var (
+	composer100    = dao.PluginVersionKey{Plugin: "scenes-composer", Major: 1}
+	composer120    = dao.PluginVersionKey{Plugin: "scenes-composer", Major: 1, Minor: 2}
+	composer1100   = dao.PluginVersionKey{Plugin: "scenes-composer", Major: 1, Minor: 10}
+	composer200Dev = dao.PluginVersionKey{Plugin: "scenes-composer", Major: 2, Prerelease: "dev.1"}
+	characters010  = dao.PluginVersionKey{Plugin: "characters", Minor: 1}
+	drafts010Dev   = dao.PluginVersionKey{Plugin: "drafts", Minor: 1, Prerelease: "dev.1"}
+)
+
+// The JSON documents of the plugin fixtures, spelled as PostgreSQL returns a jsonb value, so a read compares
+// equal to its fixture.
+const (
+	pluginSchema     = `{"type": "object"}`
+	pluginSchemaNext = `{"type": "object", "required": ["beats"]}`
+	pluginExports    = `{"scenes": {"id": "/id", "select": "$.beats[*].scenes[*]"}}`
+)
+
 // fixtures is the data a DAO test seeds before it runs the operation under test.
 type fixtures struct {
 	projects []*dao.Project
@@ -85,6 +105,9 @@ type fixtures struct {
 	scenes   []*dao.Scene
 	layers   []*dao.Layer
 	cells    []*dao.Cell
+
+	pluginVersions []*dao.PluginVersion
+	pluginMessages []*dao.PluginMessages
 }
 
 // composerFixtures returns a project of three beats and two layers beside a project of another owner.
@@ -168,6 +191,70 @@ func logoChecksum(data []byte) *string {
 	return new(hex.EncodeToString(sum[:]))
 }
 
+// pluginFixtures returns a registry of three plugins. The composer has three releases and a later prerelease,
+// and its latest release is translated in French. Characters has one release, in English alone. Drafts only
+// has a prerelease. Each call returns fresh values, so a case may change them.
+func pluginFixtures() fixtures {
+	version := func(key dao.PluginVersionKey, schema string, migration []byte) *dao.PluginVersion {
+		return &dao.PluginVersion{
+			PluginVersionKey: key, Schema: json.RawMessage(schema), Exports: json.RawMessage(pluginExports),
+			Migration: migration, UI: pluginUI(key), PublishedAt: createdAt, PublishedBy: "fixture",
+		}
+	}
+
+	return fixtures{
+		pluginVersions: []*dao.PluginVersion{
+			version(composer100, pluginSchema, nil),
+			version(composer120, pluginSchema, pluginMigration(composer120)),
+			version(composer1100, pluginSchemaNext, pluginMigration(composer1100)),
+			version(composer200Dev, pluginSchemaNext, nil),
+			version(characters010, pluginSchema, nil),
+			version(drafts010Dev, pluginSchema, nil),
+		},
+		pluginMessages: []*dao.PluginMessages{
+			pluginMessages(composer100, "en", "Scenes Composer"),
+			pluginMessages(composer120, "en", "Scenes Composer"),
+			pluginMessages(composer1100, "en", "Scenes Composer"),
+			pluginMessages(composer1100, "fr", "Compositeur de scènes"),
+			pluginMessages(composer200Dev, "en", "Scenes Composer"),
+			pluginMessages(characters010, "en", "Characters"),
+			pluginMessages(drafts010Dev, "en", "Drafts"),
+		},
+	}
+}
+
+// pluginUI returns the UI module the fixtures give a version, which names it.
+func pluginUI(key dao.PluginVersionKey) []byte {
+	return fmt.Appendf(nil, "export default %q;", fmt.Sprint("ui ", key))
+}
+
+// pluginMigration returns the migration module the fixtures give a version that ships one.
+func pluginMigration(key dao.PluginVersionKey) []byte {
+	return fmt.Appendf(nil, "export default %q;", fmt.Sprint("migration ", key))
+}
+
+// pluginMessages returns the translations the fixtures give a version in a language.
+func pluginMessages(key dao.PluginVersionKey, language, title string) *dao.PluginMessages {
+	return &dao.PluginMessages{
+		PluginVersionKey: key, Language: language, Title: title, Description: "About " + title,
+		Messages: json.RawMessage(`{"title": "` + title + `"}`),
+	}
+}
+
+// pluginChecksum returns the checksum a read returns for a module of these bytes: their SHA-256, in lowercase
+// hex.
+func pluginChecksum(data []byte) string {
+	sum := sha256.Sum256(data)
+
+	return hex.EncodeToString(sum[:])
+}
+
+// pluginSchemaChecksum returns the checksum a read returns for a schema. The registry hashes what jsonb_send
+// writes: a version byte, then the schema as PostgreSQL spells it.
+func pluginSchemaChecksum(schema string) string {
+	return pluginChecksum(append([]byte{1}, schema...))
+}
+
 // fillerID derives a stable ID from a filler row's position.
 func fillerID(kind string, position int) uuid.UUID {
 	return uuid.NewSHA1(uuid.NameSpaceOID, []byte(kind+strconv.Itoa(position)))
@@ -248,6 +335,16 @@ func insertFixtures(ctx context.Context, t *testing.T, data fixtures) {
 
 	if len(data.cells) > 0 {
 		_, err = db.NewInsert().Model(&data.cells).Returning("NULL").Exec(ctx)
+		require.NoError(t, err)
+	}
+
+	if len(data.pluginVersions) > 0 {
+		_, err = db.NewInsert().Model(&data.pluginVersions).Returning("NULL").Exec(ctx)
+		require.NoError(t, err)
+	}
+
+	if len(data.pluginMessages) > 0 {
+		_, err = db.NewInsert().Model(&data.pluginMessages).Returning("NULL").Exec(ctx)
 		require.NoError(t, err)
 	}
 }
