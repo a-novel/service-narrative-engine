@@ -84,6 +84,14 @@ func validateInstant(fl validator.FieldLevel) bool {
 	return err == nil && instant.Year() >= 1 && offset > -16*60*60 && offset < 16*60*60
 }
 
+// validatePluginVersion reports whether a string is a version the registry can hold, as [parsePluginVersion]
+// reads it. The package registers it as the "pluginversion" struct tag.
+func validatePluginVersion(fl validator.FieldLevel) bool {
+	_, ok := parsePluginVersion(fl.Field().String())
+
+	return ok
+}
+
 // validateUniqueCells reports whether a list of [CellsWriteItem] names each pair of a scene and a layer
 // once. The package registers it as the "uniquecells" struct tag.
 func validateUniqueCells(fl validator.FieldLevel) bool {
@@ -120,6 +128,8 @@ func init() {
 		"projecttag":     validateProjectTag,
 		"logochecksum":   validateLogoChecksum,
 		"instant":        validateInstant,
+		"pluginversion":  validatePluginVersion,
+		"pluginmodule":   inSet(PluginModules),
 	}
 
 	for tag, fn := range validations {
