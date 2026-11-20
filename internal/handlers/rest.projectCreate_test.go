@@ -46,12 +46,10 @@ func TestRestProjectCreate(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.ProjectComposer]{
-				resp: &core.ProjectComposer{Project: coreProject, Layers: []*core.Layer{coreLayer}},
-			},
+			serviceMock: &serviceMock[*core.ProjectComposer]{resp: &core.ProjectComposer{Project: coreProject}},
 
 			expectStatus:   http.StatusCreated,
-			expectResponse: withComposer(jsonProject, []any{jsonLayer}),
+			expectResponse: jsonProject,
 			expectLocation: "/v1/project?id=" + projectID.String(),
 		},
 		{

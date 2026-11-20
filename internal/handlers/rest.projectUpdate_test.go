@@ -157,9 +157,32 @@ func TestRestProjectUpdate(t *testing.T) {
 
 			expectStatus: http.StatusBadRequest,
 		},
+		// This handler tests projectErrors sentinel by sentinel (see CONTRIBUTING, "Handler tests"), whether or
+		// not the route produces each of them.
 		{
-			// Wiring case: a sentinel only composerErrors holds, to prove the handler uses that map (see
-			// CONTRIBUTING, "Handler tests"), whether or not the route produces it.
+			name: "Error/NotFound",
+
+			request: validRequest,
+
+			expectTags:   tags,
+			expectGenres: genres,
+			serviceMock:  &serviceMock[*core.Project]{err: core.ErrProjectNotFound},
+
+			expectStatus: http.StatusNotFound,
+		},
+		{
+			name: "Error/ProjectBudget",
+
+			request: validRequest,
+
+			expectTags:   tags,
+			expectGenres: genres,
+			serviceMock:  &serviceMock[*core.Project]{err: core.ErrProjectBudget},
+
+			expectStatus:   http.StatusConflict,
+			expectResponse: limitProblem("projectBytes"),
+		},
+		{
 			name: "Error/ProjectsFull",
 
 			request: validRequest,
