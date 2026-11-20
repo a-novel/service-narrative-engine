@@ -32,7 +32,7 @@ func TestPgPluginManifestSelect(t *testing.T) {
 			expect: &dao.PluginManifest{
 				PluginVersionKey: composer1100, Schema: []byte(pluginSchemaNext), Exports: []byte(pluginExports),
 				HasMigration: true, SchemaChecksum: pluginSchemaChecksum(pluginSchemaNext),
-				UIChecksum: pluginChecksum(pluginUI(composer1100)), PublishedAt: createdAt, PublishedBy: "fixture",
+				UIChecksum: pluginChecksum(pluginUI(composer1100)), PublishedAt: createdAt,
 			},
 		},
 		{
@@ -43,7 +43,7 @@ func TestPgPluginManifestSelect(t *testing.T) {
 			expect: &dao.PluginManifest{
 				PluginVersionKey: composer100, Schema: []byte(pluginSchema), Exports: []byte(pluginExports),
 				SchemaChecksum: pluginSchemaChecksum(pluginSchema), UIChecksum: pluginChecksum(pluginUI(composer100)),
-				PublishedAt: createdAt, PublishedBy: "fixture",
+				PublishedAt: createdAt,
 			},
 		},
 		{
@@ -54,7 +54,7 @@ func TestPgPluginManifestSelect(t *testing.T) {
 			expect: &dao.PluginManifest{
 				PluginVersionKey: composer200Dev, Schema: []byte(pluginSchemaNext), Exports: []byte(pluginExports),
 				SchemaChecksum: pluginSchemaChecksum(pluginSchemaNext),
-				UIChecksum:     pluginChecksum(pluginUI(composer200Dev)), PublishedAt: createdAt, PublishedBy: "fixture",
+				UIChecksum:     pluginChecksum(pluginUI(composer200Dev)), PublishedAt: createdAt,
 			},
 		},
 		{

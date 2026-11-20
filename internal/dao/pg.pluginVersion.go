@@ -36,6 +36,4 @@ type PluginVersion struct {
 	UI []byte `bun:"ui"`
 
 	PublishedAt time.Time `bun:"published_at"`
-	// PublishedBy is the identity that published the version.
-	PublishedBy string `bun:"published_by"`
 }

@@ -33,8 +33,6 @@ type PluginManifest struct {
 	UIChecksum string `bun:"ui_checksum"`
 
 	PublishedAt time.Time `bun:"published_at"`
-	// PublishedBy is the identity that published the version.
-	PublishedBy string `bun:"published_by"`
 }
 
 // PluginManifestSelectRequest is the input to [PgPluginManifestSelect.Exec].

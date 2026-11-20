@@ -198,7 +198,7 @@ func pluginFixtures() fixtures {
 	version := func(key dao.PluginVersionKey, schema string, migration []byte) *dao.PluginVersion {
 		return &dao.PluginVersion{
 			PluginVersionKey: key, Schema: json.RawMessage(schema), Exports: json.RawMessage(pluginExports),
-			Migration: migration, UI: pluginUI(key), PublishedAt: createdAt, PublishedBy: "fixture",
+			Migration: migration, UI: pluginUI(key), PublishedAt: createdAt,
 		}
 	}
 

@@ -10,8 +10,7 @@ SELECT
   migration IS NOT NULL AS has_migration,
   encode(schema_checksum, 'hex') AS schema_checksum,
   encode(ui_checksum, 'hex') AS ui_checksum,
-  published_at,
-  published_by
+  published_at
 FROM
   plugin_versions
 WHERE
