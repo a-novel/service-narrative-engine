@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"iter"
 	"time"
 
 	"github.com/google/uuid"
@@ -15,13 +14,8 @@ import (
 )
 
 const (
-	// ProjectBytesMax caps the UTF-8 bytes a project stores, over its scenes, cells, recaps and every other
-	// large field. A 200k-word novel takes about 1.3 MB per manuscript layer, and a heavy project with
-	// notes, recaps and a few branches stays under 8 MB, so the cap leaves it room to double.
+	// ProjectBytesMax caps the UTF-8 bytes a project stores: its own fields, and every row it holds.
 	ProjectBytesMax = 16 << 20
-	// ListPageBytesMax bounds the bytes a page of a list holds. It fits the largest single cell, 2 MiB of
-	// content and 2 MiB of recap, so a page always holds one row.
-	ListPageBytesMax = 4 << 20
 	// ProjectsPerOwnerMax caps the projects a user owns. Each holds at most [ProjectBytesMax], so an account
 	// stores 1.6 GiB at most. A writer keeps a handful of novels, and 100 leaves room for drafts and copies.
 	ProjectsPerOwnerMax = 100
@@ -30,43 +24,13 @@ const (
 var (
 	// ErrProjectNotFound is returned when no project has the ID, or another user owns it.
 	ErrProjectNotFound = errors.New("project not found")
-	// ErrBeatNotFound is returned when the project holds no beat with the ID.
-	ErrBeatNotFound = errors.New("beat not found")
-	// ErrSceneNotFound is returned when the project holds no scene with the ID.
-	ErrSceneNotFound = errors.New("scene not found")
-	// ErrLayerNotFound is returned when the project holds no layer with the ID.
-	ErrLayerNotFound = errors.New("layer not found")
 	// ErrProjectLogoNotFound is returned when the project holds no logo.
 	ErrProjectLogoNotFound = errors.New("project logo not found")
-	// ErrProjectFull is returned when a project already holds as many beats or layers as it may, a beat as
-	// many scenes, or a write would bring a scene past [SceneContentMax] characters.
-	ErrProjectFull = errors.New("project full")
-	// ErrRequiredLayer is returned by a delete that would leave a project without a layer of a required
-	// kind, such as the manuscript.
-	ErrRequiredLayer = errors.New("required layer")
-	// ErrProjectBudget is returned by a write that would bring a project past [ProjectBytesMax] stored bytes,
-	// and by a whole-project read of a project already past it.
+	// ErrProjectBudget is returned by a write that would bring a project past [ProjectBytesMax] stored bytes.
 	ErrProjectBudget = errors.New("project budget reached")
 	// ErrProjectsFull is returned by [ProjectCreate] when the user already owns [ProjectsPerOwnerMax]
 	// projects.
 	ErrProjectsFull = errors.New("projects full")
-	// ErrGenerationNotFound is returned when genai holds no generation with the ID for the caller.
-	ErrGenerationNotFound = errors.New("generation not found")
-	// ErrGenerationQuota is returned by [GenerationSubmit], as a [GenerationQuotaError], when genai admits
-	// none of a generation's calls.
-	ErrGenerationQuota = errors.New("generation quota reached")
-	// ErrGenaiUnavailable is returned when genai cannot take a call, such as during its downtime.
-	ErrGenaiUnavailable = errors.New("genai unavailable")
-	// ErrCellNotFound is returned when the project holds no cell where the scene and the layer cross.
-	ErrCellNotFound = errors.New("cell not found")
-	// ErrRecapConflict is returned by a recap write that read its source at a version older than the
-	// stored recap's, or newer than the source's own.
-	ErrRecapConflict = errors.New("recap conflict")
-	// ErrGenerationNotStreamed is returned by [GenerationStream] for a call it cannot stream: one
-	// submitted without streaming, or one the provider no longer streams. A read returns the call.
-	ErrGenerationNotStreamed = errors.New("generation not streamed")
-	// ErrStreamEnded is returned when the caller resumes a stream after its last event.
-	ErrStreamEnded = errors.New("stream ended")
 	// ErrPluginVersionNotFound is returned when the registry holds no such version of the plugin.
 	ErrPluginVersionNotFound = dao.ErrPluginVersionNotFound
 	// ErrPluginModuleNotFound is returned when the registry holds no such version of the plugin, or the
@@ -139,8 +103,8 @@ func lockOwnedProject(ctx context.Context, daoLock ProjectLockDao, opts projectO
 	return nil
 }
 
-// ProjectBytesDao reads how many bytes a project stores. Every service that grows a project, or reads it
-// whole, takes it for [keepProjectBudget].
+// ProjectBytesDao reads how many bytes a project stores. Every service that grows a project takes it for
+// [keepProjectBudget].
 type ProjectBytesDao interface {
 	Exec(ctx context.Context, request *dao.ProjectBytesRequest) (*dao.ProjectBytes, error)
 }
@@ -152,7 +116,7 @@ type projectBudgetOpts struct {
 
 // keepProjectBudget returns [ErrProjectBudget] when the project stores more than [ProjectBytesMax] bytes. A
 // write runs it after its write, in the same transaction, so the count holds that write and a refusal
-// rolls it back. A whole-project read runs it before it reads.
+// rolls it back.
 func keepProjectBudget(ctx context.Context, daoBytes ProjectBytesDao, opts projectBudgetOpts) error {
 	ctx, span := otel.Tracer().Start(ctx, "core.keepProjectBudget")
 	defer span.End()
@@ -169,83 +133,4 @@ func keepProjectBudget(ctx context.Context, daoBytes ProjectBytesDao, opts proje
 	}
 
 	return nil
-}
-
-// SceneLengthDao reads how many characters the cells of scenes hold, for [checkSceneContent].
-type SceneLengthDao interface {
-	Exec(ctx context.Context, request *dao.SceneLengthRequest) ([]*dao.SceneLength, error)
-}
-
-// checkSceneContent returns [ErrProjectFull] when one of the scenes holds more than [SceneContentMax]
-// characters. A cell write runs it after its write, in the transaction that locked the project, so the count
-// holds that write and every earlier one.
-func checkSceneContent(ctx context.Context, daoLength SceneLengthDao, projectID uuid.UUID, sceneIDs []uuid.UUID) error {
-	ctx, span := otel.Tracer().Start(ctx, "core.checkSceneContent")
-	defer span.End()
-
-	lengths, err := daoLength.Exec(ctx, &dao.SceneLengthRequest{ProjectID: projectID, IDs: sceneIDs})
-	if err != nil {
-		return otel.ReportError(span, err)
-	}
-
-	for _, scene := range lengths {
-		if scene.Length > SceneContentMax {
-			return otel.ReportError(span, fmt.Errorf(
-				"%w: scene %s would hold %d characters", ErrProjectFull, scene.SceneID, scene.Length,
-			))
-		}
-	}
-
-	return nil
-}
-
-// newIDs generates count UUIDv7 identifiers. uuid.NewV7 fails only when crypto/rand does, which Go documents
-// as never happening on supported platforms.
-func newIDs(count int) []uuid.UUID {
-	ids := make([]uuid.UUID, count)
-
-	for i := range ids {
-		ids[i] = uuid.Must(uuid.NewV7())
-	}
-
-	return ids
-}
-
-// pages yields the items of a paged list from offset on, one page at a time. Read reads the page at an
-// offset, and convert turns each row into its item and the size of the list. A failed read yields its error
-// and ends the sequence.
-func pages[Row, Item any](
-	offset int, read func(offset int) ([]Row, error), convert func(row Row) (Item, int),
-) iter.Seq2[Item, error] {
-	return func(yield func(Item, error) bool) {
-		for {
-			rows, err := read(offset)
-			if err != nil {
-				var zero Item
-
-				yield(zero, err)
-
-				return
-			}
-
-			var total int
-
-			for _, row := range rows {
-				var item Item
-
-				item, total = convert(row)
-				if !yield(item, nil) {
-					return
-				}
-			}
-
-			offset += len(rows)
-
-			// A page past the end comes back empty, and a page that reaches the total ends the list. A page may
-			// stop short of the limit, at its byte bound.
-			if len(rows) == 0 || offset >= total {
-				return
-			}
-		}
-	}
 }

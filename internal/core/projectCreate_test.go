@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -23,9 +22,6 @@ func TestProjectCreate(t *testing.T) {
 	t.Parallel()
 
 	errFoo := errors.New("foo")
-
-	manuscript := daoLayer(layerID1, 0, core.LayerKindManuscript)
-	manuscript.Name = "Manuscript"
 
 	request := func(title, language string) *core.ProjectCreateRequest {
 		return &core.ProjectCreateRequest{OwnerID: ownerID, Title: title, Premise: "Paul ment.", Language: language}
@@ -45,21 +41,6 @@ func TestProjectCreate(t *testing.T) {
 		return classified
 	}
 
-	created := &core.ProjectComposer{
-		Project: &core.Project{
-			ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Language: "fr", Tags: []string{"noir"},
-			Genres:    []string{"thriller"},
-			CreatedAt: createdAt, UpdatedAt: updatedAt, EditedAt: editedAt,
-			LogoChecksum: new(logoChecksum),
-		},
-		Layers: []*core.Layer{
-			{
-				ID: layerID1, ProjectID: projectID, Kind: core.LayerKindManuscript, Name: "Manuscript",
-				UpdatedAt: updatedAt,
-			},
-		},
-	}
-
 	testCases := []struct {
 		name string
 
@@ -69,9 +50,8 @@ func TestProjectCreate(t *testing.T) {
 		lockMock    *daoMock[struct{}]
 		countMock   *daoMock[*dao.ProjectCount]
 		projectMock *daoMock[*dao.Project]
-		layersMock  *daoMock[[]*dao.Layer]
 
-		expect    *core.ProjectComposer
+		expect    *core.Project
 		expectErr error
 	}{
 		{
@@ -82,9 +62,8 @@ func TestProjectCreate(t *testing.T) {
 			lockMock:    &daoMock[struct{}]{},
 			countMock:   &daoMock[*dao.ProjectCount]{resp: &dao.ProjectCount{Count: core.ProjectsPerOwnerMax - 1}},
 			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
-			layersMock:  &daoMock[[]*dao.Layer]{resp: []*dao.Layer{manuscript}},
 
-			expect: created,
+			expect: coreProject(),
 		},
 		{
 			name: "Success/Tags",
@@ -99,9 +78,8 @@ func TestProjectCreate(t *testing.T) {
 			lockMock:    &daoMock[struct{}]{},
 			countMock:   &daoMock[*dao.ProjectCount]{resp: &dao.ProjectCount{Count: core.ProjectsPerOwnerMax - 1}},
 			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
-			layersMock:  &daoMock[[]*dao.Layer]{resp: []*dao.Layer{manuscript}},
 
-			expect: created,
+			expect: coreProject(),
 		},
 		{
 			name: "Success/Genres",
@@ -112,9 +90,8 @@ func TestProjectCreate(t *testing.T) {
 			lockMock:    &daoMock[struct{}]{},
 			countMock:   &daoMock[*dao.ProjectCount]{resp: &dao.ProjectCount{Count: core.ProjectsPerOwnerMax - 1}},
 			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
-			layersMock:  &daoMock[[]*dao.Layer]{resp: []*dao.Layer{manuscript}},
 
-			expect: created,
+			expect: coreProject(),
 		},
 		{
 			name: "Success/MostTags",
@@ -124,9 +101,8 @@ func TestProjectCreate(t *testing.T) {
 			lockMock:    &daoMock[struct{}]{},
 			countMock:   &daoMock[*dao.ProjectCount]{resp: &dao.ProjectCount{Count: core.ProjectsPerOwnerMax - 1}},
 			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
-			layersMock:  &daoMock[[]*dao.Layer]{resp: []*dao.Layer{manuscript}},
 
-			expect: created,
+			expect: coreProject(),
 		},
 		{
 			name: "Success/MostGenres",
@@ -136,9 +112,8 @@ func TestProjectCreate(t *testing.T) {
 			lockMock:    &daoMock[struct{}]{},
 			countMock:   &daoMock[*dao.ProjectCount]{resp: &dao.ProjectCount{Count: core.ProjectsPerOwnerMax - 1}},
 			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
-			layersMock:  &daoMock[[]*dao.Layer]{resp: []*dao.Layer{manuscript}},
 
-			expect: created,
+			expect: coreProject(),
 		},
 		{
 			name: "Success/LongestTitle",
@@ -148,9 +123,8 @@ func TestProjectCreate(t *testing.T) {
 			lockMock:    &daoMock[struct{}]{},
 			countMock:   &daoMock[*dao.ProjectCount]{resp: &dao.ProjectCount{Count: core.ProjectsPerOwnerMax - 1}},
 			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
-			layersMock:  &daoMock[[]*dao.Layer]{resp: []*dao.Layer{manuscript}},
 
-			expect: created,
+			expect: coreProject(),
 		},
 		{
 			name: "Error/BlankTitle",
@@ -393,18 +367,6 @@ func TestProjectCreate(t *testing.T) {
 			expectErr: errFoo,
 		},
 		{
-			name: "Error/InsertLayers",
-
-			request: request("Les Heures claires", "fr"),
-
-			lockMock:    &daoMock[struct{}]{},
-			countMock:   &daoMock[*dao.ProjectCount]{resp: &dao.ProjectCount{Count: core.ProjectsPerOwnerMax - 1}},
-			projectMock: &daoMock[*dao.Project]{resp: daoProject()},
-			layersMock:  &daoMock[[]*dao.Layer]{err: errFoo},
-
-			expectErr: errFoo,
-		},
-		{
 			name: "Error/Transaction",
 
 			request:    request("Les Heures claires", "fr"),
@@ -421,7 +383,6 @@ func TestProjectCreate(t *testing.T) {
 			daoLockMock := coremocks.NewMockProjectCreateDaoLock(t)
 			daoCountMock := coremocks.NewMockProjectCreateDaoCount(t)
 			daoProjectMock := coremocks.NewMockProjectCreateDaoProject(t)
-			daoLayersMock := coremocks.NewMockProjectCreateDaoLayers(t)
 
 			if testCase.lockMock != nil {
 				daoLockMock.EXPECT().
@@ -447,28 +408,12 @@ func TestProjectCreate(t *testing.T) {
 					Return(testCase.projectMock.resp, testCase.projectMock.err)
 			}
 
-			if testCase.layersMock != nil {
-				daoLayersMock.EXPECT().
-					Exec(mock.Anything, mock.MatchedBy(func(req *dao.LayersInsertRequest) bool {
-						ids := lo.Map(req.Layers, func(item dao.LayersInsertItem, _ int) uuid.UUID { return item.ID })
-						layers := lo.Map(req.Layers, func(item dao.LayersInsertItem, _ int) dao.LayersInsertItem {
-							item.ID = uuid.Nil
-
-							return item
-						})
-
-						return req.ProjectID == projectID && req.Position == 0 && recent(req.Now) && freshIDs(ids) &&
-							slices.Equal(layers, []dao.LayersInsertItem{{Kind: core.LayerKindManuscript, Name: "Manuscript"}})
-					})).
-					Return(testCase.layersMock.resp, testCase.layersMock.err)
-			}
-
 			transactor := testCase.transactor
 			if transactor == nil {
 				transactor = transactiontest.NewTransactor()
 			}
 
-			service := core.NewProjectCreate(daoLockMock, daoCountMock, daoProjectMock, daoLayersMock, transactor)
+			service := core.NewProjectCreate(daoLockMock, daoCountMock, daoProjectMock, transactor)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)

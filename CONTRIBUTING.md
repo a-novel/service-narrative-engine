@@ -31,17 +31,12 @@ The routes are described in [`openapi.yaml`](./openapi.yaml).
 
 `internal/core` is one flat package. Its file names group it:
 
-| Files                                                                            | What they hold                                                                                                                                                                |
-| -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `beat.go`, `scene.go`, `layer.go`, `cell.go`, `project.go`                       | Each entity's model and its page.                                                                                                                                             |
-| `beats*.go`, `scenes*.go`, `layers*.go`, `cellsWrite.go`, `*Move.go`, `*List.go` | One Scenes Composer operation per file. A route that writes one item sends the batch operation a list of one.                                                                 |
-| `project*.go`, `manuscript*.go`                                                  | The project's own operations, its logo, the drift and edit lists, and the reads of a whole project, which `projectReadGate.go` bounds.                                        |
-| `plugin*.go`                                                                     | The reads of the plugin registry. `plugin.go` holds its models, and turns a version between its text and the numbers the registry keys it by.                                 |
-| `common.go`                                                                      | The sentinels, the size limits, and the checks every operation shares: `lockOwnedProject`, `checkProjectOwnership`, `keepProjectBudget`.                                      |
-| `validate.go`                                                                    | The request validator and its custom tags.                                                                                                                                    |
-| `generation*.go`                                                                 | The generation operations. A submit reads a project snapshot, plans its calls, and sends them to genai; get, stream and cancel follow them.                                   |
-| `generationPlan.go`, `context*.go`                                               | The planner: `contextSplit` splits a generation into calls, `contextDraft` and `contextRead` hold what a call reads, `contextPrompt` renders it, `contextPlan` is the result. |
-| `openaiResponses.go`                                                             | The OpenAI request and response formats.                                                                                                                                      |
+| Files         | What they hold                                                                                                                                |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `project*.go` | The project's model, its own operations, its logo, and the drift and edit lists.                                                              |
+| `plugin*.go`  | The reads of the plugin registry. `plugin.go` holds its models, and turns a version between its text and the numbers the registry keys it by. |
+| `common.go`   | The sentinels, the size limits, and the checks every operation shares: `lockOwnedProject`, `checkProjectOwnership`, `keepProjectBudget`.      |
+| `validate.go` | The request validator and its custom tags.                                                                                                    |
 
 `internal/dao` holds one statement per file, `pg.<operation>.sql` beside its `pg.<operation>.go`, and `internal/handlers` one route per `rest.<operation>.go`, with the shared error maps in `rest.errors.go`. golib's `httpf` answers the ping and runs the health probes, which `rest.health.go` lists: `postgres.Health` and JSON Keys.
 
@@ -72,7 +67,7 @@ Unit-test a service that takes a transactor with `transactiontest.NewTransactor`
 
 ## Project lock
 
-Every write to a project's content takes the project lock with `lockOwnedProject` before its first write, in the same transaction. The content is the project's own fields, its beats, scenes, layers and cells, and their recaps. The lock runs the project's writes one at a time and stamps the project's `edited_at`, which `ProjectEditsList` returns. A write that fails later rolls the stamp back with it.
+Every write to a project's content takes the project lock with `lockOwnedProject` before its first write, in the same transaction. The content is the project's own fields. The lock runs the project's writes one at a time and stamps the project's `edited_at`, which `ProjectEditsList` returns. A write that fails later rolls the stamp back with it.
 
 ```go
 err := service.transactor.WithinTx(ctx, func(ctx context.Context) error {
@@ -96,7 +91,7 @@ Each shared error map in `internal/handlers/rest.errors.go` is tested sentinel b
 
 ## Refresh goldens
 
-`pnpm generate:go` rewrites every golden file from the current code: the generation prompts and plans under `internal/core/testdata`, and the schema snapshots of the migrations. Review its diff before you commit it.
+`pnpm generate:go` rewrites every golden file from the current code: the schema snapshots of the migrations. Review its diff before you commit it.
 
 ---
 

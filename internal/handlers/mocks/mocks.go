@@ -689,23 +689,23 @@ func (_m *MockRestProjectCreateService) EXPECT() *MockRestProjectCreateService_E
 }
 
 // Exec provides a mock function for the type MockRestProjectCreateService
-func (_mock *MockRestProjectCreateService) Exec(ctx context.Context, request *core.ProjectCreateRequest) (*core.ProjectComposer, error) {
+func (_mock *MockRestProjectCreateService) Exec(ctx context.Context, request *core.ProjectCreateRequest) (*core.Project, error) {
 	ret := _mock.Called(ctx, request)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Exec")
 	}
 
-	var r0 *core.ProjectComposer
+	var r0 *core.Project
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.ProjectCreateRequest) (*core.ProjectComposer, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.ProjectCreateRequest) (*core.Project, error)); ok {
 		return returnFunc(ctx, request)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.ProjectCreateRequest) *core.ProjectComposer); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *core.ProjectCreateRequest) *core.Project); ok {
 		r0 = returnFunc(ctx, request)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*core.ProjectComposer)
+			r0 = ret.Get(0).(*core.Project)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, *core.ProjectCreateRequest) error); ok {
@@ -746,12 +746,12 @@ func (_c *MockRestProjectCreateService_Exec_Call) Run(run func(ctx context.Conte
 	return _c
 }
 
-func (_c *MockRestProjectCreateService_Exec_Call) Return(projectComposer *core.ProjectComposer, err error) *MockRestProjectCreateService_Exec_Call {
-	_c.Call.Return(projectComposer, err)
+func (_c *MockRestProjectCreateService_Exec_Call) Return(project *core.Project, err error) *MockRestProjectCreateService_Exec_Call {
+	_c.Call.Return(project, err)
 	return _c
 }
 
-func (_c *MockRestProjectCreateService_Exec_Call) RunAndReturn(run func(ctx context.Context, request *core.ProjectCreateRequest) (*core.ProjectComposer, error)) *MockRestProjectCreateService_Exec_Call {
+func (_c *MockRestProjectCreateService_Exec_Call) RunAndReturn(run func(ctx context.Context, request *core.ProjectCreateRequest) (*core.Project, error)) *MockRestProjectCreateService_Exec_Call {
 	_c.Call.Return(run)
 	return _c
 }
