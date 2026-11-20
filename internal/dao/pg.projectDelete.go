@@ -24,7 +24,7 @@ type ProjectDeleteRequest struct {
 	ID uuid.UUID
 }
 
-// PgProjectDelete removes a project with its scenes, layers and cells.
+// PgProjectDelete removes a project with its logo.
 type PgProjectDelete struct{}
 
 func NewPgProjectDelete() *PgProjectDelete {

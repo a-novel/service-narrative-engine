@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
 	"github.com/a-novel-kit/golib/postgres"
@@ -21,8 +20,8 @@ func TestPgProjectBytes(t *testing.T) {
 	testCases := []struct {
 		name string
 
-		// write runs before the read, in its transaction, as the budget check reads the count after a write.
-		write   *dao.BeatsDeleteRequest
+		// held is the count of the bytes the rows of the test project hold, which the schema keeps.
+		held    int64
 		request *dao.ProjectBytesRequest
 
 		expect    *dao.ProjectBytes
@@ -33,18 +32,16 @@ func TestPgProjectBytes(t *testing.T) {
 
 			request: &dao.ProjectBytesRequest{ID: projectID},
 
-			// The UTF-8 bytes of the project's own texts (31), of its beats (33), scenes (34) and layers (31),
-			// and of its cells' documents as text (31).
-			expect: &dao.ProjectBytes{StoredBytes: 160},
+			// The UTF-8 bytes of the project's own texts.
+			expect: &dao.ProjectBytes{StoredBytes: 31},
 		},
 		{
-			name: "Success/AfterWrite",
+			name: "Success/HeldRows",
 
-			write:   &dao.BeatsDeleteRequest{ProjectID: projectID, IDs: []uuid.UUID{beatID1}},
+			held:    64,
 			request: &dao.ProjectBytesRequest{ID: projectID},
 
-			// The delete takes the first beat (9), the three scenes it holds (25) and the cells of its first
-			// scene (31), which its cascade removes.
+			// The bytes of the project's own texts (31), and of the rows it holds (64).
 			expect: &dao.ProjectBytes{StoredBytes: 95},
 		},
 		{
@@ -56,7 +53,6 @@ func TestPgProjectBytes(t *testing.T) {
 		},
 	}
 
-	daoBeatsDelete := dao.NewPgBeatsDelete()
 	daoProjectBytes := dao.NewPgProjectBytes()
 
 	for _, testCase := range testCases {
@@ -66,21 +62,17 @@ func TestPgProjectBytes(t *testing.T) {
 			postgrestest.RunDBTest(t, configtest.PostgresPreset, migrations.Migrations, func(ctx context.Context, t *testing.T) {
 				t.Helper()
 
-				insertFixtures(ctx, t, composerFixtures())
+				insertFixtures(ctx, t, projectFixtures())
 
-				err := postgres.WithinTx(ctx, nil, func(ctx context.Context) error {
-					if testCase.write != nil {
-						_, err := daoBeatsDelete.Exec(ctx, testCase.write)
-						require.NoError(t, err)
-					}
-
-					result, err := daoProjectBytes.Exec(ctx, testCase.request)
-					require.ErrorIs(t, err, testCase.expectErr)
-					require.Equal(t, testCase.expect, result)
-
-					return nil
-				})
+				db, err := postgres.GetContext(ctx)
 				require.NoError(t, err)
+
+				_, err = db.NewRaw("UPDATE projects SET stored_bytes = ?0 WHERE id = ?1", testCase.held, projectID).Exec(ctx)
+				require.NoError(t, err)
+
+				result, err := daoProjectBytes.Exec(ctx, testCase.request)
+				require.ErrorIs(t, err, testCase.expectErr)
+				require.Equal(t, testCase.expect, result)
 			})
 		})
 	}

@@ -62,7 +62,7 @@ func TestPgProjectCount(t *testing.T) {
 			postgrestest.RunDBTest(t, configtest.PostgresPreset, migrations.Migrations, func(ctx context.Context, t *testing.T) {
 				t.Helper()
 
-				data := composerFixtures()
+				data := projectFixtures()
 				data.projects = append(data.projects, secondProject)
 				insertFixtures(ctx, t, data)
 
