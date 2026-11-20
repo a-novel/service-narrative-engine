@@ -10,6 +10,7 @@ export * from "./finding";
 export * from "./generation";
 export * from "./layer";
 export * from "./manuscript";
+export * from "./plugin";
 export * from "./project";
 export * from "./recap";
 export * from "./scene";

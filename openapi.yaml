@@ -35,6 +35,14 @@ info:
     suggestions through cell writes, stores recaps through the recap writes, and verifies a check's
     findings against the scenes it holds.
 
+    ## Plugin registry
+
+    The registry holds the published versions of each plugin. A version is a manifest (the JSON Schema of the
+    content it edits and the items it exports), a UI module, an optional migration module and its
+    translations. A version never changes once published, so a project that pins one loads the same modules for
+    good. Semantic versioning orders the versions, and a prerelease is read by its exact name only: no list
+    returns one. Any signed-in user reads the registry, which belongs to no user.
+
   version: v1.9.1
   license:
     name: RPL-1.5
@@ -60,6 +68,8 @@ tags:
     description: The text of a manuscript layer, exported for renderers.
   - name: generation
     description: Model calls that suggest text for a project, recap its cells and beats, or check its coherence, run through genai.
+  - name: plugin
+    description: The published versions of each plugin, with their manifest, modules and translations.
 
 paths:
   /v1/ping:
@@ -1722,6 +1732,214 @@ paths:
         default:
           $ref: "#/components/responses/internalError"
 
+  /v1/plugins:
+    get:
+      operationId: pluginList
+      summary: List the plugins of the registry.
+      description: |
+        Returns a page of the registry's plugins, by name. Each comes with its latest release, and its title and
+        description in the language asked for, or in English when that release is not translated in it. The
+        page comes with how many plugins the registry lists in all. A plugin that only has prereleases is left
+        out. To read the next page, raise `offset` by the plugins received, while that stays below the total.
+      tags: [plugin]
+      parameters:
+        - $ref: "#/components/parameters/pluginListLanguage"
+        - $ref: "#/components/parameters/composerLimit"
+        - $ref: "#/components/parameters/offset"
+      responses:
+        "200":
+          $ref: "#/components/responses/pluginPage"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/plannedDowntime"
+        default:
+          $ref: "#/components/responses/internalError"
+
+  /v1/plugin/version:
+    get:
+      operationId: pluginManifestGet
+      summary: Get the manifest of a version of a plugin.
+      description: |
+        Returns the manifest of one version of a plugin, a prerelease included: the schema its content follows,
+        its exports, whether it ships a migration, and the checksums of its schema and of its UI module. The
+        modules and the translations have their own routes.
+      tags: [plugin]
+      parameters:
+        - $ref: "#/components/parameters/pluginName"
+        - $ref: "#/components/parameters/pluginVersion"
+      responses:
+        "200":
+          $ref: "#/components/responses/pluginManifest"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/pluginNotFound"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/plannedDowntime"
+        default:
+          $ref: "#/components/responses/internalError"
+
+  /v1/plugin/version/ui:
+    get:
+      operationId: pluginUIGet
+      summary: Get the UI module of a version of a plugin.
+      description: |
+        Returns the JavaScript module that renders one version of a plugin.
+
+        The response's strong `ETag` is the module's checksum, as the manifest's `uiChecksum` carries it, and its
+        `Last-Modified` is when the version was published. A matching `If-None-Match` or `If-Modified-Since`
+        answers 304. A published version never changes, so `Cache-Control` marks the module immutable for a
+        year, in the caller's own cache.
+      tags: [plugin]
+      parameters:
+        - $ref: "#/components/parameters/pluginName"
+        - $ref: "#/components/parameters/pluginVersion"
+      responses:
+        "200":
+          $ref: "#/components/responses/pluginModule"
+        "304":
+          $ref: "#/components/responses/pluginModuleNotModified"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/pluginNotFound"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/plannedDowntime"
+        default:
+          $ref: "#/components/responses/internalError"
+
+  /v1/plugin/version/migration:
+    get:
+      operationId: pluginMigrationGet
+      summary: Get the migration module of a version of a plugin.
+      description: |
+        Returns the JavaScript module that brings content from the previous version of a plugin to this one. A
+        version ships one only when its manifest's `hasMigration` is true, and answers 404 otherwise.
+
+        The response carries the same `ETag`, `Last-Modified` and `Cache-Control` as the UI module, and answers
+        a conditional request the same way.
+      tags: [plugin]
+      parameters:
+        - $ref: "#/components/parameters/pluginName"
+        - $ref: "#/components/parameters/pluginVersion"
+      responses:
+        "200":
+          $ref: "#/components/responses/pluginModule"
+        "304":
+          $ref: "#/components/responses/pluginModuleNotModified"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/pluginNotFound"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/plannedDowntime"
+        default:
+          $ref: "#/components/responses/internalError"
+
+  /v1/plugin/version/messages:
+    get:
+      operationId: pluginMessagesGet
+      summary: Get the translations of a version of a plugin.
+      description: |
+        Returns the translations of one version of a plugin in one language: its title, its description and
+        its messages. The route reads that language alone, and answers 404 when the version is not translated
+        in it. Every version is translated in English, which a client reads to fill the keys another language
+        lacks.
+      tags: [plugin]
+      parameters:
+        - $ref: "#/components/parameters/pluginName"
+        - $ref: "#/components/parameters/pluginVersion"
+        - $ref: "#/components/parameters/pluginMessagesLanguage"
+      responses:
+        "200":
+          $ref: "#/components/responses/pluginMessages"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/pluginNotFound"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/plannedDowntime"
+        default:
+          $ref: "#/components/responses/internalError"
+
+  /v1/plugin/versions:
+    get:
+      operationId: pluginVersionList
+      summary: List the releases of a plugin after a version.
+      description: |
+        Returns a page of the releases of a plugin that come after a version, oldest first: the steps of an
+        upgrade from that version. Each step tells whether it ships a migration, and carries the checksum of
+        its schema, so a client fetches a schema only where the checksum changes. The page comes with how many
+        releases come after the version in all.
+
+        A prerelease is never a step. The release of a version comes after its prereleases, so `1.2.0` follows
+        `1.2.0-dev.1`. The registry need not hold the version the request names, and a plugin it lacks has no
+        release: both answer a page, which may be empty.
+      tags: [plugin]
+      parameters:
+        - $ref: "#/components/parameters/pluginName"
+        - $ref: "#/components/parameters/pluginAfter"
+        - $ref: "#/components/parameters/composerLimit"
+        - $ref: "#/components/parameters/offset"
+      responses:
+        "200":
+          $ref: "#/components/responses/pluginVersionPage"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/plannedDowntime"
+        default:
+          $ref: "#/components/responses/internalError"
+
 components:
   responses:
     pong:
@@ -2026,6 +2244,81 @@ components:
                 }
             uncapped:
               value: { "caps": {}, "inFlight": 3, "windows": [] }
+
+    pluginPage:
+      description: A page of the registry's plugins, by name, with their total.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/pluginPage"
+
+    pluginManifest:
+      description: The manifest of a version of a plugin.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/pluginManifest"
+
+    pluginModule:
+      description: The source of the module, as it was published.
+      headers:
+        ETag:
+          description: The strong validator of the module, its checksum in quotes.
+          schema:
+            type: string
+            examples: ['"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"']
+        Last-Modified:
+          description: When the module's version was published, to the second.
+          schema:
+            type: string
+            examples: ["Thu, 19 Nov 2026 08:15:30 GMT"]
+        Cache-Control:
+          description: Always the same, since a published module never changes. A private cache keeps it for a year.
+          schema:
+            type: string
+            const: private, max-age=31536000, immutable
+        X-Content-Type-Options:
+          description: Always `nosniff`, so a browser reads the module as JavaScript.
+          schema:
+            type: string
+            const: nosniff
+      content:
+        text/javascript:
+          schema:
+            type: string
+            contentMediaType: text/javascript
+
+    pluginModuleNotModified:
+      description: The module matches the request's `If-None-Match` or `If-Modified-Since`. The response has no body.
+      headers:
+        ETag:
+          description: The strong validator of the module, its checksum in quotes.
+          schema:
+            type: string
+        Cache-Control:
+          description: The same as on the module itself.
+          schema:
+            type: string
+            const: private, max-age=31536000, immutable
+
+    pluginMessages:
+      description: The translations of a version of a plugin in one language.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/pluginMessages"
+
+    pluginVersionPage:
+      description: A page of the releases of a plugin after a version, oldest first, with their total.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/pluginVersionPage"
+
+    pluginNotFound:
+      description: |
+        The registry holds no such version of the plugin, the version ships without the module, or it is not
+        translated in the language.
 
     badRequest:
       description: |
@@ -4070,6 +4363,180 @@ components:
           description: Whether the server reached the dependency.
           enum: [up, down]
 
+    pluginName:
+      type: string
+      description: |
+        The name of a plugin, which identifies it across its versions: a DNS label (RFC 1035), so lowercase
+        letters, digits and hyphens, from a letter to a letter or a digit.
+      pattern: "^[a-z]([-a-z0-9]*[a-z0-9])?$"
+      minLength: 1
+      maxLength: 63
+      examples: [scenes-composer]
+
+    pluginSemver:
+      type: string
+      description: |
+        A version of a plugin, as a semantic version (Semantic Versioning 2.0.0) without build metadata: three
+        numbers, each below 2147483648, then an optional hyphen and prerelease identifiers.
+      pattern: "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?$"
+      examples: ["1.2.0", "2.0.0-dev.1"]
+
+    pluginChecksum:
+      type: string
+      description: A SHA-256 in lowercase hex.
+      pattern: "^[0-9a-f]{64}$"
+      examples: ["9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"]
+
+    plugin:
+      type: object
+      description: A plugin of the registry, as its latest release describes it.
+      required: [name, version, title, description]
+      additionalProperties: false
+      properties:
+        name:
+          $ref: "#/components/schemas/pluginName"
+        version:
+          $ref: "#/components/schemas/pluginSemver"
+          description: The plugin's latest release. A prerelease is never one.
+        title:
+          type: string
+          description: The plugin's title, in the language asked for, or in English when the release lacks it.
+          examples: [Scenes Composer]
+        description:
+          type: string
+          description: What the plugin does, in the language of the title.
+          examples: [Compose a story scene by scene.]
+
+    pluginPage:
+      type: object
+      description: A page of the registry's plugins, by name.
+      required: [plugins, total]
+      additionalProperties: false
+      properties:
+        plugins:
+          type: array
+          description: The plugins of the page.
+          items:
+            $ref: "#/components/schemas/plugin"
+        total:
+          type: integer
+          description: |
+            How many plugins the registry lists in all, so a client paging through them knows when it holds
+            them all. A page past the end reports 0.
+          minimum: 0
+          examples: [3]
+
+    pluginManifest:
+      type: object
+      description: One version of a plugin, without its modules and its translations.
+      required:
+        - plugin
+        - version
+        - schema
+        - exports
+        - hasMigration
+        - schemaChecksum
+        - uiChecksum
+        - publishedAt
+      additionalProperties: false
+      properties:
+        plugin:
+          $ref: "#/components/schemas/pluginName"
+        version:
+          $ref: "#/components/schemas/pluginSemver"
+        schema:
+          type: object
+          description: |
+            The JSON Schema (2020-12) the content of an instance follows. Its titles and descriptions are keys
+            of the version's messages.
+          additionalProperties: true
+          examples:
+            - { "type": "object", "default": { "beats": [], "layers": [] } }
+        exports:
+          type: object
+          description: The lists of linkable items an instance exposes, by name.
+          additionalProperties: true
+          examples:
+            - {
+                "scenes":
+                  { "name": "exports.scenes", "select": "$.beats[*].scenes[*]", "id": "/id", "label": "/title" },
+              }
+        hasMigration:
+          type: boolean
+          description: Whether the version ships a migration module, which brings content from the previous version.
+        schemaChecksum:
+          $ref: "#/components/schemas/pluginChecksum"
+          description: |
+            The checksum of the stored schema. Two versions with the same one share their schema. It is not
+            the hash of the JSON this response carries.
+        uiChecksum:
+          $ref: "#/components/schemas/pluginChecksum"
+          description: The checksum of the UI module's bytes, which the module's `ETag` carries.
+        publishedAt:
+          type: string
+          description: When the version was published.
+          format: date-time
+          examples: ["2026-11-19T08:15:30Z"]
+
+    pluginMessages:
+      type: object
+      description: The translations of one version of a plugin in one language.
+      required: [language, title, description, messages]
+      additionalProperties: false
+      properties:
+        language:
+          type: string
+          description: The language of the translations, as a BCP 47 tag.
+          examples: [fr]
+        title:
+          type: string
+          description: The plugin's title.
+          examples: [Compositeur de scènes]
+        description:
+          type: string
+          description: What the plugin does.
+          examples: [Composez une histoire scène par scène.]
+        messages:
+          type: object
+          description: The translations of the plugin's interface and of its schema, by key.
+          additionalProperties: true
+          examples:
+            - { "exports": { "scenes": "Scènes" } }
+
+    pluginVersion:
+      type: object
+      description: One release of a plugin, as an upgrade steps through it.
+      required: [version, hasMigration, schemaChecksum]
+      additionalProperties: false
+      properties:
+        version:
+          $ref: "#/components/schemas/pluginSemver"
+        hasMigration:
+          type: boolean
+          description: Whether the release ships a migration module, which an upgrade runs to reach it.
+        schemaChecksum:
+          $ref: "#/components/schemas/pluginChecksum"
+          description: The checksum of the stored schema. Two releases with the same one share their schema.
+
+    pluginVersionPage:
+      type: object
+      description: A page of the releases of a plugin after a version, oldest first.
+      required: [versions, total]
+      additionalProperties: false
+      properties:
+        versions:
+          type: array
+          description: The releases of the page.
+          items:
+            $ref: "#/components/schemas/pluginVersion"
+        total:
+          type: integer
+          description: |
+            How many releases come after the version in all, so a client paging through them knows when it
+            holds them all. A page past the end reports 0.
+          minimum: 0
+          examples: [4]
+
   securitySchemes:
     BearerAuth:
       type: http
@@ -4211,3 +4678,47 @@ components:
       required: true
       schema:
         $ref: "#/components/schemas/generationID"
+
+    pluginName:
+      name: plugin
+      in: query
+      description: The name of the plugin.
+      required: true
+      schema:
+        $ref: "#/components/schemas/pluginName"
+
+    pluginVersion:
+      name: version
+      in: query
+      description: The version of the plugin to read.
+      required: true
+      schema:
+        $ref: "#/components/schemas/pluginSemver"
+
+    pluginAfter:
+      name: after
+      in: query
+      description: The version the releases come after. The registry need not hold it.
+      required: true
+      schema:
+        $ref: "#/components/schemas/pluginSemver"
+
+    pluginListLanguage:
+      name: language
+      in: query
+      description: |
+        The language to read each title and description in, as a BCP 47 tag. Omitted, or for a plugin that is
+        not translated in it, they read in English.
+      required: false
+      schema:
+        type: string
+        examples: [fr]
+
+    pluginMessagesLanguage:
+      name: language
+      in: query
+      description: The language to read, as a BCP 47 tag.
+      required: true
+      schema:
+        type: string
+        examples: [fr]
