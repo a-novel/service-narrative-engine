@@ -87,6 +87,7 @@ var (
 	composer200Dev = dao.PluginVersionKey{Plugin: "scenes-composer", Major: 2, Prerelease: "dev.1"}
 	characters010  = dao.PluginVersionKey{Plugin: "characters", Minor: 1}
 	drafts010Dev   = dao.PluginVersionKey{Plugin: "drafts", Minor: 1, Prerelease: "dev.1"}
+	glossary010    = dao.PluginVersionKey{Plugin: "glossary", Minor: 1}
 )
 
 // The JSON documents of the plugin fixtures, spelled as PostgreSQL returns a jsonb value, so a read compares
@@ -191,9 +192,10 @@ func logoChecksum(data []byte) *string {
 	return new(hex.EncodeToString(sum[:]))
 }
 
-// pluginFixtures returns a registry of three plugins. The composer has three releases and a later prerelease,
+// pluginFixtures returns a registry of four plugins. The composer has three releases and a later prerelease,
 // and its latest release is translated in French. Characters has one release, in English alone. Drafts only
-// has a prerelease. Each call returns fresh values, so a case may change them.
+// has a prerelease. Glossary has one release, in Spanish and Italian but not in English. Each call returns
+// fresh values, so a case may change them.
 func pluginFixtures() fixtures {
 	version := func(key dao.PluginVersionKey, schema string, migration []byte) *dao.PluginVersion {
 		return &dao.PluginVersion{
@@ -210,6 +212,7 @@ func pluginFixtures() fixtures {
 			version(composer200Dev, pluginSchemaNext, nil),
 			version(characters010, pluginSchema, nil),
 			version(drafts010Dev, pluginSchema, nil),
+			version(glossary010, pluginSchema, nil),
 		},
 		pluginMessages: []*dao.PluginMessages{
 			pluginMessages(composer100, "en", "Scenes Composer"),
@@ -219,6 +222,8 @@ func pluginFixtures() fixtures {
 			pluginMessages(composer200Dev, "en", "Scenes Composer"),
 			pluginMessages(characters010, "en", "Characters"),
 			pluginMessages(drafts010Dev, "en", "Drafts"),
+			pluginMessages(glossary010, "es", "Glosario"),
+			pluginMessages(glossary010, "it", "Glossario"),
 		},
 	}
 }

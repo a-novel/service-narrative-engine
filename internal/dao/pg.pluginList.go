@@ -17,7 +17,7 @@ var pluginListQuery string
 // PluginListRequest is the input to [PgPluginList.Exec].
 type PluginListRequest struct {
 	// Language is the language to read each title and description in, as a BCP 47 tag. A plugin that is not
-	// translated in it reads in English.
+	// translated in it reads in English, and one that lacks both reads in the first of its languages.
 	Language string
 
 	// Limit caps the plugins in the page.
