@@ -3,16 +3,5 @@
  * schema-validated helpers for each resource it exposes.
  */
 export * from "./api";
-export * from "./beat";
-export * from "./cell";
-export * from "./content";
-export * from "./finding";
-export * from "./generation";
-export * from "./layer";
-export * from "./manuscript";
 export * from "./plugin";
 export * from "./project";
-export * from "./recap";
-export * from "./scene";
-export type { ServerSentEvent } from "./stream";
-export * from "./suggestion";

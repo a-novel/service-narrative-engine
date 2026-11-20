@@ -13,13 +13,3 @@ export const accessToken = await superAdminAccessToken(authApi);
 
 /** An ID no record holds, for the requests that answer 404. */
 export const ABSENT_ID = "01920000-0000-7000-8000-000000000000";
-
-/** A beat color the service accepts. */
-export const COLOR = "#4a90d9";
-
-/** Reads a stream to its end. */
-export async function collect<T>(stream: AsyncIterable<T>): Promise<T[]> {
-  const items: T[] = [];
-  for await (const item of stream) items.push(item);
-  return items;
-}
