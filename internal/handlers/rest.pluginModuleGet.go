@@ -34,12 +34,12 @@ type RestPluginModuleGetRequest struct {
 type RestPluginModuleGet struct {
 	service RestPluginModuleGetService
 	// module names the module the endpoint serves.
-	module string
+	module core.PluginModuleKind
 	logger logging.Log
 }
 
 func NewRestPluginModuleGet(
-	service RestPluginModuleGetService, module string, logger logging.Log,
+	service RestPluginModuleGetService, module core.PluginModuleKind, logger logging.Log,
 ) *RestPluginModuleGet {
 	return &RestPluginModuleGet{service: service, module: module, logger: logger}
 }

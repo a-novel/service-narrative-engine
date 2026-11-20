@@ -32,7 +32,7 @@ func TestRestPluginModuleGet(t *testing.T) {
 		name string
 
 		// module is the module the endpoint serves, the UI when empty.
-		module      string
+		module      core.PluginModuleKind
 		target      string
 		ifNoneMatch string
 
