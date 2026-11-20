@@ -67,6 +67,14 @@ var (
 	ErrGenerationNotStreamed = errors.New("generation not streamed")
 	// ErrStreamEnded is returned when the caller resumes a stream after its last event.
 	ErrStreamEnded = errors.New("stream ended")
+	// ErrPluginVersionNotFound is returned when the registry holds no such version of the plugin.
+	ErrPluginVersionNotFound = dao.ErrPluginVersionNotFound
+	// ErrPluginModuleNotFound is returned when the registry holds no such version of the plugin, or the
+	// version ships without the module.
+	ErrPluginModuleNotFound = dao.ErrPluginModuleNotFound
+	// ErrPluginMessagesNotFound is returned when the registry holds no such version of the plugin, or the
+	// version is not translated in the language.
+	ErrPluginMessagesNotFound = dao.ErrPluginMessagesNotFound
 )
 
 // ProjectOwnerDao checks that a user owns a project. A service that checks ownership without the project lock

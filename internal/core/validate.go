@@ -22,9 +22,9 @@ var validate = validator.New(validator.WithRequiredStructEnabled())
 var ErrInvalidRequest = errors.New("invalid request")
 
 // inSet returns a validation that reports whether a string is one of set.
-func inSet(set []string) validator.Func {
+func inSet[T ~string](set []T) validator.Func {
 	return func(fl validator.FieldLevel) bool {
-		return slices.Contains(set, fl.Field().String())
+		return slices.Contains(set, T(fl.Field().String()))
 	}
 }
 
@@ -84,6 +84,16 @@ func validateInstant(fl validator.FieldLevel) bool {
 	return err == nil && instant.Year() >= 1 && offset > -16*60*60 && offset < 16*60*60
 }
 
+// validatePluginVersion reports whether a string is a version the registry can hold, as [parsePluginVersion]
+// reads it. The package registers it as the "pluginversion" struct tag.
+func validatePluginVersion(fl validator.FieldLevel) bool {
+	// FIXME: return the reason once a validation can. A validator.Func only answers yes or no, so what
+	// parsePluginVersion says of a refused version is dropped here (go-playground/validator#1278).
+	_, err := parsePluginVersion(fl.Field().String())
+
+	return err == nil
+}
+
 // validateUniqueCells reports whether a list of [CellsWriteItem] names each pair of a scene and a layer
 // once. The package registers it as the "uniquecells" struct tag.
 func validateUniqueCells(fl validator.FieldLevel) bool {
@@ -120,6 +130,8 @@ func init() {
 		"projecttag":     validateProjectTag,
 		"logochecksum":   validateLogoChecksum,
 		"instant":        validateInstant,
+		"pluginversion":  validatePluginVersion,
+		"pluginmodule":   inSet([]PluginModuleKind{PluginModuleUI, PluginModuleMigration}),
 	}
 
 	for tag, fn := range validations {
