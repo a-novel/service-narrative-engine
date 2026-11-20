@@ -19,8 +19,8 @@ type PluginMessagesGetDao interface {
 
 // PluginMessagesGetRequest names one language of one version of a plugin.
 type PluginMessagesGetRequest struct {
-	// Plugin is the plugin's name.
-	Plugin string `validate:"required"`
+	// Plugin is the plugin's name, a DNS label (RFC 1035).
+	Plugin string `validate:"required,dns_rfc1035_label"`
 	// Version is the version to read, as a semantic version without build metadata.
 	Version string `validate:"required,pluginversion"`
 
@@ -56,8 +56,15 @@ func (service *PluginMessagesGet) Exec(
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
+	key, err := parsePluginVersion(request.Version)
+	if err != nil {
+		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
+	}
+
+	key.Plugin = request.Plugin
+
 	entity, err := service.dao.Exec(ctx, &dao.PluginMessagesSelectRequest{
-		PluginVersionKey: pluginVersionKey(request.Plugin, request.Version),
+		PluginVersionKey: key,
 		Language:         request.Language,
 	})
 	if err != nil {

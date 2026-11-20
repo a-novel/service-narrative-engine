@@ -19,13 +19,13 @@ type PluginModuleGetDao interface {
 
 // PluginModuleGetRequest names one module of one version of a plugin.
 type PluginModuleGetRequest struct {
-	// Plugin is the plugin's name.
-	Plugin string `validate:"required"`
+	// Plugin is the plugin's name, a DNS label (RFC 1035).
+	Plugin string `validate:"required,dns_rfc1035_label"`
 	// Version is the version to read, as a semantic version without build metadata.
 	Version string `validate:"required,pluginversion"`
 
 	// Module names the module to read, one of [PluginModules].
-	Module string `validate:"pluginmodule"`
+	Module PluginModuleKind `validate:"required,pluginmodule"`
 }
 
 // PluginModuleGet reads one JavaScript module of a version of a plugin, with its checksum. It returns
@@ -45,7 +45,7 @@ func (service *PluginModuleGet) Exec(ctx context.Context, request *PluginModuleG
 	span.SetAttributes(
 		attribute.String("plugin.name", request.Plugin),
 		attribute.String("plugin.version", request.Version),
-		attribute.String("plugin.module", request.Module),
+		attribute.String("plugin.module", string(request.Module)),
 	)
 
 	err := validate.Struct(request)
@@ -53,9 +53,16 @@ func (service *PluginModuleGet) Exec(ctx context.Context, request *PluginModuleG
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
+	key, err := parsePluginVersion(request.Version)
+	if err != nil {
+		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
+	}
+
+	key.Plugin = request.Plugin
+
 	entity, err := service.dao.Exec(ctx, &dao.PluginModuleSelectRequest{
-		PluginVersionKey: pluginVersionKey(request.Plugin, request.Version),
-		Module:           request.Module,
+		PluginVersionKey: key,
+		Module:           string(request.Module),
 	})
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("select module: %w", err))

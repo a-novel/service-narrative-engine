@@ -19,8 +19,8 @@ type PluginManifestGetDao interface {
 
 // PluginManifestGetRequest names one version of a plugin.
 type PluginManifestGetRequest struct {
-	// Plugin is the plugin's name.
-	Plugin string `validate:"required"`
+	// Plugin is the plugin's name, a DNS label (RFC 1035).
+	Plugin string `validate:"required,dns_rfc1035_label"`
 	// Version is the version to read, as a semantic version without build metadata.
 	Version string `validate:"required,pluginversion"`
 }
@@ -50,9 +50,14 @@ func (service *PluginManifestGet) Exec(
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	entity, err := service.dao.Exec(ctx, &dao.PluginManifestSelectRequest{
-		PluginVersionKey: pluginVersionKey(request.Plugin, request.Version),
-	})
+	key, err := parsePluginVersion(request.Version)
+	if err != nil {
+		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
+	}
+
+	key.Plugin = request.Plugin
+
+	entity, err := service.dao.Exec(ctx, &dao.PluginManifestSelectRequest{PluginVersionKey: key})
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("select manifest: %w", err))
 	}

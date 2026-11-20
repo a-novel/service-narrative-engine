@@ -67,9 +67,23 @@ func TestPluginModuleGet(t *testing.T) {
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
+			name: "Error/InvalidPlugin",
+
+			request: &core.PluginModuleGetRequest{Plugin: "Scenes Composer", Version: "1.10.0", Module: core.PluginModuleUI},
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
 			name: "Error/InvalidVersion",
 
 			request: &core.PluginModuleGetRequest{Plugin: "scenes-composer", Version: "1.10", Module: core.PluginModuleUI},
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/MissingModule",
+
+			request: &core.PluginModuleGetRequest{Plugin: "scenes-composer", Version: "1.10.0"},
 
 			expectErr: core.ErrInvalidRequest,
 		},

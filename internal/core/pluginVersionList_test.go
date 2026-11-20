@@ -94,6 +94,13 @@ func TestPluginVersionList(t *testing.T) {
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
+			name: "Error/InvalidPlugin",
+
+			request: &core.PluginVersionListRequest{Plugin: "Scenes Composer", After: "1.0.0"},
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
 			name: "Error/MissingAfter",
 
 			request: &core.PluginVersionListRequest{Plugin: "scenes-composer"},

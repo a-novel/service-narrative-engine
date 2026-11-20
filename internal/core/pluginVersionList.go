@@ -23,8 +23,8 @@ const PluginVersionListLimitDefault = 100
 
 // PluginVersionListRequest selects a page of the releases of a plugin that come after a version.
 type PluginVersionListRequest struct {
-	// Plugin is the plugin's name.
-	Plugin string `validate:"required"`
+	// Plugin is the plugin's name, a DNS label (RFC 1035).
+	Plugin string `validate:"required,dns_rfc1035_label"`
 	// After is the version the releases come after, as a semantic version without build metadata. The registry
 	// need not hold it.
 	After string `validate:"required,pluginversion"`
@@ -65,12 +65,19 @@ func (service *PluginVersionList) Exec(
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
+	after, err := parsePluginVersion(request.After)
+	if err != nil {
+		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
+	}
+
+	after.Plugin = request.Plugin
+
 	if request.Limit == 0 {
 		request.Limit = PluginVersionListLimitDefault
 	}
 
 	rows, err := service.dao.Exec(ctx, &dao.PluginVersionListRequest{
-		After:  pluginVersionKey(request.Plugin, request.After),
+		After:  after,
 		Limit:  request.Limit,
 		Offset: request.Offset,
 	})

@@ -2,6 +2,7 @@ package core_test
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/mock"
@@ -56,6 +57,15 @@ func TestPluginManifestGet(t *testing.T) {
 		}
 	}
 
+	// invalidPlugin returns a case for a name that is no DNS label, which no DAO reads.
+	invalidPlugin := func(name, plugin string) testCase {
+		return testCase{
+			name:      "Error/InvalidPlugin/" + name,
+			request:   &core.PluginManifestGetRequest{Plugin: plugin, Version: "1.10.0"},
+			expectErr: core.ErrInvalidRequest,
+		}
+	}
+
 	testCases := []testCase{
 		{
 			name: "Success",
@@ -78,6 +88,19 @@ func TestPluginManifestGet(t *testing.T) {
 			expect: expect("2.0.0-dev.1"),
 		},
 		{
+			name: "Success/LongestPlugin",
+
+			// A name holds 63 characters, digits and doubled hyphens included.
+			request: &core.PluginManifestGetRequest{Plugin: "a2--" + strings.Repeat("b", 59), Version: "1.10.0"},
+
+			daoRequest: &dao.PluginManifestSelectRequest{
+				Plugin: "a2--" + strings.Repeat("b", 59), Major: 1, Minor: 10,
+			},
+			daoMock: daoMock[*dao.PluginManifest]{err: dao.ErrPluginVersionNotFound},
+
+			expectErr: core.ErrPluginVersionNotFound,
+		},
+		{
 			name: "Success/LargestNumber",
 
 			// Each number fits a 32-bit column.
@@ -97,6 +120,14 @@ func TestPluginManifestGet(t *testing.T) {
 
 			expectErr: core.ErrInvalidRequest,
 		},
+		invalidPlugin("Uppercase", "Scenes-Composer"),
+		invalidPlugin("Space", "scenes composer"),
+		invalidPlugin("Underscore", "scenes_composer"),
+		invalidPlugin("LeadingDigit", "3d-map"),
+		invalidPlugin("LeadingHyphen", "-composer"),
+		invalidPlugin("TrailingHyphen", "scenes-"),
+		invalidPlugin("NotASCII", "scènes"),
+		invalidPlugin("TooLong", strings.Repeat("a", 64)),
 		invalid("Missing", ""),
 		invalid("TwoNumbers", "1.10"),
 		invalid("Prefix", "v1.10.0"),

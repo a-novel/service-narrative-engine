@@ -55,6 +55,13 @@ func TestPluginMessagesGet(t *testing.T) {
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
+			name: "Error/InvalidPlugin",
+
+			request: &core.PluginMessagesGetRequest{Plugin: "Scenes Composer", Version: "1.10.0", Language: "fr"},
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
 			name: "Error/InvalidVersion",
 
 			request: &core.PluginMessagesGetRequest{Plugin: "scenes-composer", Version: "1.10", Language: "fr"},

@@ -22,9 +22,9 @@ var validate = validator.New(validator.WithRequiredStructEnabled())
 var ErrInvalidRequest = errors.New("invalid request")
 
 // inSet returns a validation that reports whether a string is one of set.
-func inSet(set []string) validator.Func {
+func inSet[T ~string](set []T) validator.Func {
 	return func(fl validator.FieldLevel) bool {
-		return slices.Contains(set, fl.Field().String())
+		return slices.Contains(set, T(fl.Field().String()))
 	}
 }
 
@@ -87,9 +87,11 @@ func validateInstant(fl validator.FieldLevel) bool {
 // validatePluginVersion reports whether a string is a version the registry can hold, as [parsePluginVersion]
 // reads it. The package registers it as the "pluginversion" struct tag.
 func validatePluginVersion(fl validator.FieldLevel) bool {
-	_, ok := parsePluginVersion(fl.Field().String())
+	// FIXME: return the reason once a validation can. A validator.Func only answers yes or no, so what
+	// parsePluginVersion says of a refused version is dropped here (go-playground/validator#1278).
+	_, err := parsePluginVersion(fl.Field().String())
 
-	return ok
+	return err == nil
 }
 
 // validateUniqueCells reports whether a list of [CellsWriteItem] names each pair of a scene and a layer

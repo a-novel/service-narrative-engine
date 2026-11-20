@@ -2,6 +2,8 @@ package core
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"regexp"
 	"strconv"
 	"time"
@@ -9,19 +11,23 @@ import (
 	"github.com/a-novel/service-narrative-engine/internal/dao"
 )
 
+// PluginModuleKind names a JavaScript module a version of a plugin publishes.
+type PluginModuleKind string
+
 const (
-	// PluginModuleUI names the module that renders a plugin.
-	PluginModuleUI = "ui"
-	// PluginModuleMigration names the module that brings content from the previous version of a plugin.
-	PluginModuleMigration = "migration"
+	// PluginModuleUI is the module that renders a plugin.
+	PluginModuleUI PluginModuleKind = "ui"
+	// PluginModuleMigration is the module that brings content from the previous version of a plugin.
+	PluginModuleMigration PluginModuleKind = "migration"
 )
 
 // PluginModules lists the JavaScript modules a version of a plugin publishes.
-var PluginModules = []string{PluginModuleUI, PluginModuleMigration}
+var PluginModules = []PluginModuleKind{PluginModuleUI, PluginModuleMigration}
 
 // Plugin is a plugin of the registry, as its latest release describes it.
 type Plugin struct {
-	// Name identifies the plugin across its versions.
+	// Name identifies the plugin across its versions. It is a DNS label (RFC 1035): lowercase letters, digits
+	// and hyphens, from a letter to a letter or a digit, 63 characters at most.
 	Name string
 	// Version is the plugin's latest release, as a semantic version. A prerelease is never one.
 	Version string
@@ -117,12 +123,16 @@ var pluginVersionPattern = regexp.MustCompile(
 		`(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?$`,
 )
 
+// errPluginVersionSyntax reports a string that [pluginVersionPattern] does not match.
+var errPluginVersionSyntax = errors.New("not a semantic version without build metadata")
+
 // parsePluginVersion splits a version into the columns the registry keys it by, and leaves the plugin unset. It
-// reports false for anything but a semantic version without build metadata whose numbers fit those columns.
-func parsePluginVersion(version string) (dao.PluginVersionKey, bool) {
+// refuses anything but a semantic version without build metadata whose numbers fit those columns, and says
+// which of the two the version breaks.
+func parsePluginVersion(version string) (dao.PluginVersionKey, error) {
 	parts := pluginVersionPattern.FindStringSubmatch(version)
 	if parts == nil {
-		return dao.PluginVersionKey{}, false
+		return dao.PluginVersionKey{}, fmt.Errorf("%w: %q", errPluginVersionSyntax, version)
 	}
 
 	var numbers [3]int
@@ -131,22 +141,13 @@ func parsePluginVersion(version string) (dao.PluginVersionKey, bool) {
 		// The registry stores each number in a 32-bit column.
 		number, err := strconv.ParseInt(parts[i+1], 10, 32)
 		if err != nil {
-			return dao.PluginVersionKey{}, false
+			return dao.PluginVersionKey{}, fmt.Errorf("parse a number of version %q: %w", version, err)
 		}
 
 		numbers[i] = int(number)
 	}
 
-	return dao.PluginVersionKey{Major: numbers[0], Minor: numbers[1], Patch: numbers[2], Prerelease: parts[4]}, true
-}
-
-// pluginVersionKey returns a version of a plugin as the registry keys it. The version comes from a request
-// that passed the "pluginversion" tag, so it parses.
-func pluginVersionKey(plugin, version string) dao.PluginVersionKey {
-	key, _ := parsePluginVersion(version)
-	key.Plugin = plugin
-
-	return key
+	return dao.PluginVersionKey{Major: numbers[0], Minor: numbers[1], Patch: numbers[2], Prerelease: parts[4]}, nil
 }
 
 // formatPluginVersion spells the version a key names as a semantic version, such as 1.2.0-dev.1.
