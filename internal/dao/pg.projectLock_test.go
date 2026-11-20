@@ -63,7 +63,7 @@ func TestPgProjectLock(t *testing.T) {
 			postgrestest.RunDBTest(t, configtest.PostgresPreset, migrations.Migrations, func(ctx context.Context, t *testing.T) {
 				t.Helper()
 
-				insertFixtures(ctx, t, composerFixtures())
+				insertFixtures(ctx, t, projectFixtures())
 
 				result, err := daoProjectLock.Exec(ctx, testCase.request)
 				require.NoError(t, err)
