@@ -34,7 +34,7 @@ func TestRestProjectCreate(t *testing.T) {
 
 		request func(t *testing.T) *http.Request
 
-		serviceMock *serviceMock[*core.ProjectComposer]
+		serviceMock *serviceMock[*core.Project]
 
 		expectStatus   int
 		expectResponse any
@@ -46,7 +46,7 @@ func TestRestProjectCreate(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.ProjectComposer]{resp: &core.ProjectComposer{Project: coreProject}},
+			serviceMock: &serviceMock[*core.Project]{resp: coreProject},
 
 			expectStatus:   http.StatusCreated,
 			expectResponse: jsonProject,
@@ -79,7 +79,7 @@ func TestRestProjectCreate(t *testing.T) {
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.ProjectComposer]{err: core.ErrProjectsFull},
+			serviceMock: &serviceMock[*core.Project]{err: core.ErrProjectsFull},
 
 			expectStatus:   http.StatusConflict,
 			expectResponse: limitProblem("projects"),

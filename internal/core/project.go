@@ -12,7 +12,7 @@ import (
 // project_language enum holds the same values.
 var ProjectLanguages = []string{"en", "fr"}
 
-// Project is a narrative in progress, owned by one user. It produces one manuscript.
+// Project is a narrative in progress, owned by one user.
 type Project struct {
 	ID uuid.UUID
 	// OwnerID is the user who owns the project, from the authentication service.
@@ -32,8 +32,7 @@ type Project struct {
 	CreatedAt time.Time
 	// UpdatedAt is when the project's own fields last changed: its title, premise, language, tags or genres.
 	UpdatedAt time.Time
-	// EditedAt is when the project's content last changed: its own fields, its beats, scenes, layers, cells or
-	// recaps. Its logo is cosmetic and leaves it as it was.
+	// EditedAt is when the project's content last changed. Its logo is cosmetic and leaves it as it was.
 	EditedAt time.Time
 
 	// LogoChecksum is the SHA-256 of the logo's bytes in lowercase hex, nil while the project has no logo. Logo URLs

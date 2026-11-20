@@ -15,7 +15,7 @@ import (
 
 // RestProjectCreateService is the core operation [RestProjectCreate] delegates to.
 type RestProjectCreateService interface {
-	Exec(ctx context.Context, request *core.ProjectCreateRequest) (*core.ProjectComposer, error)
+	Exec(ctx context.Context, request *core.ProjectCreateRequest) (*core.Project, error)
 }
 
 // RestProjectCreateRequest is the JSON body the create-project endpoint accepts.
@@ -79,6 +79,6 @@ func (handler *RestProjectCreate) ServeHTTP(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	w.Header().Set("Location", "/v1/project?id="+result.Project.ID.String())
-	httpf.SendJSONStatus(w, span, http.StatusCreated, loadProject(result.Project))
+	w.Header().Set("Location", "/v1/project?id="+result.ID.String())
+	httpf.SendJSONStatus(w, span, http.StatusCreated, loadProject(result))
 }
