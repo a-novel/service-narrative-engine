@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"maps"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -28,14 +27,6 @@ import (
 type serviceMock[Resp any] struct {
 	resp Resp
 	err  error
-}
-
-// withComposer returns the JSON of a new project carrying the layers it starts with.
-func withComposer(project map[string]any, layers []any) map[string]any {
-	composer := maps.Clone(project)
-	composer["layers"] = layers
-
-	return composer
 }
 
 // asUser returns the request as the auth middleware hands it over: carrying the claims of userID,
@@ -81,18 +72,6 @@ func requireResponse(t *testing.T, response *http.Response, expectStatus int, ex
 	require.Equal(t, expectBody, body)
 }
 
-// mustDecode decodes JSON, for an expected response body.
-func mustDecode(data string) any {
-	var value any
-
-	err := json.Unmarshal([]byte(data), &value)
-	if err != nil {
-		panic(err)
-	}
-
-	return value
-}
-
 // probeSetup selects the state of the PostgreSQL connection a health probe meets.
 type probeSetup int
 
@@ -130,14 +109,6 @@ func newProbeContext(t *testing.T, setup probeSetup) context.Context {
 	}
 
 	return ctx
-}
-
-// invalidFieldsProblem is the body of a refusal for invalid request fields, each named by its path.
-func invalidFieldsProblem(fields map[string]any) any {
-	return map[string]any{
-		"type": "about:blank", "title": "Unprocessable Entity", "status": 422.0,
-		"tags": map[string]any{"invalidFields": fields},
-	}
 }
 
 // limitProblem is the body of a refusal for a storage limit, whose limit tag names the limit reached.

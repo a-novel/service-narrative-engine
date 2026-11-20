@@ -1,6 +1,6 @@
-// Command app prints the REST read timeout of the default preset and the locations of its JSON Keys
-// and genai services. TestAppPresetDefault runs it once per environment, since the preset resolves at
-// package initialization.
+// Command app prints the REST read timeout of the default preset and the location of its JSON Keys
+// service. TestAppPresetDefault runs it once per environment, since the preset resolves at package
+// initialization.
 package main
 
 import (
@@ -12,7 +12,5 @@ import (
 func main() {
 	cfg := config.AppPresetDefault
 
-	fmt.Printf(
-		"%v %+v %+v\n", cfg.Rest.Timeouts.Read, cfg.Dependencies.ServiceJSONKeys, cfg.Dependencies.ServiceGenai,
-	)
+	fmt.Printf("%v %+v\n", cfg.Rest.Timeouts.Read, cfg.Dependencies.ServiceJSONKeys)
 }

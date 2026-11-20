@@ -86,13 +86,13 @@ func TestRestProjectFieldsDrift(t *testing.T) {
 			expectStatus: http.StatusBadRequest,
 		},
 		{
-			// Wiring case: a sentinel only composerErrors holds, to prove the handler uses that map (see
+			// Wiring case: a sentinel only projectErrors holds, to prove the handler uses that map (see
 			// CONTRIBUTING, "Handler tests"), whether or not the route produces it.
-			name: "Error/ProjectFull",
+			name: "Error/ProjectsFull",
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.ProjectFieldsDriftResult]{err: core.ErrProjectFull},
+			serviceMock: &serviceMock[*core.ProjectFieldsDriftResult]{err: core.ErrProjectsFull},
 
 			expectStatus: http.StatusConflict,
 		},

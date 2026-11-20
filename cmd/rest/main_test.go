@@ -12,7 +12,6 @@ import (
 
 	servicejsonkeys "github.com/a-novel/service-json-keys/v2/pkg/go"
 
-	"github.com/a-novel-kit/golib/grpcf"
 	"github.com/a-novel-kit/golib/servicetoken"
 	"github.com/a-novel-kit/golib/servicetoken/servicetokentest"
 
@@ -37,8 +36,8 @@ func TestNewRouter(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(jsonKeysClient.Close)
 
-	// The test hands the router no database, no JSON Keys server and no genai host, so a request the
-	// gate admits to the health route answers that the first two are down, and leaves genai out.
+	// The test hands the router no database and no JSON Keys server, so a request the gate admits to
+	// the health route answers that both are down.
 	bothDown := `{"api:jsonKeys":{"status":"down"},"client:postgres":{"status":"down"}}`
 
 	testCases := []struct {
@@ -116,9 +115,8 @@ func TestNewRouter(t *testing.T) {
 
 			cfg := config.AppPresetDefault
 			cfg.ServiceToken = testCase.serviceToken
-			cfg.Dependencies.ServiceGenai = grpcf.ClientConfig{}
 
-			router, err := newRouter(t.Context(), cfg, jsonKeysClient, unconfiguredGenai{})
+			router, err := newRouter(cfg, jsonKeysClient)
 			require.ErrorIs(t, err, testCase.expectErr)
 
 			if testCase.expectErr != nil {
