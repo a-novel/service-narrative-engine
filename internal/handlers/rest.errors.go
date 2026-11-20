@@ -3,9 +3,6 @@ package handlers
 import (
 	"errors"
 	"net/http"
-	"strings"
-
-	"github.com/go-playground/validator/v10"
 
 	"github.com/a-novel-kit/golib/httpf"
 	"github.com/a-novel-kit/golib/picture"
@@ -17,23 +14,17 @@ import (
 // session's (serviceauthentication.ErrAnonymousCaller), or one that carries no claims.
 var ownerErrors = httpf.ErrMap{nil: http.StatusForbidden}
 
-// decodeErrors maps a request whose body, query or Last-Event-ID header cannot be read or parsed to its status.
+// decodeErrors maps a request whose body or query cannot be read or parsed to its status.
 var decodeErrors = httpf.ErrMap{nil: http.StatusBadRequest}
 
-// composerErrors maps the refusals of the Scenes Composer operations to their status. A 422 answers a request
-// that fails validation. A 409 answers a write that conflicts with the project's state: a full project or
-// beat, a project past its byte budget, a user who owns as many projects as they may, or a delete of the
-// last layer of a required kind.
-var composerErrors = httpf.ErrMap{
+// projectErrors maps the refusals of the project operations to their status. A 422 answers a request that
+// fails validation. A 409 answers a write that conflicts with the caller's state: a project past its byte
+// budget, or a user who owns as many projects as they may.
+var projectErrors = httpf.ErrMap{
 	core.ErrInvalidRequest:  http.StatusUnprocessableEntity,
 	core.ErrProjectNotFound: http.StatusNotFound,
-	core.ErrBeatNotFound:    http.StatusNotFound,
-	core.ErrSceneNotFound:   http.StatusNotFound,
-	core.ErrLayerNotFound:   http.StatusNotFound,
-	core.ErrProjectFull:     http.StatusConflict,
 	core.ErrProjectBudget:   http.StatusConflict,
 	core.ErrProjectsFull:    http.StatusConflict,
-	core.ErrRequiredLayer:   http.StatusConflict,
 }
 
 // logoErrors maps the refusals of the logo operations to their status. A 422 answers a request that fails
@@ -43,18 +34,6 @@ var logoErrors = httpf.ErrMap{
 	core.ErrProjectNotFound:     http.StatusNotFound,
 	core.ErrProjectLogoNotFound: http.StatusNotFound,
 	picture.ErrRefused:          http.StatusUnprocessableEntity,
-}
-
-// recapErrors maps the refusals of the recap writes to their status. A 422 answers a request that fails
-// validation. A 409 answers a recap that read its source at a version older than the stored recap's, or
-// newer than the source's own, and one that would bring the project past its byte budget.
-var recapErrors = httpf.ErrMap{
-	core.ErrInvalidRequest:  http.StatusUnprocessableEntity,
-	core.ErrProjectNotFound: http.StatusNotFound,
-	core.ErrBeatNotFound:    http.StatusNotFound,
-	core.ErrCellNotFound:    http.StatusNotFound,
-	core.ErrRecapConflict:   http.StatusConflict,
-	core.ErrProjectBudget:   http.StatusConflict,
 }
 
 // pluginErrors maps the refusals of the plugin registry's reads to their status. A 422 answers a request that
@@ -79,45 +58,4 @@ func tagLimit(err error) error {
 	default:
 		return err
 	}
-}
-
-// generationErrors maps the refusals of the generation operations to their status. A 422 answers a request
-// that fails validation, and a generation that outgrows every call its kind allows. A 403 answers a caller
-// whose roles set no caps, a 429 a generation genai admits no call of, and a 503 one genai cannot take.
-var generationErrors = httpf.ErrMap{
-	core.ErrInvalidRequest:     http.StatusUnprocessableEntity,
-	core.ErrNoGenerationCaps:   http.StatusForbidden,
-	core.ErrProjectNotFound:    http.StatusNotFound,
-	core.ErrBeatNotFound:       http.StatusNotFound,
-	core.ErrSceneNotFound:      http.StatusNotFound,
-	core.ErrLayerNotFound:      http.StatusNotFound,
-	core.ErrGenerationNotFound: http.StatusNotFound,
-	core.ErrContextTooLarge:    http.StatusUnprocessableEntity,
-	core.ErrGenerationQuota:    http.StatusTooManyRequests,
-	core.ErrGenaiUnavailable:   http.StatusServiceUnavailable,
-}
-
-// itemFields names the invalid fields of a one-item batch request as the single-item route's body names them,
-// so its invalidFields stay those of its own request: title for Beats[0].Title, id for IDs[0]. Every
-// single-item body is flat, so a field's own name is its path. golib names the fields only when this tag is
-// unset.
-func itemFields(err error) error {
-	fields, ok := errors.AsType[validator.ValidationErrors](err)
-	if !ok {
-		return err
-	}
-
-	paths := make(map[string]string, len(fields))
-
-	for _, field := range fields {
-		// A field is a capitalized word, or ends in ID: Title, ProjectID, and ID itself, which IDs[0] becomes.
-		name := strings.TrimSuffix(field.StructField(), "s[0]")
-		if name == "ID" {
-			name = "id"
-		}
-
-		paths[strings.ToLower(name[:1])+name[1:]] = field.Tag()
-	}
-
-	return httpf.WithTag(err, httpf.InvalidFieldsTag, paths)
 }

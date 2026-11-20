@@ -25,8 +25,7 @@ type RestProjectGetRequest struct {
 	ID uuid.UUID `schema:"id"`
 }
 
-// RestProjectGet is the HTTP handler for the get-project endpoint. It responds with the project. Its
-// scenes, layers and cells come page by page from their list endpoints.
+// RestProjectGet is the HTTP handler for the get-project endpoint. It responds with the project.
 type RestProjectGet struct {
 	service RestProjectGetService
 	logger  logging.Log
@@ -63,7 +62,7 @@ func (handler *RestProjectGet) ServeHTTP(w http.ResponseWriter, r *http.Request)
 
 	result, err := handler.service.Exec(ctx, serviceRequest)
 	if err != nil {
-		httpf.HandleError(ctx, handler.logger, w, span, composerErrors, err)
+		httpf.HandleError(ctx, handler.logger, w, span, projectErrors, err)
 
 		return
 	}

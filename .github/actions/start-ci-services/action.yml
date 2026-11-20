@@ -29,14 +29,6 @@ inputs:
     required: false
     default: ghcr.io/a-novel/service-authentication/standalone-rest:v2.28.0@sha256:2db636aad663cfedec224d2c90aff5b16c8e40e8ff8cabfad09b028a727e02d6
     description: Authentication REST image reference used by the CI topology.
-  genai_database_image:
-    required: false
-    default: ghcr.io/a-novel/service-genai/database:v0.13.0@sha256:9aafca234ebd25ca3db0f29546264d6f748e1f3b2ab500006364c6af8c6292d9
-    description: genai database image reference used by the CI topology.
-  genai_grpc_image:
-    required: false
-    default: ghcr.io/a-novel/service-genai/standalone-grpc:v0.13.0@sha256:997dac132c25959de9dcae494a7b6fe0a0330d992315f328ed0195907b8c7c39
-    description: genai gRPC image reference used by the CI topology.
   registry_login:
     required: false
     default: "false"
@@ -53,8 +45,6 @@ runs:
         JSON_KEYS_GRPC_IMAGE: ${{ inputs.json_keys_grpc_image }}
         AUTHENTICATION_DATABASE_IMAGE: ${{ inputs.authentication_database_image }}
         AUTHENTICATION_REST_IMAGE: ${{ inputs.authentication_rest_image }}
-        GENAI_DATABASE_IMAGE: ${{ inputs.genai_database_image }}
-        GENAI_GRPC_IMAGE: ${{ inputs.genai_grpc_image }}
         POSTGRES_PASSWORD: postgres
       with:
         services: ${{ inputs.services }}

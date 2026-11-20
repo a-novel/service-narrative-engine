@@ -3,10 +3,6 @@ package env
 import (
 	"cmp"
 	"os"
-	"strconv"
-	"time"
-
-	"github.com/samber/lo"
 
 	"github.com/a-novel-kit/golib/config"
 	"github.com/a-novel-kit/golib/downtime"
@@ -34,34 +30,11 @@ const (
 	ServiceJSONKeysHostDefault = "localhost"
 	// ServiceJSONKeysPortDefault is the JSON Keys service's default gRPC port.
 	ServiceJSONKeysPortDefault = 8080
-	// ServiceGenaiPortDefault is the genai service's default gRPC port.
-	ServiceGenaiPortDefault = 8080
 
-	// RestTimeoutDefault bounds a request and the write of its response. A generation submit plans its
-	// calls, then waits on genai for two of them at most, at 35 seconds each.
-	RestTimeoutDefault = 90 * time.Second
-	// RestMaxStreamDurationDefault bounds a streamed response to the 5 minutes OpenAI streams a call
-	// for. A client resumes a longer stream from the last event it received.
-	RestMaxStreamDurationDefault = 5 * time.Minute
-	// RestMaxStreamsPerCallerDefault fits genai's 2 calls per user, the overlap of a reconnect, a project
-	// load and a few tabs.
-	RestMaxStreamsPerCallerDefault = 8
-
-	// RestMaxRequestSizeDefault lets a batch through: up to 100 items, among them cells whose content
-	// the core caps at 2 MiB each. The router applies it to every route.
+	// RestMaxRequestSizeDefault lets a batch of items through. The router applies it to every route.
 	RestMaxRequestSizeDefault = 50 << 20
-	// RestMaxItemRequestSizeDefault caps a route that writes one item. It fits a whole cell, with room
-	// for the rest of the body.
+	// RestMaxItemRequestSizeDefault caps a route that writes one item.
 	RestMaxItemRequestSizeDefault = 4 << 20
-)
-
-var (
-	// RestRateLimitGenerationDefault caps a user's generation submits. Each one reads the project and plans
-	// its calls before genai's per-user quota applies, so a burst costs this service first.
-	RestRateLimitGenerationDefault = lo.Must(httpf.ParseRate("30/1m"))
-	// RestRateLimitGenerationReadDefault caps a user's reads of a call. Each unsettled read asks the provider
-	// for the call's state through genai, and a client polling twice a second sees a finished call at once.
-	RestRateLimitGenerationReadDefault = lo.Must(httpf.ParseRate("2/1s"))
 )
 
 var (
@@ -73,9 +46,6 @@ var (
 		Host: ServiceJSONKeysHostDefault,
 		Port: ServiceJSONKeysPortDefault,
 	})
-	// ServiceGenai locates the genai gRPC server through the SERVICE_GENAI_* variables. Without a host,
-	// genai stays unconfigured, and the generation routes answer 503.
-	ServiceGenai = grpcf.LoadClientConfig(getEnv, "SERVICE_GENAI", grpcf.ClientConfig{Port: ServiceGenaiPortDefault})
 
 	// AppName is the name of the application, as it appears in logs and tracing.
 	AppName = cmp.Or(getEnv("APP_NAME"), AppNameDefault)
@@ -89,25 +59,6 @@ var (
 	RestMaxItemRequestSize = config.LoadEnv(
 		getEnv("REST_MAX_ITEM_REQUEST_SIZE"), RestMaxItemRequestSizeDefault, config.Int64Parser,
 	)
-	// RestMaxStreamDuration bounds a streamed response.
-	RestMaxStreamDuration = config.LoadEnv(
-		getEnv("REST_MAX_STREAM_DURATION"), RestMaxStreamDurationDefault, time.ParseDuration,
-	)
-	// RestMaxStreamsPerCaller caps the streams one caller holds open on an instance.
-	RestMaxStreamsPerCaller = config.LoadEnv(
-		getEnv("REST_MAX_STREAMS_PER_CALLER"), RestMaxStreamsPerCallerDefault, strconv.Atoi,
-	)
-	// RestRateLimitGeneration caps each signed-in user's generation submits.
-	RestRateLimitGeneration = config.LoadEnv(
-		getEnv("REST_RATE_LIMIT_GENERATION"), RestRateLimitGenerationDefault, httpf.ParseRate,
-	)
-	// RestRateLimitGenerationRead caps each signed-in user's reads of a call, on each read route.
-	RestRateLimitGenerationRead = config.LoadEnv(
-		getEnv("REST_RATE_LIMIT_GENERATION_READ"), RestRateLimitGenerationReadDefault, httpf.ParseRate,
-	)
-	// MaxConcurrentProjectReads caps the reads of a whole project an instance runs at once. Unset, 0 lets
-	// core.NewProjectReadGate size them to the instance's memory.
-	MaxConcurrentProjectReads = config.LoadEnv(getEnv("MAX_CONCURRENT_PROJECT_READS"), 0, strconv.Atoi)
 
 	// ServiceToken names the service tokens the REST server accepts. Without an issuer, the server
 	// refuses to start unless SERVICE_ISSUER_OPTIONAL is set.
@@ -118,12 +69,10 @@ var (
 	DowntimeStart = config.LoadEnv(getEnv("DOWNTIME_START"), nil, downtime.ParseStart)
 )
 
-// restDefaults keeps golib's REST defaults but for the versioned ping path, the request and write
-// timeouts, and the request size.
+// restDefaults keeps golib's REST defaults but for the versioned ping path and the request size.
 func restDefaults() httpf.ServerConfig {
 	defaults := httpf.ServerConfigDefault
 	defaults.Liveness = "/v1/ping"
-	defaults.Timeouts.Write, defaults.Timeouts.Request = RestTimeoutDefault, RestTimeoutDefault
 	defaults.MaxRequestSize = RestMaxRequestSizeDefault
 
 	return defaults

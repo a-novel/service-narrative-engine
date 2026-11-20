@@ -54,10 +54,7 @@ func main() {
 	))
 	defer jsonKeysClient.Close()
 
-	genaiClient := newGenaiClient(cfg.Dependencies.ServiceGenai)
-	defer genaiClient.Close()
-
-	router := lo.Must(newRouter(ctx, cfg, jsonKeysClient, genaiClient))
+	router := lo.Must(newRouter(cfg, jsonKeysClient))
 
 	log.Println("Starting REST server on :" + strconv.Itoa(cfg.Rest.Port))
 
@@ -68,12 +65,8 @@ func main() {
 // reaches a route only with a token cfg accepts, and the mux reads the client IP header and counts
 // rate limits for verified callers alone. The liveness route stays open to the kubelet. The gate
 // refuses an empty issuer unless cfg opts a local stack out, so the server never starts open by
-// mistake. The stream routes end their streams once ctx ends.
-//
-//nolint:maintidx // newRouter wires the whole dependency graph as one flat list, one line per dependency.
-func newRouter(
-	ctx context.Context, cfg config.App, jsonKeysClient servicejsonkeys.Client, genai genaiClient,
-) (http.Handler, error) {
+// mistake.
+func newRouter(cfg config.App, jsonKeysClient servicejsonkeys.Client) (http.Handler, error) {
 	withServiceToken, err := httpf.ServiceTokenGate(
 		cfg.ServiceToken, httpf.NewPoolClient(httpf.PoolOptions{}), cfg.Logger, cfg.Rest.Liveness,
 	)
@@ -107,42 +100,13 @@ func newRouter(
 	daoProjectLogoUpsert := dao.NewPgProjectLogoUpsert()
 	daoProjectLogoSelect := dao.NewPgProjectLogoSelect()
 	daoProjectLogoDelete := dao.NewPgProjectLogoDelete()
-	daoBeatsInsert := dao.NewPgBeatsInsert()
-	daoBeatList := dao.NewPgBeatList()
-	daoBeatsUpdate := dao.NewPgBeatsUpdate()
-	daoBeatMove := dao.NewPgBeatMove()
-	daoBeatsDelete := dao.NewPgBeatsDelete()
-	daoScenesInsert := dao.NewPgScenesInsert()
-	daoSceneList := dao.NewPgSceneList()
-	daoScenesUpdate := dao.NewPgScenesUpdate()
-	daoSceneMove := dao.NewPgSceneMove()
-	daoScenesDelete := dao.NewPgScenesDelete()
-	daoSceneLength := dao.NewPgSceneLength()
 	daoLayersInsert := dao.NewPgLayersInsert()
-	daoLayerKind := dao.NewPgLayerKind()
-	daoLayerList := dao.NewPgLayerList()
-	daoLayersUpdate := dao.NewPgLayersUpdate()
-	daoLayerMove := dao.NewPgLayerMove()
-	daoLayersDelete := dao.NewPgLayersDelete()
-	daoCellsUpsert := dao.NewPgCellsUpsert()
-	daoCellList := dao.NewPgCellList()
-	daoCellSummaryList := dao.NewPgCellSummaryList()
-	daoCellsSelect := dao.NewPgCellsSelect()
-	daoCellRecapUpdate := dao.NewPgCellRecapUpdate()
-	daoBeatRecapUpdate := dao.NewPgBeatRecapUpdate()
-	daoManuscriptSelect := dao.NewPgManuscriptSelect()
 	daoPluginList := dao.NewPgPluginList()
 	daoPluginManifestSelect := dao.NewPgPluginManifestSelect()
 	daoPluginModuleSelect := dao.NewPgPluginModuleSelect()
 	daoPluginMessagesSelect := dao.NewPgPluginMessagesSelect()
 	daoPluginVersionList := dao.NewPgPluginVersionList()
 	transactor := postgres.NewTransactor(nil)
-	projectReadGate := core.NewProjectReadGate(cfg.Limits.MaxConcurrentProjectReads)
-
-	generationCaps, err := core.NewGenerationCapsPolicy(cfg.Permissions, cfg.Caps)
-	if err != nil {
-		return nil, fmt.Errorf("generation caps: %w", err)
-	}
 
 	// =================================================================================================================
 	// SERVICES
@@ -160,44 +124,6 @@ func newRouter(
 	serviceProjectLogoUpdate := core.NewProjectLogoUpdate(daoProjectOwned, daoProjectLogoUpsert)
 	serviceProjectLogoGet := core.NewProjectLogoGet(daoProjectOwned, daoProjectLogoSelect)
 	serviceProjectLogoDelete := core.NewProjectLogoDelete(daoProjectOwned, daoProjectLogoDelete)
-	serviceBeatsCreate := core.NewBeatsCreate(daoProjectLock, daoBeatsInsert, daoProjectBytes, transactor)
-	serviceBeatList := core.NewBeatList(daoProjectOwned, daoBeatList)
-	serviceBeatsUpdate := core.NewBeatsUpdate(daoProjectLock, daoBeatsUpdate, daoProjectBytes, transactor)
-	serviceBeatMove := core.NewBeatMove(daoProjectLock, daoBeatMove, transactor)
-	serviceBeatsDelete := core.NewBeatsDelete(daoProjectLock, daoBeatsDelete, transactor)
-	serviceScenesCreate := core.NewScenesCreate(daoProjectLock, daoScenesInsert, daoProjectBytes, transactor)
-	serviceSceneList := core.NewSceneList(daoProjectOwned, daoSceneList)
-	serviceScenesUpdate := core.NewScenesUpdate(daoProjectLock, daoScenesUpdate, daoProjectBytes, transactor)
-	serviceSceneMove := core.NewSceneMove(daoProjectLock, daoSceneMove, transactor)
-	serviceScenesDelete := core.NewScenesDelete(daoProjectLock, daoScenesDelete, transactor)
-	serviceLayersCreate := core.NewLayersCreate(daoProjectLock, daoLayersInsert, daoProjectBytes, transactor)
-	serviceLayerList := core.NewLayerList(daoProjectOwned, daoLayerList)
-	serviceLayersUpdate := core.NewLayersUpdate(daoProjectLock, daoLayersUpdate, daoProjectBytes, transactor)
-	serviceLayerMove := core.NewLayerMove(daoProjectLock, daoLayerMove, transactor)
-	serviceLayersDelete := core.NewLayersDelete(daoProjectLock, daoLayerKind, daoLayersDelete, transactor)
-	serviceCellList := core.NewCellList(daoProjectOwned, daoCellList)
-	serviceCellRecapWrite := core.NewCellRecapWrite(daoProjectLock, daoCellRecapUpdate, daoProjectBytes, transactor)
-	serviceBeatRecapWrite := core.NewBeatRecapWrite(daoProjectLock, daoBeatRecapUpdate, daoProjectBytes, transactor)
-	serviceCellsWrite := core.NewCellsWrite(
-		daoProjectLock, daoLayerKind, daoCellsUpsert, daoSceneLength, daoProjectBytes, transactor,
-	)
-	serviceManuscriptExport := core.NewManuscriptExport(
-		daoProjectOwned, daoLayerKind, daoProjectBytes, daoProjectSelect, daoManuscriptSelect, projectReadGate,
-	)
-	serviceProjectSnapshotRead := core.NewProjectSnapshotRead(
-		daoProjectOwned, daoProjectBytes, daoProjectSelect, daoBeatList, daoSceneList, daoLayerList, daoCellSummaryList,
-	)
-	serviceGenerationPlan := core.NewGenerationPlan(cfg.Generations, daoCellsSelect)
-	serviceGenerationSubmit := core.NewGenerationSubmit(
-		serviceProjectSnapshotRead, serviceGenerationPlan, genai, projectReadGate, generationCaps,
-	)
-	serviceGenerationGet := core.NewGenerationGet(genai)
-	serviceGenerationStream := core.NewGenerationStream(genai, serviceGenerationGet)
-	serviceGenerationCancel := core.NewGenerationCancel(genai)
-	serviceGenerationUsage := core.NewGenerationUsage(genai, generationCaps)
-	serviceProjectStream := core.NewProjectStream(
-		daoProjectOwned, daoProjectSelect, daoBeatList, daoSceneList, daoLayerList, daoCellList,
-	)
 	servicePluginList := core.NewPluginList(daoPluginList)
 	servicePluginManifestGet := core.NewPluginManifestGet(daoPluginManifestSelect)
 	servicePluginModuleGet := core.NewPluginModuleGet(daoPluginModuleSelect)
@@ -208,7 +134,7 @@ func newRouter(
 	// HANDLERS
 	// =================================================================================================================
 
-	handlerHealth := handlers.NewRestHealth(jsonKeysClient, genaiHealth(genai, cfg.Dependencies.ServiceGenai))
+	handlerHealth := handlers.NewRestHealth(jsonKeysClient)
 	handlerProjectCreate := handlers.NewRestProjectCreate(serviceProjectCreate, cfg.Logger)
 	handlerProjectGet := handlers.NewRestProjectGet(serviceProjectGet, cfg.Logger)
 	handlerProjectFieldsDrift := handlers.NewRestProjectFieldsDrift(serviceProjectFieldsDrift, cfg.Logger)
@@ -219,42 +145,6 @@ func newRouter(
 	handlerProjectLogoUpdate := handlers.NewRestProjectLogoUpdate(serviceProjectLogoUpdate, cfg.Logger)
 	handlerProjectLogoGet := handlers.NewRestProjectLogoGet(serviceProjectLogoGet, cfg.Logger)
 	handlerProjectLogoDelete := handlers.NewRestProjectLogoDelete(serviceProjectLogoDelete, cfg.Logger)
-	handlerBeatCreate := handlers.NewRestBeatCreate(serviceBeatsCreate, cfg.Logger)
-	handlerBeatsCreate := handlers.NewRestBeatsCreate(serviceBeatsCreate, cfg.Logger)
-	handlerBeatList := handlers.NewRestBeatList(serviceBeatList, cfg.Logger)
-	handlerBeatUpdate := handlers.NewRestBeatUpdate(serviceBeatsUpdate, cfg.Logger)
-	handlerBeatsUpdate := handlers.NewRestBeatsUpdate(serviceBeatsUpdate, cfg.Logger)
-	handlerBeatMove := handlers.NewRestBeatMove(serviceBeatMove, cfg.Logger)
-	handlerBeatDelete := handlers.NewRestBeatDelete(serviceBeatsDelete, cfg.Logger)
-	handlerBeatsDelete := handlers.NewRestBeatsDelete(serviceBeatsDelete, cfg.Logger)
-	handlerSceneCreate := handlers.NewRestSceneCreate(serviceScenesCreate, cfg.Logger)
-	handlerScenesCreate := handlers.NewRestScenesCreate(serviceScenesCreate, cfg.Logger)
-	handlerSceneList := handlers.NewRestSceneList(serviceSceneList, cfg.Logger)
-	handlerSceneUpdate := handlers.NewRestSceneUpdate(serviceScenesUpdate, cfg.Logger)
-	handlerScenesUpdate := handlers.NewRestScenesUpdate(serviceScenesUpdate, cfg.Logger)
-	handlerSceneMove := handlers.NewRestSceneMove(serviceSceneMove, cfg.Logger)
-	handlerSceneDelete := handlers.NewRestSceneDelete(serviceScenesDelete, cfg.Logger)
-	handlerScenesDelete := handlers.NewRestScenesDelete(serviceScenesDelete, cfg.Logger)
-	handlerLayerCreate := handlers.NewRestLayerCreate(serviceLayersCreate, cfg.Logger)
-	handlerLayersCreate := handlers.NewRestLayersCreate(serviceLayersCreate, cfg.Logger)
-	handlerLayerList := handlers.NewRestLayerList(serviceLayerList, cfg.Logger)
-	handlerLayerUpdate := handlers.NewRestLayerUpdate(serviceLayersUpdate, cfg.Logger)
-	handlerLayersUpdate := handlers.NewRestLayersUpdate(serviceLayersUpdate, cfg.Logger)
-	handlerLayerMove := handlers.NewRestLayerMove(serviceLayerMove, cfg.Logger)
-	handlerLayerDelete := handlers.NewRestLayerDelete(serviceLayersDelete, cfg.Logger)
-	handlerLayersDelete := handlers.NewRestLayersDelete(serviceLayersDelete, cfg.Logger)
-	handlerCellList := handlers.NewRestCellList(serviceCellList, cfg.Logger)
-	handlerCellWrite := handlers.NewRestCellWrite(serviceCellsWrite, cfg.Logger)
-	handlerCellsWrite := handlers.NewRestCellsWrite(serviceCellsWrite, cfg.Logger)
-	handlerCellRecapWrite := handlers.NewRestCellRecapWrite(serviceCellRecapWrite, cfg.Logger)
-	handlerBeatRecapWrite := handlers.NewRestBeatRecapWrite(serviceBeatRecapWrite, cfg.Logger)
-	handlerManuscriptExport := handlers.NewRestManuscriptExport(serviceManuscriptExport, cfg.Logger)
-	handlerGenerationSubmit := handlers.NewRestGenerationSubmit(serviceGenerationSubmit, cfg.Logger)
-	handlerGenerationGet := handlers.NewRestGenerationGet(serviceGenerationGet, cfg.Logger)
-	handlerGenerationStream := handlers.NewRestGenerationStream(serviceGenerationStream, cfg.Logger)
-	handlerGenerationCancel := handlers.NewRestGenerationCancel(serviceGenerationCancel, cfg.Logger)
-	handlerGenerationUsage := handlers.NewRestGenerationUsage(serviceGenerationUsage, cfg.Logger)
-	handlerProjectStream := handlers.NewRestProjectStream(serviceProjectStream, cfg.Logger)
 	handlerPluginList := handlers.NewRestPluginList(servicePluginList, cfg.Logger)
 	handlerPluginManifestGet := handlers.NewRestPluginManifestGet(servicePluginManifestGet, cfg.Logger)
 	handlerPluginUIGet := handlers.NewRestPluginModuleGet(servicePluginModuleGet, core.PluginModuleUI, cfg.Logger)
@@ -269,15 +159,11 @@ func newRouter(
 	// =================================================================================================================
 
 	router := httpf.NewMux(cfg.Rest, cfg.RestLogger, cfg.App.DowntimeStart)
-	limit := handlers.NewRestLimits(cfg.Rest, cfg.Limits)
 
 	router.Route("/v1", func(api chi.Router) {
 		// The router's body limit fits a batch; a route that writes one item, or compares what a client holds,
 		// caps its body lower.
 		item := api.With(middleware.RequestSize(cfg.Limits.MaxItemRequestSize))
-		// A stream outlives the request timeout, and ends at shutdown: its client resumes on another
-		// instance. One cap counts a caller's open streams across both stream routes.
-		stream := api.With(httpf.Streaming(cfg.Limits.MaxStreamDuration), httpf.EndOnShutdown(ctx))
 
 		api.Get("/ping", httpf.Ping)
 		api.Get("/healthcheck", handlerHealth)
@@ -287,59 +173,11 @@ func newRouter(
 		withAuth(api, config.PermissionProjectRead).Get("/projects/edits", handlerProjectEditsList.ServeHTTP)
 		withAuth(item, config.PermissionProjectRead).Post("/projects/logos/drift", handlerProjectLogosDrift.ServeHTTP)
 		withAuth(api, config.PermissionProjectRead).Get("/project", handlerProjectGet.ServeHTTP)
-		withAuth(stream, config.PermissionProjectRead).With(limit.Stream).
-			Get("/project/stream", handlerProjectStream.ServeHTTP)
 		withAuth(item, config.PermissionProjectWrite).Put("/project", handlerProjectUpdate.ServeHTTP)
 		withAuth(item, config.PermissionProjectWrite).Delete("/project", handlerProjectDelete.ServeHTTP)
 		withAuth(item, config.PermissionProjectWrite).Put("/project/logo", handlerProjectLogoUpdate.ServeHTTP)
 		withAuth(api, config.PermissionProjectRead).Get("/project/logo", handlerProjectLogoGet.ServeHTTP)
 		withAuth(item, config.PermissionProjectWrite).Delete("/project/logo", handlerProjectLogoDelete.ServeHTTP)
-
-		withAuth(item, config.PermissionProjectWrite).Post("/beat", handlerBeatCreate.ServeHTTP)
-		withAuth(item, config.PermissionProjectWrite).Put("/beat", handlerBeatUpdate.ServeHTTP)
-		withAuth(item, config.PermissionProjectWrite).Delete("/beat", handlerBeatDelete.ServeHTTP)
-		withAuth(item, config.PermissionProjectWrite).Post("/beat/move", handlerBeatMove.ServeHTTP)
-		withAuth(api, config.PermissionProjectRead).Get("/beats", handlerBeatList.ServeHTTP)
-		withAuth(api, config.PermissionProjectWrite).Post("/beats", handlerBeatsCreate.ServeHTTP)
-		withAuth(api, config.PermissionProjectWrite).Put("/beats", handlerBeatsUpdate.ServeHTTP)
-		withAuth(api, config.PermissionProjectWrite).Delete("/beats", handlerBeatsDelete.ServeHTTP)
-
-		withAuth(item, config.PermissionProjectWrite).Post("/scene", handlerSceneCreate.ServeHTTP)
-		withAuth(item, config.PermissionProjectWrite).Put("/scene", handlerSceneUpdate.ServeHTTP)
-		withAuth(item, config.PermissionProjectWrite).Delete("/scene", handlerSceneDelete.ServeHTTP)
-		withAuth(item, config.PermissionProjectWrite).Post("/scene/move", handlerSceneMove.ServeHTTP)
-		withAuth(api, config.PermissionProjectRead).Get("/scenes", handlerSceneList.ServeHTTP)
-		withAuth(api, config.PermissionProjectWrite).Post("/scenes", handlerScenesCreate.ServeHTTP)
-		withAuth(api, config.PermissionProjectWrite).Put("/scenes", handlerScenesUpdate.ServeHTTP)
-		withAuth(api, config.PermissionProjectWrite).Delete("/scenes", handlerScenesDelete.ServeHTTP)
-
-		withAuth(item, config.PermissionProjectWrite).Post("/layer", handlerLayerCreate.ServeHTTP)
-		withAuth(item, config.PermissionProjectWrite).Put("/layer", handlerLayerUpdate.ServeHTTP)
-		withAuth(item, config.PermissionProjectWrite).Delete("/layer", handlerLayerDelete.ServeHTTP)
-		withAuth(item, config.PermissionProjectWrite).Post("/layer/move", handlerLayerMove.ServeHTTP)
-		withAuth(api, config.PermissionProjectRead).Get("/layers", handlerLayerList.ServeHTTP)
-		withAuth(api, config.PermissionProjectWrite).Post("/layers", handlerLayersCreate.ServeHTTP)
-		withAuth(api, config.PermissionProjectWrite).Put("/layers", handlerLayersUpdate.ServeHTTP)
-		withAuth(api, config.PermissionProjectWrite).Delete("/layers", handlerLayersDelete.ServeHTTP)
-
-		withAuth(item, config.PermissionProjectWrite).Put("/cell", handlerCellWrite.ServeHTTP)
-		withAuth(api, config.PermissionProjectRead).Get("/cells", handlerCellList.ServeHTTP)
-		withAuth(api, config.PermissionProjectWrite).Put("/cells", handlerCellsWrite.ServeHTTP)
-
-		withAuth(item, config.PermissionProjectWrite).Put("/cell/recap", handlerCellRecapWrite.ServeHTTP)
-		withAuth(item, config.PermissionProjectWrite).Put("/beat/recap", handlerBeatRecapWrite.ServeHTTP)
-
-		withAuth(api, config.PermissionProjectRead).Get("/manuscript", handlerManuscriptExport.ServeHTTP)
-
-		// A submit carries its overrides, so it takes a batch's body limit.
-		withAuth(api, config.PermissionProjectWrite).With(limit.Generation).
-			Post("/generation", handlerGenerationSubmit.ServeHTTP)
-		withAuth(api, config.PermissionProjectRead).With(limit.GenerationRead).
-			Get("/generation", handlerGenerationGet.ServeHTTP)
-		withAuth(stream, config.PermissionProjectRead).With(limit.GenerationStream).
-			Get("/generation/stream", handlerGenerationStream.ServeHTTP)
-		withAuth(api, config.PermissionProjectWrite).Delete("/generation", handlerGenerationCancel.ServeHTTP)
-		withAuth(api, config.PermissionProjectRead).Get("/generation/usage", handlerGenerationUsage.ServeHTTP)
 
 		withAuth(api, config.PermissionPluginRead).Get("/plugins", handlerPluginList.ServeHTTP)
 		withAuth(api, config.PermissionPluginRead).Get("/plugin/version", handlerPluginManifestGet.ServeHTTP)

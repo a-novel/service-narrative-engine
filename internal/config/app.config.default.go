@@ -14,21 +14,11 @@ var AppPresetDefault = App{
 	},
 	Dependencies: Dependencies{
 		ServiceJSONKeys: env.ServiceJSONKeys,
-		ServiceGenai:    env.ServiceGenai,
 	},
 	Permissions:  PermissionsConfigDefault,
-	Caps:         CapsConfigDefault,
 	Rest:         env.Rest,
 	ServiceToken: env.ServiceToken,
-	Limits: Limits{
-		MaxItemRequestSize:        env.RestMaxItemRequestSize,
-		MaxStreamDuration:         env.RestMaxStreamDuration,
-		MaxStreamsPerCaller:       env.RestMaxStreamsPerCaller,
-		RateLimitGeneration:       env.RestRateLimitGeneration,
-		RateLimitGenerationRead:   env.RestRateLimitGenerationRead,
-		MaxConcurrentProjectReads: env.MaxConcurrentProjectReads,
-	},
-	Generations: GenerationsConfigDefault,
+	Limits:       Limits{MaxItemRequestSize: env.RestMaxItemRequestSize},
 
 	Otel:       env.Telemetry.Otel,
 	Logger:     env.Telemetry.Logger,
