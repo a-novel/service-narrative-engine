@@ -92,7 +92,7 @@ err := service.transactor.WithinTx(ctx, func(ctx context.Context) error {
 
 ## Handler tests
 
-Each shared error map in `internal/handlers/rest.errors.go` is tested sentinel by sentinel once, through one representative handler: `BeatsCreate` for `composerErrors`, `CellRecapWrite` for `recapErrors`, `GenerationSubmit` for `generationErrors`, `ProjectLogoUpdate` for `logoErrors`. Every other handler keeps one wiring case: it raises a sentinel only its own map holds, to prove which map it uses, even when its route never produces that error.
+Each shared error map in `internal/handlers/rest.errors.go` is tested sentinel by sentinel once, through one representative handler: `BeatsCreate` for `composerErrors`, `CellRecapWrite` for `recapErrors`, `GenerationSubmit` for `generationErrors`, `ProjectLogoUpdate` for `logoErrors`, `PluginManifestGet` for `pluginErrors`. Every other handler keeps one wiring case: it raises a sentinel only its own map holds, to prove which map it uses, even when its route never produces that error.
 
 ## Refresh goldens
 

@@ -131,6 +131,11 @@ func newRouter(
 	daoCellRecapUpdate := dao.NewPgCellRecapUpdate()
 	daoBeatRecapUpdate := dao.NewPgBeatRecapUpdate()
 	daoManuscriptSelect := dao.NewPgManuscriptSelect()
+	daoPluginList := dao.NewPgPluginList()
+	daoPluginManifestSelect := dao.NewPgPluginManifestSelect()
+	daoPluginModuleSelect := dao.NewPgPluginModuleSelect()
+	daoPluginMessagesSelect := dao.NewPgPluginMessagesSelect()
+	daoPluginVersionList := dao.NewPgPluginVersionList()
 	transactor := postgres.NewTransactor(nil)
 	projectReadGate := core.NewProjectReadGate(cfg.Limits.MaxConcurrentProjectReads)
 
@@ -193,6 +198,11 @@ func newRouter(
 	serviceProjectStream := core.NewProjectStream(
 		daoProjectOwned, daoProjectSelect, daoBeatList, daoSceneList, daoLayerList, daoCellList,
 	)
+	servicePluginList := core.NewPluginList(daoPluginList)
+	servicePluginManifestGet := core.NewPluginManifestGet(daoPluginManifestSelect)
+	servicePluginModuleGet := core.NewPluginModuleGet(daoPluginModuleSelect)
+	servicePluginMessagesGet := core.NewPluginMessagesGet(daoPluginMessagesSelect)
+	servicePluginVersionList := core.NewPluginVersionList(daoPluginVersionList)
 
 	// =================================================================================================================
 	// HANDLERS
@@ -245,6 +255,14 @@ func newRouter(
 	handlerGenerationCancel := handlers.NewRestGenerationCancel(serviceGenerationCancel, cfg.Logger)
 	handlerGenerationUsage := handlers.NewRestGenerationUsage(serviceGenerationUsage, cfg.Logger)
 	handlerProjectStream := handlers.NewRestProjectStream(serviceProjectStream, cfg.Logger)
+	handlerPluginList := handlers.NewRestPluginList(servicePluginList, cfg.Logger)
+	handlerPluginManifestGet := handlers.NewRestPluginManifestGet(servicePluginManifestGet, cfg.Logger)
+	handlerPluginUIGet := handlers.NewRestPluginModuleGet(servicePluginModuleGet, core.PluginModuleUI, cfg.Logger)
+	handlerPluginMigrationGet := handlers.NewRestPluginModuleGet(
+		servicePluginModuleGet, core.PluginModuleMigration, cfg.Logger,
+	)
+	handlerPluginMessagesGet := handlers.NewRestPluginMessagesGet(servicePluginMessagesGet, cfg.Logger)
+	handlerPluginVersionList := handlers.NewRestPluginVersionList(servicePluginVersionList, cfg.Logger)
 
 	// =================================================================================================================
 	// ROUTER
@@ -322,6 +340,13 @@ func newRouter(
 			Get("/generation/stream", handlerGenerationStream.ServeHTTP)
 		withAuth(api, config.PermissionProjectWrite).Delete("/generation", handlerGenerationCancel.ServeHTTP)
 		withAuth(api, config.PermissionProjectRead).Get("/generation/usage", handlerGenerationUsage.ServeHTTP)
+
+		withAuth(api, config.PermissionPluginRead).Get("/plugins", handlerPluginList.ServeHTTP)
+		withAuth(api, config.PermissionPluginRead).Get("/plugin/version", handlerPluginManifestGet.ServeHTTP)
+		withAuth(api, config.PermissionPluginRead).Get("/plugin/version/ui", handlerPluginUIGet.ServeHTTP)
+		withAuth(api, config.PermissionPluginRead).Get("/plugin/version/migration", handlerPluginMigrationGet.ServeHTTP)
+		withAuth(api, config.PermissionPluginRead).Get("/plugin/version/messages", handlerPluginMessagesGet.ServeHTTP)
+		withAuth(api, config.PermissionPluginRead).Get("/plugin/versions", handlerPluginVersionList.ServeHTTP)
 	})
 
 	return withServiceToken(router), nil

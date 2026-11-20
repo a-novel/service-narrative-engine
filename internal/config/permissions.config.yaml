@@ -8,6 +8,7 @@ roles:
     permissions:
       - "narrative:project:read"
       - "narrative:project:write"
+      - "narrative:plugin:read"
   "auth:admin":
     priority: 2
     inherits:
