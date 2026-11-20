@@ -58,8 +58,6 @@ export const PluginManifestSchema = z.object({
   /** The checksum of the UI module's bytes. */
   uiChecksum: PluginChecksumSchema,
   publishedAt: DateSchema,
-  /** The identity that published the version. */
-  publishedBy: z.string(),
 });
 
 /** The value {@link PluginManifestSchema} validates. */

@@ -4434,7 +4434,6 @@ components:
         - schemaChecksum
         - uiChecksum
         - publishedAt
-        - publishedBy
       additionalProperties: false
       properties:
         plugin:
@@ -4474,10 +4473,6 @@ components:
           description: When the version was published.
           format: date-time
           examples: ["2026-11-19T08:15:30Z"]
-        publishedBy:
-          type: string
-          description: The identity that published the version.
-          examples: [release-ci]
 
     pluginMessages:
       type: object
