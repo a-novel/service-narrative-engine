@@ -28,10 +28,10 @@ func TestPgProjectSelect(t *testing.T) {
 		{
 			name: "Success",
 
-			fixtures: composerFixtures(),
+			fixtures: projectFixtures(),
 			request:  &dao.ProjectSelectRequest{ID: projectID},
 
-			expect: composerFixtures().projects[0],
+			expect: projectFixtures().projects[0],
 		},
 		{
 			name: "Success/Logo",

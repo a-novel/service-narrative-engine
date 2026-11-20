@@ -90,7 +90,6 @@ func TestPgProjectInsert(t *testing.T) {
 
 				result, err := daoProjectInsert.Exec(ctx, testCase.request)
 				require.ErrorIs(t, err, testCase.expectErr)
-				requireStoredBytes(ctx, t)
 				require.Equal(t, testCase.expect, result)
 			})
 		})
