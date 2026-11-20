@@ -66,6 +66,5 @@ func (service *PluginManifestGet) Exec(
 		SchemaChecksum: entity.SchemaChecksum,
 		UIChecksum:     entity.UIChecksum,
 		PublishedAt:    entity.PublishedAt,
-		PublishedBy:    entity.PublishedBy,
 	}, nil
 }

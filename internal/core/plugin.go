@@ -62,8 +62,6 @@ type PluginManifest struct {
 	UIChecksum string
 
 	PublishedAt time.Time
-	// PublishedBy is the identity that published the version.
-	PublishedBy string
 }
 
 // PluginModule is one JavaScript module of a version of a plugin.

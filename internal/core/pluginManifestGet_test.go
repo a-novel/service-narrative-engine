@@ -23,7 +23,7 @@ func TestPluginManifestGet(t *testing.T) {
 	manifest := func(key dao.PluginVersionKey) *dao.PluginManifest {
 		return &dao.PluginManifest{
 			PluginVersionKey: key, Schema: []byte(`{"type": "object"}`), Exports: []byte(`{}`), HasMigration: true,
-			SchemaChecksum: "schema checksum", UIChecksum: "ui checksum", PublishedAt: createdAt, PublishedBy: "ci",
+			SchemaChecksum: "schema checksum", UIChecksum: "ui checksum", PublishedAt: createdAt,
 		}
 	}
 
@@ -31,7 +31,6 @@ func TestPluginManifestGet(t *testing.T) {
 		return &core.PluginManifest{
 			Plugin: "scenes-composer", Version: version, Schema: []byte(`{"type": "object"}`), Exports: []byte(`{}`),
 			HasMigration: true, SchemaChecksum: "schema checksum", UIChecksum: "ui checksum", PublishedAt: createdAt,
-			PublishedBy: "ci",
 		}
 	}
 
