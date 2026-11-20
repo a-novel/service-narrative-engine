@@ -1,4 +1,4 @@
-import { ABSENT_ID, accessToken, api, authApi, collect } from "./fixtures";
+import { ABSENT_ID, accessToken, api, authApi } from "./fixtures";
 
 import { createHash, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
@@ -9,15 +9,12 @@ import { expectStatus } from "@a-novel-kit/nodelib-test/http";
 import { anonymousAccessToken, userAccessToken } from "@a-novel/service-authentication-rest-test";
 import {
   Language,
-  LayerKind,
   PictureRefusal,
-  type ProjectComposer,
+  type Project,
   type ProjectCreateRequest,
   ProjectGenresSchema,
   ProjectTagsSchema,
   type ProjectUpdateRequest,
-  beatCreate,
-  cellWrite,
   projectCreate,
   projectDelete,
   projectEditsList,
@@ -27,9 +24,7 @@ import {
   projectLogoGet,
   projectLogoUpdate,
   projectLogosDrift,
-  projectStream,
   projectUpdate,
-  sceneCreate,
 } from "@a-novel/service-narrative-engine-rest";
 
 /** A 16 px square WebP, a logo the server accepts. */
@@ -50,7 +45,7 @@ const animatedLogo = new Blob([readFileSync(new URL("../testdata/animated-logo.p
 });
 
 /** Creates a project of the session the test deletes when it finishes, whatever its outcome. */
-async function createProject(request: ProjectCreateRequest, token = accessToken): Promise<ProjectComposer> {
+async function createProject(request: ProjectCreateRequest, token = accessToken): Promise<Project> {
   const project = await projectCreate(api, token, request);
   onTestFinished(() =>
     projectDelete(api, token, project).then(
@@ -139,7 +134,7 @@ describe("ProjectGenresSchema", () => {
 });
 
 describe("projectCreate", () => {
-  it("creates a project with its required layers", async () => {
+  it("creates a project", async () => {
     const project = await createProject({
       title: "Les Heures claires",
       premise: "Marie attend.",
@@ -153,7 +148,6 @@ describe("projectCreate", () => {
       tags: [],
       genres: [],
     });
-    expect(project.layers.map((layer) => [layer.position, layer.kind])).toEqual([[0, LayerKind.Manuscript]]);
   });
 
   it("stores the tags in order", async () => {
@@ -340,15 +334,14 @@ describe("projectEditsList", () => {
     });
   });
 
-  it("follows a content write, which leaves the project's fields as they were", async () => {
+  it("follows an update of the project's fields", async () => {
     const user = await userAccessToken(authApi);
     const project = await createProject({ title: "Edited", language: Language.En }, user);
 
-    await beatCreate(api, user, { projectID: project.id, title: "Le départ", color: "#4a90d9" });
+    await projectUpdate(api, user, { id: project.id, title: "Renamed", language: Language.En, tags: [], genres: [] });
 
     const { edits } = await projectEditsList(api, user);
     expect(edits[project.id].getTime()).toBeGreaterThan(project.editedAt.getTime());
-    expect((await projectGet(api, user, { id: project.id })).updatedAt).toEqual(project.updatedAt);
   });
 
   it("returns 403 for an anonymous session", async () => {
@@ -490,48 +483,6 @@ describe("projectDelete", () => {
 
   it("returns 404 for an absent project", async () => {
     await expectStatus(projectDelete(api, accessToken, { id: ABSENT_ID }), 404);
-  });
-});
-
-describe("projectStream", () => {
-  it("streams the project, then its beats, scenes, layers and cells", async () => {
-    const project = await createProject({ title: "Les Heures claires", language: Language.Fr });
-    const beat = await beatCreate(api, accessToken, { projectID: project.id, title: "Le départ", color: "#4a90d9" });
-    const scene = await sceneCreate(api, accessToken, {
-      projectID: project.id,
-      beatID: beat.id,
-      position: 0,
-      title: "Le quai",
-    });
-    const layer = project.layers[0];
-    await cellWrite(api, accessToken, {
-      projectID: project.id,
-      sceneID: scene.id,
-      layerID: layer.id,
-      content: { blocks: [{ kind: "narration", text: "Le train entrait en gare." }] },
-    });
-
-    const records = await collect(projectStream(api, accessToken, { id: project.id }));
-
-    expect(records).toMatchObject([
-      { type: "project", project: { id: project.id, title: "Les Heures claires" } },
-      { type: "beat", beat: { id: beat.id } },
-      { type: "scene", scene: { id: scene.id } },
-      { type: "layer", layer: { id: layer.id } },
-      { type: "cell", cell: { sceneID: scene.id, layerID: layer.id } },
-    ]);
-  });
-
-  it("returns 400 for a malformed ID", async () => {
-    await expectStatus(collect(projectStream(api, accessToken, { id: "not-a-uuid" })), 400);
-  });
-
-  it("returns 401 without a session", async () => {
-    await expectStatus(collect(projectStream(api, "", { id: ABSENT_ID })), 401);
-  });
-
-  it("returns 404 for an absent project", async () => {
-    await expectStatus(collect(projectStream(api, accessToken, { id: ABSENT_ID })), 404);
   });
 });
 
