@@ -24,7 +24,7 @@ func TestRestPluginManifestGet(t *testing.T) {
 	manifest := &core.PluginManifest{
 		Plugin: "scenes-composer", Version: "1.10.0", Schema: []byte(`{"type": "object"}`),
 		Exports: []byte(`{"scenes": {"id": "/id"}}`), HasMigration: true, SchemaChecksum: "schema checksum",
-		UIChecksum: "ui checksum", PublishedAt: createdAt, PublishedBy: "ci",
+		UIChecksum: "ui checksum", PublishedAt: createdAt,
 	}
 
 	testCases := []struct {
@@ -49,7 +49,7 @@ func TestRestPluginManifestGet(t *testing.T) {
 				"plugin": "scenes-composer", "version": "1.10.0", "schema": map[string]any{"type": "object"},
 				"exports": map[string]any{"scenes": map[string]any{"id": "/id"}}, "hasMigration": true,
 				"schemaChecksum": "schema checksum", "uiChecksum": "ui checksum",
-				"publishedAt": "2021-01-01T00:00:00Z", "publishedBy": "ci",
+				"publishedAt": "2021-01-01T00:00:00Z",
 			},
 		},
 		{

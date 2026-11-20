@@ -66,8 +66,6 @@ type PluginManifest struct {
 	UIChecksum string `json:"uiChecksum"`
 
 	PublishedAt time.Time `json:"publishedAt"`
-	// PublishedBy is the identity that published the version.
-	PublishedBy string `json:"publishedBy"`
 }
 
 func loadPluginManifest(manifest *core.PluginManifest) PluginManifest {
@@ -80,7 +78,6 @@ func loadPluginManifest(manifest *core.PluginManifest) PluginManifest {
 		SchemaChecksum: manifest.SchemaChecksum,
 		UIChecksum:     manifest.UIChecksum,
 		PublishedAt:    manifest.PublishedAt,
-		PublishedBy:    manifest.PublishedBy,
 	}
 }
 
