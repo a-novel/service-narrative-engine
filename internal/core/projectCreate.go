@@ -1,12 +1,9 @@
 package core
 
 import (
-	"cmp"
 	"context"
 	"errors"
 	"fmt"
-	"maps"
-	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -34,11 +31,6 @@ type ProjectCreateDaoProject interface {
 	Exec(ctx context.Context, request *dao.ProjectInsertRequest) (*dao.Project, error)
 }
 
-// ProjectCreateDaoLayers inserts the project's required layers.
-type ProjectCreateDaoLayers interface {
-	Exec(ctx context.Context, request *dao.LayersInsertRequest) ([]*dao.Layer, error)
-}
-
 // ProjectCreateRequest carries a new project.
 type ProjectCreateRequest struct {
 	OwnerID uuid.UUID `validate:"required"`
@@ -57,13 +49,12 @@ type ProjectCreateRequest struct {
 	Genres []string `validate:"max=10,unique,dive,required,max=24,projectlabel"`
 }
 
-// ProjectCreate creates a project with its required layers, in one transaction. It creates nothing when the
-// user already owns [ProjectsPerOwnerMax] projects.
+// ProjectCreate creates a project. It creates nothing when the user already owns [ProjectsPerOwnerMax]
+// projects.
 type ProjectCreate struct {
 	daoLock    ProjectCreateDaoLock
 	daoCount   ProjectCreateDaoCount
 	daoProject ProjectCreateDaoProject
-	daoLayers  ProjectCreateDaoLayers
 	transactor transaction.Transactor
 }
 
@@ -71,15 +62,12 @@ func NewProjectCreate(
 	daoLock ProjectCreateDaoLock,
 	daoCount ProjectCreateDaoCount,
 	daoProject ProjectCreateDaoProject,
-	daoLayers ProjectCreateDaoLayers,
 	transactor transaction.Transactor,
 ) *ProjectCreate {
-	return &ProjectCreate{
-		daoLock: daoLock, daoCount: daoCount, daoProject: daoProject, daoLayers: daoLayers, transactor: transactor,
-	}
+	return &ProjectCreate{daoLock: daoLock, daoCount: daoCount, daoProject: daoProject, transactor: transactor}
 }
 
-func (service *ProjectCreate) Exec(ctx context.Context, request *ProjectCreateRequest) (*ProjectComposer, error) {
+func (service *ProjectCreate) Exec(ctx context.Context, request *ProjectCreateRequest) (*Project, error) {
 	ctx, span := otel.Tracer().Start(ctx, "core.ProjectCreate")
 	defer span.End()
 
@@ -90,19 +78,11 @@ func (service *ProjectCreate) Exec(ctx context.Context, request *ProjectCreateRe
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	// The project takes the first ID, then its required layers.
-	ids := newIDs(1 + len(requiredLayers))
-
-	kinds := slices.Sorted(maps.Keys(requiredLayers))
-	layerItems := make([]dao.LayersInsertItem, len(kinds))
-
-	for i, kind := range kinds {
-		layerItems[i] = dao.LayersInsertItem{ID: ids[1+i], Kind: kind, Name: requiredLayers[kind]}
-	}
-
+	// uuid.NewV7 fails only when crypto/rand does, which Go documents as never happening on supported platforms.
+	id := uuid.Must(uuid.NewV7())
 	now := time.Now()
 
-	var composer *ProjectComposer
+	var project *dao.Project
 
 	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
 		// The lock holds the count until the insert commits, so two creations cannot both pass it.
@@ -120,8 +100,8 @@ func (service *ProjectCreate) Exec(ctx context.Context, request *ProjectCreateRe
 			return fmt.Errorf("%w: %d projects", ErrProjectsFull, owned.Count)
 		}
 
-		project, err := service.daoProject.Exec(ctx, &dao.ProjectInsertRequest{
-			ID:       ids[0],
+		project, err = service.daoProject.Exec(ctx, &dao.ProjectInsertRequest{
+			ID:       id,
 			OwnerID:  request.OwnerID,
 			Title:    request.Title,
 			Premise:  request.Premise,
@@ -134,28 +114,11 @@ func (service *ProjectCreate) Exec(ctx context.Context, request *ProjectCreateRe
 			return fmt.Errorf("insert project: %w", err)
 		}
 
-		layers, err := service.daoLayers.Exec(ctx, &dao.LayersInsertRequest{
-			ProjectID: project.ID,
-			Position:  0,
-			Layers:    layerItems,
-			Now:       now,
-		})
-		if err != nil {
-			return fmt.Errorf("insert required layers: %w", err)
-		}
-
-		slices.SortFunc(layers, func(a, b *dao.Layer) int { return cmp.Compare(a.Position, b.Position) })
-
-		composer = &ProjectComposer{
-			Project: newProject(project),
-			Layers:  lo.Map(layers, func(entity *dao.Layer, _ int) *Layer { return newLayer(entity) }),
-		}
-
 		return nil
 	})
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("run transaction: %w", err))
 	}
 
-	return composer, nil
+	return newProject(project), nil
 }

@@ -100,7 +100,6 @@ func newRouter(cfg config.App, jsonKeysClient servicejsonkeys.Client) (http.Hand
 	daoProjectLogoUpsert := dao.NewPgProjectLogoUpsert()
 	daoProjectLogoSelect := dao.NewPgProjectLogoSelect()
 	daoProjectLogoDelete := dao.NewPgProjectLogoDelete()
-	daoLayersInsert := dao.NewPgLayersInsert()
 	daoPluginList := dao.NewPgPluginList()
 	daoPluginManifestSelect := dao.NewPgPluginManifestSelect()
 	daoPluginModuleSelect := dao.NewPgPluginModuleSelect()
@@ -112,9 +111,7 @@ func newRouter(cfg config.App, jsonKeysClient servicejsonkeys.Client) (http.Hand
 	// SERVICES
 	// =================================================================================================================
 
-	serviceProjectCreate := core.NewProjectCreate(
-		daoOwnerLock, daoProjectCount, daoProjectInsert, daoLayersInsert, transactor,
-	)
+	serviceProjectCreate := core.NewProjectCreate(daoOwnerLock, daoProjectCount, daoProjectInsert, transactor)
 	serviceProjectGet := core.NewProjectGet(daoProjectOwned, daoProjectSelect)
 	serviceProjectFieldsDrift := core.NewProjectFieldsDrift(daoProjectFieldsDrift)
 	serviceProjectEditsList := core.NewProjectEditsList(daoProjectEditsList)
