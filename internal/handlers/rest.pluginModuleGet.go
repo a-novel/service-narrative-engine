@@ -23,8 +23,8 @@ type RestPluginModuleGetRequest struct {
 	Version string `schema:"version"`
 }
 
-// RestPluginModuleGet is the HTTP handler for the get-module endpoints, one per module of
-// [core.PluginModules]. It responds with the source of that module for one version of a plugin.
+// RestPluginModuleGet is the HTTP handler for the get-module endpoints, one per [core.PluginModuleKind]. It
+// responds with the source of that module for one version of a plugin.
 //
 // The module is JavaScript, which X-Content-Type-Options keeps the browser from second-guessing. Its
 // checksum is its strong ETag (RFC 9110 section 8.8.3), and Last-Modified is when its version was published.
