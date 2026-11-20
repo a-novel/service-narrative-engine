@@ -24,7 +24,7 @@ type PluginModuleGetRequest struct {
 	// Version is the version to read, as a semantic version without build metadata.
 	Version string `validate:"required,pluginversion"`
 
-	// Module names the module to read, one of [PluginModules].
+	// Module names the module to read.
 	Module PluginModuleKind `validate:"required,pluginmodule"`
 }
 
@@ -55,7 +55,7 @@ func (service *PluginModuleGet) Exec(ctx context.Context, request *PluginModuleG
 
 	key, err := parsePluginVersion(request.Version)
 	if err != nil {
-		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
+		return nil, otel.ReportError(span, err)
 	}
 
 	key.Plugin = request.Plugin

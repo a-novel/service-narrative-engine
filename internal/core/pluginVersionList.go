@@ -67,7 +67,7 @@ func (service *PluginVersionList) Exec(
 
 	after, err := parsePluginVersion(request.After)
 	if err != nil {
-		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
+		return nil, otel.ReportError(span, err)
 	}
 
 	after.Plugin = request.Plugin

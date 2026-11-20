@@ -2,7 +2,6 @@ package core
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -20,9 +19,6 @@ const (
 	// PluginModuleMigration is the module that brings content from the previous version of a plugin.
 	PluginModuleMigration PluginModuleKind = "migration"
 )
-
-// PluginModules lists the JavaScript modules a version of a plugin publishes.
-var PluginModules = []PluginModuleKind{PluginModuleUI, PluginModuleMigration}
 
 // Plugin is a plugin of the registry, as its latest release describes it.
 type Plugin struct {
@@ -123,16 +119,15 @@ var pluginVersionPattern = regexp.MustCompile(
 		`(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?$`,
 )
 
-// errPluginVersionSyntax reports a string that [pluginVersionPattern] does not match.
-var errPluginVersionSyntax = errors.New("not a semantic version without build metadata")
-
 // parsePluginVersion splits a version into the columns the registry keys it by, and leaves the plugin unset. It
-// refuses anything but a semantic version without build metadata whose numbers fit those columns, and says
-// which of the two the version breaks.
+// refuses anything but a semantic version without build metadata whose numbers fit those columns, with an
+// [ErrInvalidRequest] that says which of the two the version breaks.
 func parsePluginVersion(version string) (dao.PluginVersionKey, error) {
 	parts := pluginVersionPattern.FindStringSubmatch(version)
 	if parts == nil {
-		return dao.PluginVersionKey{}, fmt.Errorf("%w: %q", errPluginVersionSyntax, version)
+		return dao.PluginVersionKey{}, fmt.Errorf(
+			"%w: not a semantic version without build metadata: %q", ErrInvalidRequest, version,
+		)
 	}
 
 	var numbers [3]int
@@ -141,7 +136,9 @@ func parsePluginVersion(version string) (dao.PluginVersionKey, error) {
 		// The registry stores each number in a 32-bit column.
 		number, err := strconv.ParseInt(parts[i+1], 10, 32)
 		if err != nil {
-			return dao.PluginVersionKey{}, fmt.Errorf("parse a number of version %q: %w", version, err)
+			return dao.PluginVersionKey{}, fmt.Errorf(
+				"%w: parse a number of version %q: %w", ErrInvalidRequest, version, err,
+			)
 		}
 
 		numbers[i] = int(number)

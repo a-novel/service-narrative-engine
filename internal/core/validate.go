@@ -131,7 +131,7 @@ func init() {
 		"logochecksum":   validateLogoChecksum,
 		"instant":        validateInstant,
 		"pluginversion":  validatePluginVersion,
-		"pluginmodule":   inSet(PluginModules),
+		"pluginmodule":   inSet([]PluginModuleKind{PluginModuleUI, PluginModuleMigration}),
 	}
 
 	for tag, fn := range validations {

@@ -58,7 +58,7 @@ func (service *PluginMessagesGet) Exec(
 
 	key, err := parsePluginVersion(request.Version)
 	if err != nil {
-		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
+		return nil, otel.ReportError(span, err)
 	}
 
 	key.Plugin = request.Plugin
