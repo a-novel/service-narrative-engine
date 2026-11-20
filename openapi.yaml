@@ -4365,8 +4365,12 @@ components:
 
     pluginName:
       type: string
-      description: The name of a plugin, which identifies it across its versions.
+      description: |
+        The name of a plugin, which identifies it across its versions: a DNS label (RFC 1035), so lowercase
+        letters, digits and hyphens, from a letter to a letter or a digit.
+      pattern: "^[a-z]([-a-z0-9]*[a-z0-9])?$"
       minLength: 1
+      maxLength: 63
       examples: [scenes-composer]
 
     pluginSemver:

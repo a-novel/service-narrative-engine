@@ -13,13 +13,21 @@ export const PluginSemverSchema = z
     /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?$/
   );
 
+/**
+ * The name of a plugin, which identifies it across its versions: a DNS label (RFC 1035), so lowercase letters,
+ * digits and hyphens, from a letter to a letter or a digit, 63 characters at most.
+ */
+export const PluginNameSchema = z
+  .string()
+  .max(63)
+  .regex(/^[a-z]([-a-z0-9]*[a-z0-9])?$/);
+
 /** A checksum the registry computes: a SHA-256 in lowercase hex. */
 const PluginChecksumSchema = z.string().regex(/^[0-9a-f]{64}$/);
 
 /** A plugin of the registry, as its latest release describes it. */
 export const PluginSchema = z.object({
-  /** Identifies the plugin across its versions. */
-  name: z.string(),
+  name: PluginNameSchema,
   /** The plugin's latest release. A prerelease is never one. */
   version: PluginSemverSchema,
   /** The plugin's title, in the language asked for, or in English when the release lacks it. */
@@ -42,7 +50,7 @@ export type PluginPage = z.infer<typeof PluginPageSchema>;
 
 /** One version of a plugin, without its modules and its translations. */
 export const PluginManifestSchema = z.object({
-  plugin: z.string(),
+  plugin: PluginNameSchema,
   version: PluginSemverSchema,
   /** The JSON Schema (2020-12) the content of an instance follows. Its titles and descriptions are message keys. */
   schema: z.record(z.string(), z.unknown()),
@@ -112,7 +120,7 @@ export type PluginListRequest = z.infer<typeof PluginListRequestSchema>;
 
 /** One version of a plugin, to read its manifest or one of its modules. */
 export const PluginVersionGetRequestSchema = z.object({
-  plugin: z.string().min(1),
+  plugin: PluginNameSchema,
   version: PluginSemverSchema,
 });
 
@@ -133,7 +141,7 @@ export type PluginMessagesGetRequest = z.infer<typeof PluginMessagesGetRequestSc
  * `offset`. The registry need not hold the `after` version.
  */
 export const PluginVersionListRequestSchema = z.object({
-  plugin: z.string().min(1),
+  plugin: PluginNameSchema,
   after: PluginSemverSchema,
   limit: z.int().min(0).max(500).optional(),
   offset: z.int().min(0).optional(),

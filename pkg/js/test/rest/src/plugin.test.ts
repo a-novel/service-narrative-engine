@@ -57,6 +57,11 @@ describe("pluginManifestGet", () => {
     await expectStatus(pluginManifestGet(api, accessToken, { ...absent, version: "1.0.0+build" }), 422);
   });
 
+  it("returns 422 for a name that is no DNS label", async () => {
+    await expectStatus(pluginManifestGet(api, accessToken, { ...absent, plugin: "Absent Plugin" }), 422);
+    await expectStatus(pluginManifestGet(api, accessToken, { ...absent, plugin: "absent-" }), 422);
+  });
+
   it("returns 403 for an anonymous session", async () => {
     await expectStatus(pluginManifestGet(api, await anonymousAccessToken(authApi), absent), 403);
   });
