@@ -1,4 +1,4 @@
-migration-history	sha256:0bda4b09b83a4edcb9bfde8ba5d41a0db4bca200c8e6ffb270eed17ad4205c04
+migration-history	sha256:072baaf545c5913994a0394dd371b5a6e5096df0aa250f550312de647183bd34
 column	beats.bytes	bigint DEFAULT ((((octet_length(title) + octet_length(description)) + octet_length(prompt)) + COALESCE(octet_length((recap)::text), 0)) + COALESCE(octet_length((recap_sources)::text), 0)) GENERATED s
 column	beats.color	text NOT NULL
 column	beats.description	text NOT NULL DEFAULT ''::text
@@ -54,7 +54,6 @@ column	plugin_versions.patch	integer NOT NULL
 column	plugin_versions.plugin	text NOT NULL
 column	plugin_versions.prerelease	text NOT NULL DEFAULT ''::text
 column	plugin_versions.published_at	timestamp(0) with time zone NOT NULL
-column	plugin_versions.published_by	text NOT NULL
 column	plugin_versions.schema	jsonb NOT NULL
 column	plugin_versions.schema_checksum	bytea DEFAULT sha256(jsonb_send(schema)) GENERATED s
 column	plugin_versions.ui	bytea NOT NULL
@@ -150,7 +149,6 @@ constraint	plugin_versions.plugin_versions_plugin_check	CHECK ((plugin <> ''::te
 constraint	plugin_versions.plugin_versions_plugin_not_null	NOT NULL plugin
 constraint	plugin_versions.plugin_versions_prerelease_not_null	NOT NULL prerelease
 constraint	plugin_versions.plugin_versions_published_at_not_null	NOT NULL published_at
-constraint	plugin_versions.plugin_versions_published_by_not_null	NOT NULL published_by
 constraint	plugin_versions.plugin_versions_schema_not_null	NOT NULL schema
 constraint	plugin_versions.plugin_versions_ui_check	CHECK ((octet_length(ui) > 0))
 constraint	plugin_versions.plugin_versions_ui_not_null	NOT NULL ui

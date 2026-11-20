@@ -39,8 +39,6 @@ CREATE TABLE plugin_versions (
     octet_length(schema::text) + octet_length(exports::text) + octet_length(ui) + coalesce(octet_length(migration), 0)
   ) STORED,
   published_at timestamp(0) with time zone NOT NULL,
-  /* The identity that published the version. */
-  published_by text NOT NULL,
   PRIMARY KEY (plugin, major, minor, patch, prerelease)
 );
 

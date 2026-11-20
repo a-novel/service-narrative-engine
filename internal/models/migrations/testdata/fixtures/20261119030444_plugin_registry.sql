@@ -10,8 +10,7 @@ INSERT INTO
     exports,
     migration,
     ui,
-    published_at,
-    published_by
+    published_at
   )
 VALUES
   (
@@ -23,8 +22,7 @@ VALUES
     '{}',
     'export default (content) => ({ migrated: content });',
     'export default { mount() {} };',
-    '2026-11-19T00:00:00Z',
-    'fixture'
+    '2026-11-19T00:00:00Z'
   );
 
 INSERT INTO
