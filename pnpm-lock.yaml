@@ -234,10 +234,10 @@ importers:
         version: 2.14.0(@a-novel-kit/nodelib-browser@2.14.0(@grafana/faro-web-sdk@2.14.0)(@grafana/faro-web-tracing@2.14.0)(zod@4.6.7))(jsdom@31.0.1)(playwright@1.65.1)
       '@a-novel/service-authentication-rest':
         specifier: ^2.27.0
-        version: 2.28.0(@a-novel-kit/nodelib-browser@2.14.0(@grafana/faro-web-sdk@2.14.0)(@grafana/faro-web-tracing@2.14.0)(zod@4.6.7))(zod@4.6.7)
+        version: 2.29.0(@a-novel-kit/nodelib-browser@2.14.0(@grafana/faro-web-sdk@2.14.0)(@grafana/faro-web-tracing@2.14.0)(zod@4.6.7))(zod@4.6.7)
       '@a-novel/service-authentication-rest-test':
         specifier: ^2.27.0
-        version: 2.28.0(@a-novel-kit/nodelib-browser@2.14.0(@grafana/faro-web-sdk@2.14.0)(@grafana/faro-web-tracing@2.14.0)(zod@4.6.7))(@a-novel/service-authentication-rest@2.28.0(@a-novel-kit/nodelib-browser@2.14.0(@grafana/faro-web-sdk@2.14.0)(@grafana/faro-web-tracing@2.14.0)(zod@4.6.7))(zod@4.6.7))
+        version: 2.29.0(@a-novel-kit/nodelib-browser@2.14.0(@grafana/faro-web-sdk@2.14.0)(@grafana/faro-web-tracing@2.14.0)(zod@4.6.7))(@a-novel/service-authentication-rest@2.29.0(@a-novel-kit/nodelib-browser@2.14.0(@grafana/faro-web-sdk@2.14.0)(@grafana/faro-web-tracing@2.14.0)(zod@4.6.7))(zod@4.6.7))
       '@a-novel/service-narrative-engine-rest':
         specifier: workspace:*
         version: link:pkg/js/rest
@@ -367,15 +367,15 @@ packages:
       jsdom: ^30.0.0 || ^31.0.0
       playwright: ^1.63.0
 
-  '@a-novel/service-authentication-rest-test@2.28.0':
-    resolution: {integrity: sha512-iFvJ3LJnxEjU0+N5VaYOcJHXN/JdSA3Fsa3dvIba2Hqvrdu7LLhYClN/OIXMk6W8vAvHy6F0lNBJpZ0T4cVwzg==, tarball: https://npm.pkg.github.com/download/@a-novel/service-authentication-rest-test/2.28.0/f4c77fafb1c4a204bd13e3e0866dfb6f2b13d928}
+  '@a-novel/service-authentication-rest-test@2.29.0':
+    resolution: {integrity: sha512-yVcnkYme5lS4uqyG/LIyxqZNJVArUnMlslC/gBh9qE0OoBEoagFv/FnuOsVqxryR8i4IGNf++W5Tzrocm+lgnw==, tarball: https://npm.pkg.github.com/download/@a-novel/service-authentication-rest-test/2.29.0/2b98743ff59992a3eb3c7485ca260d1b3c1f8f1a}
     engines: {node: '>=23.11.0', npm: '>=10.9.2'}
     peerDependencies:
       '@a-novel-kit/nodelib-browser': ^1.3.21 || ^2.0.0
-      '@a-novel/service-authentication-rest': ^2.28.0
+      '@a-novel/service-authentication-rest': ^2.29.0
 
-  '@a-novel/service-authentication-rest@2.28.0':
-    resolution: {integrity: sha512-NvPxYqxNvMkkIxCfODQ0GK49d9CaBP/k69VzvP02z4EyzR85FEPVq6MC69lOO1uR72WlR1wZJtHk+1en9LNN7w==, tarball: https://npm.pkg.github.com/download/@a-novel/service-authentication-rest/2.28.0/2e02877486577d538bbffb7f1da68cabb90489e0}
+  '@a-novel/service-authentication-rest@2.29.0':
+    resolution: {integrity: sha512-BmfRtrl0PiUUQolIffzj91n47/NziAu88BO6YrwucoNQh6rHNCkypt7hXv/8cLDpGlXK++x+pwUdLX83RRm4Dg==, tarball: https://npm.pkg.github.com/download/@a-novel/service-authentication-rest/2.29.0/49f217bf63013cedcac921da4ee63a57cf705af5}
     engines: {node: '>=23.11.0', npm: '>=10.9.2'}
     peerDependencies:
       '@a-novel-kit/nodelib-browser': ^2.13.0
@@ -2976,12 +2976,12 @@ snapshots:
       jsdom: 31.0.1
       playwright: 1.65.1
 
-  '@a-novel/service-authentication-rest-test@2.28.0(@a-novel-kit/nodelib-browser@2.14.0(@grafana/faro-web-sdk@2.14.0)(@grafana/faro-web-tracing@2.14.0)(zod@4.6.7))(@a-novel/service-authentication-rest@2.28.0(@a-novel-kit/nodelib-browser@2.14.0(@grafana/faro-web-sdk@2.14.0)(@grafana/faro-web-tracing@2.14.0)(zod@4.6.7))(zod@4.6.7))':
+  '@a-novel/service-authentication-rest-test@2.29.0(@a-novel-kit/nodelib-browser@2.14.0(@grafana/faro-web-sdk@2.14.0)(@grafana/faro-web-tracing@2.14.0)(zod@4.6.7))(@a-novel/service-authentication-rest@2.29.0(@a-novel-kit/nodelib-browser@2.14.0(@grafana/faro-web-sdk@2.14.0)(@grafana/faro-web-tracing@2.14.0)(zod@4.6.7))(zod@4.6.7))':
     dependencies:
       '@a-novel-kit/nodelib-browser': 2.14.0(@grafana/faro-web-sdk@2.14.0)(@grafana/faro-web-tracing@2.14.0)(zod@4.6.7)
-      '@a-novel/service-authentication-rest': 2.28.0(@a-novel-kit/nodelib-browser@2.14.0(@grafana/faro-web-sdk@2.14.0)(@grafana/faro-web-tracing@2.14.0)(zod@4.6.7))(zod@4.6.7)
+      '@a-novel/service-authentication-rest': 2.29.0(@a-novel-kit/nodelib-browser@2.14.0(@grafana/faro-web-sdk@2.14.0)(@grafana/faro-web-tracing@2.14.0)(zod@4.6.7))(zod@4.6.7)
 
-  '@a-novel/service-authentication-rest@2.28.0(@a-novel-kit/nodelib-browser@2.14.0(@grafana/faro-web-sdk@2.14.0)(@grafana/faro-web-tracing@2.14.0)(zod@4.6.7))(zod@4.6.7)':
+  '@a-novel/service-authentication-rest@2.29.0(@a-novel-kit/nodelib-browser@2.14.0(@grafana/faro-web-sdk@2.14.0)(@grafana/faro-web-tracing@2.14.0)(zod@4.6.7))(zod@4.6.7)':
     dependencies:
       '@a-novel-kit/nodelib-browser': 2.14.0(@grafana/faro-web-sdk@2.14.0)(@grafana/faro-web-tracing@2.14.0)(zod@4.6.7)
       zod: 4.6.7
