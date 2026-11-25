@@ -1,8 +1,4 @@
 import type { NarrativeEngineApi } from "./api";
-import { type Beat, BeatSchema } from "./beat";
-import { type Cell, CellSchema } from "./cell";
-import { type Layer, LayerSchema } from "./layer";
-import { type Scene, SceneSchema } from "./scene";
 import { DateSchema, maxChars } from "./schema";
 
 import { z } from "zod";
@@ -37,7 +33,7 @@ export const PROJECTS_MAX = 100;
 /** The checksum of a logo: the SHA-256 of its stored bytes, in lowercase hex. */
 const LogoChecksumSchema = z.string().regex(/^[0-9a-f]{64}$/);
 
-/** One narrative, written in one language, that its owner composes scene by scene. */
+/** One narrative, written in one language. */
 export const ProjectSchema = z.object({
   id: z.uuid(),
   title: z.string(),
@@ -61,14 +57,6 @@ export const ProjectSchema = z.object({
 
 /** The value {@link ProjectSchema} validates. */
 export type Project = z.infer<typeof ProjectSchema>;
-
-/** A new project with its required layers, in order, as {@link projectCreate} returns it. */
-export const ProjectComposerSchema = ProjectSchema.extend({
-  layers: z.array(LayerSchema),
-});
-
-/** The value {@link ProjectComposerSchema} validates. */
-export type ProjectComposer = z.infer<typeof ProjectComposerSchema>;
 
 /** The title of a project, which is not blank. */
 export const ProjectTitleSchema = maxChars(80).regex(/\S/);
@@ -118,7 +106,7 @@ export const ProjectGenresSchema = z
   .max(PROJECT_GENRES_MAX)
   .refine((genres) => new Set(genres).size === genres.length, { error: "Expected every genre to appear once" });
 
-/** The project to create. Its scenes come next, from `sceneCreate`. */
+/** The project to create. */
 export const ProjectCreateRequestSchema = z.object({
   title: ProjectTitleSchema,
   premise: ProjectPremiseSchema.optional(),
@@ -160,25 +148,22 @@ export const ProjectDeleteRequestSchema = z.object({
 export type ProjectDeleteRequest = z.infer<typeof ProjectDeleteRequestSchema>;
 
 /**
- * Creates a project with its required layers, and returns it with them. Throws on HTTP 409, with `projects` in
- * the error's `tags.limit`, when the caller already owns 100 projects.
+ * Creates a project, and returns it. Throws on HTTP 409, with `projects` in the error's `tags.limit`, when the
+ * caller already owns 100 projects.
  */
 export async function projectCreate(
   api: NarrativeEngineApi,
   accessToken: string,
   request: ProjectCreateRequest
-): Promise<ProjectComposer> {
-  return await api.fetch("/v1/projects", ProjectComposerSchema, {
+): Promise<Project> {
+  return await api.fetch("/v1/projects", ProjectSchema, {
     method: "POST",
     accessToken,
     json: request,
   });
 }
 
-/**
- * Returns a project of the caller. Read its scenes, layers and cells page by page with `sceneList`,
- * `layerList` and `cellList`. Throws on HTTP 404 when the caller owns no such project.
- */
+/** Returns a project of the caller. Throws on HTTP 404 when the caller owns no such project. */
 export async function projectGet(
   api: NarrativeEngineApi,
   accessToken: string,
@@ -321,10 +306,7 @@ export async function projectUpdate(
   });
 }
 
-/**
- * Deletes a project with its scenes, layers and cells, and returns it as it was. Throws on HTTP 404
- * for an unknown project.
- */
+/** Deletes a project, and returns it as it was. Throws on HTTP 404 for an unknown project. */
 export async function projectDelete(
   api: NarrativeEngineApi,
   accessToken: string,
@@ -412,60 +394,4 @@ export async function projectLogoDelete(
     method: "DELETE",
     accessToken,
   });
-}
-
-/** A record of {@link projectStream}: the project, or one of its beats, scenes, layers or cells. */
-export type ProjectStreamRecord =
-  | { type: "project"; project: Project }
-  | { type: "beat"; beat: Beat }
-  | { type: "scene"; scene: Scene }
-  | { type: "layer"; layer: Layer }
-  | { type: "cell"; cell: Cell };
-
-/** Options of {@link projectStream}. */
-export type ProjectStreamOptions = {
-  /** Stops the stream. */
-  signal?: AbortSignal;
-};
-
-/**
- * Streams a project of the caller whole, in one response: the project, then its beats and scenes in narrative order,
- * its layers in order, and its cells by the narrative order of their scene, then the position of their layer, each
- * as its list returns it. A cut stream resumes after the last record received. A write during the stream may show,
- * as it does across the pages of a list. Throws on HTTP 404 when the caller owns no such project.
- */
-export async function* projectStream(
-  api: NarrativeEngineApi,
-  accessToken: string,
-  request: ProjectGetRequest,
-  options: ProjectStreamOptions = {}
-): AsyncGenerator<ProjectStreamRecord> {
-  const params = new URLSearchParams({ id: request.id });
-  const events = api.stream(
-    `/v1/project/stream?${params.toString()}`,
-    { method: "GET", accessToken, signal: options.signal },
-    (event) => event.type === "end"
-  );
-
-  for await (const event of events) {
-    const data: unknown = JSON.parse(event.data);
-
-    switch (event.type) {
-      case "project":
-        yield { type: "project", project: ProjectSchema.parse(data) };
-        break;
-      case "beat":
-        yield { type: "beat", beat: BeatSchema.parse(data) };
-        break;
-      case "scene":
-        yield { type: "scene", scene: SceneSchema.parse(data) };
-        break;
-      case "layer":
-        yield { type: "layer", layer: LayerSchema.parse(data) };
-        break;
-      case "cell":
-        yield { type: "cell", cell: CellSchema.parse(data) };
-        break;
-    }
-  }
 }
