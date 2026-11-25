@@ -51,7 +51,7 @@ func (handler *RestProjectEditsList) ServeHTTP(w http.ResponseWriter, r *http.Re
 
 	result, err := handler.service.Exec(ctx, &core.ProjectEditsListRequest{OwnerID: ownerID})
 	if err != nil {
-		httpf.HandleError(ctx, handler.logger, w, span, composerErrors, err)
+		httpf.HandleError(ctx, handler.logger, w, span, projectErrors, err)
 
 		return
 	}

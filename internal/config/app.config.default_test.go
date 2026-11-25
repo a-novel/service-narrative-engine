@@ -34,10 +34,10 @@ func TestAppPresetDefault(t *testing.T) {
 	}{
 		{
 			// The unprefixed variable would fail to parse: reading the prefixed one proves the prefix
-			// applies. Genai keeps no host, so the service runs without it.
+			// applies.
 			name:   "Success",
 			env:    []string{"TEST_REST_TIMEOUT_READ=2s"},
-			expect: "2s {Host:localhost Port:8080 TLS:false TokenPath:} {Host: Port:8080 TLS:false TokenPath:}",
+			expect: "2s {Host:localhost Port:8080 TLS:false TokenPath:}",
 		},
 		{
 			name: "Success/Dependencies",
@@ -46,14 +46,8 @@ func TestAppPresetDefault(t *testing.T) {
 				"TEST_SERVICE_JSON_KEYS_PORT=9090",
 				"TEST_SERVICE_JSON_KEYS_TLS=true",
 				"TEST_SERVICE_JSON_KEYS_TOKEN_PATH=/tokens/json-keys",
-				"TEST_SERVICE_GENAI_HOST=genai",
-				"TEST_SERVICE_GENAI_PORT=9091",
-				"TEST_SERVICE_GENAI_TLS=true",
-				"TEST_SERVICE_GENAI_TOKEN_PATH=/tokens/genai",
 			},
-			expect: "15s" +
-				" {Host:json-keys Port:9090 TLS:true TokenPath:/tokens/json-keys}" +
-				" {Host:genai Port:9091 TLS:true TokenPath:/tokens/genai}",
+			expect: "15s {Host:json-keys Port:9090 TLS:true TokenPath:/tokens/json-keys}",
 		},
 	}
 

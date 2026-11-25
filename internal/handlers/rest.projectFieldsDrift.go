@@ -74,7 +74,7 @@ func (handler *RestProjectFieldsDrift) ServeHTTP(w http.ResponseWriter, r *http.
 
 	result, err := handler.service.Exec(ctx, serviceRequest)
 	if err != nil {
-		httpf.HandleError(ctx, handler.logger, w, span, composerErrors, err)
+		httpf.HandleError(ctx, handler.logger, w, span, projectErrors, err)
 
 		return
 	}

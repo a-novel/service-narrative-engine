@@ -81,7 +81,7 @@ func (handler *RestProjectUpdate) ServeHTTP(w http.ResponseWriter, r *http.Reque
 
 	result, err := handler.service.Exec(ctx, serviceRequest)
 	if err != nil {
-		httpf.HandleError(ctx, handler.logger, w, span, composerErrors, tagLimit(err))
+		httpf.HandleError(ctx, handler.logger, w, span, projectErrors, tagLimit(err))
 
 		return
 	}

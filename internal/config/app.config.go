@@ -27,9 +27,6 @@ type Dependencies struct {
 	// ServiceJSONKeys locates the JSON Keys service, which verifies access tokens, and says how to
 	// dial it.
 	ServiceJSONKeys grpcf.ClientConfig
-	// ServiceGenai locates the genai service, which runs the model calls of generations, and says how
-	// to dial it. An empty host leaves genai unconfigured.
-	ServiceGenai grpcf.ClientConfig
 }
 
 // Limits bounds what one request carries, below the REST server's own limits. The server's
@@ -37,21 +34,6 @@ type Dependencies struct {
 type Limits struct {
 	// MaxItemRequestSize caps the body of a route that writes one item, in bytes.
 	MaxItemRequestSize int64
-	// MaxStreamDuration bounds a streamed response, past the server's request timeout.
-	MaxStreamDuration time.Duration
-	// MaxStreamsPerCaller caps the streams one caller holds open on an instance, across the stream
-	// routes. A stream past it answers 429.
-	MaxStreamsPerCaller int
-	// RateLimitGeneration caps each signed-in user's generation submits, on top of the router's rate. A submit
-	// past it answers 429.
-	RateLimitGeneration httpf.Rate
-	// RateLimitGenerationRead caps each signed-in user's reads of a call, on top of the router's rate. A read and a
-	// stream each count on a budget of their own. A read past it answers 429.
-	RateLimitGenerationRead httpf.Rate
-	// MaxConcurrentProjectReads caps the reads of a whole project an instance runs at once: manuscript exports
-	// and the snapshots generations plan from. A read past it waits for a slot. 0 sizes it to the instance's
-	// memory.
-	MaxConcurrentProjectReads int
 }
 
 // App is the complete configuration the service reads at startup.
@@ -62,8 +44,6 @@ type App struct {
 	Dependencies Dependencies
 	// Permissions maps each role to the permissions it grants.
 	Permissions serviceauthentication.Permissions
-	// Caps maps roles to the caps genai counts their users' generations against.
-	Caps Caps
 	// Rest configures the REST server.
 	Rest httpf.ServerConfig
 	// ServiceToken names the service tokens the REST server accepts. Without an issuer, the server
@@ -71,8 +51,6 @@ type App struct {
 	ServiceToken servicetoken.Config
 	// Limits bounds what one request carries, below the REST server's own limits.
 	Limits Limits
-	// Generations configures the model calls of generations.
-	Generations Generations
 
 	// Otel configures the OpenTelemetry exporter.
 	Otel otel.Config

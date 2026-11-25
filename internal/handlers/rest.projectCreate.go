@@ -33,8 +33,7 @@ type RestProjectCreateRequest struct {
 }
 
 // RestProjectCreate is the HTTP handler for the create-project endpoint. It responds 201 with the
-// project and its required layers, and a Location naming the project's read (RFC 9110 §15.3.2). The
-// client adds scenes next, through the create-scenes endpoint.
+// project, and a Location naming the project's read (RFC 9110 §15.3.2).
 type RestProjectCreate struct {
 	service RestProjectCreateService
 	logger  logging.Log
@@ -75,11 +74,11 @@ func (handler *RestProjectCreate) ServeHTTP(w http.ResponseWriter, r *http.Reque
 
 	result, err := handler.service.Exec(ctx, serviceRequest)
 	if err != nil {
-		httpf.HandleError(ctx, handler.logger, w, span, composerErrors, tagLimit(err))
+		httpf.HandleError(ctx, handler.logger, w, span, projectErrors, tagLimit(err))
 
 		return
 	}
 
 	w.Header().Set("Location", "/v1/project?id="+result.Project.ID.String())
-	httpf.SendJSONStatus(w, span, http.StatusCreated, loadProjectComposer(result))
+	httpf.SendJSONStatus(w, span, http.StatusCreated, loadProject(result.Project))
 }

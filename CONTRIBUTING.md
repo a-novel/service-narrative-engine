@@ -19,7 +19,7 @@ Check that it answers:
 # Liveness
 curl "http://localhost:${REST_PORT}/v1/ping"
 
-# Dependency check (Postgres, JSON Keys, and genai once SERVICE_GENAI_HOST is set)
+# Dependency check (Postgres and JSON Keys)
 curl "http://localhost:${REST_PORT}/v1/healthcheck"
 ```
 
@@ -43,7 +43,7 @@ The routes are described in [`openapi.yaml`](./openapi.yaml).
 | `generationPlan.go`, `context*.go`                                               | The planner: `contextSplit` splits a generation into calls, `contextDraft` and `contextRead` hold what a call reads, `contextPrompt` renders it, `contextPlan` is the result. |
 | `openaiResponses.go`                                                             | The OpenAI request and response formats.                                                                                                                                      |
 
-`internal/dao` holds one statement per file, `pg.<operation>.sql` beside its `pg.<operation>.go`, and `internal/handlers` one route per `rest.<operation>.go`, with the shared error maps in `rest.errors.go`. golib's `httpf` answers the ping and runs the health probes, which `rest.health.go` lists: `postgres.Health`, JSON Keys and, once configured, genai.
+`internal/dao` holds one statement per file, `pg.<operation>.sql` beside its `pg.<operation>.go`, and `internal/handlers` one route per `rest.<operation>.go`, with the shared error maps in `rest.errors.go`. golib's `httpf` answers the ping and runs the health probes, which `rest.health.go` lists: `postgres.Health` and JSON Keys.
 
 ## Transactions
 
@@ -92,7 +92,7 @@ err := service.transactor.WithinTx(ctx, func(ctx context.Context) error {
 
 ## Handler tests
 
-Each shared error map in `internal/handlers/rest.errors.go` is tested sentinel by sentinel once, through one representative handler: `BeatsCreate` for `composerErrors`, `CellRecapWrite` for `recapErrors`, `GenerationSubmit` for `generationErrors`, `ProjectLogoUpdate` for `logoErrors`, `PluginManifestGet` for `pluginErrors`. Every other handler keeps one wiring case: it raises a sentinel only its own map holds, to prove which map it uses, even when its route never produces that error.
+Each shared error map in `internal/handlers/rest.errors.go` is tested sentinel by sentinel once, through one representative handler: `ProjectUpdate` for `projectErrors`, `ProjectLogoUpdate` for `logoErrors`, `PluginManifestGet` for `pluginErrors`. Every other handler keeps one wiring case: it raises a sentinel only its own map holds, to prove which map it uses, even when its route never produces that error.
 
 ## Refresh goldens
 
