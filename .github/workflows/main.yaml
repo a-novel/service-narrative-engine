@@ -32,13 +32,13 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Check schema snapshots
-        uses: a-novel-kit/workflows/generic-actions/check-append-only@v1.87.1
+        uses: a-novel-kit/workflows/generic-actions/check-append-only@v1.87.2
         with:
           path: internal/models/migrations/testdata/schema
           base: ${{ github.event.pull_request.base.sha }}
           github_token: ${{ github.token }}
       - name: Check migration SQL
-        uses: a-novel-kit/workflows/generic-actions/check-append-only@v1.87.1
+        uses: a-novel-kit/workflows/generic-actions/check-append-only@v1.87.2
         with:
           path: ":(glob)internal/models/migrations/*.sql"
           base: ${{ github.event.pull_request.base.sha }}
@@ -67,14 +67,14 @@ jobs:
           services: postgres
           database_image: ghcr.io/${{ github.repository }}/database@${{ needs.build-database.outputs.digest }}
           registry_login: "true"
-      - uses: a-novel-kit/workflows/go-actions/generate-go@v1.87.1
+      - uses: a-novel-kit/workflows/go-actions/generate-go@v1.87.2
 
   lint-go:
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
-      - uses: a-novel-kit/workflows/go-actions/lint-go@v1.87.1
+      - uses: a-novel-kit/workflows/go-actions/lint-go@v1.87.2
 
   lint-js:
     runs-on: ubuntu-latest
@@ -82,7 +82,7 @@ jobs:
       contents: read
       packages: read
     steps:
-      - uses: a-novel-kit/workflows/node-actions/lint-node@v1.87.1
+      - uses: a-novel-kit/workflows/node-actions/lint-node@v1.87.2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           lint_action: "lint:ci"
@@ -92,7 +92,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: a-novel-kit/workflows/generic-actions/lint-shell@v1.87.1
+      - uses: a-novel-kit/workflows/generic-actions/lint-shell@v1.87.2
         with:
           run_steps: .github/actions/*/action.yml .github/workflows/*.yaml
 
@@ -101,7 +101,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: a-novel-kit/workflows/generic-actions/lint-dockerfile@v1.87.1
+      - uses: a-novel-kit/workflows/generic-actions/lint-dockerfile@v1.87.2
 
   # The service ruleset checks the structural conventions golangci-lint cannot express.
   lint-semgrep:
@@ -109,7 +109,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: a-novel-kit/workflows/security-actions/lint-semgrep@v1.87.1
+      - uses: a-novel-kit/workflows/security-actions/lint-semgrep@v1.87.2
         with:
           ruleset: service
 
@@ -119,7 +119,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: a-novel-kit/workflows/security-actions/scan-secrets@v1.87.1
+      - uses: a-novel-kit/workflows/security-actions/scan-secrets@v1.87.2
 
   # zizmor audits the workflows, excessive job permissions included.
   lint-workflows:
@@ -127,7 +127,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: a-novel-kit/workflows/security-actions/lint-workflows@v1.87.1
+      - uses: a-novel-kit/workflows/security-actions/lint-workflows@v1.87.2
 
   test-go:
     needs: [build-database]
@@ -148,7 +148,7 @@ jobs:
           persist-credentials: false
       - *start-local-database
       - uses: $/.github/actions/run-migrations
-      - uses: a-novel-kit/workflows/go-actions/test-go@v1.87.1
+      - uses: a-novel-kit/workflows/go-actions/test-go@v1.87.2
         with:
           include: /internal|/cmd
           skip_setup: true
@@ -178,7 +178,7 @@ jobs:
           database_image: ghcr.io/${{ github.repository }}/database@${{ needs.build-database.outputs.digest }}
           standalone_rest_image: ghcr.io/${{ github.repository }}/standalone-rest@${{ needs.build-standalone-rest.outputs.digest }}
           registry_login: "true"
-      - uses: a-novel-kit/workflows/node-actions/test-node@v1.87.1
+      - uses: a-novel-kit/workflows/node-actions/test-node@v1.87.2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           coverage_artifact: jscover
@@ -194,7 +194,7 @@ jobs:
     outputs:
       digest: ${{ steps.build.outputs.digest }}
     steps:
-      - uses: a-novel-kit/workflows/build-actions/docker@v1.87.1
+      - uses: a-novel-kit/workflows/build-actions/docker@v1.87.2
         id: build
         with:
           file: builds/database.Dockerfile
@@ -209,7 +209,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: a-novel-kit/workflows/build-actions/check-reproducible@v1.87.1
+      - uses: a-novel-kit/workflows/build-actions/check-reproducible@v1.87.2
 
   build-migrations:
     needs: [build-database]
@@ -231,7 +231,7 @@ jobs:
         with:
           persist-credentials: false
       - *start-local-database
-      - uses: a-novel-kit/workflows/build-actions/docker@v1.87.1
+      - uses: a-novel-kit/workflows/build-actions/docker@v1.87.2
         with:
           mode: job
           file: builds/migrations.Dockerfile
@@ -266,7 +266,7 @@ jobs:
           persist-credentials: false
       - *start-local-database
       - uses: $/.github/actions/run-migrations
-      - uses: a-novel-kit/workflows/build-actions/docker@v1.87.1
+      - uses: a-novel-kit/workflows/build-actions/docker@v1.87.2
         with:
           file: builds/rest.Dockerfile
           image_name: ${{ github.repository }}/rest
@@ -293,7 +293,7 @@ jobs:
     # test-pkg-js boots this image and runs the JS client suite against it, so the job only builds
     # and pushes it, without a smoke run.
     steps:
-      - uses: a-novel-kit/workflows/build-actions/docker@v1.87.1
+      - uses: a-novel-kit/workflows/build-actions/docker@v1.87.2
         id: build
         with:
           file: builds/standalone.rest.Dockerfile
@@ -307,7 +307,7 @@ jobs:
       contents: read
       packages: read
     steps:
-      - uses: a-novel-kit/workflows/node-actions/build-node@v1.87.1
+      - uses: a-novel-kit/workflows/node-actions/build-node@v1.87.2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           build_action: "build:rest"
@@ -318,7 +318,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: a-novel-kit/workflows/generic-actions/codecov@v1.87.1
+      - uses: a-novel-kit/workflows/generic-actions/codecov@v1.87.2
         with:
           codecov_token: ${{ secrets.CODECOV_TOKEN }}
 
@@ -337,4 +337,4 @@ jobs:
       pages: write
       id-token: write
     steps:
-      - uses: a-novel-kit/workflows/github-pages-actions/publish-api-docs@v1.87.1
+      - uses: a-novel-kit/workflows/github-pages-actions/publish-api-docs@v1.87.2
