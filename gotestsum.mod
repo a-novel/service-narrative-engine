@@ -1,4 +1,4 @@
-module github.com/a-novel/service-narrative-engine/gotestsum
+module github.com/a-novel/service-narrative-engine/v2/gotestsum
 
 go 1.26.5
 

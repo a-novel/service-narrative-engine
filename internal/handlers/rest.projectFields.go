@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/a-novel/service-narrative-engine/internal/core"
+	"github.com/a-novel/service-narrative-engine/v2/internal/core"
 )
 
 // ProjectFields is the REST representation of a project's fields, with its EditedAt so a project the client lacks

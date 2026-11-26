@@ -7,7 +7,7 @@ package coremocks
 import (
 	"context"
 
-	"github.com/a-novel/service-narrative-engine/internal/dao"
+	"github.com/a-novel/service-narrative-engine/v2/internal/dao"
 	mock "github.com/stretchr/testify/mock"
 )
 

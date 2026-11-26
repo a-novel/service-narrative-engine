@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/a-novel/service-narrative-engine/internal/dao"
+	"github.com/a-novel/service-narrative-engine/v2/internal/dao"
 )
 
 // PluginModuleKind names a JavaScript module a version of a plugin publishes.

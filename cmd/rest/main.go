@@ -26,10 +26,10 @@ import (
 	"github.com/a-novel-kit/golib/otel"
 	"github.com/a-novel-kit/golib/postgres"
 
-	"github.com/a-novel/service-narrative-engine/internal/config"
-	"github.com/a-novel/service-narrative-engine/internal/core"
-	"github.com/a-novel/service-narrative-engine/internal/dao"
-	"github.com/a-novel/service-narrative-engine/internal/handlers"
+	"github.com/a-novel/service-narrative-engine/v2/internal/config"
+	"github.com/a-novel/service-narrative-engine/v2/internal/core"
+	"github.com/a-novel/service-narrative-engine/v2/internal/dao"
+	"github.com/a-novel/service-narrative-engine/v2/internal/handlers"
 )
 
 func main() {

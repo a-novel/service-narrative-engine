@@ -12,7 +12,7 @@ import (
 
 	"github.com/a-novel-kit/golib/otel"
 
-	"github.com/a-novel/service-narrative-engine/internal/dao"
+	"github.com/a-novel/service-narrative-engine/v2/internal/dao"
 )
 
 // ProjectEditsListDao reads when each project of the caller last changed.

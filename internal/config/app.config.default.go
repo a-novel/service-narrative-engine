@@ -1,7 +1,7 @@
 package config
 
 import (
-	"github.com/a-novel/service-narrative-engine/internal/config/env"
+	"github.com/a-novel/service-narrative-engine/v2/internal/config/env"
 )
 
 // AppPresetDefault is the configuration the service starts with. It reads every value from the

@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"github.com/a-novel/service-narrative-engine/internal/core"
+	"github.com/a-novel/service-narrative-engine/v2/internal/core"
 )
 
 // Project is the REST representation of a project: its fields, and its logo's checksum.

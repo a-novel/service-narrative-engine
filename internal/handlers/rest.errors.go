@@ -7,7 +7,7 @@ import (
 	"github.com/a-novel-kit/golib/httpf"
 	"github.com/a-novel-kit/golib/picture"
 
-	"github.com/a-novel/service-narrative-engine/internal/core"
+	"github.com/a-novel/service-narrative-engine/v2/internal/core"
 )
 
 // ownerErrors maps a request that acts for no user to 403: one whose claims name none, such as an anonymous

@@ -9,8 +9,8 @@ import (
 
 	"github.com/a-novel-kit/golib/postgres"
 
-	"github.com/a-novel/service-narrative-engine/internal/config"
-	"github.com/a-novel/service-narrative-engine/internal/models/migrations"
+	"github.com/a-novel/service-narrative-engine/v2/internal/config"
+	"github.com/a-novel/service-narrative-engine/v2/internal/models/migrations"
 )
 
 func main() {

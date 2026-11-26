@@ -13,7 +13,7 @@ import (
 	"github.com/a-novel-kit/golib/otel"
 	"github.com/a-novel-kit/golib/transaction"
 
-	"github.com/a-novel/service-narrative-engine/internal/dao"
+	"github.com/a-novel/service-narrative-engine/v2/internal/dao"
 )
 
 // ProjectCreateDaoLock makes the user's project creations run one at a time, until the transaction ends.

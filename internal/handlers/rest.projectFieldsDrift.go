@@ -13,7 +13,7 @@ import (
 	"github.com/a-novel-kit/golib/logging"
 	"github.com/a-novel-kit/golib/otel"
 
-	"github.com/a-novel/service-narrative-engine/internal/core"
+	"github.com/a-novel/service-narrative-engine/v2/internal/core"
 )
 
 // RestProjectFieldsDriftService is the core operation [RestProjectFieldsDrift] delegates to.
