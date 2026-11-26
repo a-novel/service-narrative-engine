@@ -4,7 +4,7 @@ go 1.27.4
 
 require (
 	github.com/a-novel-kit/golib v0.67.0
-	github.com/a-novel/service-authentication/v2 v2.28.0
+	github.com/a-novel/service-authentication/v2 v2.29.0
 	github.com/a-novel/service-json-keys/v2 v2.17.0
 	github.com/go-chi/chi/v5 v5.5.0
 	github.com/go-playground/validator/v10 v10.30.6
@@ -68,7 +68,7 @@ require (
 	golang.org/x/net v0.62.0 // indirect
 	golang.org/x/sys v0.50.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20261012220534-4341edf3f941 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20261110000943-09e21b237f2c // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20261118221215-c8830f628b3f // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 	mellium.im/sasl v0.3.2 // indirect
 )
