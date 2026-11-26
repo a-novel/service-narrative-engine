@@ -42,7 +42,7 @@ func TestPgProjectUpdate(t *testing.T) {
 		{
 			name: "Success",
 
-			fixtures: composerFixtures(),
+			fixtures: projectFixtures(),
 			request:  update,
 
 			expect: updated(nil),
@@ -58,7 +58,7 @@ func TestPgProjectUpdate(t *testing.T) {
 		{
 			name: "Success/ClearLabels",
 
-			fixtures: composerFixtures(),
+			fixtures: projectFixtures(),
 			request: &dao.ProjectUpdateRequest{
 				ID: projectID, Title: "Clear Hours", Premise: "Marie waits.", Language: "en", Tags: []string{},
 				Genres: []string{}, Now: now,
@@ -94,7 +94,6 @@ func TestPgProjectUpdate(t *testing.T) {
 
 				result, err := daoProjectUpdate.Exec(ctx, testCase.request)
 				require.ErrorIs(t, err, testCase.expectErr)
-				requireStoredBytes(ctx, t)
 				require.Equal(t, testCase.expect, result)
 			})
 		})

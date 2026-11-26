@@ -23,7 +23,7 @@ func TestPgProjectLogoUpsert(t *testing.T) {
 
 	// withLogo returns the test project with the checksum of its new logo.
 	withLogo := func(logo *dao.ProjectLogo) *dao.Project {
-		project := composerFixtures().projects[0]
+		project := projectFixtures().projects[0]
 		project.LogoChecksum = logoChecksum(logo.Data)
 
 		return project
@@ -59,7 +59,7 @@ func TestPgProjectLogoUpsert(t *testing.T) {
 		{
 			name: "Success/Insert",
 
-			fixtures: composerFixtures(),
+			fixtures: projectFixtures(),
 			request:  request(newLogo),
 
 			expect:     withLogo(newLogo),
