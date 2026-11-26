@@ -4,7 +4,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/uptrace/bun/driver/pgdriver"
 
-	"github.com/a-novel/service-narrative-engine/internal/config/env"
+	"github.com/a-novel/service-narrative-engine/v2/internal/config/env"
 )
 
 // PostgresPresetDefault is the servers' PostgreSQL connection. It panics when the connection names a

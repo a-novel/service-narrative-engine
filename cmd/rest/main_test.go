@@ -15,7 +15,7 @@ import (
 	"github.com/a-novel-kit/golib/servicetoken"
 	"github.com/a-novel-kit/golib/servicetoken/servicetokentest"
 
-	"github.com/a-novel/service-narrative-engine/internal/config"
+	"github.com/a-novel/service-narrative-engine/v2/internal/config"
 )
 
 func TestNewRouter(t *testing.T) {

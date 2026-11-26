@@ -10,9 +10,9 @@ import (
 
 	"github.com/a-novel-kit/golib/postgres/postgrestest"
 
-	"github.com/a-novel/service-narrative-engine/internal/config/configtest"
-	"github.com/a-novel/service-narrative-engine/internal/dao"
-	"github.com/a-novel/service-narrative-engine/internal/models/migrations"
+	"github.com/a-novel/service-narrative-engine/v2/internal/config/configtest"
+	"github.com/a-novel/service-narrative-engine/v2/internal/dao"
+	"github.com/a-novel/service-narrative-engine/v2/internal/models/migrations"
 )
 
 func TestPgProjectEditsList(t *testing.T) {

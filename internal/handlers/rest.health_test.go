@@ -11,8 +11,8 @@ import (
 
 	servicejsonkeys "github.com/a-novel/service-json-keys/v2/pkg/go"
 
-	"github.com/a-novel/service-narrative-engine/internal/handlers"
-	handlersmocks "github.com/a-novel/service-narrative-engine/internal/handlers/mocks"
+	"github.com/a-novel/service-narrative-engine/v2/internal/handlers"
+	handlersmocks "github.com/a-novel/service-narrative-engine/v2/internal/handlers/mocks"
 )
 
 func TestRestHealth(t *testing.T) {

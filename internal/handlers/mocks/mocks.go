@@ -8,7 +8,7 @@ import (
 	"context"
 
 	"github.com/a-novel/service-json-keys/v2/pkg/go"
-	"github.com/a-novel/service-narrative-engine/internal/core"
+	"github.com/a-novel/service-narrative-engine/v2/internal/core"
 	mock "github.com/stretchr/testify/mock"
 	"google.golang.org/grpc"
 )

@@ -10,9 +10,9 @@ import (
 
 	"github.com/a-novel-kit/golib/picture"
 
-	"github.com/a-novel/service-narrative-engine/internal/core"
-	coremocks "github.com/a-novel/service-narrative-engine/internal/core/mocks"
-	"github.com/a-novel/service-narrative-engine/internal/dao"
+	"github.com/a-novel/service-narrative-engine/v2/internal/core"
+	coremocks "github.com/a-novel/service-narrative-engine/v2/internal/core/mocks"
+	"github.com/a-novel/service-narrative-engine/v2/internal/dao"
 )
 
 func TestProjectLogoUpdate(t *testing.T) {

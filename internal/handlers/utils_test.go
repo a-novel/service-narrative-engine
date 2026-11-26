@@ -19,7 +19,7 @@ import (
 	"github.com/a-novel-kit/golib/postgres"
 	postgrespresets "github.com/a-novel-kit/golib/postgres/presets"
 
-	"github.com/a-novel/service-narrative-engine/internal/config/configtest"
+	"github.com/a-novel/service-narrative-engine/v2/internal/config/configtest"
 )
 
 // serviceMock is what the service mock of a handler test case returns. A nil one means the handler

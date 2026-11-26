@@ -1,4 +1,4 @@
-module github.com/a-novel/service-narrative-engine/govulncheck
+module github.com/a-novel/service-narrative-engine/v2/govulncheck
 
 go 1.27.0
 

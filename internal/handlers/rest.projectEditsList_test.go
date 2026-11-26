@@ -9,10 +9,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
 
-	"github.com/a-novel/service-narrative-engine/internal/config/configtest"
-	"github.com/a-novel/service-narrative-engine/internal/core"
-	"github.com/a-novel/service-narrative-engine/internal/handlers"
-	handlersmocks "github.com/a-novel/service-narrative-engine/internal/handlers/mocks"
+	"github.com/a-novel/service-narrative-engine/v2/internal/config/configtest"
+	"github.com/a-novel/service-narrative-engine/v2/internal/core"
+	"github.com/a-novel/service-narrative-engine/v2/internal/handlers"
+	handlersmocks "github.com/a-novel/service-narrative-engine/v2/internal/handlers/mocks"
 )
 
 func TestRestProjectEditsList(t *testing.T) {

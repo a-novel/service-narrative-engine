@@ -15,7 +15,7 @@ import (
 	"github.com/a-novel-kit/golib/otel"
 	"github.com/a-novel-kit/golib/picture"
 
-	"github.com/a-novel/service-narrative-engine/internal/core"
+	"github.com/a-novel/service-narrative-engine/v2/internal/core"
 )
 
 // RestProjectLogoUpdateService is the core operation [RestProjectLogoUpdate] delegates to.

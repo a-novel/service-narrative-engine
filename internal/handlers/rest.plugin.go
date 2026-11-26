@@ -6,7 +6,7 @@ import (
 
 	"github.com/samber/lo"
 
-	"github.com/a-novel/service-narrative-engine/internal/core"
+	"github.com/a-novel/service-narrative-engine/v2/internal/core"
 )
 
 // Plugin is the REST representation of a plugin of the registry, as its latest release describes it.

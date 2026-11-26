@@ -1,4 +1,4 @@
-module github.com/a-novel/service-narrative-engine
+module github.com/a-novel/service-narrative-engine/v2
 
 go 1.27.4
 
