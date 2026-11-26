@@ -1,6 +1,6 @@
 -- A fixture runs after its matching migration and seeds data for the rollback. The fixture project takes two
 -- instances, a default among them, and its links, so the down migration drops the column, both tables and their
--- triggers while they hold rows.
+-- triggers while they hold rows. The second instance has no name, which the schema allows.
 INSERT INTO
   instances (
     id,
@@ -30,7 +30,7 @@ VALUES
     '00000000-0000-0000-0000-000000000001',
     'scenes-composer',
     '1.1.0-dev.1',
-    'Fixture notes',
+    '',
     '{"scenes": [{"id": "a"}]}',
     '{"scenes": []}',
     '2026-11-26T00:00:00.000002Z',

@@ -11,11 +11,14 @@ CREATE TABLE instances (
   plugin text NOT NULL CHECK (plugin <> ''),
   /* The exact version of the plugin the content follows, as a semantic version. */
   version text NOT NULL CHECK (version <> ''),
-  /* The display name the writer gave the instance. */
-  name text NOT NULL CHECK (name <> ''),
+  /* The display name the writer gave the instance. Empty when they gave none: the client then shows a name of
+  its own. */
+  name text NOT NULL,
   /* The document the plugin edits. */
   content jsonb NOT NULL,
-  /* One restore point of the content, which the client writes and reads. Null until it writes one. */
+  /* What the client keeps to undo an upgrade of the content: the previous version, its content and the entries
+  the upgrade could not carry over. The server stores it whole and never reads inside it. Null while the client
+  keeps none. */
   recovery jsonb,
   created_at timestamp with time zone NOT NULL,
   -- A content write names the value it read and applies only while the row still holds it, so the column keeps

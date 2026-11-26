@@ -1,4 +1,4 @@
-migration-history	sha256:a9546b56a739b2d6b0be8717b73de1311d487983a40d4064935051d049b02cf5
+migration-history	sha256:b10d0c63be80848fcafda7863c017e1ea62001770f016cfbfdac79385a4cf44a
 column	instances.bytes	bigint DEFAULT ((((octet_length(plugin) + octet_length(version)) + octet_length(name)) + octet_length((content)::text)) + COALESCE(octet_length((recovery)::text), 0)) GENERATED s
 column	instances.content	jsonb NOT NULL
 column	instances.created_at	timestamp with time zone NOT NULL
@@ -59,7 +59,6 @@ comment	schema public	standard public schema
 constraint	instances.instances_content_not_null	NOT NULL content
 constraint	instances.instances_created_at_not_null	NOT NULL created_at
 constraint	instances.instances_id_not_null	NOT NULL id
-constraint	instances.instances_name_check	CHECK ((name <> ''::text))
 constraint	instances.instances_name_not_null	NOT NULL name
 constraint	instances.instances_pkey	PRIMARY KEY (id)
 constraint	instances.instances_plugin_check	CHECK ((plugin <> ''::text))
