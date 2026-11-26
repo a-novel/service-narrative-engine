@@ -2,7 +2,6 @@ package core
 
 import (
 	"errors"
-	"reflect"
 	"regexp"
 	"slices"
 	"strings"
@@ -10,10 +9,7 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/go-playground/validator/v10/non-standard/validators"
-	"github.com/google/uuid"
 	"golang.org/x/text/unicode/norm"
-
-	"github.com/a-novel/service-narrative-engine/internal/models/schemas"
 )
 
 var validate = validator.New(validator.WithRequiredStructEnabled())
@@ -26,14 +22,6 @@ func inSet[T ~string](set []T) validator.Func {
 	return func(fl validator.FieldLevel) bool {
 		return slices.Contains(set, T(fl.Field().String()))
 	}
-}
-
-// validateLayerKind reports whether a string names a layer kind that has a content schema. The package
-// registers it as the "layerkind" struct tag.
-func validateLayerKind(fl validator.FieldLevel) bool {
-	_, err := schemas.Content(fl.Field().String())
-
-	return err == nil
 }
 
 // validateProjectLabel reports whether a genre of a project holds no whitespace at either end and no NUL, which
@@ -94,44 +82,16 @@ func validatePluginVersion(fl validator.FieldLevel) bool {
 	return err == nil
 }
 
-// validateUniqueCells reports whether a list of [CellsWriteItem] names each pair of a scene and a layer
-// once. The package registers it as the "uniquecells" struct tag.
-func validateUniqueCells(fl validator.FieldLevel) bool {
-	cells, ok := reflect.TypeAssert[[]CellsWriteItem](fl.Field())
-	if !ok {
-		return false
-	}
-
-	seen := make(map[[2]uuid.UUID]bool, len(cells))
-
-	for _, cell := range cells {
-		key := [2]uuid.UUID{cell.SceneID, cell.LayerID}
-		if seen[key] {
-			return false
-		}
-
-		seen[key] = true
-	}
-
-	return true
-}
-
 func init() {
 	validations := map[string]validator.Func{
-		"notblank":       validators.NotBlank,
-		"language":       inSet(ProjectLanguages),
-		"layerkind":      validateLayerKind,
-		"uniquecells":    validateUniqueCells,
-		"generationkind": inSet(GenerationKinds),
-		"targetmode":     inSet(TargetModes),
-		"scenefield":     inSet(SceneFields),
-		"streamsection":  inSet(ProjectStreamSections),
-		"projectlabel":   validateProjectLabel,
-		"projecttag":     validateProjectTag,
-		"logochecksum":   validateLogoChecksum,
-		"instant":        validateInstant,
-		"pluginversion":  validatePluginVersion,
-		"pluginmodule":   inSet([]PluginModuleKind{PluginModuleUI, PluginModuleMigration}),
+		"notblank":      validators.NotBlank,
+		"language":      inSet(ProjectLanguages),
+		"projectlabel":  validateProjectLabel,
+		"projecttag":    validateProjectTag,
+		"logochecksum":  validateLogoChecksum,
+		"instant":       validateInstant,
+		"pluginversion": validatePluginVersion,
+		"pluginmodule":  inSet([]PluginModuleKind{PluginModuleUI, PluginModuleMigration}),
 	}
 
 	for tag, fn := range validations {
