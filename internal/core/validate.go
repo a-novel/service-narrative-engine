@@ -4,6 +4,9 @@ import (
 	"cmp"
 	"encoding/json"
 	"errors"
+	"iter"
+	"maps"
+	"reflect"
 	"regexp"
 	"slices"
 	"strconv"
@@ -86,6 +89,190 @@ func validatePluginVersion(fl validator.FieldLevel) bool {
 	_, err := parsePluginVersion(fl.Field().String())
 
 	return err == nil
+}
+
+// pluginSchemaKeywords lists the JSON Schema keywords whose value is a subschema, or a list of subschemas.
+// additionalItems is older than draft 2020-12, and validators still apply it.
+var pluginSchemaKeywords = []string{
+	"additionalItems", "additionalProperties", "allOf", "anyOf", "contains", "contentSchema", "else", "if",
+	"items", "not", "oneOf", "prefixItems", "propertyNames", "then", "unevaluatedItems", "unevaluatedProperties",
+}
+
+// pluginSchemaMapKeywords lists the JSON Schema keywords whose value maps names to subschemas. definitions
+// and dependencies are older than draft 2020-12, and validators still apply them.
+var pluginSchemaMapKeywords = []string{
+	"$defs", "definitions", "dependencies", "dependentSchemas", "patternProperties", "properties",
+}
+
+// pluginSchemaRefused lists the JSON Schema keywords a plugin's schema cannot use: some validators lack the
+// first two, and validators disagree on formats.
+var pluginSchemaRefused = []string{"$dynamicRef", "$dynamicAnchor", "format"}
+
+// validatePluginSchema reports whether a JSON document is a schema every host of a plugin reads alike: a JSON
+// object whose subschemas only reference the schema itself, with a "$ref" that starts with "#", and use no
+// keyword of [pluginSchemaRefused]. The package registers it as the "pluginschema" struct tag.
+//
+// It reads the subschemas by keyword, so a property named after a keyword, or the content of a default, is
+// never read as a schema. It does not compile the schema: this validator reads a pattern as RE2, where a host
+// reads it as ECMAScript.
+func validatePluginSchema(fl validator.FieldLevel) bool {
+	var schema map[string]any
+
+	err := json.Unmarshal(fl.Field().Bytes(), &schema)
+	if err != nil || schema == nil {
+		return false
+	}
+
+	// The depth of a schema comes from the request, so the subschemas wait on a stack, with no recursion.
+	pending := []map[string]any{schema}
+
+	for len(pending) > 0 {
+		subschema := pending[len(pending)-1]
+		pending = pending[:len(pending)-1]
+
+		if !pluginSubschemaAllowed(subschema) {
+			return false
+		}
+
+		pending = appendPluginSubschemas(pending, subschema)
+	}
+
+	return true
+}
+
+// pluginSubschemaAllowed reports whether one subschema of a plugin's schema, its own subschemas aside, keeps
+// to what [validatePluginSchema] allows.
+func pluginSubschemaAllowed(subschema map[string]any) bool {
+	if ref, ok := subschema["$ref"]; ok {
+		target, isString := ref.(string)
+		if !isString || !strings.HasPrefix(target, "#") {
+			return false
+		}
+	}
+
+	for _, keyword := range pluginSchemaRefused {
+		if _, ok := subschema[keyword]; ok {
+			return false
+		}
+	}
+
+	return true
+}
+
+// appendPluginSubschemas appends to pending the subschemas a schema holds under its own keywords. A boolean
+// subschema is left out: it holds no keyword.
+func appendPluginSubschemas(pending []map[string]any, schema map[string]any) []map[string]any {
+	for _, keyword := range pluginSchemaKeywords {
+		switch value := schema[keyword].(type) {
+		case map[string]any:
+			pending = append(pending, value)
+		case []any:
+			pending = appendJSONObjects(pending, slices.Values(value))
+		}
+	}
+
+	for _, keyword := range pluginSchemaMapKeywords {
+		if children, ok := schema[keyword].(map[string]any); ok {
+			pending = appendJSONObjects(pending, maps.Values(children))
+		}
+	}
+
+	return pending
+}
+
+// appendJSONObjects appends to objects each of values that is a JSON object.
+func appendJSONObjects(objects []map[string]any, values iter.Seq[any]) []map[string]any {
+	for value := range values {
+		if object, ok := value.(map[string]any); ok {
+			objects = append(objects, object)
+		}
+	}
+
+	return objects
+}
+
+// pluginExportNamePattern matches the name of an export. A link addresses an item as "<export>/<id>", so a
+// name holds no slash.
+var pluginExportNamePattern = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_-]*$`)
+
+// pluginExportSelectPattern matches the path to the items of an export in the content: "$", then member
+// names and "[*]", a subset of JSONPath (RFC 9535).
+var pluginExportSelectPattern = regexp.MustCompile(`^\$(\.[A-Za-z_][A-Za-z0-9_]*|\[\*\])*$`)
+
+// pluginExportPointerPattern matches a JSON Pointer (RFC 6901) into an item of an export.
+var pluginExportPointerPattern = regexp.MustCompile(`^(/([^/~]|~[01])*)*$`)
+
+// pluginExportMembers maps each member of an export, one named list of linkable items, to the pattern its
+// value follows. An export holds every one of them as a string, and no other member.
+var pluginExportMembers = map[string]*regexp.Regexp{
+	// The translation key of the export's display name, which follows no pattern.
+	"name": nil,
+	// The path to the exported items.
+	"select": pluginExportSelectPattern,
+	// The pointer to the identifier inside each item.
+	"id": pluginExportPointerPattern,
+	// The pointer to the label inside each item.
+	"label": pluginExportPointerPattern,
+}
+
+// validatePluginExports reports whether a JSON document holds the exports of a plugin, the lists of linkable
+// items an instance exposes: a JSON object that maps each name [pluginExportNamePattern] matches to an export
+// [pluginExportAllowed] accepts. The package registers it as the "pluginexports" struct tag.
+func validatePluginExports(fl validator.FieldLevel) bool {
+	var exports map[string]any
+
+	err := json.Unmarshal(fl.Field().Bytes(), &exports)
+	if err != nil || exports == nil {
+		return false
+	}
+
+	for name, export := range exports {
+		if !pluginExportNamePattern.MatchString(name) || !pluginExportAllowed(export) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// pluginExportAllowed reports whether a JSON value is one export of a plugin: an object that holds each of
+// [pluginExportMembers] as a string its pattern matches, and no other member.
+func pluginExportAllowed(value any) bool {
+	export, ok := value.(map[string]any)
+	if !ok || len(export) != len(pluginExportMembers) {
+		return false
+	}
+
+	for member, pattern := range pluginExportMembers {
+		text, isString := export[member].(string)
+		if !isString || (pattern != nil && !pattern.MatchString(text)) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// validatePluginEnglish reports whether the translations of a plugin, a map by language, hold
+// [PluginLanguageEnglish]. The package registers it as the "pluginenglish" struct tag.
+func validatePluginEnglish(fl validator.FieldLevel) bool {
+	return fl.Field().MapIndex(reflect.ValueOf(PluginLanguageEnglish)).IsValid()
+}
+
+// validateJSONObject reports whether a JSON document is an object. The package registers it as the
+// "jsonobject" struct tag.
+func validateJSONObject(fl validator.FieldLevel) bool {
+	var object map[string]json.RawMessage
+
+	err := json.Unmarshal(fl.Field().Bytes(), &object)
+
+	return err == nil && object != nil
+}
+
+// validateNoNul reports whether a text holds no NUL character, which PostgreSQL stores in no text. The package
+// registers it as the "nonul" struct tag, the rule a document breaks for the same character.
+func validateNoNul(fl validator.FieldLevel) bool {
+	return !strings.ContainsRune(fl.Field().String(), 0)
 }
 
 // The rules a [FieldError] names, beside the tags of the validator.
@@ -300,6 +487,11 @@ func init() {
 		"instant":       validateInstant,
 		"pluginversion": validatePluginVersion,
 		"pluginmodule":  inSet([]PluginModuleKind{PluginModuleUI, PluginModuleMigration}),
+		"pluginschema":  validatePluginSchema,
+		"pluginexports": validatePluginExports,
+		"pluginenglish": validatePluginEnglish,
+		"jsonobject":    validateJSONObject,
+		ruleNoNul:       validateNoNul,
 	}
 
 	for tag, fn := range validations {

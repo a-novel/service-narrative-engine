@@ -20,6 +20,10 @@ const (
 	PluginModuleMigration PluginModuleKind = "migration"
 )
 
+// PluginLanguageEnglish is the language every version of a plugin is translated in, as a BCP 47 tag. A read
+// falls back on it for a plugin that lacks the language asked for.
+const PluginLanguageEnglish = "en"
+
 // Plugin is a plugin of the registry, as its latest release describes it.
 type Plugin struct {
 	// Name identifies the plugin across its versions. It is a DNS label (RFC 1035): lowercase letters, digits
@@ -62,6 +66,14 @@ type PluginManifest struct {
 	SchemaChecksum string
 	// UIChecksum is the SHA-256 of the UI module in lowercase hex.
 	UIChecksum string
+
+	// Proof is the token the publisher's API key signed for the version: a compact JWT of type "proof+jwt",
+	// whose claims name the plugin and the version, and carry the SHA-256 of each module. Nil for a version
+	// published without a key.
+	Proof *string
+	// APIKeyID is the ID of the API key that signed Proof, which JSON Keys serves by that ID. Nil when Proof
+	// is.
+	APIKeyID *string
 
 	PublishedAt time.Time
 }

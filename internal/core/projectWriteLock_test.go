@@ -19,6 +19,8 @@ var projectWriteLockExempt = map[string]string{
 	"ProjectDelete":     "it removes the project",
 	"ProjectLogoUpdate": "a logo is cosmetic and leaves the project's edit date",
 	"ProjectLogoDelete": "a logo is cosmetic and leaves the project's edit date",
+
+	"PluginVersionPublish": "the plugin registry belongs to no project",
 }
 
 // projectWriteOperations end the names of the DAO requests that write a project's content, such as

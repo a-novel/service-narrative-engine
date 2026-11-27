@@ -70,6 +70,8 @@ func (service *PluginManifestGet) Exec(
 		HasMigration:   entity.HasMigration,
 		SchemaChecksum: entity.SchemaChecksum,
 		UIChecksum:     entity.UIChecksum,
+		Proof:          entity.Proof,
+		APIKeyID:       entity.APIKeyID,
 		PublishedAt:    entity.PublishedAt,
 	}, nil
 }
