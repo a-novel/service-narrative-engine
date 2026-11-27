@@ -54,14 +54,16 @@ var instanceErrors = httpf.ErrMap{
 	core.ErrProjectBudget:     http.StatusConflict,
 }
 
-// pluginErrors maps the refusals of the plugin registry's reads to their status. A 422 answers a request that
-// fails validation. A 404 answers a version the registry lacks, a module the version ships without, and a
-// language it is not translated in.
+// pluginErrors maps the refusals of the plugin registry's operations to their status. A 422 answers a request
+// that fails validation, and a version whose proof does not vouch for it. A 404 answers a version the registry
+// lacks, a module the version ships without, and a language it is not translated in. A 409 answers the
+// publication of a version the registry holds.
 var pluginErrors = httpf.ErrMap{
 	core.ErrInvalidRequest:         http.StatusUnprocessableEntity,
 	core.ErrPluginVersionNotFound:  http.StatusNotFound,
 	core.ErrPluginModuleNotFound:   http.StatusNotFound,
 	core.ErrPluginMessagesNotFound: http.StatusNotFound,
+	core.ErrPluginVersionExists:    http.StatusConflict,
 }
 
 // tagLimit tags a refusal for a storage limit with the limit it reached, so a client tells it from another

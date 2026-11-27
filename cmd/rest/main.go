@@ -66,6 +66,10 @@ func main() {
 // rate limits for verified callers alone. The liveness route stays open to the kubelet. The gate
 // refuses an empty issuer unless cfg opts a local stack out, so the server never starts open by
 // mistake.
+//
+// The publish route takes no user's session: its caller signs each request with a system API key,
+// which the route verifies through JSON Keys. It refuses a request without a token, unless cfg opts a
+// local stack out of service tokens.
 func newRouter(cfg config.App, jsonKeysClient servicejsonkeys.Client) (http.Handler, error) {
 	withServiceToken, err := httpf.ServiceTokenGate(
 		cfg.ServiceToken, httpf.NewPoolClient(httpf.PoolOptions{}), cfg.Logger, cfg.Rest.Liveness,
@@ -80,6 +84,17 @@ func newRouter(cfg config.App, jsonKeysClient servicejsonkeys.Client) (http.Hand
 	}
 
 	withAuth := serviceauthentication.NewAuthHandler(claimsVerifier, cfg.Permissions, cfg.Logger)
+
+	pluginPublisher, err := servicejsonkeys.NewAPIKeyVerifier(
+		jsonKeysClient, servicejsonkeys.APIKeyPurposePublishNarrativeEnginePlugin,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("plugin publisher verifier: %w", err)
+	}
+
+	withPluginPublisher := servicejsonkeys.NewAPIKeyGate(
+		pluginPublisher, servicejsonkeys.APIKeyGateConfig{TokenOptional: cfg.ServiceToken.IssuerOptional}, cfg.Logger,
+	)
 
 	// =================================================================================================================
 	// DAO
@@ -115,6 +130,7 @@ func newRouter(cfg config.App, jsonKeysClient servicejsonkeys.Client) (http.Hand
 	daoPluginModuleSelect := dao.NewPgPluginModuleSelect()
 	daoPluginMessagesSelect := dao.NewPgPluginMessagesSelect()
 	daoPluginVersionList := dao.NewPgPluginVersionList()
+	daoPluginVersionInsert := dao.NewPgPluginVersionInsert()
 	transactor := postgres.NewTransactor(nil)
 
 	// =================================================================================================================
@@ -152,6 +168,7 @@ func newRouter(cfg config.App, jsonKeysClient servicejsonkeys.Client) (http.Hand
 	servicePluginModuleGet := core.NewPluginModuleGet(daoPluginModuleSelect)
 	servicePluginMessagesGet := core.NewPluginMessagesGet(daoPluginMessagesSelect)
 	servicePluginVersionList := core.NewPluginVersionList(daoPluginVersionList)
+	servicePluginVersionPublish := core.NewPluginVersionPublish(daoPluginVersionInsert, pluginPublisher)
 
 	// =================================================================================================================
 	// HANDLERS
@@ -186,6 +203,7 @@ func newRouter(cfg config.App, jsonKeysClient servicejsonkeys.Client) (http.Hand
 	)
 	handlerPluginMessagesGet := handlers.NewRestPluginMessagesGet(servicePluginMessagesGet, cfg.Logger)
 	handlerPluginVersionList := handlers.NewRestPluginVersionList(servicePluginVersionList, cfg.Logger)
+	handlerPluginVersionPublish := handlers.NewRestPluginVersionPublish(servicePluginVersionPublish, cfg.Logger)
 
 	// =================================================================================================================
 	// ROUTER
@@ -235,6 +253,9 @@ func newRouter(cfg config.App, jsonKeysClient servicejsonkeys.Client) (http.Hand
 		withAuth(api, config.PermissionPluginRead).Get("/plugin/version/migration", handlerPluginMigrationGet.ServeHTTP)
 		withAuth(api, config.PermissionPluginRead).Get("/plugin/version/messages", handlerPluginMessagesGet.ServeHTTP)
 		withAuth(api, config.PermissionPluginRead).Get("/plugin/versions", handlerPluginVersionList.ServeHTTP)
+		// The gate comes first: the limit counts the versions of a key the gate verified.
+		item.With(withPluginPublisher, limit.PluginVersionWrite).
+			Post("/plugin/version", handlerPluginVersionPublish.ServeHTTP)
 	})
 
 	return withServiceToken(router), nil

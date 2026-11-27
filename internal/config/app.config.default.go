@@ -21,6 +21,9 @@ var AppPresetDefault = App{
 	Limits: Limits{
 		MaxItemRequestSize:     env.RestMaxItemRequestSize,
 		RateLimitDocumentWrite: env.RestRateLimitDocumentWrite,
+
+		RateLimitPluginVersionWriteBurst: env.RestRateLimitPluginVersionWriteBurst,
+		RateLimitPluginVersionWrite:      env.RestRateLimitPluginVersionWrite,
 	},
 	Caps: Caps{
 		ContentBytes:          env.MaxContentSize,

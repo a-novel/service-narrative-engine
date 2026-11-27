@@ -65,6 +65,13 @@ type PluginManifest struct {
 	// UIChecksum is the SHA-256 of the UI module in lowercase hex.
 	UIChecksum string `json:"uiChecksum"`
 
+	// Proof is the token the publisher's API key signed for the version, a compact JWT of type "proof+jwt".
+	// Absent for a version published without a key.
+	Proof *string `json:"proof,omitempty"`
+	// APIKeyID is the ID of the API key that signed Proof, which JSON Keys serves by that ID. Absent when
+	// Proof is.
+	APIKeyID *string `json:"apiKeyID,omitempty"`
+
 	PublishedAt time.Time `json:"publishedAt"`
 }
 
@@ -77,6 +84,8 @@ func loadPluginManifest(manifest *core.PluginManifest) PluginManifest {
 		HasMigration:   manifest.HasMigration,
 		SchemaChecksum: manifest.SchemaChecksum,
 		UIChecksum:     manifest.UIChecksum,
+		Proof:          manifest.Proof,
+		APIKeyID:       manifest.APIKeyID,
 		PublishedAt:    manifest.PublishedAt,
 	}
 }
