@@ -9,6 +9,8 @@ const (
 	// pgRestrictViolation is the SQLSTATE PostgreSQL raises when a write removes a row that a foreign
 	// key with a restriction still names.
 	pgRestrictViolation = "23001"
+	// pgUniqueViolation is the SQLSTATE PostgreSQL raises when a write breaks a unique key.
+	pgUniqueViolation = "23505"
 )
 
 var (

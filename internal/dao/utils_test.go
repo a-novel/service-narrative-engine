@@ -88,6 +88,12 @@ const (
 		`"relationship": "therefore"}]`
 )
 
+// The proof the plugin fixtures give a version published with an API key, and the ID of that key.
+const (
+	pluginProof    = "header.claims.signature"
+	pluginAPIKeyID = "publisher-key"
+)
+
 // fixtures is the data a DAO test seeds before it runs the operation under test.
 type fixtures struct {
 	projects []*dao.Project
@@ -197,10 +203,10 @@ func logoChecksum(data []byte) *string {
 	return new(hex.EncodeToString(sum[:]))
 }
 
-// pluginFixtures returns a registry of four plugins. The composer has three releases and a later prerelease,
-// and its latest release is translated in French. Characters has one release, in English alone. Drafts only
-// has a prerelease. Glossary has one release, in Spanish and Italian but not in English. Each call returns
-// fresh values, so a case may change them.
+// pluginFixtures returns a registry of four plugins. The composer has three releases and a later prerelease.
+// Its latest release is translated in French, and is the one version published with an API key. Characters
+// has one release, in English alone. Drafts only has a prerelease. Glossary has one release, in Spanish and
+// Italian but not in English. Each call returns fresh values, so a case may change them.
 func pluginFixtures() fixtures {
 	version := func(key dao.PluginVersionKey, schema string, migration []byte) *dao.PluginVersion {
 		return &dao.PluginVersion{
@@ -209,11 +215,14 @@ func pluginFixtures() fixtures {
 		}
 	}
 
+	signed := version(composer1100, pluginSchemaNext, pluginMigration(composer1100))
+	signed.Proof, signed.APIKeyID = new(pluginProof), new(pluginAPIKeyID)
+
 	return fixtures{
 		pluginVersions: []*dao.PluginVersion{
 			version(composer100, pluginSchema, nil),
 			version(composer120, pluginSchema, pluginMigration(composer120)),
-			version(composer1100, pluginSchemaNext, pluginMigration(composer1100)),
+			signed,
 			version(composer200Dev, pluginSchemaNext, nil),
 			version(characters010, pluginSchema, nil),
 			version(drafts010Dev, pluginSchema, nil),

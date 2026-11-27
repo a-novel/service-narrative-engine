@@ -35,5 +35,11 @@ type PluginVersion struct {
 	// UI is the JavaScript module that renders the plugin.
 	UI []byte `bun:"ui"`
 
+	// Proof is the token the publisher's API key signed for the version, a compact JWT. Nil for a version
+	// published without a key.
+	Proof *string `bun:"proof"`
+	// APIKeyID is the ID of the API key that signed Proof. Nil when Proof is.
+	APIKeyID *string `bun:"api_key_id"`
+
 	PublishedAt time.Time `bun:"published_at"`
 }
