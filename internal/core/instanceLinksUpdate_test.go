@@ -18,7 +18,7 @@ import (
 	"github.com/a-novel/service-narrative-engine/v2/internal/dao"
 )
 
-func TestProjectLinksUpdate(t *testing.T) {
+func TestInstanceLinksUpdate(t *testing.T) {
 	t.Parallel()
 
 	errFoo := errors.New("foo")
@@ -26,19 +26,19 @@ func TestProjectLinksUpdate(t *testing.T) {
 	otherInstanceID := uuid.MustParse("00000000-0000-0000-0000-000000000032")
 
 	link := core.Link{
-		Source:       core.Identifier{ID: instanceID, Target: "scenes/a"},
+		Source:       "scenes/a",
 		Destination:  core.Identifier{ID: otherInstanceID, Target: "cast/b"},
 		Relationship: "therefore",
 	}
 
-	// linkJSON is the link as the project stores it.
-	const linkJSON = `{"source":{"id":"00000000-0000-0000-0000-000000000031","target":"scenes/a"},` +
+	// linkJSON is the link as the instance stores it.
+	const linkJSON = `{"source":"scenes/a",` +
 		`"destination":{"id":"00000000-0000-0000-0000-000000000032","target":"cast/b"},` +
 		`"relationship":"therefore"}`
 
-	withLinks := func(links ...core.Link) *core.ProjectLinksUpdateRequest {
-		return &core.ProjectLinksUpdateRequest{
-			OwnerID: ownerID, ProjectID: projectID, Links: links, UpdatedAt: new(documentUpdatedAt),
+	withLinks := func(links ...core.Link) *core.InstanceLinksUpdateRequest {
+		return &core.InstanceLinksUpdateRequest{
+			OwnerID: ownerID, ProjectID: projectID, ID: instanceID, Links: links, UpdatedAt: new(documentUpdatedAt),
 		}
 	}
 
@@ -53,21 +53,21 @@ func TestProjectLinksUpdate(t *testing.T) {
 	// longest is a text of the most characters a target holds, each of two bytes.
 	longest := strings.Repeat("é", caps.LinkTargetLength)
 
-	written := &daoMock[*dao.ProjectLinksUpsertRow]{resp: &dao.ProjectLinksUpsertRow{UpdatedAt: editedAt}}
+	written := &daoMock[*dao.InstanceLinksUpdateRow]{resp: &dao.InstanceLinksUpdateRow{UpdatedAt: editedAt}}
 
 	testCases := []struct {
 		name string
 
-		request *core.ProjectLinksUpdateRequest
+		request *core.InstanceLinksUpdateRequest
 
 		lockMock   *daoMock[bool]
-		daoMock    *daoMock[*dao.ProjectLinksUpsertRow]
+		daoMock    *daoMock[*dao.InstanceLinksUpdateRow]
 		bytesMock  *daoMock[*dao.ProjectBytes]
 		transactor transaction.Transactor
 
 		// expectLinks is the document the write stores.
 		expectLinks string
-		expect      *core.WrittenProjectLinks
+		expect      *core.WrittenInstanceLinks
 		expectErr   error
 		expectField *core.FieldError
 	}{
@@ -81,27 +81,30 @@ func TestProjectLinksUpdate(t *testing.T) {
 			bytesMock: withinBudget,
 
 			expectLinks: "[" + linkJSON + "]",
-			expect:      &core.WrittenProjectLinks{UpdatedAt: editedAt},
+			expect:      &core.WrittenInstanceLinks{UpdatedAt: editedAt},
 		},
 		{
-			// A project that never wrote its links names no instant.
+			// An instance that never wrote its links names no instant.
 			name: "Success/FirstWrite",
 
-			request: &core.ProjectLinksUpdateRequest{OwnerID: ownerID, ProjectID: projectID, Links: []core.Link{link}},
+			request: &core.InstanceLinksUpdateRequest{
+				OwnerID: ownerID, ProjectID: projectID, ID: instanceID, Links: []core.Link{link},
+			},
 
 			lockMock:  &daoMock[bool]{resp: true},
 			daoMock:   written,
 			bytesMock: withinBudget,
 
 			expectLinks: "[" + linkJSON + "]",
-			expect:      &core.WrittenProjectLinks{UpdatedAt: editedAt},
+			expect:      &core.WrittenInstanceLinks{UpdatedAt: editedAt},
 		},
 		{
 			// An empty list clears the links, where a missing one is refused.
 			name: "Success/Clear",
 
-			request: &core.ProjectLinksUpdateRequest{
-				OwnerID: ownerID, ProjectID: projectID, Links: []core.Link{}, UpdatedAt: new(documentUpdatedAt),
+			request: &core.InstanceLinksUpdateRequest{
+				OwnerID: ownerID, ProjectID: projectID, ID: instanceID, Links: []core.Link{},
+				UpdatedAt: new(documentUpdatedAt),
 			},
 
 			lockMock:  &daoMock[bool]{resp: true},
@@ -109,7 +112,7 @@ func TestProjectLinksUpdate(t *testing.T) {
 			bytesMock: withinBudget,
 
 			expectLinks: "[]",
-			expect:      &core.WrittenProjectLinks{UpdatedAt: editedAt},
+			expect:      &core.WrittenInstanceLinks{UpdatedAt: editedAt},
 		},
 		{
 			// A target counts its characters, a relationship its bytes, and a link may leave its relationship
@@ -117,7 +120,7 @@ func TestProjectLinksUpdate(t *testing.T) {
 			name: "Success/MostOfEach",
 
 			request: withLinks(
-				changed(func(link *core.Link) { link.Source.Target = longest }),
+				changed(func(link *core.Link) { link.Source = longest }),
 				changed(func(link *core.Link) { link.Relationship = strings.Repeat("a", caps.LinkRelationshipBytes) }),
 				changed(func(link *core.Link) { link.Relationship = "" }),
 			),
@@ -130,20 +133,34 @@ func TestProjectLinksUpdate(t *testing.T) {
 				strings.Replace(linkJSON, "scenes/a", longest, 1) + "," +
 				strings.Replace(linkJSON, "therefore", strings.Repeat("a", caps.LinkRelationshipBytes), 1) + "," +
 				strings.Replace(linkJSON, "therefore", "", 1) + "]",
-			expect: &core.WrittenProjectLinks{UpdatedAt: editedAt},
+			expect: &core.WrittenInstanceLinks{UpdatedAt: editedAt},
 		},
 		{
 			// An omitted list never wipes the links.
 			name: "Error/NoLinks",
 
-			request: &core.ProjectLinksUpdateRequest{OwnerID: ownerID, ProjectID: projectID},
+			request: &core.InstanceLinksUpdateRequest{OwnerID: ownerID, ProjectID: projectID, ID: instanceID},
 
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
-			name: "Error/NoSourceID",
+			name: "Error/NoInstance",
 
-			request: withLinks(changed(func(link *core.Link) { link.Source.ID = uuid.Nil })),
+			request: &core.InstanceLinksUpdateRequest{OwnerID: ownerID, ProjectID: projectID, Links: []core.Link{link}},
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/NoSource",
+
+			request: withLinks(changed(func(link *core.Link) { link.Source = "" })),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/NoDestinationID",
+
+			request: withLinks(changed(func(link *core.Link) { link.Destination.ID = uuid.Nil })),
 
 			expectErr: core.ErrInvalidRequest,
 		},
@@ -163,12 +180,12 @@ func TestProjectLinksUpdate(t *testing.T) {
 			expectField: &core.FieldError{Path: "links", Rule: "max"},
 		},
 		{
-			name: "Error/SourceTargetTooLong",
+			name: "Error/SourceTooLong",
 
-			request: withLinks(link, changed(func(link *core.Link) { link.Source.Target = longest + "é" })),
+			request: withLinks(link, changed(func(link *core.Link) { link.Source = longest + "é" })),
 
 			expectErr:   core.ErrInvalidRequest,
-			expectField: &core.FieldError{Path: "links[1].source.target", Rule: "max"},
+			expectField: &core.FieldError{Path: "links[1].source", Rule: "max"},
 		},
 		{
 			name: "Error/DestinationTargetTooLong",
@@ -189,14 +206,14 @@ func TestProjectLinksUpdate(t *testing.T) {
 			expectField: &core.FieldError{Path: "links[0].relationship", Rule: "maxbytes"},
 		},
 		{
-			// Three links whose targets hold the most characters weigh 601 bytes, one past the most the links
-			// hold.
+			// Three links whose targets hold the most characters weigh 436 bytes, one past the most the links of
+			// an instance hold.
 			name: "Error/TooLarge",
 
 			request: withLinks(
-				changed(func(link *core.Link) { link.Source.Target, link.Destination.Target = longest, longest }),
-				changed(func(link *core.Link) { link.Source.Target, link.Destination.Target = longest, longest }),
-				changed(func(link *core.Link) { link.Source.Target, link.Destination.Target = longest, longest }),
+				changed(func(link *core.Link) { link.Source, link.Destination.Target = longest, longest }),
+				changed(func(link *core.Link) { link.Source, link.Destination.Target = longest, longest }),
+				changed(func(link *core.Link) { link.Source, link.Destination.Target = longest, longest }),
 			),
 
 			expectErr:   core.ErrInvalidRequest,
@@ -225,10 +242,21 @@ func TestProjectLinksUpdate(t *testing.T) {
 			request: withLinks(link),
 
 			lockMock:    &daoMock[bool]{resp: true},
-			daoMock:     &daoMock[*dao.ProjectLinksUpsertRow]{err: dao.ErrProjectLinksUpsertStale},
+			daoMock:     &daoMock[*dao.InstanceLinksUpdateRow]{err: dao.ErrInstanceLinksUpdateStale},
 			expectLinks: "[" + linkJSON + "]",
 
-			expectErr: core.ErrProjectLinksStale,
+			expectErr: core.ErrInstanceLinksStale,
+		},
+		{
+			name: "Error/InstanceNotFound",
+
+			request: withLinks(link),
+
+			lockMock:    &daoMock[bool]{resp: true},
+			daoMock:     &daoMock[*dao.InstanceLinksUpdateRow]{err: dao.ErrInstanceNotFound},
+			expectLinks: "[" + linkJSON + "]",
+
+			expectErr: core.ErrInstanceNotFound,
 		},
 		{
 			name: "Error/Internal",
@@ -236,7 +264,7 @@ func TestProjectLinksUpdate(t *testing.T) {
 			request: withLinks(link),
 
 			lockMock:    &daoMock[bool]{resp: true},
-			daoMock:     &daoMock[*dao.ProjectLinksUpsertRow]{err: errFoo},
+			daoMock:     &daoMock[*dao.InstanceLinksUpdateRow]{err: errFoo},
 			expectLinks: "[" + linkJSON + "]",
 
 			expectErr: errFoo,
@@ -269,7 +297,7 @@ func TestProjectLinksUpdate(t *testing.T) {
 			t.Parallel()
 
 			mockLock := coremocks.NewMockProjectLockDao(t)
-			mockDao := coremocks.NewMockProjectLinksUpdateDao(t)
+			mockDao := coremocks.NewMockInstanceLinksUpdateDao(t)
 			mockBytes := coremocks.NewMockProjectBytesDao(t)
 
 			if testCase.lockMock != nil {
@@ -280,8 +308,9 @@ func TestProjectLinksUpdate(t *testing.T) {
 
 			if testCase.daoMock != nil {
 				mockDao.EXPECT().
-					Exec(mock.Anything, mock.MatchedBy(func(req *dao.ProjectLinksUpsertRequest) bool {
-						return req.ProjectID == projectID && string(req.Links) == testCase.expectLinks &&
+					Exec(mock.Anything, mock.MatchedBy(func(req *dao.InstanceLinksUpdateRequest) bool {
+						return req.ProjectID == projectID && req.ID == instanceID &&
+							string(req.Links) == testCase.expectLinks &&
 							sameInstant(req.UpdatedAt, testCase.request.UpdatedAt) && recent(req.Now)
 					})).
 					Return(testCase.daoMock.resp, testCase.daoMock.err)
@@ -298,7 +327,7 @@ func TestProjectLinksUpdate(t *testing.T) {
 				transactor = transactiontest.NewTransactor()
 			}
 
-			service := core.NewProjectLinksUpdate(mockLock, mockDao, mockBytes, transactor, caps)
+			service := core.NewInstanceLinksUpdate(mockLock, mockDao, mockBytes, transactor, caps)
 
 			result, err := service.Exec(t.Context(), testCase.request)
 			require.ErrorIs(t, err, testCase.expectErr)

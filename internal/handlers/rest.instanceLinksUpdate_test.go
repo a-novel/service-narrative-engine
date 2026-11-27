@@ -14,26 +14,27 @@ import (
 	handlersmocks "github.com/a-novel/service-narrative-engine/v2/internal/handlers/mocks"
 )
 
-func TestRestProjectLinksUpdate(t *testing.T) {
+func TestRestInstanceLinksUpdate(t *testing.T) {
 	t.Parallel()
 
 	otherInstanceID := uuid.MustParse("00000000-0000-0000-0000-000000000032")
 
 	jsonLink := map[string]any{
-		"source":       map[string]any{"id": instanceID.String(), "target": "scenes/a"},
+		"source":       "scenes/a",
 		"destination":  map[string]any{"id": otherInstanceID.String(), "target": "cast/b"},
 		"relationship": "therefore",
 	}
 
 	coreLink := core.Link{
-		Source:       core.Identifier{ID: instanceID, Target: "scenes/a"},
+		Source:       "scenes/a",
 		Destination:  core.Identifier{ID: otherInstanceID, Target: "cast/b"},
 		Relationship: "therefore",
 	}
 
-	// newBody returns the body of a write of links read at updatedAt, a nil one omitting each.
+	// newBody returns the body of a write of the links of the test instance read at updatedAt, a nil one
+	// omitting each.
 	newBody := func(links, updatedAt any) map[string]any {
-		body := map[string]any{"projectID": projectID.String()}
+		body := map[string]any{"projectID": projectID.String(), "id": instanceID.String()}
 
 		if links != nil {
 			body["links"] = links
@@ -46,7 +47,12 @@ func TestRestProjectLinksUpdate(t *testing.T) {
 		return body
 	}
 
-	written := &serviceMock[*core.WrittenProjectLinks]{resp: &core.WrittenProjectLinks{UpdatedAt: preciseAt}}
+	// emptied is the request of a write that names no instant and clears the links.
+	emptied := &core.InstanceLinksUpdateRequest{
+		OwnerID: ownerID, ProjectID: projectID, ID: instanceID, Links: []core.Link{},
+	}
+
+	written := &serviceMock[*core.WrittenInstanceLinks]{resp: &core.WrittenInstanceLinks{UpdatedAt: preciseAt}}
 	jsonWritten := map[string]any{"updatedAt": "2021-01-03T08:15:30.123456Z"}
 
 	testCases := []struct {
@@ -57,8 +63,8 @@ func TestRestProjectLinksUpdate(t *testing.T) {
 		anonymous bool
 
 		// expectRequest is the request the service receives. A nil one means the handler must not call it.
-		expectRequest *core.ProjectLinksUpdateRequest
-		serviceMock   *serviceMock[*core.WrittenProjectLinks]
+		expectRequest *core.InstanceLinksUpdateRequest
+		serviceMock   *serviceMock[*core.WrittenInstanceLinks]
 
 		expectStatus   int
 		expectResponse any
@@ -69,8 +75,9 @@ func TestRestProjectLinksUpdate(t *testing.T) {
 
 			body: newBody([]any{jsonLink}, "2021-01-03T08:15:30.123456Z"),
 
-			expectRequest: &core.ProjectLinksUpdateRequest{
-				OwnerID: ownerID, ProjectID: projectID, Links: []core.Link{coreLink}, UpdatedAt: &preciseAt,
+			expectRequest: &core.InstanceLinksUpdateRequest{
+				OwnerID: ownerID, ProjectID: projectID, ID: instanceID, Links: []core.Link{coreLink},
+				UpdatedAt: &preciseAt,
 			},
 			serviceMock: written,
 
@@ -78,13 +85,13 @@ func TestRestProjectLinksUpdate(t *testing.T) {
 			expectResponse: jsonWritten,
 		},
 		{
-			// A project that never wrote its links names no instant, and an empty list reaches the service as
+			// An instance that never wrote its links names no instant, and an empty list reaches the service as
 			// one.
 			name: "Success/FirstWrite",
 
 			body: newBody([]any{}, nil),
 
-			expectRequest: &core.ProjectLinksUpdateRequest{OwnerID: ownerID, ProjectID: projectID, Links: []core.Link{}},
+			expectRequest: emptied,
 			serviceMock:   written,
 
 			expectStatus:   http.StatusOK,
@@ -96,8 +103,10 @@ func TestRestProjectLinksUpdate(t *testing.T) {
 
 			body: newBody(nil, "2021-01-03T08:15:30.123456Z"),
 
-			expectRequest: &core.ProjectLinksUpdateRequest{OwnerID: ownerID, ProjectID: projectID, UpdatedAt: &preciseAt},
-			serviceMock:   &serviceMock[*core.WrittenProjectLinks]{err: core.ErrInvalidRequest},
+			expectRequest: &core.InstanceLinksUpdateRequest{
+				OwnerID: ownerID, ProjectID: projectID, ID: instanceID, UpdatedAt: &preciseAt,
+			},
+			serviceMock: &serviceMock[*core.WrittenInstanceLinks]{err: core.ErrInvalidRequest},
 
 			expectStatus: http.StatusUnprocessableEntity,
 		},
@@ -120,7 +129,7 @@ func TestRestProjectLinksUpdate(t *testing.T) {
 			// An ID that is no UUID fails the decoding.
 			name: "Error/MalformedID",
 
-			body: newBody([]any{map[string]any{"source": map[string]any{"id": "nope", "target": "a"}}}, nil),
+			body: newBody([]any{map[string]any{"destination": map[string]any{"id": "nope", "target": "a"}}}, nil),
 
 			expectStatus: http.StatusBadRequest,
 		},
@@ -131,8 +140,8 @@ func TestRestProjectLinksUpdate(t *testing.T) {
 
 			body: newBody([]any{}, nil),
 
-			expectRequest: &core.ProjectLinksUpdateRequest{OwnerID: ownerID, ProjectID: projectID, Links: []core.Link{}},
-			serviceMock:   &serviceMock[*core.WrittenProjectLinks]{err: core.ErrProjectLinksStale},
+			expectRequest: emptied,
+			serviceMock:   &serviceMock[*core.WrittenInstanceLinks]{err: core.ErrInstanceLinksStale},
 
 			expectStatus: http.StatusConflict,
 		},
@@ -141,8 +150,8 @@ func TestRestProjectLinksUpdate(t *testing.T) {
 
 			body: newBody([]any{}, nil),
 
-			expectRequest: &core.ProjectLinksUpdateRequest{OwnerID: ownerID, ProjectID: projectID, Links: []core.Link{}},
-			serviceMock:   &serviceMock[*core.WrittenProjectLinks]{err: core.ErrProjectBudget},
+			expectRequest: emptied,
+			serviceMock:   &serviceMock[*core.WrittenInstanceLinks]{err: core.ErrProjectBudget},
 
 			expectStatus:   http.StatusConflict,
 			expectResponse: limitProblem("projectBytes"),
@@ -153,8 +162,8 @@ func TestRestProjectLinksUpdate(t *testing.T) {
 
 			body: newBody([]any{}, nil),
 
-			expectRequest: &core.ProjectLinksUpdateRequest{OwnerID: ownerID, ProjectID: projectID, Links: []core.Link{}},
-			serviceMock: &serviceMock[*core.WrittenProjectLinks]{
+			expectRequest: emptied,
+			serviceMock: &serviceMock[*core.WrittenInstanceLinks]{
 				err: &core.FieldError{Path: "links[3].relationship", Rule: "maxbytes"},
 			},
 
@@ -167,7 +176,7 @@ func TestRestProjectLinksUpdate(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			service := handlersmocks.NewMockRestProjectLinksUpdateService(t)
+			service := handlersmocks.NewMockRestInstanceLinksUpdateService(t)
 
 			if testCase.expectRequest != nil {
 				service.EXPECT().
@@ -175,13 +184,13 @@ func TestRestProjectLinksUpdate(t *testing.T) {
 					Return(testCase.serviceMock.resp, testCase.serviceMock.err)
 			}
 
-			request := newRequest(t, http.MethodPut, "/v1/links", testCase.body)
+			request := newRequest(t, http.MethodPut, "/v1/instance/links", testCase.body)
 			if testCase.anonymous {
 				request = asUser(request, nil)
 			}
 
 			w := httptest.NewRecorder()
-			handlers.NewRestProjectLinksUpdate(service, configtest.Logger).ServeHTTP(w, request)
+			handlers.NewRestInstanceLinksUpdate(service, configtest.Logger).ServeHTTP(w, request)
 
 			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
 		})

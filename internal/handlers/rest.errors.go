@@ -44,14 +44,14 @@ var logoErrors = httpf.ErrMap{
 // conflicts with the project's state: a document that changed since the caller read it, the delete of the
 // default instance, a project that holds as many instances as it may, or one past its byte budget.
 var instanceErrors = httpf.ErrMap{
-	core.ErrInvalidRequest:    http.StatusUnprocessableEntity,
-	core.ErrProjectNotFound:   http.StatusNotFound,
-	core.ErrInstanceNotFound:  http.StatusNotFound,
-	core.ErrInstanceStale:     http.StatusConflict,
-	core.ErrInstanceDefault:   http.StatusConflict,
-	core.ErrInstancesFull:     http.StatusConflict,
-	core.ErrProjectLinksStale: http.StatusConflict,
-	core.ErrProjectBudget:     http.StatusConflict,
+	core.ErrInvalidRequest:     http.StatusUnprocessableEntity,
+	core.ErrProjectNotFound:    http.StatusNotFound,
+	core.ErrInstanceNotFound:   http.StatusNotFound,
+	core.ErrInstanceStale:      http.StatusConflict,
+	core.ErrInstanceDefault:    http.StatusConflict,
+	core.ErrInstancesFull:      http.StatusConflict,
+	core.ErrInstanceLinksStale: http.StatusConflict,
+	core.ErrProjectBudget:      http.StatusConflict,
 }
 
 // pluginErrors maps the refusals of the plugin registry's reads to their status. A 422 answers a request that

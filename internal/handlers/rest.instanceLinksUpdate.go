@@ -17,36 +17,39 @@ import (
 	"github.com/a-novel/service-narrative-engine/v2/internal/core"
 )
 
-// RestProjectLinksUpdateService is the core operation [RestProjectLinksUpdate] delegates to.
-type RestProjectLinksUpdateService interface {
-	Exec(ctx context.Context, request *core.ProjectLinksUpdateRequest) (*core.WrittenProjectLinks, error)
+// RestInstanceLinksUpdateService is the core operation [RestInstanceLinksUpdate] delegates to.
+type RestInstanceLinksUpdateService interface {
+	Exec(ctx context.Context, request *core.InstanceLinksUpdateRequest) (*core.WrittenInstanceLinks, error)
 }
 
-// RestProjectLinksUpdateRequest is the JSON body the update-links endpoint accepts.
-type RestProjectLinksUpdateRequest struct {
+// RestInstanceLinksUpdateRequest is the JSON body the update-instance-links endpoint accepts.
+type RestInstanceLinksUpdateRequest struct {
 	ProjectID uuid.UUID `json:"projectID"`
+	ID        uuid.UUID `json:"id"`
 
-	// Links replace the links of the project. An empty list clears them, and an omitted one is refused.
+	// Links replace the links the instance stores. An empty list clears them, and an omitted one is refused.
 	Links []Link `json:"links"`
 
 	// UpdatedAt is the updatedAt the links carried when the client read them, sent back as it was received:
-	// null or omitted when the project had never written its links.
+	// null or omitted for an instance that never wrote its links.
 	UpdatedAt *time.Time `json:"updatedAt"`
 }
 
-// RestProjectLinksUpdate is the HTTP handler for the update-links endpoint. It responds with the updatedAt of
-// the written links, which the next write names.
-type RestProjectLinksUpdate struct {
-	service RestProjectLinksUpdateService
+// RestInstanceLinksUpdate is the HTTP handler for the update-instance-links endpoint. It responds with the
+// updatedAt of the written links, which the next write names.
+type RestInstanceLinksUpdate struct {
+	service RestInstanceLinksUpdateService
 	logger  logging.Log
 }
 
-func NewRestProjectLinksUpdate(service RestProjectLinksUpdateService, logger logging.Log) *RestProjectLinksUpdate {
-	return &RestProjectLinksUpdate{service: service, logger: logger}
+func NewRestInstanceLinksUpdate(
+	service RestInstanceLinksUpdateService, logger logging.Log,
+) *RestInstanceLinksUpdate {
+	return &RestInstanceLinksUpdate{service: service, logger: logger}
 }
 
-func (handler *RestProjectLinksUpdate) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ctx, span := otel.Tracer().Start(r.Context(), "rest.ProjectLinksUpdate")
+func (handler *RestInstanceLinksUpdate) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer().Start(r.Context(), "rest.InstanceLinksUpdate")
 	defer span.End()
 
 	ownerID, err := serviceauthentication.RequestUser(r.Context())
@@ -56,7 +59,7 @@ func (handler *RestProjectLinksUpdate) ServeHTTP(w http.ResponseWriter, r *http.
 		return
 	}
 
-	var request RestProjectLinksUpdateRequest
+	var request RestInstanceLinksUpdateRequest
 
 	err = httpf.DecodeJSON(r.Body, &request)
 	if err != nil {
@@ -65,9 +68,10 @@ func (handler *RestProjectLinksUpdate) ServeHTTP(w http.ResponseWriter, r *http.
 		return
 	}
 
-	serviceRequest := &core.ProjectLinksUpdateRequest{
+	serviceRequest := &core.InstanceLinksUpdateRequest{
 		OwnerID:   ownerID,
 		ProjectID: request.ProjectID,
+		ID:        request.ID,
 		UpdatedAt: request.UpdatedAt,
 	}
 
@@ -83,5 +87,5 @@ func (handler *RestProjectLinksUpdate) ServeHTTP(w http.ResponseWriter, r *http.
 		return
 	}
 
-	httpf.SendJSONStatus(w, span, http.StatusOK, WrittenProjectLinks{UpdatedAt: result.UpdatedAt})
+	httpf.SendJSONStatus(w, span, http.StatusOK, WrittenInstanceLinks{UpdatedAt: result.UpdatedAt})
 }

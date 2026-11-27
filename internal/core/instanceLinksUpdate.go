@@ -19,63 +19,67 @@ import (
 	"github.com/a-novel/service-narrative-engine/v2/internal/dao"
 )
 
-// linksDepth is how deep the links nest: a list of links, each holding its two ends.
+// linksDepth is how deep the links nest: a list of links, each holding its destination.
 const linksDepth = 3
 
-// ProjectLinksUpdateDao writes the links of the project, only while they still hold the UpdatedAt the request
+// InstanceLinksUpdateDao writes the links of the instance, only while they still hold the UpdatedAt the request
 // names.
-type ProjectLinksUpdateDao interface {
-	Exec(ctx context.Context, request *dao.ProjectLinksUpsertRequest) (*dao.ProjectLinksUpsertRow, error)
+type InstanceLinksUpdateDao interface {
+	Exec(ctx context.Context, request *dao.InstanceLinksUpdateRequest) (*dao.InstanceLinksUpdateRow, error)
 }
 
-// ProjectLinksUpdateRequest carries the new links of a project.
-type ProjectLinksUpdateRequest struct {
+// InstanceLinksUpdateRequest carries the new links of an instance.
+type InstanceLinksUpdateRequest struct {
 	OwnerID   uuid.UUID `validate:"required"`
 	ProjectID uuid.UUID `validate:"required"`
+	ID        uuid.UUID `validate:"required"`
 
-	// Links replace the links of the project, within the configured caps. An empty list clears them, and a
-	// nil list fails validation, so an omission never wipes them.
+	// Links replace the links the instance stores, within the configured caps. An empty list clears them, and
+	// a nil list fails validation, so an omission never wipes them.
 	Links []Link `validate:"required,dive"`
 
-	// UpdatedAt is the UpdatedAt the links carried when the caller read them, to the microsecond: nil when the
-	// project had never written its links. The first write of a project applies whatever it names.
+	// UpdatedAt is the UpdatedAt the links carried when the caller read them, to the microsecond: nil for an
+	// instance that never wrote its links. The first write names none, as every later write names the one
+	// before it.
 	UpdatedAt *time.Time
 }
 
-// ProjectLinksUpdate replaces the links of a project in one write, and returns when it wrote them. The write
-// applies only while the links still carry the UpdatedAt the request names: it merges nothing, and returns
-// [ErrProjectLinksStale] once another write changed them. It writes nothing when the project would store more
+// InstanceLinksUpdate replaces the static links an instance stores in one write, and returns when it wrote
+// them. The write applies only while the links still carry the UpdatedAt the request names: it merges nothing,
+// and returns [ErrInstanceLinksStale] once another write changed them. The links and the content of an instance
+// are stamped apart, so neither write makes the other stale. It writes nothing when the project would store more
 // than [ProjectBytesMax] bytes.
 //
 // The service checks the shape and the size of the links. It never checks that an instance or an item they
 // name exists: the client resolves them, and prunes the ones left dangling.
-type ProjectLinksUpdate struct {
+type InstanceLinksUpdate struct {
 	daoLock    ProjectLockDao
-	dao        ProjectLinksUpdateDao
+	dao        InstanceLinksUpdateDao
 	daoBytes   ProjectBytesDao
 	transactor transaction.Transactor
 	caps       config.Caps
 }
 
-func NewProjectLinksUpdate(
+func NewInstanceLinksUpdate(
 	daoLock ProjectLockDao,
-	dao ProjectLinksUpdateDao,
+	dao InstanceLinksUpdateDao,
 	daoBytes ProjectBytesDao,
 	transactor transaction.Transactor,
 	caps config.Caps,
-) *ProjectLinksUpdate {
-	return &ProjectLinksUpdate{daoLock: daoLock, dao: dao, daoBytes: daoBytes, transactor: transactor, caps: caps}
+) *InstanceLinksUpdate {
+	return &InstanceLinksUpdate{daoLock: daoLock, dao: dao, daoBytes: daoBytes, transactor: transactor, caps: caps}
 }
 
-func (service *ProjectLinksUpdate) Exec(
-	ctx context.Context, request *ProjectLinksUpdateRequest,
-) (*WrittenProjectLinks, error) {
-	ctx, span := otel.Tracer().Start(ctx, "core.ProjectLinksUpdate")
+func (service *InstanceLinksUpdate) Exec(
+	ctx context.Context, request *InstanceLinksUpdateRequest,
+) (*WrittenInstanceLinks, error) {
+	ctx, span := otel.Tracer().Start(ctx, "core.InstanceLinksUpdate")
 	defer span.End()
 
 	span.SetAttributes(
 		attribute.String("project.id", request.ProjectID.String()),
 		attribute.String("project.owner_id", request.OwnerID.String()),
+		attribute.String("instance.id", request.ID.String()),
 		attribute.Int("links.count", len(request.Links)),
 	)
 
@@ -89,7 +93,7 @@ func (service *ProjectLinksUpdate) Exec(
 		return nil, otel.ReportError(span, err)
 	}
 
-	var entity *dao.ProjectLinksUpsertRow
+	var entity *dao.InstanceLinksUpdateRow
 
 	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
 		err := lockOwnedProject(ctx, service.daoLock, projectOwnershipOpts{
@@ -100,14 +104,15 @@ func (service *ProjectLinksUpdate) Exec(
 			return fmt.Errorf("lock project: %w", err)
 		}
 
-		entity, err = service.dao.Exec(ctx, &dao.ProjectLinksUpsertRequest{
+		entity, err = service.dao.Exec(ctx, &dao.InstanceLinksUpdateRequest{
 			ProjectID: request.ProjectID,
+			ID:        request.ID,
 			Links:     links,
 			UpdatedAt: request.UpdatedAt,
 			Now:       time.Now(),
 		})
 		if err != nil {
-			return fmt.Errorf("upsert links: %w", err)
+			return fmt.Errorf("update links: %w", err)
 		}
 
 		err = keepProjectBudget(ctx, service.daoBytes, projectBudgetOpts{projectID: request.ProjectID})
@@ -121,12 +126,12 @@ func (service *ProjectLinksUpdate) Exec(
 		return nil, otel.ReportError(span, fmt.Errorf("run transaction: %w", err))
 	}
 
-	return &WrittenProjectLinks{UpdatedAt: entity.UpdatedAt}, nil
+	return &WrittenInstanceLinks{UpdatedAt: entity.UpdatedAt}, nil
 }
 
-// encode returns the links as the JSON document the project stores, or a [FieldError] for the first cap they
+// encode returns the links as the JSON document the instance stores, or a [FieldError] for the first cap they
 // pass.
-func (service *ProjectLinksUpdate) encode(links []Link) (json.RawMessage, error) {
+func (service *InstanceLinksUpdate) encode(links []Link) (json.RawMessage, error) {
 	if len(links) > service.caps.Links {
 		return nil, &FieldError{Path: "links", Rule: ruleMax}
 	}
@@ -135,8 +140,8 @@ func (service *ProjectLinksUpdate) encode(links []Link) (json.RawMessage, error)
 		path := "links[" + strconv.Itoa(index) + "]."
 
 		switch {
-		case utf8.RuneCountInString(link.Source.Target) > service.caps.LinkTargetLength:
-			return nil, &FieldError{Path: path + "source.target", Rule: ruleMax}
+		case utf8.RuneCountInString(link.Source) > service.caps.LinkTargetLength:
+			return nil, &FieldError{Path: path + "source", Rule: ruleMax}
 		case utf8.RuneCountInString(link.Destination.Target) > service.caps.LinkTargetLength:
 			return nil, &FieldError{Path: path + "destination.target", Rule: ruleMax}
 		case len(link.Relationship) > service.caps.LinkRelationshipBytes:

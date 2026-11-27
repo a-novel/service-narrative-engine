@@ -101,14 +101,14 @@ func newRouter(cfg config.App, jsonKeysClient servicejsonkeys.Client) (http.Hand
 	daoProjectLogoSelect := dao.NewPgProjectLogoSelect()
 	daoProjectLogoDelete := dao.NewPgProjectLogoDelete()
 	daoProjectDefaultUpdate := dao.NewPgProjectDefaultUpdate()
-	daoProjectLinksSelect := dao.NewPgProjectLinksSelect()
-	daoProjectLinksUpsert := dao.NewPgProjectLinksUpsert()
 	daoInstanceCount := dao.NewPgInstanceCount()
 	daoInstancesInsert := dao.NewPgInstancesInsert()
 	daoInstanceList := dao.NewPgInstanceList()
 	daoInstanceSelect := dao.NewPgInstanceSelect()
 	daoInstanceUpdate := dao.NewPgInstanceUpdate()
 	daoInstanceContentUpdate := dao.NewPgInstanceContentUpdate()
+	daoInstanceLinksList := dao.NewPgInstanceLinksList()
+	daoInstanceLinksUpdate := dao.NewPgInstanceLinksUpdate()
 	daoInstanceDelete := dao.NewPgInstanceDelete()
 	daoPluginList := dao.NewPgPluginList()
 	daoPluginManifestSelect := dao.NewPgPluginManifestSelect()
@@ -132,10 +132,6 @@ func newRouter(cfg config.App, jsonKeysClient servicejsonkeys.Client) (http.Hand
 	serviceProjectLogoGet := core.NewProjectLogoGet(daoProjectOwned, daoProjectLogoSelect)
 	serviceProjectLogoDelete := core.NewProjectLogoDelete(daoProjectOwned, daoProjectLogoDelete)
 	serviceProjectDefaultUpdate := core.NewProjectDefaultUpdate(daoProjectLock, daoProjectDefaultUpdate, transactor)
-	serviceProjectLinksGet := core.NewProjectLinksGet(daoProjectOwned, daoProjectLinksSelect)
-	serviceProjectLinksUpdate := core.NewProjectLinksUpdate(
-		daoProjectLock, daoProjectLinksUpsert, daoProjectBytes, transactor, cfg.Caps,
-	)
 	serviceInstancesCreate := core.NewInstancesCreate(
 		daoProjectLock, daoInstanceCount, daoInstancesInsert, daoProjectDefaultUpdate, daoProjectBytes, transactor,
 		cfg.Caps,
@@ -145,6 +141,10 @@ func newRouter(cfg config.App, jsonKeysClient servicejsonkeys.Client) (http.Hand
 	serviceInstanceUpdate := core.NewInstanceUpdate(daoProjectLock, daoInstanceUpdate, daoProjectBytes, transactor)
 	serviceInstanceContentUpdate := core.NewInstanceContentUpdate(
 		daoProjectLock, daoInstanceContentUpdate, daoProjectBytes, transactor, cfg.Caps,
+	)
+	serviceInstanceLinksList := core.NewInstanceLinksList(daoProjectOwned, daoInstanceLinksList)
+	serviceInstanceLinksUpdate := core.NewInstanceLinksUpdate(
+		daoProjectLock, daoInstanceLinksUpdate, daoProjectBytes, transactor, cfg.Caps,
 	)
 	serviceInstanceDelete := core.NewInstanceDelete(daoProjectLock, daoInstanceDelete, transactor)
 	servicePluginList := core.NewPluginList(daoPluginList)
@@ -169,14 +169,14 @@ func newRouter(cfg config.App, jsonKeysClient servicejsonkeys.Client) (http.Hand
 	handlerProjectLogoGet := handlers.NewRestProjectLogoGet(serviceProjectLogoGet, cfg.Logger)
 	handlerProjectLogoDelete := handlers.NewRestProjectLogoDelete(serviceProjectLogoDelete, cfg.Logger)
 	handlerProjectDefaultUpdate := handlers.NewRestProjectDefaultUpdate(serviceProjectDefaultUpdate, cfg.Logger)
-	handlerProjectLinksGet := handlers.NewRestProjectLinksGet(serviceProjectLinksGet, cfg.Logger)
-	handlerProjectLinksUpdate := handlers.NewRestProjectLinksUpdate(serviceProjectLinksUpdate, cfg.Logger)
 	handlerInstanceCreate := handlers.NewRestInstanceCreate(serviceInstancesCreate, cfg.Logger)
 	handlerInstancesCreate := handlers.NewRestInstancesCreate(serviceInstancesCreate, cfg.Logger)
 	handlerInstanceList := handlers.NewRestInstanceList(serviceInstanceList, cfg.Logger)
 	handlerInstanceGet := handlers.NewRestInstanceGet(serviceInstanceGet, cfg.Logger)
 	handlerInstanceUpdate := handlers.NewRestInstanceUpdate(serviceInstanceUpdate, cfg.Logger)
 	handlerInstanceContentUpdate := handlers.NewRestInstanceContentUpdate(serviceInstanceContentUpdate, cfg.Logger)
+	handlerInstanceLinksList := handlers.NewRestInstanceLinksList(serviceInstanceLinksList, cfg.Logger)
+	handlerInstanceLinksUpdate := handlers.NewRestInstanceLinksUpdate(serviceInstanceLinksUpdate, cfg.Logger)
 	handlerInstanceDelete := handlers.NewRestInstanceDelete(serviceInstanceDelete, cfg.Logger)
 	handlerPluginList := handlers.NewRestPluginList(servicePluginList, cfg.Logger)
 	handlerPluginManifestGet := handlers.NewRestPluginManifestGet(servicePluginManifestGet, cfg.Logger)
@@ -225,9 +225,9 @@ func newRouter(cfg config.App, jsonKeysClient servicejsonkeys.Client) (http.Hand
 		withAuth(item, config.PermissionProjectWrite).Delete("/instance", handlerInstanceDelete.ServeHTTP)
 		withAuth(item, config.PermissionProjectWrite).With(limit.DocumentWrite).
 			Put("/instance/content", handlerInstanceContentUpdate.ServeHTTP)
-		withAuth(api, config.PermissionProjectRead).Get("/links", handlerProjectLinksGet.ServeHTTP)
 		withAuth(item, config.PermissionProjectWrite).With(limit.DocumentWrite).
-			Put("/links", handlerProjectLinksUpdate.ServeHTTP)
+			Put("/instance/links", handlerInstanceLinksUpdate.ServeHTTP)
+		withAuth(api, config.PermissionProjectRead).Get("/links", handlerInstanceLinksList.ServeHTTP)
 
 		withAuth(api, config.PermissionPluginRead).Get("/plugins", handlerPluginList.ServeHTTP)
 		withAuth(api, config.PermissionPluginRead).Get("/plugin/version", handlerPluginManifestGet.ServeHTTP)

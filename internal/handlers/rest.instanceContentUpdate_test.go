@@ -166,11 +166,11 @@ func TestRestInstanceContentUpdate(t *testing.T) {
 			expectResponse: limitProblem("instances"),
 		},
 		{
-			name: "Error/ProjectLinksStale",
+			name: "Error/InstanceLinksStale",
 
 			request: validRequest,
 
-			serviceMock: &serviceMock[*core.InstanceDescriptor]{err: core.ErrProjectLinksStale},
+			serviceMock: &serviceMock[*core.InstanceDescriptor]{err: core.ErrInstanceLinksStale},
 
 			expectStatus: http.StatusConflict,
 			expectText:   "Conflict\n",

@@ -16,6 +16,8 @@ import {
   ProjectTagsSchema,
   type ProjectUpdateRequest,
   instanceGet,
+  instanceLinksList,
+  instanceLinksUpdate,
   instancesCreate,
   projectCreate,
   projectDefaultUpdate,
@@ -23,8 +25,6 @@ import {
   projectEditsList,
   projectFieldsDrift,
   projectGet,
-  projectLinksGet,
-  projectLinksUpdate,
   projectLogoDelete,
   projectLogoGet,
   projectLogoUpdate,
@@ -643,14 +643,11 @@ async function seedProject(token = accessToken) {
       { plugin: "characters", version: "0.1.0", name: "Characters", content: [] },
     ],
   });
-  await projectLinksUpdate(api, token, {
+  await instanceLinksUpdate(api, token, {
     projectID: project.id,
+    id: instances[0].id,
     links: [
-      {
-        source: { id: instances[0].id, target: "scenes/a" },
-        destination: { id: instances[1].id, target: "characters/b" },
-        relationship: "therefore",
-      },
+      { source: "scenes/a", destination: { id: instances[1].id, target: "characters/b" }, relationship: "therefore" },
     ],
   });
 
@@ -723,7 +720,7 @@ describe("projectDelete, of a project that holds instances", () => {
 
     await expectStatus(projectGet(api, accessToken, project), 404);
     await expectStatus(instanceGet(api, accessToken, instances[0]), 404);
-    await expectStatus(projectLinksGet(api, accessToken, { projectID: project.id }), 404);
+    await expectStatus(instanceLinksList(api, accessToken, { projectID: project.id }), 404);
 
     // The owner's other projects keep their instances.
     const { instances: kept } = await seedProject();

@@ -1,0 +1,147 @@
+migration-history	sha256:42ec7716c29c0d108c1866eb4bee1f0ac16d516b5507b97c8c5c0fa1308366a0
+column	instances.bytes	bigint DEFAULT ((((octet_length(plugin) + octet_length(version)) + octet_length(name)) + octet_length((content)::text)) + octet_length((links)::text)) GENERATED s
+column	instances.content	jsonb NOT NULL
+column	instances.created_at	timestamp with time zone NOT NULL
+column	instances.id	uuid NOT NULL DEFAULT uuidv7()
+column	instances.links	jsonb NOT NULL DEFAULT '[]'::jsonb
+column	instances.links_updated_at	timestamp with time zone
+column	instances.name	text NOT NULL
+column	instances.plugin	text NOT NULL
+column	instances.project_id	uuid NOT NULL
+column	instances.updated_at	timestamp with time zone NOT NULL
+column	instances.version	text NOT NULL
+column	plugin_messages.bytes	bigint DEFAULT ((octet_length(title) + octet_length(description)) + octet_length((messages)::text)) GENERATED s
+column	plugin_messages.description	text NOT NULL
+column	plugin_messages.language	text NOT NULL
+column	plugin_messages.major	integer NOT NULL
+column	plugin_messages.messages	jsonb NOT NULL
+column	plugin_messages.minor	integer NOT NULL
+column	plugin_messages.patch	integer NOT NULL
+column	plugin_messages.plugin	text NOT NULL
+column	plugin_messages.prerelease	text NOT NULL
+column	plugin_messages.title	text NOT NULL
+column	plugin_versions.api_key_id	text
+column	plugin_versions.bytes	bigint DEFAULT (((octet_length((schema)::text) + octet_length((exports)::text)) + octet_length(ui)) + COALESCE(octet_length(migration), 0)) GENERATED s
+column	plugin_versions.exports	jsonb NOT NULL
+column	plugin_versions.major	integer NOT NULL
+column	plugin_versions.migration	bytea
+column	plugin_versions.migration_checksum	bytea DEFAULT sha256(migration) GENERATED s
+column	plugin_versions.minor	integer NOT NULL
+column	plugin_versions.patch	integer NOT NULL
+column	plugin_versions.plugin	text NOT NULL
+column	plugin_versions.prerelease	text NOT NULL DEFAULT ''::text
+column	plugin_versions.proof	text
+column	plugin_versions.published_at	timestamp(0) with time zone NOT NULL
+column	plugin_versions.schema	jsonb NOT NULL
+column	plugin_versions.schema_checksum	bytea DEFAULT sha256(jsonb_send(schema)) GENERATED s
+column	plugin_versions.ui	bytea NOT NULL
+column	plugin_versions.ui_checksum	bytea DEFAULT sha256(ui) GENERATED s
+column	project_logos.checksum	bytea DEFAULT sha256(data) GENERATED s
+column	project_logos.data	bytea NOT NULL
+column	project_logos.media_type	text NOT NULL
+column	project_logos.project_id	uuid NOT NULL
+column	project_logos.updated_at	timestamp with time zone NOT NULL
+column	projects.bytes	bigint DEFAULT (octet_length(title) + octet_length(premise)) GENERATED s
+column	projects.created_at	timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
+column	projects.default_instance_id	uuid
+column	projects.edited_at	timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
+column	projects.genres	text[] NOT NULL DEFAULT '{}'::text[]
+column	projects.id	uuid NOT NULL DEFAULT uuidv7()
+column	projects.language	project_language NOT NULL
+column	projects.owner_id	uuid NOT NULL
+column	projects.premise	text NOT NULL DEFAULT ''::text
+column	projects.stored_bytes	bigint NOT NULL DEFAULT 0
+column	projects.tags	text[] NOT NULL DEFAULT '{}'::text[]
+column	projects.title	text NOT NULL
+column	projects.updated_at	timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
+comment	schema public	standard public schema
+constraint	instances.instances_content_not_null	NOT NULL content
+constraint	instances.instances_created_at_not_null	NOT NULL created_at
+constraint	instances.instances_id_not_null	NOT NULL id
+constraint	instances.instances_links_not_null	NOT NULL links
+constraint	instances.instances_name_not_null	NOT NULL name
+constraint	instances.instances_pkey	PRIMARY KEY (id)
+constraint	instances.instances_plugin_check	CHECK ((plugin <> ''::text))
+constraint	instances.instances_plugin_not_null	NOT NULL plugin
+constraint	instances.instances_project_id_fkey	FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+constraint	instances.instances_project_id_id_key	UNIQUE (project_id, id)
+constraint	instances.instances_project_id_not_null	NOT NULL project_id
+constraint	instances.instances_updated_at_not_null	NOT NULL updated_at
+constraint	instances.instances_version_check	CHECK ((version <> ''::text))
+constraint	instances.instances_version_not_null	NOT NULL version
+constraint	plugin_messages.plugin_messages_description_check	CHECK ((description <> ''::text))
+constraint	plugin_messages.plugin_messages_description_not_null	NOT NULL description
+constraint	plugin_messages.plugin_messages_language_check	CHECK ((language <> ''::text))
+constraint	plugin_messages.plugin_messages_language_not_null	NOT NULL language
+constraint	plugin_messages.plugin_messages_major_not_null	NOT NULL major
+constraint	plugin_messages.plugin_messages_messages_not_null	NOT NULL messages
+constraint	plugin_messages.plugin_messages_minor_not_null	NOT NULL minor
+constraint	plugin_messages.plugin_messages_patch_not_null	NOT NULL patch
+constraint	plugin_messages.plugin_messages_pkey	PRIMARY KEY (plugin, major, minor, patch, prerelease, language)
+constraint	plugin_messages.plugin_messages_plugin_not_null	NOT NULL plugin
+constraint	plugin_messages.plugin_messages_prerelease_not_null	NOT NULL prerelease
+constraint	plugin_messages.plugin_messages_title_check	CHECK ((title <> ''::text))
+constraint	plugin_messages.plugin_messages_title_not_null	NOT NULL title
+constraint	plugin_messages.plugin_messages_version_fkey	FOREIGN KEY (plugin, major, minor, patch, prerelease) REFERENCES plugin_versions(plugin, major, minor, patch, prerelease) ON DELETE CASCADE
+constraint	plugin_versions.plugin_versions_api_key_id_check	CHECK ((api_key_id <> ''::text))
+constraint	plugin_versions.plugin_versions_exports_not_null	NOT NULL exports
+constraint	plugin_versions.plugin_versions_major_check	CHECK ((major >= 0))
+constraint	plugin_versions.plugin_versions_major_not_null	NOT NULL major
+constraint	plugin_versions.plugin_versions_migration_check	CHECK ((octet_length(migration) > 0))
+constraint	plugin_versions.plugin_versions_minor_check	CHECK ((minor >= 0))
+constraint	plugin_versions.plugin_versions_minor_not_null	NOT NULL minor
+constraint	plugin_versions.plugin_versions_patch_check	CHECK ((patch >= 0))
+constraint	plugin_versions.plugin_versions_patch_not_null	NOT NULL patch
+constraint	plugin_versions.plugin_versions_pkey	PRIMARY KEY (plugin, major, minor, patch, prerelease)
+constraint	plugin_versions.plugin_versions_plugin_check	CHECK ((plugin <> ''::text))
+constraint	plugin_versions.plugin_versions_plugin_not_null	NOT NULL plugin
+constraint	plugin_versions.plugin_versions_prerelease_not_null	NOT NULL prerelease
+constraint	plugin_versions.plugin_versions_proof_api_key_id_check	CHECK (((proof IS NULL) = (api_key_id IS NULL)))
+constraint	plugin_versions.plugin_versions_proof_check	CHECK ((proof <> ''::text))
+constraint	plugin_versions.plugin_versions_published_at_not_null	NOT NULL published_at
+constraint	plugin_versions.plugin_versions_schema_not_null	NOT NULL schema
+constraint	plugin_versions.plugin_versions_ui_check	CHECK ((octet_length(ui) > 0))
+constraint	plugin_versions.plugin_versions_ui_not_null	NOT NULL ui
+constraint	project_logos.project_logos_data_check	CHECK ((octet_length(data) <= 262144))
+constraint	project_logos.project_logos_data_not_null	NOT NULL data
+constraint	project_logos.project_logos_media_type_check	CHECK ((media_type = ANY (ARRAY['image/webp'::text, 'image/jpeg'::text, 'image/png'::text])))
+constraint	project_logos.project_logos_media_type_not_null	NOT NULL media_type
+constraint	project_logos.project_logos_pkey	PRIMARY KEY (project_id)
+constraint	project_logos.project_logos_project_id_fkey	FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+constraint	project_logos.project_logos_project_id_not_null	NOT NULL project_id
+constraint	project_logos.project_logos_updated_at_not_null	NOT NULL updated_at
+constraint	projects.projects_created_at_not_null	NOT NULL created_at
+constraint	projects.projects_default_instance_fkey	FOREIGN KEY (id, default_instance_id) REFERENCES instances(project_id, id) ON DELETE RESTRICT
+constraint	projects.projects_edited_at_not_null	NOT NULL edited_at
+constraint	projects.projects_genres_check	CHECK ((cardinality(genres) <= 10))
+constraint	projects.projects_genres_not_null	NOT NULL genres
+constraint	projects.projects_id_not_null	NOT NULL id
+constraint	projects.projects_language_not_null	NOT NULL language
+constraint	projects.projects_owner_id_not_null	NOT NULL owner_id
+constraint	projects.projects_pkey	PRIMARY KEY (id)
+constraint	projects.projects_premise_not_null	NOT NULL premise
+constraint	projects.projects_stored_bytes_not_null	NOT NULL stored_bytes
+constraint	projects.projects_tags_check	CHECK ((cardinality(tags) <= 10))
+constraint	projects.projects_tags_not_null	NOT NULL tags
+constraint	projects.projects_title_check	CHECK ((title <> ''::text))
+constraint	projects.projects_title_not_null	NOT NULL title
+constraint	projects.projects_updated_at_not_null	NOT NULL updated_at
+extension	plpgsql	1.0
+index	instances_pkey	CREATE UNIQUE INDEX instances_pkey ON public.instances USING btree (id)
+index	instances_project_id_id_key	CREATE UNIQUE INDEX instances_project_id_id_key ON public.instances USING btree (project_id, id)
+index	plugin_messages_pkey	CREATE UNIQUE INDEX plugin_messages_pkey ON public.plugin_messages USING btree (plugin, major, minor, patch, prerelease, language)
+index	plugin_versions_pkey	CREATE UNIQUE INDEX plugin_versions_pkey ON public.plugin_versions USING btree (plugin, major, minor, patch, prerelease)
+index	project_logos_pkey	CREATE UNIQUE INDEX project_logos_pkey ON public.project_logos USING btree (project_id)
+index	projects_owner_id_edited_at_idx	CREATE INDEX projects_owner_id_edited_at_idx ON public.projects USING btree (owner_id, edited_at DESC, id DESC)
+index	projects_pkey	CREATE UNIQUE INDEX projects_pkey ON public.projects USING btree (id)
+relation	instances	r
+relation	plugin_messages	r
+relation	plugin_versions	r
+relation	project_logos	r
+relation	projects	r
+routine	keep_stored_bytes()	f c2b9b1568f93200b748cfffb68159992 trigger v false false plpgsql
+schema	public	pg_database_owner=UC/pg_database_owner,=U/pg_database_owner
+trigger	instances.instances_stored_bytes_delete	CREATE TRIGGER instances_stored_bytes_delete AFTER DELETE ON public.instances REFERENCING OLD TABLE AS old_rows FOR EACH STATEMENT EXECUTE FUNCTION keep_stored_bytes() ENABLED O
+trigger	instances.instances_stored_bytes_insert	CREATE TRIGGER instances_stored_bytes_insert AFTER INSERT ON public.instances REFERENCING NEW TABLE AS new_rows FOR EACH STATEMENT EXECUTE FUNCTION keep_stored_bytes() ENABLED O
+trigger	instances.instances_stored_bytes_update	CREATE TRIGGER instances_stored_bytes_update AFTER UPDATE ON public.instances REFERENCING OLD TABLE AS old_rows NEW TABLE AS new_rows FOR EACH STATEMENT EXECUTE FUNCTION keep_stored_bytes() ENABLED O
+type	project_language	e en,fr

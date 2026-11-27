@@ -22,19 +22,21 @@ info:
 
     ## Instances and links
 
-    A project is a set of instances and one list of links. An instance is one use of a plugin in the project:
-    it pins the exact version of the plugin, and holds the document the plugin edits, its content. A link
-    relates two items of the project, each addressed by the instance that holds it. The first instance of a
-    project becomes its default, the one the project opens on.
+    A project is a set of instances. An instance is one use of a plugin in the project: it pins the exact
+    version of the plugin, and holds the document the plugin edits, its content, and a list of links. A link
+    relates an item of the instance that stores it to an item of an instance of the same project. The first
+    instance of a project becomes its default, the one the project opens on.
 
     The service stores these documents and bounds their size and their shape. It never reads what they mean:
     it validates no content against the schema of its plugin, and never checks that a plugin version, an
     instance or an item a document names exists. The client validates, migrates and repairs them.
 
-    A write of a content or of the links replaces the whole document, and names the `updatedAt` the client
-    read. It applies only while the document still carries that value, and answers 409 once another write
-    changed it: nothing is merged, and the client reads the document again. An `updatedAt` keeps microseconds,
-    which a JavaScript date drops, so a client keeps the text it received and sends it back as it is.
+    A write of the content or of the links of an instance replaces the whole document, and names the
+    `updatedAt` the client read. It applies only while the document still carries that value, and answers 409
+    once another write changed it: nothing is merged, and the client reads the document again. The content and
+    the links of an instance carry an `updatedAt` each, so a write of one never refuses a write of the other.
+    An `updatedAt` keeps microseconds, which a JavaScript date drops, so a client keeps the text it received
+    and sends it back as it is.
 
     ## Plugin registry
 
@@ -60,7 +62,7 @@ tags:
   - name: instance
     description: The plugin instances of a project, with their content.
   - name: link
-    description: The links between the items of a project.
+    description: The links between the items of a project, which each instance stores for its own items.
   - name: plugin
     description: The published versions of each plugin, with their manifest, modules and translations.
 
@@ -690,8 +692,8 @@ paths:
         Deletes an instance and its content, and returns the instance without its content.
 
         The default instance of a project cannot be deleted: the request answers 409 until
-        `PUT /v1/project/default` chooses another. The links that name the instance stay, and the client prunes
-        them.
+        `PUT /v1/project/default` chooses another. The links the instance stores go with it. The links other
+        instances store that point at it stay, and the client prunes them.
       tags: [instance]
       parameters:
         - $ref: "#/components/parameters/parentProjectID"
@@ -766,49 +768,23 @@ paths:
         default:
           $ref: "#/components/responses/internalError"
 
-  /v1/links:
-    get:
-      operationId: projectLinksGet
-      summary: Get the links of a project.
-      description: |
-        Returns the links of a project of the caller, and when they last changed. A project that never wrote
-        its links returns an empty list and a null `updatedAt`.
-      tags: [link]
-      parameters:
-        - $ref: "#/components/parameters/parentProjectID"
-      responses:
-        "200":
-          $ref: "#/components/responses/projectLinks"
-        "400":
-          $ref: "#/components/responses/badRequest"
-        "401":
-          $ref: "#/components/responses/invalidToken"
-        "403":
-          $ref: "#/components/responses/forbidden"
-        "404":
-          $ref: "#/components/responses/notFound"
-        "422":
-          $ref: "#/components/responses/unprocessableEntity"
-        "429":
-          $ref: "#/components/responses/tooManyRequests"
-        "503":
-          $ref: "#/components/responses/plannedDowntime"
-        default:
-          $ref: "#/components/responses/internalError"
-
+  /v1/instance/links:
     put:
-      operationId: projectLinksUpdate
-      summary: Write the links of a project.
+      operationId: instanceLinksUpdate
+      summary: Write the links of an instance.
       description: |
-        Replaces the links of a project in one write, and returns their new `updatedAt`. An empty list clears
-        them, and a request that omits the list is refused.
+        Replaces the links an instance stores in one write, and returns their new `updatedAt`. An instance
+        stores the links whose source is one of its own items. An empty list clears them, and a request that
+        omits the list is refused.
 
-        The write applies only while the links still carry the `updatedAt` the request names. Once another
-        write changed them, it answers 409 and changes nothing: the client reads the links again. A project
-        that never wrote its links takes its first write, whatever `updatedAt` the request names.
+        The write applies only while the links still carry the `updatedAt` the request names: null, or
+        omitted, for an instance that never wrote its links. Once another write changed them, it answers 409
+        and changes nothing: the client reads the links again. A first write that names an instant answers 409
+        as well, since the instance holds none. The write leaves the instance's own `updatedAt`, so it refuses
+        no write of the content, and a write of the content leaves the `updatedAt` of the links.
 
         The service checks the shape and the size of the links, never that an instance or an item they name
-        exists. By default a project holds 20,000 links at most, of 2 MiB once the service encodes them, a
+        exists. By default an instance stores 20,000 links at most, of 2 MiB once the service encodes them, a
         target holds 200 characters and a relationship 1 KiB. Links past a limit, or holding the NUL character
         in a text, answer 422.
 
@@ -820,10 +796,50 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/projectLinksUpdateRequest"
+              $ref: "#/components/schemas/instanceLinksUpdateRequest"
       responses:
         "200":
-          $ref: "#/components/responses/projectLinksWritten"
+          $ref: "#/components/responses/instanceLinksWritten"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/instanceNotFound"
+        "409":
+          $ref: "#/components/responses/staleWrite"
+        "413":
+          $ref: "#/components/responses/contentTooLarge"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/plannedDowntime"
+        default:
+          $ref: "#/components/responses/internalError"
+
+  /v1/links:
+    get:
+      operationId: instanceLinksList
+      summary: List the links of the instances of a project.
+      description: |
+        Returns a page of the links the instances of a project of the caller store, oldest instance first: each
+        list with its instance, and when it last changed. An instance that never wrote its links returns an
+        empty list and a null `updatedAt`.
+
+        The pages are those of `GET /v1/instances`, and come with how many instances the project holds in all.
+        A project holds 50 instances at most by default, so one page of the default size holds every list.
+      tags: [link]
+      parameters:
+        - $ref: "#/components/parameters/parentProjectID"
+        - $ref: "#/components/parameters/composerLimit"
+        - $ref: "#/components/parameters/offset"
+      responses:
+        "200":
+          $ref: "#/components/responses/instanceLinksPage"
         "400":
           $ref: "#/components/responses/badRequest"
         "401":
@@ -832,10 +848,6 @@ paths:
           $ref: "#/components/responses/forbidden"
         "404":
           $ref: "#/components/responses/notFound"
-        "409":
-          $ref: "#/components/responses/staleWrite"
-        "413":
-          $ref: "#/components/responses/contentTooLarge"
         "422":
           $ref: "#/components/responses/unprocessableEntity"
         "429":
@@ -1155,19 +1167,19 @@ components:
             items:
               $ref: "#/components/schemas/instanceDescriptor"
 
-    projectLinks:
-      description: The links of the project, and when they last changed.
+    instanceLinksPage:
+      description: A page of the links the instances of the project store, oldest instance first, with their total.
       content:
         application/json:
           schema:
-            $ref: "#/components/schemas/projectLinks"
+            $ref: "#/components/schemas/instanceLinksPage"
 
-    projectLinksWritten:
+    instanceLinksWritten:
       description: When the write replaced the links, which the next write names.
       content:
         application/json:
           schema:
-            $ref: "#/components/schemas/projectLinksWritten"
+            $ref: "#/components/schemas/instanceLinksWritten"
 
     projectFieldsDrift:
       description: The projects whose fields drifted, and the IDs of the request that name no project of the caller.
@@ -1963,7 +1975,7 @@ components:
 
     linkIdentifier:
       type: object
-      description: One end of a link, which addresses an item of the project.
+      description: The destination of a link, which addresses an item of the project.
       required: [id, target]
       additionalProperties: false
       properties:
@@ -1971,21 +1983,27 @@ components:
           description: The instance that holds the item. The service never checks that it exists.
           $ref: "#/components/schemas/instanceID"
         target:
-          type: string
-          description: |
-            The address of the item inside that instance, which only plugins read. Not empty, and 200
-            characters at most by default.
-          minLength: 1
-          examples: ["scenes/01920000-0000-7000-8000-0000000000a1"]
+          $ref: "#/components/schemas/linkTarget"
+
+    linkTarget:
+      type: string
+      description: |
+        The address of an item inside an instance, which only plugins read. Not empty, and 200 characters at
+        most by default.
+      minLength: 1
+      examples: ["scenes/01920000-0000-7000-8000-0000000000a1"]
 
     link:
       type: object
-      description: A relation between two items of one project.
+      description: |
+        A relation from an item of the instance that stores the link to an item of an instance of the same
+        project, which may be that instance.
       required: [source, destination, relationship]
       additionalProperties: false
       properties:
         source:
-          $ref: "#/components/schemas/linkIdentifier"
+          description: The item the link starts from, inside the instance that stores the link.
+          $ref: "#/components/schemas/linkTarget"
         destination:
           $ref: "#/components/schemas/linkIdentifier"
         relationship:
@@ -1995,47 +2013,71 @@ components:
             most by default.
           examples: ["therefore"]
 
-    projectLinks:
+    instanceLinks:
       type: object
-      description: The links of a project, which it stores and replaces whole.
-      required: [links, updatedAt]
+      description: The links an instance stores, which it replaces whole.
+      required: [instanceID, links, updatedAt]
       additionalProperties: false
       properties:
+        instanceID:
+          description: The instance that stores the links.
+          $ref: "#/components/schemas/instanceID"
         links:
           type: array
-          description: The links of the project. Empty until the project writes some.
+          description: The links of the instance. Empty until the instance writes some.
           items:
             $ref: "#/components/schemas/link"
         updatedAt:
-          description: When the links last changed. Null for a project that never wrote its links.
+          description: When the links last changed. Null for an instance that never wrote its links.
           oneOf:
             - $ref: "#/components/schemas/instant"
             - type: "null"
 
-    projectLinksUpdateRequest:
+    instanceLinksPage:
       type: object
-      description: The new links of a project.
-      required: [projectID, links]
+      description: A page of the links the instances of a project store, oldest instance first.
+      required: [instances, total]
+      additionalProperties: false
+      properties:
+        instances:
+          type: array
+          description: The links of each instance of the page.
+          items:
+            $ref: "#/components/schemas/instanceLinks"
+        total:
+          type: integer
+          description: |
+            How many instances the project holds in all, so a client knows when it holds the links of them all.
+            A page past the end reports 0.
+          minimum: 0
+          examples: [2]
+
+    instanceLinksUpdateRequest:
+      type: object
+      description: The new links of an instance.
+      required: [projectID, id, links]
       additionalProperties: false
       properties:
         projectID:
           $ref: "#/components/schemas/projectID"
+        id:
+          $ref: "#/components/schemas/instanceID"
         links:
           type: array
-          description: The links that replace those of the project, 20,000 at most by default.
+          description: The links that replace those the instance stores, 20,000 at most by default.
           items:
             $ref: "#/components/schemas/link"
         updatedAt:
           description: |
-            The `updatedAt` the links carried when the client read them. Null or omitted for a project that
-            never wrote its links, which takes its first write whatever this names.
+            The `updatedAt` the links carried when the client read them. Null or omitted for an instance that
+            never wrote its links: its first write names none, and one that names an instant answers 409.
           oneOf:
             - $ref: "#/components/schemas/instant"
             - type: "null"
 
-    projectLinksWritten:
+    instanceLinksWritten:
       type: object
-      description: When a write replaced the links of a project.
+      description: When a write replaced the links of an instance.
       required: [updatedAt]
       additionalProperties: false
       properties:
