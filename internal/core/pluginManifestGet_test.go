@@ -35,6 +35,13 @@ func TestPluginManifestGet(t *testing.T) {
 		}
 	}
 
+	// A version published with an API key carries its proof, and the ID of that key.
+	signedManifest := manifest(composer)
+	signedManifest.Proof, signedManifest.APIKeyID = new("header.claims.signature"), new("publisher-key")
+
+	expectSigned := expect("1.10.0")
+	expectSigned.Proof, expectSigned.APIKeyID = new("header.claims.signature"), new("publisher-key")
+
 	type testCase struct {
 		name string
 
@@ -76,6 +83,16 @@ func TestPluginManifestGet(t *testing.T) {
 			daoMock:    daoMock[*dao.PluginManifest]{resp: manifest(composer)},
 
 			expect: expect("1.10.0"),
+		},
+		{
+			name: "Success/Proof",
+
+			request: &core.PluginManifestGetRequest{Plugin: "scenes-composer", Version: "1.10.0"},
+
+			daoRequest: &dao.PluginManifestSelectRequest{PluginVersionKey: composer},
+			daoMock:    daoMock[*dao.PluginManifest]{resp: signedManifest},
+
+			expect: expectSigned,
 		},
 		{
 			name: "Success/Prerelease",
