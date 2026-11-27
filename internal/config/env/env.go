@@ -65,6 +65,15 @@ const (
 // new row, with its log.
 var RestRateLimitDocumentWriteDefault = lo.Must(httpf.ParseRate("3/1m"))
 
+// The windows that cap the versions one API key publishes. Versions are published rarely, by the platform's
+// own keys, so a faster publisher is a mistake or a leaked key.
+var (
+	// RestRateLimitPluginVersionWriteBurstDefault lets a release publish two versions in a row.
+	RestRateLimitPluginVersionWriteBurstDefault = lo.Must(httpf.ParseRate("2/1m"))
+	// RestRateLimitPluginVersionWriteDefault holds a key to five versions in a quarter of an hour.
+	RestRateLimitPluginVersionWriteDefault = lo.Must(httpf.ParseRate("5/15m"))
+)
+
 var (
 	// Postgres reaches PostgreSQL through the POSTGRES_* variables, with the fleet's pool bounds.
 	Postgres = postgrespresets.LoadConnection(getEnv, postgrespresets.ConnectionDefault)
@@ -92,6 +101,16 @@ var (
 	// one.
 	RestRateLimitDocumentWrite = config.LoadEnv(
 		getEnv("REST_RATE_LIMIT_DOCUMENT_WRITE"), RestRateLimitDocumentWriteDefault, httpf.ParseRate,
+	)
+
+	// RestRateLimitPluginVersionWriteBurst caps the versions each API key publishes within a short window.
+	RestRateLimitPluginVersionWriteBurst = config.LoadEnv(
+		getEnv("REST_RATE_LIMIT_PLUGIN_VERSION_WRITE_BURST"), RestRateLimitPluginVersionWriteBurstDefault,
+		httpf.ParseRate,
+	)
+	// RestRateLimitPluginVersionWrite caps the versions each API key publishes within a long window.
+	RestRateLimitPluginVersionWrite = config.LoadEnv(
+		getEnv("REST_RATE_LIMIT_PLUGIN_VERSION_WRITE"), RestRateLimitPluginVersionWriteDefault, httpf.ParseRate,
 	)
 
 	// MaxContentSize caps the content of an instance, in bytes of JSON.

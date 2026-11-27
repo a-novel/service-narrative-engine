@@ -27,6 +27,9 @@ func TestRestPluginManifestGet(t *testing.T) {
 		UIChecksum: "ui checksum", PublishedAt: createdAt,
 	}
 
+	signed := *manifest
+	signed.Proof, signed.APIKeyID = new("header.claims.signature"), new("publisher-key")
+
 	testCases := []struct {
 		name string
 
@@ -38,6 +41,7 @@ func TestRestPluginManifestGet(t *testing.T) {
 		expectResponse any
 	}{
 		{
+			// A version published without a key carries neither a proof nor the ID of a key.
 			name: "Success",
 
 			target: target,
@@ -49,6 +53,22 @@ func TestRestPluginManifestGet(t *testing.T) {
 				"plugin": "scenes-composer", "version": "1.10.0", "schema": map[string]any{"type": "object"},
 				"exports": map[string]any{"scenes": map[string]any{"id": "/id"}}, "hasMigration": true,
 				"schemaChecksum": "schema checksum", "uiChecksum": "ui checksum",
+				"publishedAt": "2021-01-01T00:00:00Z",
+			},
+		},
+		{
+			name: "Success/Proof",
+
+			target: target,
+
+			serviceMock: &serviceMock[*core.PluginManifest]{resp: &signed},
+
+			expectStatus: http.StatusOK,
+			expectResponse: map[string]any{
+				"plugin": "scenes-composer", "version": "1.10.0", "schema": map[string]any{"type": "object"},
+				"exports": map[string]any{"scenes": map[string]any{"id": "/id"}}, "hasMigration": true,
+				"schemaChecksum": "schema checksum", "uiChecksum": "ui checksum",
+				"proof": "header.claims.signature", "apiKeyID": "publisher-key",
 				"publishedAt": "2021-01-01T00:00:00Z",
 			},
 		},
@@ -96,6 +116,15 @@ func TestRestPluginManifestGet(t *testing.T) {
 			serviceMock: &serviceMock[*core.PluginManifest]{err: core.ErrPluginMessagesNotFound},
 
 			expectStatus: http.StatusNotFound,
+		},
+		{
+			name: "Error/VersionExists",
+
+			target: target,
+
+			serviceMock: &serviceMock[*core.PluginManifest]{err: core.ErrPluginVersionExists},
+
+			expectStatus: http.StatusConflict,
 		},
 		{
 			name: "Error/Internal",

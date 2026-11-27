@@ -40,6 +40,11 @@ type Limits struct {
 	// the links of a project, on top of the router's rate. Each route that writes one counts on a budget of
 	// its own. A write past it answers 429.
 	RateLimitDocumentWrite httpf.Rate
+	// RateLimitPluginVersionWriteBurst and RateLimitPluginVersionWrite cap the versions each API key
+	// publishes, within a short window and a long one, on top of the router's rate. Every request the key
+	// signed counts, whatever its answer. One past either window answers 429.
+	RateLimitPluginVersionWriteBurst httpf.Rate
+	RateLimitPluginVersionWrite      httpf.Rate
 }
 
 // Caps bounds the documents a project stores: the content of its instances, and its links.
