@@ -23,7 +23,7 @@ func TestRestLimits(t *testing.T) {
 
 	const (
 		content = "/v1/instance/content"
-		links   = "/v1/links"
+		links   = "/v1/instance/links"
 	)
 
 	// documentWrite is one write a test case sends, as a user, to a route.

@@ -34,15 +34,15 @@ type Dependencies struct {
 // routes that write a document count each caller's writes.
 type Limits struct {
 	// MaxItemRequestSize caps the body of a route that writes one item, in bytes. It must fit the content of
-	// an instance and the links of a project, so it stays above [Caps.ContentBytes] and [Caps.LinksBytes].
+	// an instance, and its links, so it stays above [Caps.ContentBytes] and [Caps.LinksBytes].
 	MaxItemRequestSize int64
 	// RateLimitDocumentWrite caps each signed-in user's writes of a document, the content of an instance or
-	// the links of a project, on top of the router's rate. Each route that writes one counts on a budget of
-	// its own. A write past it answers 429.
+	// its links, on top of the router's rate. Each route that writes one counts on a budget of its own. A
+	// write past it answers 429.
 	RateLimitDocumentWrite httpf.Rate
 }
 
-// Caps bounds the documents a project stores: the content of its instances, and its links.
+// Caps bounds the documents a project stores: the content of its instances, and their links.
 // The service never reads what a document means, so these are the only rules it holds one to.
 type Caps struct {
 	// ContentBytes caps the content of an instance, in bytes of JSON. A number counts written in full, as the
@@ -54,9 +54,9 @@ type Caps struct {
 	// its instances, and refuses new ones until it is back under.
 	InstancesPerProject int
 
-	// Links caps how many links a project holds.
+	// Links caps how many links an instance stores.
 	Links int
-	// LinksBytes caps the links of a project, in bytes of JSON.
+	// LinksBytes caps the links of an instance, in bytes of JSON.
 	LinksBytes int
 	// LinkTargetLength caps the target of either end of a link, in characters.
 	LinkTargetLength int

@@ -102,9 +102,9 @@ var (
 	MaxInstancesPerProject = config.LoadEnv(
 		getEnv("MAX_INSTANCES_PER_PROJECT"), MaxInstancesPerProjectDefault, strconv.Atoi,
 	)
-	// MaxLinks caps how many links a project holds.
+	// MaxLinks caps how many links an instance stores.
 	MaxLinks = config.LoadEnv(getEnv("MAX_LINKS"), MaxLinksDefault, strconv.Atoi)
-	// MaxLinksSize caps the links of a project, in bytes of JSON.
+	// MaxLinksSize caps the links of an instance, in bytes of JSON.
 	MaxLinksSize = config.LoadEnv(getEnv("MAX_LINKS_SIZE"), MaxLinksSizeDefault, strconv.Atoi)
 	// MaxLinkTargetLength caps the target of either end of a link, in characters.
 	MaxLinkTargetLength = config.LoadEnv(getEnv("MAX_LINK_TARGET_LENGTH"), MaxLinkTargetLengthDefault, strconv.Atoi)

@@ -33,17 +33,17 @@ The routes are described in [`openapi.yaml`](./openapi.yaml).
 
 | Files          | What they hold                                                                                                                                |
 | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `project*.go`  | The project's model, its own operations, its logo, its default instance, its links, and the drift and edit lists.                             |
-| `instance*.go` | The instances of a project: their model, and the operations on their name and on their content.                                               |
+| `project*.go`  | The project's model, its own operations, its logo, its default instance, and the drift and edit lists.                                        |
+| `instance*.go` | The instances of a project: their model, and the operations on their name, on their content and on their links.                               |
 | `plugin*.go`   | The reads of the plugin registry. `plugin.go` holds its models, and turns a version between its text and the numbers the registry keys it by. |
 | `common.go`    | The sentinels, the size limits, and the checks every operation shares: `lockOwnedProject`, `checkProjectOwnership`, `keepProjectBudget`.      |
 | `validate.go`  | The request validator and its custom tags, and the check every stored document passes: `checkDocument`.                                       |
 
 ## Documents
 
-An instance's content and a project's links are JSON documents the client owns. The service stores them and bounds them, and never reads what they mean: no code here validates a document against a plugin's schema, or checks that a plugin version or an item a link names exists. `checkDocument` holds a content to its size and its depth, and refuses what PostgreSQL stores in no `jsonb` value: the NUL character, half of a surrogate pair, a number of more than 16383 digits. It counts a number toward the size written in full, as the database stores it, so an exponent adds its digits. The links have a fixed shape, so the service decodes them, and holds each to its sizes. Every cap is configuration, in `config.Caps`, so a check that breaks one returns a `core.FieldError` instead of a validator error.
+An instance's content and its links are JSON documents the client owns. The service stores them and bounds them, and never reads what they mean: no code here validates a document against a plugin's schema, or checks that a plugin version or an item a link names exists. `checkDocument` holds a content to its size and its depth, and refuses what PostgreSQL stores in no `jsonb` value: the NUL character, half of a surrogate pair, a number of more than 16383 digits. It counts a number toward the size written in full, as the database stores it, so an exponent adds its digits. The links have a fixed shape, so the service decodes them, and holds each to its sizes. Every cap is configuration, in `config.Caps`, so a check that breaks one returns a `core.FieldError` instead of a validator error.
 
-A document write names the `updatedAt` it read, and its statement applies only while the row still holds that value. PostgreSQL keeps microseconds, so the value travels as the exact text the service sent: a client that parses it into a JavaScript date loses three digits, and every write of it then answers 409.
+A document write names the `updatedAt` it read, and its statement applies only while the row still holds that value. The content and the links of an instance carry a stamp each, so a write of one never makes a write of the other stale. An instance that never wrote its links holds no stamp for them, and its first links write names none. PostgreSQL keeps microseconds, so the value travels as the exact text the service sent: a client that parses it into a JavaScript date loses three digits, and every write of it then answers 409.
 
 `internal/dao` holds one statement per file, `pg.<operation>.sql` beside its `pg.<operation>.go`, and `internal/handlers` one route per `rest.<operation>.go`, with the shared error maps in `rest.errors.go` and the per-caller limits in `rest.limit.go`. golib's `httpf` answers the ping and runs the health probes, which `rest.health.go` lists: `postgres.Health` and JSON Keys.
 
@@ -74,7 +74,7 @@ Unit-test a service that takes a transactor with `transactiontest.NewTransactor`
 
 ## Project lock
 
-Every write to a project's content takes the project lock with `lockOwnedProject` before its first write, in the same transaction. The content is the project's own fields, its instances, its default instance and its links. The lock runs the project's writes one at a time and stamps the project's `edited_at`, which `ProjectEditsList` returns. A write that fails later rolls the stamp back with it.
+Every write to a project's content takes the project lock with `lockOwnedProject` before its first write, in the same transaction. The content is the project's own fields, its instances with their content and their links, and its default instance. The lock runs the project's writes one at a time and stamps the project's `edited_at`, which `ProjectEditsList` returns. A write that fails later rolls the stamp back with it.
 
 ```go
 err := service.transactor.WithinTx(ctx, func(ctx context.Context) error {

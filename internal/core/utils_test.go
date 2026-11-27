@@ -35,7 +35,7 @@ var (
 // caps are the caps the tests configure, small enough for a short document to reach each of them.
 var caps = config.Caps{
 	ContentBytes: 64, DocumentDepth: 3, InstancesPerProject: 3,
-	Links: 3, LinksBytes: 600, LinkTargetLength: 8, LinkRelationshipBytes: 16,
+	Links: 3, LinksBytes: 435, LinkTargetLength: 8, LinkRelationshipBytes: 16,
 }
 
 // logoChecksum is the checksum of the test project's logo: a SHA-256 in lowercase hex.

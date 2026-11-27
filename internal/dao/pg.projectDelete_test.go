@@ -89,9 +89,9 @@ func TestPgProjectDelete(t *testing.T) {
 				// Deleting a project deletes its logo with it.
 				require.Equal(t, testCase.expectLogo, projectLogo(ctx, t))
 
-				// It deletes its instances and its links too, and leaves those of the other project.
+				// It deletes its instances too, with the links they store, and leaves those of the other project.
 				require.Empty(t, projectInstances(ctx, t, projectID))
-				require.Zero(t, linksCount(ctx, t, projectID))
+				require.Empty(t, storedInstanceLinks(ctx, t, projectID))
 				require.Equal(t, testCase.expectKept, projectInstances(ctx, t, otherProjectID))
 			})
 		})

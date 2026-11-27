@@ -38,11 +38,11 @@ var (
 	updatedAt = time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC)
 	now       = time.Date(2021, 1, 3, 0, 0, 0, 0, time.UTC)
 
-	// documentUpdatedAt is when the contents of the fixtures and the links of their project last changed, to
-	// the microsecond PostgreSQL keeps. A write names it to apply.
+	// documentUpdatedAt is when the contents of the fixtures last changed, to the microsecond PostgreSQL
+	// keeps. A write names it to apply.
 	documentUpdatedAt = time.Date(2021, 1, 2, 0, 0, 0, 123456000, time.UTC)
-	// linksUpdatedAt is when the links the fixture instances store last changed, at another instant than their
-	// content: an instance stamps the two apart.
+	// linksUpdatedAt is when the links of the fixtures last changed, at another instant than their content: an
+	// instance stamps the two apart.
 	linksUpdatedAt = time.Date(2021, 1, 2, 12, 0, 0, 654321000, time.UTC)
 )
 
@@ -52,7 +52,6 @@ SELECT projects.id AS project_id, projects.stored_bytes AS stored, coalesce(sum(
 FROM projects
 LEFT JOIN (
   SELECT project_id, bytes FROM instances
-  UNION ALL SELECT project_id, bytes FROM project_links
 ) AS held ON held.project_id = projects.id
 GROUP BY projects.id`
 
@@ -86,10 +85,7 @@ const (
 
 	instanceContent     = `{"beats": []}`
 	instanceContentNext = `{"beats": [{"id": "a"}]}`
-	projectLinks        = `[{"source": {"id": "00000000-0000-0000-0000-000000000031", "target": "scenes/a"}, ` +
-		`"destination": {"id": "00000000-0000-0000-0000-000000000032", "target": "characters/b"}, ` +
-		`"relationship": "therefore"}]`
-	composerLinks = `[{"source": "scenes/a", ` +
+	composerLinks       = `[{"source": "scenes/a", ` +
 		`"destination": {"id": "00000000-0000-0000-0000-000000000032", "target": "characters/b"}, ` +
 		`"relationship": "therefore"}]`
 	// noLinks is what an instance that never wrote its links stores.
@@ -102,7 +98,6 @@ type fixtures struct {
 	logos    []*dao.ProjectLogo
 
 	instances []*dao.Instance
-	links     []*dao.ProjectLinks
 	// instanceLinks are the links the instances wrote. An instance left out never wrote its links.
 	instanceLinks []*dao.InstanceLinks
 
@@ -143,9 +138,9 @@ func logoFixtures() fixtures {
 	return data
 }
 
-// instanceFixtures returns the project fixtures with instances and links. The test project holds two instances,
-// opens on the first, the only instance that wrote its links, and holds links of its own. The project of the
-// other owner opens on an instance of its own, and never wrote its links.
+// instanceFixtures returns the project fixtures with instances and links. The test project holds two instances
+// and opens on the first, the only instance that wrote its links. The project of the other owner opens on an
+// instance of its own.
 func instanceFixtures() fixtures {
 	data := projectFixtures()
 	data.instances = []*dao.Instance{
@@ -164,9 +159,6 @@ func instanceFixtures() fixtures {
 			Name: "Composer", CreatedAt: createdAt, UpdatedAt: documentUpdatedAt,
 			Content: json.RawMessage(instanceContent),
 		},
-	}
-	data.links = []*dao.ProjectLinks{
-		{ProjectID: projectID, Links: json.RawMessage(projectLinks), UpdatedAt: documentUpdatedAt},
 	}
 	data.instanceLinks = []*dao.InstanceLinks{
 		{InstanceID: instanceID, Links: json.RawMessage(composerLinks), UpdatedAt: new(linksUpdatedAt)},
@@ -314,11 +306,6 @@ func insertFixtures(ctx context.Context, t *testing.T, data fixtures) {
 		require.NoError(t, err)
 	}
 
-	if len(data.links) > 0 {
-		_, err = db.NewInsert().Model(&data.links).Returning("NULL").Exec(ctx)
-		require.NoError(t, err)
-	}
-
 	for _, links := range data.instanceLinks {
 		_, err = db.NewRaw(
 			"UPDATE instances SET links = ?0::jsonb, links_updated_at = ?1 WHERE id = ?2",
@@ -396,33 +383,6 @@ func projectDefault(ctx context.Context, t *testing.T, id uuid.UUID) *uuid.UUID 
 	require.NoError(t, err)
 
 	return project.DefaultInstanceID
-}
-
-// storedLinks reads the links of a project as it stores them, nil when it never wrote them.
-func storedLinks(ctx context.Context, t *testing.T, id uuid.UUID) *dao.ProjectLinks {
-	t.Helper()
-
-	links, err := dao.NewPgProjectLinksSelect().Exec(ctx, &dao.ProjectLinksSelectRequest{ProjectID: id})
-	if errors.Is(err, dao.ErrProjectLinksNotFound) {
-		return nil
-	}
-
-	require.NoError(t, err)
-
-	return links
-}
-
-// linksCount counts the links rows of a project: 1 once it wrote its links, 0 before that and after its delete.
-func linksCount(ctx context.Context, t *testing.T, id uuid.UUID) int64 {
-	t.Helper()
-
-	db, err := postgres.GetContext(ctx)
-	require.NoError(t, err)
-
-	count, err := db.NewSelect().Model((*dao.ProjectLinks)(nil)).Where("project_id = ?", id).Count(ctx)
-	require.NoError(t, err)
-
-	return count
 }
 
 // allLinks returns the links every fixture instance of the test project stores, oldest instance first: the links
