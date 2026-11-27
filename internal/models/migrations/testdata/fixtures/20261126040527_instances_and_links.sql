@@ -9,7 +9,6 @@ INSERT INTO
     version,
     name,
     content,
-    recovery,
     created_at,
     updated_at
   )
@@ -21,7 +20,6 @@ VALUES
     '1.0.0',
     'Fixture composer',
     '{"scenes": []}',
-    NULL,
     '2026-11-26T00:00:00.000001Z',
     '2026-11-26T00:00:00.000001Z'
   ),
@@ -32,7 +30,6 @@ VALUES
     '1.1.0-dev.1',
     '',
     '{"scenes": [{"id": "a"}]}',
-    '{"scenes": []}',
     '2026-11-26T00:00:00.000002Z',
     '2026-11-26T00:00:00.000003Z'
   );

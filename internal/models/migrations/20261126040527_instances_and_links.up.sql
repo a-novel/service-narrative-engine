@@ -16,18 +16,14 @@ CREATE TABLE instances (
   name text NOT NULL,
   /* The document the plugin edits. */
   content jsonb NOT NULL,
-  /* What the client keeps to undo an upgrade of the content: the previous version, its content and the entries
-  the upgrade could not carry over. The server stores it whole and never reads inside it. Null while the client
-  keeps none. */
-  recovery jsonb,
   created_at timestamp with time zone NOT NULL,
   -- A content write names the value it read and applies only while the row still holds it, so the column keeps
   -- PostgreSQL's microseconds: at the second, two writes within one would share a value.
-  /* When the version, the content or the recovery last changed. A rename leaves it as it was. */
+  /* When the version or the content last changed. A rename leaves it as it was. */
   updated_at timestamp with time zone NOT NULL,
-  /* The UTF-8 bytes the row counts in its project's stored bytes, its JSON documents counted as text. */
+  /* The UTF-8 bytes the row counts in its project's stored bytes, its content counted as text. */
   bytes bigint GENERATED ALWAYS AS (
-    octet_length(plugin) + octet_length(version) + octet_length(name) + octet_length(content::text) + coalesce(octet_length(recovery::text), 0)
+    octet_length(plugin) + octet_length(version) + octet_length(name) + octet_length(content::text)
   ) STORED,
   -- The default instance of a project reaches its row through this key, which carries the project. It also
   -- serves the list of a project's instances, oldest first.

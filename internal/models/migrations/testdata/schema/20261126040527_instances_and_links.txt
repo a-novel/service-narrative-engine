@@ -1,12 +1,11 @@
-migration-history	sha256:b10d0c63be80848fcafda7863c017e1ea62001770f016cfbfdac79385a4cf44a
-column	instances.bytes	bigint DEFAULT ((((octet_length(plugin) + octet_length(version)) + octet_length(name)) + octet_length((content)::text)) + COALESCE(octet_length((recovery)::text), 0)) GENERATED s
+migration-history	sha256:790395d375b5e8b3f41f5c56c8c25d23299960b0236eda165c92d297d7e85ea8
+column	instances.bytes	bigint DEFAULT (((octet_length(plugin) + octet_length(version)) + octet_length(name)) + octet_length((content)::text)) GENERATED s
 column	instances.content	jsonb NOT NULL
 column	instances.created_at	timestamp with time zone NOT NULL
 column	instances.id	uuid NOT NULL DEFAULT uuidv7()
 column	instances.name	text NOT NULL
 column	instances.plugin	text NOT NULL
 column	instances.project_id	uuid NOT NULL
-column	instances.recovery	jsonb
 column	instances.updated_at	timestamp with time zone NOT NULL
 column	instances.version	text NOT NULL
 column	plugin_messages.bytes	bigint DEFAULT ((octet_length(title) + octet_length(description)) + octet_length((messages)::text)) GENERATED s
