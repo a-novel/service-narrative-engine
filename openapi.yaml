@@ -803,9 +803,9 @@ paths:
         Replaces the links of a project in one write, and returns their new `updatedAt`. An empty list clears
         them, and a request that omits the list is refused.
 
-        The write applies only while the links still carry the `updatedAt` the request names: null, or
-        omitted, for a project that never wrote its links. Once another write changed them, it answers 409 and
-        changes nothing: the client reads the links again.
+        The write applies only while the links still carry the `updatedAt` the request names. Once another
+        write changed them, it answers 409 and changes nothing: the client reads the links again. A project
+        that never wrote its links takes its first write, whatever `updatedAt` the request names.
 
         The service checks the shape and the size of the links, never that an instance or an item they name
         exists. By default a project holds 20,000 links at most, of 2 MiB once the service encodes them, a
@@ -1992,7 +1992,7 @@ components:
           type: string
           description: |
             What the source is to the destination, in the words of the plugin that wrote the link. 1 KiB at
-            most by default, and empty when omitted.
+            most by default.
           examples: ["therefore"]
 
     projectLinks:
@@ -2028,7 +2028,7 @@ components:
         updatedAt:
           description: |
             The `updatedAt` the links carried when the client read them. Null or omitted for a project that
-            never wrote its links.
+            never wrote its links, which takes its first write whatever this names.
           oneOf:
             - $ref: "#/components/schemas/instant"
             - type: "null"

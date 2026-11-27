@@ -248,8 +248,10 @@ export async function instanceGet(
 
 /**
  * Renames an instance, or clears its name, and returns it without its content. A rename leaves the instance's
- * `updatedAt`, so it refuses no write of the content. Throws on HTTP 404 when the caller owns no such project, or the project holds no such
- * instance.
+ * `updatedAt`, so it refuses no write of the content.
+ *
+ * Throws on HTTP 404 when the caller owns no such project, or the project holds no such instance, and on 409 with
+ * `projectBytes` in the error's `tags.limit` when the project would pass its 16 MiB budget of stored bytes.
  */
 export async function instanceUpdate(
   api: NarrativeEngineApi,
@@ -274,7 +276,8 @@ export async function instanceUpdate(
  * owns no such project, or the project holds no such instance.
  *
  * Throws on 429 once the caller writes documents faster than the server allows, 3 requests a minute on this route by
- * default: a client keeps the writer's edits itself and saves them at intervals.
+ * default: a client keeps the writer's edits itself and saves them at intervals. The response says when to retry, in
+ * `Retry-After`, and the error does not carry it, so the caller paces itself.
  */
 export async function instanceContentUpdate(
   api: NarrativeEngineApi,
@@ -289,9 +292,9 @@ export async function instanceContentUpdate(
 }
 
 /**
- * Deletes an instance and its content, and returns it without its content. The links that name it stay: the client prunes
- * them. Throws on HTTP 409 for the default instance of the project, which stays until `projectDefaultUpdate` chooses
- * another, and on 404 when the caller owns no such project, or the project holds no such instance.
+ * Deletes an instance and its content, and returns it without its content. The links that name it stay: the client
+ * prunes them. Throws on HTTP 409 for the default instance of the project, which stays until `projectDefaultUpdate`
+ * chooses another, and on 404 when the caller owns no such project, or the project holds no such instance.
  */
 export async function instanceDelete(
   api: NarrativeEngineApi,

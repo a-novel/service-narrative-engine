@@ -52,7 +52,7 @@ export const ProjectLinksUpdateRequestSchema = z.object({
   links: z.array(LinkSchema),
   /**
    * The `updatedAt` the links carried when the client read them, as the text the server sent. Null or omitted for a
-   * project that never wrote its links.
+   * project that never wrote its links, which takes its first write whatever this names.
    */
   updatedAt: InstantSchema.nullable().optional(),
 });
@@ -88,8 +88,9 @@ export async function projectLinksGet(
  * Replaces the links of a project in one write, and returns their new `updatedAt`. The server checks the shape and the
  * size of the links, never that an instance or an item they name exists.
  *
- * The write applies only while the links still carry the `updatedAt` the request names. Throws on HTTP 409 once
- * another write changed them: nothing is written, and the client reads the links again. A 409 whose `tags.limit` is
+ * The write applies only while the links still carry the `updatedAt` the request names. A project that never wrote
+ * its links takes its first write, whatever `updatedAt` the request names. Throws on HTTP 409 once another write
+ * changed the links: nothing is written, and the client reads them again. A 409 whose `tags.limit` is
  * `projectBytes` is the project's 16 MiB budget instead. Throws on 422, with the rule and the path of the link in the
  * error's `tags.invalidFields`, for links past a limit of the server or holding the NUL character, and on 404 when the
  * caller owns no such project. Throws on 429 once the caller writes documents faster than the server allows, 3
