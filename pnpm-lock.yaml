@@ -235,19 +235,19 @@ importers:
     devDependencies:
       '@a-novel-kit/nodelib-browser':
         specifier: ^2.13.0
-        version: 2.16.0(@grafana/faro-web-sdk@2.15.0)(@grafana/faro-web-tracing@2.15.0)(zod@4.6.7)
+        version: 2.16.1(@grafana/faro-web-sdk@2.15.0)(@grafana/faro-web-tracing@2.15.0)(zod@4.6.7)
       '@a-novel-kit/nodelib-config':
         specifier: ^2.13.0
-        version: 2.16.0(2a16136612ab4d68aed7d87cf1b34083)
+        version: 2.16.1(67ed3df5dba9ad0aa37e3c71eb03cbaa)
       '@a-novel-kit/nodelib-test':
         specifier: ^2.13.0
-        version: 2.16.0(@a-novel-kit/nodelib-browser@2.16.0(@grafana/faro-web-sdk@2.15.0)(@grafana/faro-web-tracing@2.15.0)(zod@4.6.7))(jsdom@31.0.1)(playwright@1.65.1)
+        version: 2.16.1(@a-novel-kit/nodelib-browser@2.16.1(@grafana/faro-web-sdk@2.15.0)(@grafana/faro-web-tracing@2.15.0)(zod@4.6.7))(jsdom@31.0.1)(playwright@1.65.1)
       '@a-novel/service-authentication-rest':
         specifier: ^2.27.0
-        version: 2.29.0(@a-novel-kit/nodelib-browser@2.16.0(@grafana/faro-web-sdk@2.15.0)(@grafana/faro-web-tracing@2.15.0)(zod@4.6.7))(zod@4.6.7)
+        version: 2.29.0(@a-novel-kit/nodelib-browser@2.16.1(@grafana/faro-web-sdk@2.15.0)(@grafana/faro-web-tracing@2.15.0)(zod@4.6.7))(zod@4.6.7)
       '@a-novel/service-authentication-rest-test':
         specifier: ^2.27.0
-        version: 2.29.0(@a-novel-kit/nodelib-browser@2.16.0(@grafana/faro-web-sdk@2.15.0)(@grafana/faro-web-tracing@2.15.0)(zod@4.6.7))(@a-novel/service-authentication-rest@2.29.0(@a-novel-kit/nodelib-browser@2.16.0(@grafana/faro-web-sdk@2.15.0)(@grafana/faro-web-tracing@2.15.0)(zod@4.6.7))(zod@4.6.7))
+        version: 2.29.0(@a-novel-kit/nodelib-browser@2.16.1(@grafana/faro-web-sdk@2.15.0)(@grafana/faro-web-tracing@2.15.0)(zod@4.6.7))(@a-novel/service-authentication-rest@2.29.0(@a-novel-kit/nodelib-browser@2.16.1(@grafana/faro-web-sdk@2.15.0)(@grafana/faro-web-tracing@2.15.0)(zod@4.6.7))(zod@4.6.7))
       '@a-novel/service-narrative-engine-rest':
         specifier: workspace:*
         version: link:pkg/js/rest
@@ -262,7 +262,7 @@ importers:
         version: 6.0.2(prettier-plugin-svelte@4.2.0(prettier@3.10.1)(svelte@5.59.1(@typescript-eslint/types@8.74.0)))(prettier@3.10.1)(svelte@5.59.1(@typescript-eslint/types@8.74.0))
       '@types/node':
         specifier: ^26.0.0
-        version: 26.6.6
+        version: 26.6.7
       '@vitest/coverage-v8':
         specifier: ^5.0.0
         version: 5.1.1(@vitest/browser@5.1.1)(vitest@5.1.1)
@@ -301,22 +301,22 @@ importers:
         version: 8.74.0(eslint@10.15.0(jiti@2.7.0))(typescript@6.0.3)
       vite:
         specifier: ^8.0.16
-        version: 8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)
+        version: 8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)
       vitest:
         specifier: ^5.0.0
-        version: 5.1.1(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(@vitest/browser-playwright@5.1.1)(@vitest/coverage-v8@5.1.1)(@vitest/ui@5.1.1)(jsdom@31.0.1)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
+        version: 5.1.1(@opentelemetry/api@1.10.0)(@types/node@26.6.7)(@vitest/browser-playwright@5.1.1)(@vitest/coverage-v8@5.1.1)(@vitest/ui@5.1.1)(jsdom@31.0.1)(vite@8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
 
   pkg/js/rest:
     devDependencies:
       '@a-novel-kit/nodelib-browser':
         specifier: ^2.13.0
-        version: 2.16.0(@grafana/faro-web-sdk@2.15.0)(@grafana/faro-web-tracing@2.15.0)(zod@4.6.7)
+        version: 2.16.1(@grafana/faro-web-sdk@2.15.0)(@grafana/faro-web-tracing@2.15.0)(zod@4.6.7)
       typescript:
         specifier: ^6.0.0
         version: 6.0.3
       vite:
         specifier: ^8.0.0
-        version: 8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)
+        version: 8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)
       zod:
         specifier: ^4.1.12
         version: 4.6.7
@@ -325,16 +325,16 @@ importers:
 
 packages:
 
-  '@a-novel-kit/nodelib-browser@2.16.0':
-    resolution: {integrity: sha512-wwwG0EQc+qvYDNx8gLkddyC9u8eIcbdpAkzKeoz4J7GYYCEt5h3MAYZq8M+26WgsGmo0shu4ov1XptGhf8K3LQ==, tarball: https://npm.pkg.github.com/download/@a-novel-kit/nodelib-browser/2.16.0/16b1757a6226f655cb0d6f112227d8e174321559}
+  '@a-novel-kit/nodelib-browser@2.16.1':
+    resolution: {integrity: sha512-307YsHEBEOx1dP9oq1h92wa2cumflhvQuvnQhVTvVEi5g0utTFcHHRgAESFK6LCSPuuMPmWLHm4h33x3TRjGsw==, tarball: https://npm.pkg.github.com/download/@a-novel-kit/nodelib-browser/2.16.1/d5c240e2aab973116056f32657e3b305f0d09f8b}
     engines: {node: '>=24.0.0', npm: '>=10.9.2'}
     peerDependencies:
       '@grafana/faro-web-sdk': ^2.15.0
       '@grafana/faro-web-tracing': ^2.15.0
       zod: ^4.6.7
 
-  '@a-novel-kit/nodelib-config@2.16.0':
-    resolution: {integrity: sha512-jK7+C+nYF1B2kh7YFMs+BFPZnRmEjzsL1fppp8RqxL2CSzoYhcyTbibxf3A3dCoPuxElXBHtZpfP8fExg3Wn5A==, tarball: https://npm.pkg.github.com/download/@a-novel-kit/nodelib-config/2.16.0/fa36e5c10d525caf46ba9453b013e4355d05d0e4}
+  '@a-novel-kit/nodelib-config@2.16.1':
+    resolution: {integrity: sha512-UMmDsJLWLdndWNwlMCROj1cJHU7jEePL0o7EXkVCqHMxFLRUjwP2Tpg6qugKXajxae4a9gg/F9270bqhraxMYQ==, tarball: https://npm.pkg.github.com/download/@a-novel-kit/nodelib-config/2.16.1/8863f7b0645152f120d981a159b9a8bcdabc260e}
     engines: {node: '>=24.0.0', npm: '>=10.9.2'}
     hasBin: true
     peerDependencies:
@@ -369,8 +369,8 @@ packages:
       vite: ^8.3.8
       vitest: ^5.1.1
 
-  '@a-novel-kit/nodelib-test@2.16.0':
-    resolution: {integrity: sha512-WTQmxFog3gY5XN24us0Qx7Y8ZxPJ0iEk+hgQECu8uK384RJ1+0QZLU3kqBlGkUoLK2gus0yLM11Yp/FPhoxhxw==, tarball: https://npm.pkg.github.com/download/@a-novel-kit/nodelib-test/2.16.0/8740bc95ff61cb036c1fcd7abcff0cfbda854297}
+  '@a-novel-kit/nodelib-test@2.16.1':
+    resolution: {integrity: sha512-fmbY3NcRmH96GJCLmsZpv8TI1580J3fkR3r59IIvqiCEgR2ydfWtLi+3iaRLxaqV1oOZxMQ+D7h856RVlvF7jA==, tarball: https://npm.pkg.github.com/download/@a-novel-kit/nodelib-test/2.16.1/ca2e89d0a2ec5a6842a956a96860eb70106afbea}
     engines: {node: '>=24.0.0', npm: '>=10.9.2'}
     peerDependencies:
       '@a-novel-kit/nodelib-browser': '*'
@@ -1504,8 +1504,8 @@ packages:
   '@types/json-schema@7.0.15':
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
 
-  '@types/node@26.6.6':
-    resolution: {integrity: sha512-MzQj+8Kx3XI40OmUAE6Qoh58ZMNstNNMwn2nfd3qWsfe7nDNSqJNzes4njhz6AHwrSHOffSLwXU6yb474Q4aog==}
+  '@types/node@26.6.7':
+    resolution: {integrity: sha512-tovuRfrUILu6v46bMG+BgXxMvsqPBx2WO2as8Rpln+JTff1dbexMtAM4KFTejmL0axsnSWViCW7MecUQpLuBRA==}
 
   '@types/pegjs@0.10.6':
     resolution: {integrity: sha512-eLYXDbZWXh2uxf+w8sXS8d6KSoXTswfps6fvCUuVAGN8eRpfe7h9eSRydxiSJvo9Bf+GzifsDOr9TMQlmJdmkw==}
@@ -2940,32 +2940,32 @@ packages:
 
 snapshots:
 
-  '@a-novel-kit/nodelib-browser@2.16.0(@grafana/faro-web-sdk@2.15.0)(@grafana/faro-web-tracing@2.15.0)(zod@4.6.7)':
+  '@a-novel-kit/nodelib-browser@2.16.1(@grafana/faro-web-sdk@2.15.0)(@grafana/faro-web-tracing@2.15.0)(zod@4.6.7)':
     dependencies:
       '@grafana/faro-web-sdk': 2.15.0
       '@grafana/faro-web-tracing': 2.15.0
       zod: 4.6.7
 
-  '@a-novel-kit/nodelib-config@2.16.0(2a16136612ab4d68aed7d87cf1b34083)':
+  '@a-novel-kit/nodelib-config@2.16.1(67ed3df5dba9ad0aa37e3c71eb03cbaa)':
     dependencies:
       '@eslint/compat': 2.1.1(eslint@10.15.0(jiti@2.7.0))
       '@eslint/config-helpers': 0.7.0
       '@eslint/js': 10.0.1(eslint@10.15.0(jiti@2.7.0))
       '@opentelemetry/api': 1.10.0
       '@storybook/addon-vitest': 10.6.8(@vitest/browser-playwright@5.1.1)(@vitest/browser@5.1.1)(react@19.3.1)(storybook@10.6.8(prettier@3.10.1)(react@19.3.1))(vitest@5.1.1)
-      '@sveltejs/adapter-node': 6.0.5(@sveltejs/kit@3.4.0(@opentelemetry/api@1.10.0)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.59.1(@typescript-eslint/types@8.74.0))(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)))(svelte@5.59.1(@typescript-eslint/types@8.74.0))(typescript@6.0.3)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
-      '@sveltejs/kit': 3.4.0(@opentelemetry/api@1.10.0)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.59.1(@typescript-eslint/types@8.74.0))(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)))(svelte@5.59.1(@typescript-eslint/types@8.74.0))(typescript@6.0.3)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
+      '@sveltejs/adapter-node': 6.0.5(@sveltejs/kit@3.4.0(@opentelemetry/api@1.10.0)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.59.1(@typescript-eslint/types@8.74.0))(vite@8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)))(svelte@5.59.1(@typescript-eslint/types@8.74.0))(typescript@6.0.3)(vite@8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
+      '@sveltejs/kit': 3.4.0(@opentelemetry/api@1.10.0)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.59.1(@typescript-eslint/types@8.74.0))(vite@8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)))(svelte@5.59.1(@typescript-eslint/types@8.74.0))(typescript@6.0.3)(vite@8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
       '@trivago/prettier-plugin-sort-imports': 6.0.2(prettier-plugin-svelte@4.2.0(prettier@3.10.1)(svelte@5.59.1(@typescript-eslint/types@8.74.0)))(prettier@3.10.1)(svelte@5.59.1(@typescript-eslint/types@8.74.0))
-      '@types/node': 26.6.6
-      '@vitest/browser-playwright': 5.1.1(playwright@1.65.1)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))(vitest@5.1.1)
+      '@types/node': 26.6.7
+      '@vitest/browser-playwright': 5.1.1(playwright@1.65.1)(vite@8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))(vitest@5.1.1)
       eslint: 10.15.0(jiti@2.7.0)
       eslint-config-prettier: 10.1.8(eslint@10.15.0(jiti@2.7.0))
       eslint-plugin-storybook: 10.6.8(eslint@10.15.0(jiti@2.7.0))(typescript@6.0.3)
       eslint-plugin-svelte: 3.24.1(eslint@10.15.0(jiti@2.7.0))(svelte@5.59.1(@typescript-eslint/types@8.74.0))
       estree-walker: 3.0.3
       globals: 17.14.0
-      i18next-cli: 1.95.3(@types/node@26.6.6)(react@19.3.1)(typescript@6.0.3)
-      i18next-cli-plugin-svelte: 2.5.0(estree-walker@3.0.3)(i18next-cli@1.95.3(@types/node@26.6.6)(react@19.3.1)(typescript@6.0.3))(svelte@5.59.1(@typescript-eslint/types@8.74.0))
+      i18next-cli: 1.95.3(@types/node@26.6.7)(react@19.3.1)(typescript@6.0.3)
+      i18next-cli-plugin-svelte: 2.5.0(estree-walker@3.0.3)(i18next-cli@1.95.3(@types/node@26.6.7)(react@19.3.1)(typescript@6.0.3))(svelte@5.59.1(@typescript-eslint/types@8.74.0))
       playwright: 1.65.1
       prettier: 3.10.1
       prettier-plugin-css-order: 2.2.0(postcss@8.5.33)(prettier@3.10.1)
@@ -2976,24 +2976,24 @@ snapshots:
       svelte: 5.59.1(@typescript-eslint/types@8.74.0)
       typescript: 6.0.3
       typescript-eslint: 8.74.0(eslint@10.15.0(jiti@2.7.0))(typescript@6.0.3)
-      vite: 8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)
-      vitest: 5.1.1(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(@vitest/browser-playwright@5.1.1)(@vitest/coverage-v8@5.1.1)(@vitest/ui@5.1.1)(jsdom@31.0.1)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
+      vite: 8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)
+      vitest: 5.1.1(@opentelemetry/api@1.10.0)(@types/node@26.6.7)(@vitest/browser-playwright@5.1.1)(@vitest/coverage-v8@5.1.1)(@vitest/ui@5.1.1)(jsdom@31.0.1)(vite@8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
       yaml: 2.9.1
 
-  '@a-novel-kit/nodelib-test@2.16.0(@a-novel-kit/nodelib-browser@2.16.0(@grafana/faro-web-sdk@2.15.0)(@grafana/faro-web-tracing@2.15.0)(zod@4.6.7))(jsdom@31.0.1)(playwright@1.65.1)':
+  '@a-novel-kit/nodelib-test@2.16.1(@a-novel-kit/nodelib-browser@2.16.1(@grafana/faro-web-sdk@2.15.0)(@grafana/faro-web-tracing@2.15.0)(zod@4.6.7))(jsdom@31.0.1)(playwright@1.65.1)':
     dependencies:
-      '@a-novel-kit/nodelib-browser': 2.16.0(@grafana/faro-web-sdk@2.15.0)(@grafana/faro-web-tracing@2.15.0)(zod@4.6.7)
+      '@a-novel-kit/nodelib-browser': 2.16.1(@grafana/faro-web-sdk@2.15.0)(@grafana/faro-web-tracing@2.15.0)(zod@4.6.7)
       jsdom: 31.0.1
       playwright: 1.65.1
 
-  '@a-novel/service-authentication-rest-test@2.29.0(@a-novel-kit/nodelib-browser@2.16.0(@grafana/faro-web-sdk@2.15.0)(@grafana/faro-web-tracing@2.15.0)(zod@4.6.7))(@a-novel/service-authentication-rest@2.29.0(@a-novel-kit/nodelib-browser@2.16.0(@grafana/faro-web-sdk@2.15.0)(@grafana/faro-web-tracing@2.15.0)(zod@4.6.7))(zod@4.6.7))':
+  '@a-novel/service-authentication-rest-test@2.29.0(@a-novel-kit/nodelib-browser@2.16.1(@grafana/faro-web-sdk@2.15.0)(@grafana/faro-web-tracing@2.15.0)(zod@4.6.7))(@a-novel/service-authentication-rest@2.29.0(@a-novel-kit/nodelib-browser@2.16.1(@grafana/faro-web-sdk@2.15.0)(@grafana/faro-web-tracing@2.15.0)(zod@4.6.7))(zod@4.6.7))':
     dependencies:
-      '@a-novel-kit/nodelib-browser': 2.16.0(@grafana/faro-web-sdk@2.15.0)(@grafana/faro-web-tracing@2.15.0)(zod@4.6.7)
-      '@a-novel/service-authentication-rest': 2.29.0(@a-novel-kit/nodelib-browser@2.16.0(@grafana/faro-web-sdk@2.15.0)(@grafana/faro-web-tracing@2.15.0)(zod@4.6.7))(zod@4.6.7)
+      '@a-novel-kit/nodelib-browser': 2.16.1(@grafana/faro-web-sdk@2.15.0)(@grafana/faro-web-tracing@2.15.0)(zod@4.6.7)
+      '@a-novel/service-authentication-rest': 2.29.0(@a-novel-kit/nodelib-browser@2.16.1(@grafana/faro-web-sdk@2.15.0)(@grafana/faro-web-tracing@2.15.0)(zod@4.6.7))(zod@4.6.7)
 
-  '@a-novel/service-authentication-rest@2.29.0(@a-novel-kit/nodelib-browser@2.16.0(@grafana/faro-web-sdk@2.15.0)(@grafana/faro-web-tracing@2.15.0)(zod@4.6.7))(zod@4.6.7)':
+  '@a-novel/service-authentication-rest@2.29.0(@a-novel-kit/nodelib-browser@2.16.1(@grafana/faro-web-sdk@2.15.0)(@grafana/faro-web-tracing@2.15.0)(zod@4.6.7))(zod@4.6.7)':
     dependencies:
-      '@a-novel-kit/nodelib-browser': 2.16.0(@grafana/faro-web-sdk@2.15.0)(@grafana/faro-web-tracing@2.15.0)(zod@4.6.7)
+      '@a-novel-kit/nodelib-browser': 2.16.1(@grafana/faro-web-sdk@2.15.0)(@grafana/faro-web-tracing@2.15.0)(zod@4.6.7)
       zod: 4.6.7
 
   '@adobe/css-tools@4.5.0': {}
@@ -3290,59 +3290,59 @@ snapshots:
 
   '@inquirer/ansi@2.1.1': {}
 
-  '@inquirer/confirm@6.4.0(@types/node@26.6.6)':
+  '@inquirer/confirm@6.4.0(@types/node@26.6.7)':
     dependencies:
-      '@inquirer/core': 12.1.1(@types/node@26.6.6)
-      '@inquirer/type': 4.3.0(@types/node@26.6.6)
+      '@inquirer/core': 12.1.1(@types/node@26.6.7)
+      '@inquirer/type': 4.3.0(@types/node@26.6.7)
     optionalDependencies:
-      '@types/node': 26.6.6
+      '@types/node': 26.6.7
 
-  '@inquirer/core@12.1.1(@types/node@26.6.6)':
+  '@inquirer/core@12.1.1(@types/node@26.6.7)':
     dependencies:
       '@inquirer/ansi': 2.1.1
       '@inquirer/figures': 2.1.1
-      '@inquirer/type': 4.3.1(@types/node@26.6.6)
+      '@inquirer/type': 4.3.1(@types/node@26.6.7)
       cli-width: 4.1.0
       fast-string-width: 3.0.2
       fast-wrap-ansi: 0.2.2
       mute-stream: 3.0.0
       signal-exit: 4.1.0
     optionalDependencies:
-      '@types/node': 26.6.6
+      '@types/node': 26.6.7
 
   '@inquirer/figures@2.1.1': {}
 
-  '@inquirer/input@5.2.0(@types/node@26.6.6)':
+  '@inquirer/input@5.2.0(@types/node@26.6.7)':
     dependencies:
-      '@inquirer/core': 12.1.1(@types/node@26.6.6)
-      '@inquirer/type': 4.3.0(@types/node@26.6.6)
+      '@inquirer/core': 12.1.1(@types/node@26.6.7)
+      '@inquirer/type': 4.3.0(@types/node@26.6.7)
     optionalDependencies:
-      '@types/node': 26.6.6
+      '@types/node': 26.6.7
 
-  '@inquirer/password@5.3.0(@types/node@26.6.6)':
+  '@inquirer/password@5.3.0(@types/node@26.6.7)':
     dependencies:
       '@inquirer/ansi': 2.1.1
-      '@inquirer/core': 12.1.1(@types/node@26.6.6)
-      '@inquirer/type': 4.3.0(@types/node@26.6.6)
+      '@inquirer/core': 12.1.1(@types/node@26.6.7)
+      '@inquirer/type': 4.3.0(@types/node@26.6.7)
     optionalDependencies:
-      '@types/node': 26.6.6
+      '@types/node': 26.6.7
 
-  '@inquirer/select@5.3.0(@types/node@26.6.6)':
+  '@inquirer/select@5.3.0(@types/node@26.6.7)':
     dependencies:
       '@inquirer/ansi': 2.1.1
-      '@inquirer/core': 12.1.1(@types/node@26.6.6)
+      '@inquirer/core': 12.1.1(@types/node@26.6.7)
       '@inquirer/figures': 2.1.1
-      '@inquirer/type': 4.3.0(@types/node@26.6.6)
+      '@inquirer/type': 4.3.0(@types/node@26.6.7)
     optionalDependencies:
-      '@types/node': 26.6.6
+      '@types/node': 26.6.7
 
-  '@inquirer/type@4.3.0(@types/node@26.6.6)':
+  '@inquirer/type@4.3.0(@types/node@26.6.7)':
     optionalDependencies:
-      '@types/node': 26.6.6
+      '@types/node': 26.6.7
 
-  '@inquirer/type@4.3.1(@types/node@26.6.6)':
+  '@inquirer/type@4.3.1(@types/node@26.6.7)':
     optionalDependencies:
-      '@types/node': 26.6.6
+      '@types/node': 26.6.7
 
   '@isaacs/nonrecursive-glob-match@1.1.0': {}
 
@@ -3703,9 +3703,9 @@ snapshots:
       '@storybook/icons': 2.2.0(react@19.3.1)
       storybook: 10.6.8(prettier@3.10.1)(react@19.3.1)
     optionalDependencies:
-      '@vitest/browser': 5.1.1(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))(vitest@5.1.1)
-      '@vitest/browser-playwright': 5.1.1(playwright@1.65.1)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))(vitest@5.1.1)
-      vitest: 5.1.1(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(@vitest/browser-playwright@5.1.1)(@vitest/coverage-v8@5.1.1)(@vitest/ui@5.1.1)(jsdom@31.0.1)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
+      '@vitest/browser': 5.1.1(vite@8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))(vitest@5.1.1)
+      '@vitest/browser-playwright': 5.1.1(playwright@1.65.1)(vite@8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))(vitest@5.1.1)
+      vitest: 5.1.1(@opentelemetry/api@1.10.0)(@types/node@26.6.7)(@vitest/browser-playwright@5.1.1)(@vitest/coverage-v8@5.1.1)(@vitest/ui@5.1.1)(jsdom@31.0.1)(vite@8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
     transitivePeerDependencies:
       - react
 
@@ -3719,23 +3719,23 @@ snapshots:
     dependencies:
       acorn: 8.19.0
 
-  '@sveltejs/adapter-node@6.0.5(@sveltejs/kit@3.4.0(@opentelemetry/api@1.10.0)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.59.1(@typescript-eslint/types@8.74.0))(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)))(svelte@5.59.1(@typescript-eslint/types@8.74.0))(typescript@6.0.3)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))':
+  '@sveltejs/adapter-node@6.0.5(@sveltejs/kit@3.4.0(@opentelemetry/api@1.10.0)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.59.1(@typescript-eslint/types@8.74.0))(vite@8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)))(svelte@5.59.1(@typescript-eslint/types@8.74.0))(typescript@6.0.3)(vite@8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))':
     dependencies:
-      '@sveltejs/adapter-server': 0.1.0(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
-      '@sveltejs/kit': 3.4.0(@opentelemetry/api@1.10.0)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.59.1(@typescript-eslint/types@8.74.0))(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)))(svelte@5.59.1(@typescript-eslint/types@8.74.0))(typescript@6.0.3)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
+      '@sveltejs/adapter-server': 0.1.0(vite@8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
+      '@sveltejs/kit': 3.4.0(@opentelemetry/api@1.10.0)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.59.1(@typescript-eslint/types@8.74.0))(vite@8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)))(svelte@5.59.1(@typescript-eslint/types@8.74.0))(typescript@6.0.3)(vite@8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
     transitivePeerDependencies:
       - vite
 
-  '@sveltejs/adapter-server@0.1.0(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))':
+  '@sveltejs/adapter-server@0.1.0(vite@8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))':
     dependencies:
-      vite: 8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)
+      vite: 8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)
 
-  '@sveltejs/kit@3.4.0(@opentelemetry/api@1.10.0)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.59.1(@typescript-eslint/types@8.74.0))(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)))(svelte@5.59.1(@typescript-eslint/types@8.74.0))(typescript@6.0.3)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))':
+  '@sveltejs/kit@3.4.0(@opentelemetry/api@1.10.0)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.59.1(@typescript-eslint/types@8.74.0))(vite@8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)))(svelte@5.59.1(@typescript-eslint/types@8.74.0))(typescript@6.0.3)(vite@8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))':
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
       '@rolldown/pluginutils': 1.1.1
       '@standard-schema/spec': 1.1.0
-      '@sveltejs/vite-plugin-svelte': 7.3.1(svelte@5.59.1(@typescript-eslint/types@8.74.0))(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
+      '@sveltejs/vite-plugin-svelte': 7.3.1(svelte@5.59.1(@typescript-eslint/types@8.74.0))(vite@8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
       cookie: 2.0.2
       devalue: 5.9.4
       esm-env: 1.2.2
@@ -3743,19 +3743,19 @@ snapshots:
       mrmime: 2.0.1
       sirv: 3.0.2
       svelte: 5.59.1(@typescript-eslint/types@8.74.0)
-      vite: 8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)
+      vite: 8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)
     optionalDependencies:
       '@opentelemetry/api': 1.10.0
       typescript: 6.0.3
 
-  '@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.59.1(@typescript-eslint/types@8.74.0))(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))':
+  '@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.59.1(@typescript-eslint/types@8.74.0))(vite@8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))':
     dependencies:
       deepmerge: 4.3.1
       magic-string: 1.4.5
       obug: 2.2.1
       svelte: 5.59.1(@typescript-eslint/types@8.74.0)
-      vite: 8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)
-      vitefu: 1.1.4(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
+      vite: 8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)
+      vitefu: 1.1.4(vite@8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
 
   '@swc/core-darwin-arm64@1.16.22':
     optional: true
@@ -3878,7 +3878,7 @@ snapshots:
 
   '@types/json-schema@7.0.15': {}
 
-  '@types/node@26.6.6':
+  '@types/node@26.6.7':
     dependencies:
       undici-types: 8.9.0
 
@@ -3979,30 +3979,30 @@ snapshots:
       '@typescript-eslint/types': 8.74.0
       eslint-visitor-keys: 5.0.1
 
-  '@vitest/browser-playwright@5.1.1(playwright@1.65.1)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))(vitest@5.1.1)':
+  '@vitest/browser-playwright@5.1.1(playwright@1.65.1)(vite@8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))(vitest@5.1.1)':
     dependencies:
-      '@vitest/browser': 5.1.1(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))(vitest@5.1.1)
-      '@vitest/mocker': 5.1.1(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
+      '@vitest/browser': 5.1.1(vite@8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))(vitest@5.1.1)
+      '@vitest/mocker': 5.1.1(vite@8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
       playwright: 1.65.1
       tinyrainbow: 3.2.0
-      vitest: 5.1.1(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(@vitest/browser-playwright@5.1.1)(@vitest/coverage-v8@5.1.1)(@vitest/ui@5.1.1)(jsdom@31.0.1)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
+      vitest: 5.1.1(@opentelemetry/api@1.10.0)(@types/node@26.6.7)(@vitest/browser-playwright@5.1.1)(@vitest/coverage-v8@5.1.1)(@vitest/ui@5.1.1)(jsdom@31.0.1)(vite@8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
     transitivePeerDependencies:
       - bufferutil
       - msw
       - utf-8-validate
       - vite
 
-  '@vitest/browser@5.1.1(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))(vitest@5.1.1)':
+  '@vitest/browser@5.1.1(vite@8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))(vitest@5.1.1)':
     dependencies:
       '@blazediff/core': 1.10.0
-      '@vitest/mocker': 5.1.1(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
+      '@vitest/mocker': 5.1.1(vite@8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
       '@vitest/ui': 5.1.1(vitest@5.1.1)
       '@vitest/utils': 5.1.1
       magic-string: 1.4.5
       pngjs: 7.0.0
       sirv: 3.0.2
       tinyrainbow: 3.2.0
-      vitest: 5.1.1(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(@vitest/browser-playwright@5.1.1)(@vitest/coverage-v8@5.1.1)(@vitest/ui@5.1.1)(jsdom@31.0.1)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
+      vitest: 5.1.1(@opentelemetry/api@1.10.0)(@types/node@26.6.7)(@vitest/browser-playwright@5.1.1)(@vitest/coverage-v8@5.1.1)(@vitest/ui@5.1.1)(jsdom@31.0.1)(vite@8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
       ws: 8.23.0
     transitivePeerDependencies:
       - bufferutil
@@ -4020,9 +4020,9 @@ snapshots:
       obug: 3.0.0
       std-env: 4.3.0
       tinyrainbow: 3.2.0
-      vitest: 5.1.1(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(@vitest/browser-playwright@5.1.1)(@vitest/coverage-v8@5.1.1)(@vitest/ui@5.1.1)(jsdom@31.0.1)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
+      vitest: 5.1.1(@opentelemetry/api@1.10.0)(@types/node@26.6.7)(@vitest/browser-playwright@5.1.1)(@vitest/coverage-v8@5.1.1)(@vitest/ui@5.1.1)(jsdom@31.0.1)(vite@8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
     optionalDependencies:
-      '@vitest/browser': 5.1.1(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))(vitest@5.1.1)
+      '@vitest/browser': 5.1.1(vite@8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))(vitest@5.1.1)
 
   '@vitest/expect@3.2.4':
     dependencies:
@@ -4038,14 +4038,14 @@ snapshots:
     dependencies:
       '@vitest/istanbul-lib-coverage': 2.1.1
 
-  '@vitest/mocker@5.1.1(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))':
+  '@vitest/mocker@5.1.1(vite@8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))':
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
       '@vitest/spy': 5.1.1
       estree-walker: 3.0.3
       magic-string: 1.4.5
     optionalDependencies:
-      vite: 8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)
+      vite: 8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)
 
   '@vitest/pretty-format@3.2.4':
     dependencies:
@@ -4069,7 +4069,7 @@ snapshots:
       pathe: 2.0.3
       sirv: 3.0.2
       tinyrainbow: 3.2.0
-      vitest: 5.1.1(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(@vitest/browser-playwright@5.1.1)(@vitest/coverage-v8@5.1.1)(@vitest/ui@5.1.1)(jsdom@31.0.1)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
+      vitest: 5.1.1(@opentelemetry/api@1.10.0)(@types/node@26.6.7)(@vitest/browser-playwright@5.1.1)(@vitest/coverage-v8@5.1.1)(@vitest/ui@5.1.1)(jsdom@31.0.1)(vite@8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
 
   '@vitest/utils@3.2.4':
     dependencies:
@@ -4489,21 +4489,21 @@ snapshots:
 
   html-parse-stringify@4.0.1: {}
 
-  i18next-cli-plugin-svelte@2.5.0(estree-walker@3.0.3)(i18next-cli@1.95.3(@types/node@26.6.6)(react@19.3.1)(typescript@6.0.3))(svelte@5.59.1(@typescript-eslint/types@8.74.0)):
+  i18next-cli-plugin-svelte@2.5.0(estree-walker@3.0.3)(i18next-cli@1.95.3(@types/node@26.6.7)(react@19.3.1)(typescript@6.0.3))(svelte@5.59.1(@typescript-eslint/types@8.74.0)):
     dependencies:
       estree-walker: 3.0.3
-      i18next-cli: 1.95.3(@types/node@26.6.6)(react@19.3.1)(typescript@6.0.3)
+      i18next-cli: 1.95.3(@types/node@26.6.7)(react@19.3.1)(typescript@6.0.3)
       recast: 0.23.21
       svelte: 5.59.1(@typescript-eslint/types@8.74.0)
 
-  i18next-cli@1.95.3(@types/node@26.6.6)(react@19.3.1)(typescript@6.0.3):
+  i18next-cli@1.95.3(@types/node@26.6.7)(react@19.3.1)(typescript@6.0.3):
     dependencies:
       '@croct/json5-parser': 0.2.2
       '@formatjs/icu-messageformat-parser': 3.5.23
-      '@inquirer/confirm': 6.4.0(@types/node@26.6.6)
-      '@inquirer/input': 5.2.0(@types/node@26.6.6)
-      '@inquirer/password': 5.3.0(@types/node@26.6.6)
-      '@inquirer/select': 5.3.0(@types/node@26.6.6)
+      '@inquirer/confirm': 6.4.0(@types/node@26.6.7)
+      '@inquirer/input': 5.2.0(@types/node@26.6.7)
+      '@inquirer/password': 5.3.0(@types/node@26.6.7)
+      '@inquirer/select': 5.3.0(@types/node@26.6.7)
       '@swc/core': 1.16.22
       chokidar: 5.0.0
       commander: 15.1.0
@@ -5200,7 +5200,7 @@ snapshots:
 
   util-deprecate@1.0.2: {}
 
-  vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1):
+  vite@8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1):
     dependencies:
       lightningcss: 1.33.0
       picomatch: 4.0.7
@@ -5208,20 +5208,20 @@ snapshots:
       rolldown: 1.2.19
       tinyglobby: 0.2.17
     optionalDependencies:
-      '@types/node': 26.6.6
+      '@types/node': 26.6.7
       esbuild: 0.28.2
       fsevents: 2.3.3
       jiti: 2.7.0
       yaml: 2.9.1
 
-  vitefu@1.1.4(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)):
+  vitefu@1.1.4(vite@8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)):
     optionalDependencies:
-      vite: 8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)
+      vite: 8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)
 
-  vitest@5.1.1(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(@vitest/browser-playwright@5.1.1)(@vitest/coverage-v8@5.1.1)(@vitest/ui@5.1.1)(jsdom@31.0.1)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)):
+  vitest@5.1.1(@opentelemetry/api@1.10.0)(@types/node@26.6.7)(@vitest/browser-playwright@5.1.1)(@vitest/coverage-v8@5.1.1)(@vitest/ui@5.1.1)(jsdom@31.0.1)(vite@8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)):
     dependencies:
       '@types/chai': 5.2.3
-      '@vitest/mocker': 5.1.1(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
+      '@vitest/mocker': 5.1.1(vite@8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
       chai: 6.3.0
       es-module-lexer: 2.3.2
       expect-type: 1.4.0
@@ -5232,12 +5232,12 @@ snapshots:
       tinybench: 6.2.4
       tinyexec: 1.3.1
       tinyglobby: 0.2.17
-      vite: 8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)
+      vite: 8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)
       why-is-node-running: 3.2.1
     optionalDependencies:
       '@opentelemetry/api': 1.10.0
-      '@types/node': 26.6.6
-      '@vitest/browser-playwright': 5.1.1(playwright@1.65.1)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))(vitest@5.1.1)
+      '@types/node': 26.6.7
+      '@vitest/browser-playwright': 5.1.1(playwright@1.65.1)(vite@8.3.8(@types/node@26.6.7)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))(vitest@5.1.1)
       '@vitest/coverage-v8': 5.1.1(@vitest/browser@5.1.1)(vitest@5.1.1)
       '@vitest/ui': 5.1.1(vitest@5.1.1)
       jsdom: 31.0.1
