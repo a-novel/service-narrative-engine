@@ -1,4 +1,4 @@
-migration-history	sha256:fff46f748d66c70937d207e8d28a92e5d5dc3a7cb779bc014a74cd333746d490
+migration-history	sha256:ef4e6f8b00ce54982c4ae666593ea01561a8fd2ccb7a9874133fa71e53388842
 column	instances.bytes	bigint DEFAULT (((octet_length(plugin) + octet_length(version)) + octet_length(name)) + octet_length((content)::text)) GENERATED s
 column	instances.content	jsonb NOT NULL
 column	instances.created_at	timestamp with time zone NOT NULL
