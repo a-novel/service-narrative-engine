@@ -93,10 +93,6 @@ func (service *ProjectUpdate) Exec(ctx context.Context, request *ProjectUpdateRe
 			Genres:   request.Genres,
 			Now:      time.Now(),
 		})
-		if errors.Is(err, dao.ErrProjectUpdateNotFound) {
-			err = errors.Join(err, ErrProjectNotFound)
-		}
-
 		if err != nil {
 			return fmt.Errorf("update project: %w", err)
 		}

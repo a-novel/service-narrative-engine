@@ -17,9 +17,6 @@ import (
 //go:embed pg.projectBytes.sql
 var projectBytesQuery string
 
-// ErrProjectBytesNotFound is returned when no project matches the requested ID.
-var ErrProjectBytesNotFound = errors.New("project not found")
-
 // ProjectBytesRequest is the input to [PgProjectBytes.Exec].
 type ProjectBytesRequest struct {
 	ID uuid.UUID
@@ -52,7 +49,7 @@ func (dao *PgProjectBytes) Exec(ctx context.Context, request *ProjectBytesReques
 
 	err = db.NewRaw(projectBytesQuery, request.ID).Scan(ctx, &entity)
 	if errors.Is(err, sql.ErrNoRows) {
-		err = errors.Join(err, ErrProjectBytesNotFound)
+		err = errors.Join(err, ErrProjectNotFound)
 	}
 
 	if err != nil {

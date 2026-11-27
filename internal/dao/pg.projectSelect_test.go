@@ -47,7 +47,7 @@ func TestPgProjectSelect(t *testing.T) {
 			fixtures: logoFixtures(),
 			request:  &dao.ProjectSelectRequest{ID: absentID},
 
-			expectErr: dao.ErrProjectSelectNotFound,
+			expectErr: dao.ErrProjectNotFound,
 		},
 	}
 

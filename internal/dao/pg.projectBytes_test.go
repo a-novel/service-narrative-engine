@@ -55,7 +55,7 @@ func TestPgProjectBytes(t *testing.T) {
 			fixtures: projectFixtures(),
 			request:  &dao.ProjectBytesRequest{ID: absentID},
 
-			expectErr: dao.ErrProjectBytesNotFound,
+			expectErr: dao.ErrProjectNotFound,
 		},
 	}
 

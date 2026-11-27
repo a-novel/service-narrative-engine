@@ -24,7 +24,7 @@ const (
 
 var (
 	// ErrProjectNotFound is returned when no project has the ID, or another user owns it.
-	ErrProjectNotFound = errors.New("project not found")
+	ErrProjectNotFound = dao.ErrProjectNotFound
 	// ErrProjectLogoNotFound is returned when the project holds no logo.
 	ErrProjectLogoNotFound = errors.New("project logo not found")
 	// ErrProjectBudget is returned by a write that would bring a project past [ProjectBytesMax] stored bytes.

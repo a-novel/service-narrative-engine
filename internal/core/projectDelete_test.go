@@ -67,7 +67,7 @@ func TestProjectDelete(t *testing.T) {
 			request: request,
 
 			ownerMock: &daoMock[bool]{resp: true},
-			daoMock:   &daoMock[*dao.Project]{err: dao.ErrProjectDeleteNotFound},
+			daoMock:   &daoMock[*dao.Project]{err: dao.ErrProjectNotFound},
 
 			expectErr: core.ErrProjectNotFound,
 		},

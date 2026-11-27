@@ -16,9 +16,6 @@ import (
 //go:embed pg.projectDelete.sql
 var projectDeleteQuery string
 
-// ErrProjectDeleteNotFound is returned by [PgProjectDelete.Exec] when no project has the ID.
-var ErrProjectDeleteNotFound = errors.New("project not found")
-
 // ProjectDeleteRequest is the input to [PgProjectDelete.Exec].
 type ProjectDeleteRequest struct {
 	ID uuid.UUID
@@ -44,7 +41,7 @@ func (dao *PgProjectDelete) Exec(ctx context.Context, request *ProjectDeleteRequ
 
 	err = db.NewRaw(projectDeleteQuery, request.ID).Scan(ctx, entity)
 	if errors.Is(err, sql.ErrNoRows) {
-		err = errors.Join(err, ErrProjectDeleteNotFound)
+		err = errors.Join(err, ErrProjectNotFound)
 	}
 
 	if err != nil {

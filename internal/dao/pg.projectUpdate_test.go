@@ -77,7 +77,7 @@ func TestPgProjectUpdate(t *testing.T) {
 				ID: absentID, Title: "Clear Hours", Language: "en", Tags: []string{}, Genres: []string{}, Now: now,
 			},
 
-			expectErr: dao.ErrProjectUpdateNotFound,
+			expectErr: dao.ErrProjectNotFound,
 		},
 	}
 
