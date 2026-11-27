@@ -25,6 +25,14 @@ export const PluginNameSchema = z
 /** A checksum the registry computes: a SHA-256 in lowercase hex. */
 const PluginChecksumSchema = z.string().regex(/^[0-9a-f]{64}$/);
 
+/**
+ * The proof of who published a version of a plugin: a compact JWT of type `proof+jwt`, signed by a system API key
+ * made for the purpose `publish-narrative-engine-plugin`. Its claims name the plugin and the version, and carry
+ * the SHA-256 of each module in lowercase hex: `plugin`, `version`, `uiSHA256`, and `migrationSHA256` when the
+ * version ships a migration.
+ */
+const PluginProofSchema = z.string().max(4096);
+
 /** A plugin of the registry, as its latest release describes it. */
 export const PluginSchema = z.object({
   name: PluginNameSchema,
@@ -65,6 +73,17 @@ export const PluginManifestSchema = z.object({
   schemaChecksum: PluginChecksumSchema,
   /** The checksum of the UI module's bytes. */
   uiChecksum: PluginChecksumSchema,
+  /**
+   * The proof the publisher's key signed for the version. A client verifies it before it uses the version: its
+   * signature against the key `apiKeyID` names, then its claims against the version and the modules it received.
+   * Absent for a version published without a key, as on a local stack.
+   */
+  proof: PluginProofSchema.optional(),
+  /**
+   * The ID of the API key that signed `proof`. A client reads the key from JSON Keys by that ID to verify the
+   * proof. Absent when `proof` is.
+   */
+  apiKeyID: z.string().optional(),
   publishedAt: DateSchema,
 });
 
@@ -104,6 +123,82 @@ export const PluginVersionPageSchema = z.object({
 
 /** The value {@link PluginVersionPageSchema} validates. */
 export type PluginVersionPage = z.infer<typeof PluginVersionPageSchema>;
+
+/** A JSON Pointer (RFC 6901) into an exported item. */
+const PluginPointerSchema = z.string().regex(/^(\/([^/~]|~[01])*)*$/);
+
+/** One named list of linkable items an instance of a plugin exposes. */
+export const PluginExportSchema = z.strictObject({
+  /** The key of the version's messages that names the export. */
+  name: z.string(),
+  /** The path to the exported items in the content: `$`, then member names and `[*]`, a subset of JSONPath (RFC 9535). */
+  select: z.string().regex(/^\$(\.[A-Za-z_][A-Za-z0-9_]*|\[\*\])*$/),
+  /** The pointer to the identifier inside each item. */
+  id: PluginPointerSchema,
+  /** The pointer to the label inside each item. */
+  label: PluginPointerSchema,
+});
+
+/** The value {@link PluginExportSchema} validates. */
+export type PluginExport = z.infer<typeof PluginExportSchema>;
+
+/**
+ * The exports a version of a plugin publishes, by name. A link addresses an item as `<export>/<id>`, so a name
+ * holds no slash. It mirrors the check the server runs on a published version, and both agree on the shared test
+ * cases.
+ */
+export const PluginExportsSchema = z.record(z.string().regex(/^[A-Za-z][A-Za-z0-9_-]*$/), PluginExportSchema);
+
+/** The value {@link PluginExportsSchema} validates. */
+export type PluginExports = z.infer<typeof PluginExportsSchema>;
+
+/** The translations of a version of a plugin in one language, as its publisher sends them. */
+export const PluginVersionPublishLanguageSchema = z.strictObject({
+  /** The plugin's title, as the list of plugins shows it. Not blank. */
+  title: z.string().min(1).max(262144),
+  /** What the plugin does, as the list of plugins shows it. Not blank. */
+  description: z.string().min(1).max(262144),
+  /** The translations of the plugin's interface and of its schema, by key, in 256 KiB of JSON at most. */
+  messages: z.record(z.string(), z.unknown()),
+});
+
+/** The value {@link PluginVersionPublishLanguageSchema} validates. */
+export type PluginVersionPublishLanguage = z.infer<typeof PluginVersionPublishLanguageSchema>;
+
+/**
+ * One whole version of a plugin, as its publisher sends it. The server also caps each JSON document at 256 KiB
+ * with its numbers written in full, refuses the NUL character and what else PostgreSQL does not store, and
+ * refuses a schema whose subschemas reference another document or use `$dynamicRef`, `$dynamicAnchor` or
+ * `format`.
+ */
+export const PluginVersionPublishRequestSchema = z.strictObject({
+  plugin: PluginNameSchema,
+  /** The version to publish. A prerelease, such as `1.2.0-dev.1`, publishes as a release does. */
+  version: PluginSemverSchema,
+  /** The JSON Schema (2020-12) the content of an instance follows. */
+  schema: z.record(z.string(), z.unknown()),
+  exports: PluginExportsSchema,
+  /** The source of the JavaScript module that renders the plugin, in 1 MiB of UTF-8 at most. */
+  ui: z.string().min(1),
+  /**
+   * The source of the JavaScript module that brings content from the previous version to this one, in 256 KiB of
+   * UTF-8 at most. Left out when the version needs none.
+   */
+  migration: z.string().min(1).optional(),
+  /** The translations of the version by language, a BCP 47 tag each: English, as `en`, and 99 others at most. */
+  languages: z
+    .record(z.string(), PluginVersionPublishLanguageSchema)
+    .refine((languages) => Object.hasOwn(languages, "en") && Object.keys(languages).length <= 100),
+  /**
+   * The proof of the version, signed by the key of the request token. Its `plugin` and `version` claims are those
+   * of this request, `uiSHA256` is the SHA-256 of `ui` as UTF-8, and `migrationSHA256` that of `migration`. A
+   * request with a token carries a proof, and a request without one carries none.
+   */
+  proof: PluginProofSchema.optional(),
+});
+
+/** The value {@link PluginVersionPublishRequestSchema} validates. */
+export type PluginVersionPublishRequest = z.infer<typeof PluginVersionPublishRequestSchema>;
 
 /**
  * A page of the registry's plugins: at most `limit`, 100 when omitted, after the first `offset`. Titles and
@@ -258,5 +353,30 @@ export async function pluginVersionList(
   return await api.fetch(`/v1/plugin/versions?${params.toString()}`, PluginVersionPageSchema, {
     method: "GET",
     accessToken,
+  });
+}
+
+/**
+ * Publishes one version of a plugin, whole: its manifest, its modules and its translations, or nothing. `body` is
+ * the JSON of a {@link PluginVersionPublishRequest}, already encoded: the publisher's request token is signed for
+ * those exact bytes, so the client sends them as they are. `requestToken` is that token, which a relay reads from
+ * the request it forwards, and which a local stack whose registry takes every request does without.
+ *
+ * Throws on HTTP 400 for a body that holds a member the registry does not know, which stores nothing, 401 for a
+ * request the publisher's key did not sign, 409 for a version the registry holds, which stays as it is, and 422 for
+ * a version that breaks a rule, whose problem names the field: `proof` for a proof that does not vouch for the
+ * version, or that comes without a request token. Throws on 429 once the key publishes
+ * faster than the server allows, 2 versions a minute and 5 in 15 minutes by default.
+ */
+export async function pluginVersionPublish(
+  api: NarrativeEngineApi,
+  requestToken: string | undefined,
+  body: BodyInit
+): Promise<void> {
+  await api.fetchVoid("/v1/plugin/version", {
+    method: "POST",
+    accessToken: requestToken,
+    headers: { "Content-Type": "application/json" },
+    body,
   });
 }
