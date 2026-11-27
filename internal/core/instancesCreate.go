@@ -39,9 +39,9 @@ type InstancesCreateItem struct {
 	// Plugin is the name of the plugin, a DNS label (RFC 1035) as the registry names its plugins. The service
 	// never checks that the registry holds it.
 	Plugin string `validate:"required,dns_rfc1035_label"`
-	// Version is the exact version of the plugin the content follows, as [parsePluginVersion] reads one. The
-	// service never checks that the registry holds it.
-	Version string `validate:"required,pluginversion"`
+	// Version is the exact version of the plugin the content follows, as [parsePluginVersion] reads one,
+	// [InstanceVersionMax] characters at most. The service never checks that the registry holds it.
+	Version string `validate:"required,max=256,pluginversion"`
 	// Name is the display name the writer gives the instance, [InstanceNameMax] characters at most. It may be
 	// empty, and the client then shows a name of its own. A name of only whitespace is refused: it would show
 	// as none, and no client would replace it.
@@ -116,25 +116,12 @@ func (service *InstancesCreate) Exec(
 		return nil, otel.ReportError(span, &FieldError{Path: "instances", Rule: ruleMax})
 	}
 
-	now := time.Now()
-	items := make([]dao.InstancesInsertItem, len(request.Instances))
-
 	for index, instance := range request.Instances {
 		path := "instances[" + strconv.Itoa(index) + "].content"
 
 		err = checkDocument(path, instance.Content, service.caps.ContentBytes, service.caps.DocumentDepth)
 		if err != nil {
 			return nil, otel.ReportError(span, err)
-		}
-
-		items[index] = dao.InstancesInsertItem{
-			// uuid.NewV7 fails only when crypto/rand does, which Go documents as never happening on supported
-			// platforms.
-			ID:      uuid.Must(uuid.NewV7()),
-			Plugin:  instance.Plugin,
-			Version: instance.Version,
-			Name:    instance.Name,
-			Content: instance.Content,
 		}
 	}
 
@@ -155,9 +142,26 @@ func (service *InstancesCreate) Exec(
 			return fmt.Errorf("count instances: %w", err)
 		}
 
-		if held.Count+len(items) > service.caps.InstancesPerProject {
-			return fmt.Errorf("%w: %d instances, and %d more", ErrInstancesFull, held.Count, len(items))
+		if held.Count+len(request.Instances) > service.caps.InstancesPerProject {
+			return fmt.Errorf(
+				"%w: %d instances, and %d more", ErrInstancesFull, held.Count, len(request.Instances),
+			)
 		}
+
+		// The stamp and the IDs are taken together once the lock is held: an ID carries the instant it was
+		// made at, and a batch that waited stamps its instances later than the write before it did.
+		now := time.Now()
+		items := lo.Map(request.Instances, func(instance InstancesCreateItem, _ int) dao.InstancesInsertItem {
+			return dao.InstancesInsertItem{
+				// uuid.NewV7 fails only when crypto/rand does, which Go documents as never happening on
+				// supported platforms.
+				ID:      uuid.Must(uuid.NewV7()),
+				Plugin:  instance.Plugin,
+				Version: instance.Version,
+				Name:    instance.Name,
+				Content: instance.Content,
+			}
+		})
 
 		entities, err = service.daoInsert.Exec(ctx, &dao.InstancesInsertRequest{
 			ProjectID: request.ProjectID,

@@ -12,6 +12,10 @@ import (
 // InstanceNameMax caps the display name of an instance, in characters.
 const InstanceNameMax = 80
 
+// InstanceVersionMax caps the version an instance pins, in characters. It is the longest version node-semver
+// reads (its MAX_LENGTH), so no JavaScript tooling parses a longer one.
+const InstanceVersionMax = 256
+
 // InstanceDescriptor is what a project knows of an instance without reading its content.
 type InstanceDescriptor struct {
 	ID        uuid.UUID

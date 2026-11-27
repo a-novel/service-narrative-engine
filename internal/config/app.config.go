@@ -40,12 +40,13 @@ type Limits struct {
 // Caps bounds the documents a project stores: the content of its instances, and its links.
 // The service never reads what a document means, so these are the only rules it holds one to.
 type Caps struct {
-	// ContentBytes caps the content of an instance, in bytes of JSON.
+	// ContentBytes caps the content of an instance, in bytes of JSON. A number counts written in full, as the
+	// database stores it, so an exponent adds its digits.
 	ContentBytes int
 	// DocumentDepth caps how deep a content nests its arrays and objects.
 	DocumentDepth int
-	// InstancesPerProject caps the instances a project holds. A list returns as many at most, so lowering it
-	// under what a project holds hides that project's newest instances.
+	// InstancesPerProject caps the instances a project holds. A project past it after the cap is lowered keeps
+	// its instances, and refuses new ones until it is back under.
 	InstancesPerProject int
 
 	// Links caps how many links a project holds.

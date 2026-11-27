@@ -42,6 +42,9 @@ func TestInstancesCreate(t *testing.T) {
 		return item
 	}
 
+	// longestVersion is a version of exactly the most characters an instance pins.
+	longestVersion := "1.2.0-" + strings.Repeat("a", core.InstanceVersionMax-len("1.2.0-"))
+
 	created := []*dao.InstanceDescriptor{daoDescriptor()}
 
 	// holds answers the count of a project that holds this many instances.
@@ -121,6 +124,18 @@ func TestInstancesCreate(t *testing.T) {
 			expect: []*core.InstanceDescriptor{coreDescriptor()},
 		},
 		{
+			name: "Success/LongestVersion",
+
+			request: withItems(changed(func(item *core.InstancesCreateItem) { item.Version = longestVersion })),
+
+			lockMock:  &daoMock[bool]{resp: true},
+			countMock: holds(1),
+			daoMock:   &daoMock[[]*dao.InstanceDescriptor]{resp: created},
+			bytesMock: withinBudget,
+
+			expect: []*core.InstanceDescriptor{coreDescriptor()},
+		},
+		{
 			// A name is optional: the client shows one of its own for an instance without.
 			name: "Success/NoName",
 
@@ -153,6 +168,13 @@ func TestInstancesCreate(t *testing.T) {
 			name: "Error/Version",
 
 			request: withItems(changed(func(item *core.InstancesCreateItem) { item.Version = "^1.2.0" })),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
+			name: "Error/VersionTooLong",
+
+			request: withItems(changed(func(item *core.InstancesCreateItem) { item.Version = longestVersion + "a" })),
 
 			expectErr: core.ErrInvalidRequest,
 		},

@@ -25,17 +25,21 @@ var projectWriteLockExempt = map[string]string{
 // dao.ProjectUpdateRequest or dao.ProjectLogoUpsertRequest.
 var projectWriteOperations = []string{"Insert", "Update", "Upsert", "Delete", "Move"}
 
-// projectWrites locates the first content write and the first project lock in the Exec method of a service.
-// Each position is token.NoPos when the method has none.
+// projectWrites locates the first content write, the first project lock and the first reading of the clock in
+// the Exec method of a service. Each position is token.NoPos when the method has none.
 type projectWrites struct {
 	write token.Pos
 	lock  token.Pos
+	clock token.Pos
 }
 
 // TestProjectWriteLock enforces the project lock rule over internal/core, where it lives. It parses the
 // package's non-test files and checks that the Exec method of every service that builds a DAO request writing a
 // project's content calls lockOwnedProject before that request. The lock runs the project's writes one at a
 // time and stamps the project's edited_at, which ProjectEditsList returns.
+//
+// It also checks that the method reads the clock only once it holds the lock, so a write that waited stamps its
+// records later than the write before it did.
 //
 // A service listed in projectWriteLockExempt skips the rule, and the test fails once that service no longer
 // exists or no longer writes, so the list holds only real exemptions.
@@ -70,6 +74,12 @@ func TestProjectWriteLock(t *testing.T) {
 					"the project's writes run one at a time and stamp its edited_at. Call lockOwnedProject first, "+
 					"or add %s to projectWriteLockExempt with its reason",
 				name, fileSet.Position(service.write), name)
+
+			require.False(t, service.clock.IsValid() && service.clock < service.lock,
+				"%s reads the clock at %s, before it calls lockOwnedProject. A write stamps its records once it "+
+					"holds the project lock, so a write that waited stamps them later than the write before it "+
+					"did. Read the clock after lockOwnedProject",
+				name, fileSet.Position(service.clock))
 		})
 	}
 }
@@ -122,8 +132,8 @@ func serviceExec(decl ast.Decl) (string, *ast.BlockStmt, bool) {
 	return receiver.Name, function.Body, true
 }
 
-// findProjectWrites locates the first content write and the first lockOwnedProject call of a method body. The
-// walk visits nodes in source order, so the first match of each is the earliest.
+// findProjectWrites locates the first content write, the first lockOwnedProject call and the first reading of
+// the clock of a method body. The walk visits nodes in source order, so the first match of each is the earliest.
 func findProjectWrites(body *ast.BlockStmt) projectWrites {
 	var found projectWrites
 
@@ -133,6 +143,10 @@ func findProjectWrites(body *ast.BlockStmt) projectWrites {
 			callee, ok := node.Fun.(*ast.Ident)
 			if ok && callee.Name == "lockOwnedProject" && !found.lock.IsValid() {
 				found.lock = node.Pos()
+			}
+
+			if readsClock(node) && !found.clock.IsValid() {
+				found.clock = node.Pos()
 			}
 		case *ast.CompositeLit:
 			if isProjectWrite(node) && !found.write.IsValid() {
@@ -144,6 +158,19 @@ func findProjectWrites(body *ast.BlockStmt) projectWrites {
 	})
 
 	return found
+}
+
+// readsClock reports whether a call reads the clock: time.Now, or uuid.NewV7, whose ID carries the instant it
+// was made at.
+func readsClock(call *ast.CallExpr) bool {
+	selector, ok := call.Fun.(*ast.SelectorExpr)
+	if !ok {
+		return false
+	}
+
+	pkg, ok := selector.X.(*ast.Ident)
+
+	return ok && slices.Contains([]string{"time.Now", "uuid.NewV7"}, pkg.Name+"."+selector.Sel.Name)
 }
 
 // isProjectWrite reports whether a literal builds a DAO request whose operation writes project content.

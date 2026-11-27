@@ -83,7 +83,9 @@ err := service.transactor.WithinTx(ctx, func(ctx context.Context) error {
 })
 ```
 
-`TestProjectWriteLock` in `internal/core/projectWriteLock_test.go` enforces the rule. It fails when the `Exec` method of a service builds a DAO request that inserts, updates, upserts, deletes or moves before it calls `lockOwnedProject`. The services that write without the lock, such as `ProjectCreate` and the logo writes, are listed with their reason in its `projectWriteLockExempt` map, and a new exemption goes there.
+A write reads the clock once it holds the lock: `time.Now` for its stamps, and `uuid.NewV7` for its IDs, which carry the instant they were made at. A write that waited then stamps its records later than the write before it did.
+
+`TestProjectWriteLock` in `internal/core/projectWriteLock_test.go` enforces both rules. It fails when the `Exec` method of a service builds a DAO request that inserts, updates, upserts, deletes or moves before it calls `lockOwnedProject`, or reads the clock before it. The services that write without the lock, such as `ProjectCreate` and the logo writes, are listed with their reason in its `projectWriteLockExempt` map, and a new exemption goes there.
 
 ## Handler tests
 

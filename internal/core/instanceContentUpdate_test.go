@@ -46,6 +46,9 @@ func TestInstanceContentUpdate(t *testing.T) {
 	// atCap is a document of exactly the most bytes the tests allow.
 	atCap := `"` + strings.Repeat("a", caps.ContentBytes-2) + `"`
 
+	// longestVersion is a version of exactly the most characters an instance pins.
+	longestVersion := "1.2.0-" + strings.Repeat("a", core.InstanceVersionMax-len("1.2.0-"))
+
 	testCases := []struct {
 		name string
 
@@ -75,6 +78,17 @@ func TestInstanceContentUpdate(t *testing.T) {
 			name: "Success/Prerelease",
 
 			request: withVersion("2.0.0-dev.1"),
+
+			lockMock:  &daoMock[bool]{resp: true},
+			daoMock:   &daoMock[*dao.InstanceDescriptor]{resp: daoDescriptor()},
+			bytesMock: withinBudget,
+
+			expect: coreDescriptor(),
+		},
+		{
+			name: "Success/LongestVersion",
+
+			request: withVersion(longestVersion),
 
 			lockMock:  &daoMock[bool]{resp: true},
 			daoMock:   &daoMock[*dao.InstanceDescriptor]{resp: daoDescriptor()},
@@ -118,6 +132,41 @@ func TestInstanceContentUpdate(t *testing.T) {
 			expect: coreDescriptor(),
 		},
 		{
+			// Two escapes spell one character past the basic plane: a high half, then its low half.
+			name: "Success/SurrogatePair",
+
+			request: withContent(`{"a":"\uD83D\ude00"}`),
+
+			lockMock:  &daoMock[bool]{resp: true},
+			daoMock:   &daoMock[*dao.InstanceDescriptor]{resp: daoDescriptor()},
+			bytesMock: withinBudget,
+
+			expect: coreDescriptor(),
+		},
+		{
+			// The database stores 1e60 as 61 digits, which this document of 4 bytes brings to the cap.
+			name: "Success/MostBytesStored",
+
+			request: withContent(`1e60`),
+
+			lockMock:  &daoMock[bool]{resp: true},
+			daoMock:   &daoMock[*dao.InstanceDescriptor]{resp: daoDescriptor()},
+			bytesMock: withinBudget,
+
+			expect: coreDescriptor(),
+		},
+		{
+			name: "Success/Exponents",
+
+			request: withContent(`{"a":[1.5e-7,-2E+3,0.25]}`),
+
+			lockMock:  &daoMock[bool]{resp: true},
+			daoMock:   &daoMock[*dao.InstanceDescriptor]{resp: daoDescriptor()},
+			bytesMock: withinBudget,
+
+			expect: coreDescriptor(),
+		},
+		{
 			// The service stores any JSON value, and never reads what it means.
 			name: "Success/Scalar",
 
@@ -146,6 +195,13 @@ func TestInstanceContentUpdate(t *testing.T) {
 			expectErr: core.ErrInvalidRequest,
 		},
 		{
+			name: "Error/VersionTooLong",
+
+			request: withVersion(longestVersion + "a"),
+
+			expectErr: core.ErrInvalidRequest,
+		},
+		{
 			name: "Error/NoUpdatedAt",
 
 			request: &core.InstanceContentUpdateRequest{
@@ -164,6 +220,50 @@ func TestInstanceContentUpdate(t *testing.T) {
 			expectField: &core.FieldError{Path: "content", Rule: "maxbytes"},
 		},
 		{
+			// A short document the database stores as a long one: it writes a number in full.
+			name: "Error/Content/TooLargeStored",
+
+			request: withContent(`1e61`),
+
+			expectErr:   core.ErrInvalidRequest,
+			expectField: &core.FieldError{Path: "content", Rule: "maxbytes"},
+		},
+		{
+			// 20 digits and an exponent of 16363 make the most digits the database stores for a number, so the
+			// number passes, and only its size refuses the document.
+			name: "Error/Content/MostDigits",
+
+			request: withContent(`[-1234567890.1234567890e16363]`),
+
+			expectErr:   core.ErrInvalidRequest,
+			expectField: &core.FieldError{Path: "content", Rule: "maxbytes"},
+		},
+		{
+			name: "Error/Content/TooManyDigits",
+
+			request: withContent(`[-1234567890.1234567890e16364]`),
+
+			expectErr:   core.ErrInvalidRequest,
+			expectField: &core.FieldError{Path: "content", Rule: "maxdigits"},
+		},
+		{
+			name: "Error/Content/TooManyDecimals",
+
+			request: withContent(`{"a":1E-16383}`),
+
+			expectErr:   core.ErrInvalidRequest,
+			expectField: &core.FieldError{Path: "content", Rule: "maxdigits"},
+		},
+		{
+			// An exponent no integer holds is counted without a fault.
+			name: "Error/Content/ExponentPastInteger",
+
+			request: withContent(`1e99999999999999999999999999999999`),
+
+			expectErr:   core.ErrInvalidRequest,
+			expectField: &core.FieldError{Path: "content", Rule: "maxdigits"},
+		},
+		{
 			name: "Error/Content/TooDeep",
 
 			request: withContent(`[[[[]]]]`),
@@ -175,6 +275,15 @@ func TestInstanceContentUpdate(t *testing.T) {
 			name: "Error/Content/NotJSON",
 
 			request: withContent(`{"beats":`),
+
+			expectErr:   core.ErrInvalidRequest,
+			expectField: &core.FieldError{Path: "content", Rule: "json"},
+		},
+		{
+			// The standard library takes any bytes inside a string.
+			name: "Error/Content/NotUTF8",
+
+			request: withContent("{\"a\":\"\xff\xfe\"}"),
 
 			expectErr:   core.ErrInvalidRequest,
 			expectField: &core.FieldError{Path: "content", Rule: "json"},
@@ -195,6 +304,34 @@ func TestInstanceContentUpdate(t *testing.T) {
 
 			expectErr:   core.ErrInvalidRequest,
 			expectField: &core.FieldError{Path: "content", Rule: "nonul"},
+		},
+		{
+			// A high half of a surrogate pair, and no low half after it. The standard library takes it for JSON,
+			// and PostgreSQL refuses to store it.
+			name: "Error/Content/LoneHighSurrogate",
+
+			request: withContent(`{"a":"\uD83Da"}`),
+
+			expectErr:   core.ErrInvalidRequest,
+			expectField: &core.FieldError{Path: "content", Rule: "nolonesurrogate"},
+		},
+		{
+			// A low half, and no high half before it.
+			name: "Error/Content/LoneLowSurrogate",
+
+			request: withContent(`{"a":"\ude00"}`),
+
+			expectErr:   core.ErrInvalidRequest,
+			expectField: &core.FieldError{Path: "content", Rule: "nolonesurrogate"},
+		},
+		{
+			// A low half only pairs with the high half right before it.
+			name: "Error/Content/SurrogatePairReversed",
+
+			request: withContent(`{"a":"\ude00\ud83d"}`),
+
+			expectErr:   core.ErrInvalidRequest,
+			expectField: &core.FieldError{Path: "content", Rule: "nolonesurrogate"},
 		},
 		{
 			name: "Error/NotOwned",

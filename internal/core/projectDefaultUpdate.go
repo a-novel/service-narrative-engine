@@ -60,8 +60,6 @@ func (service *ProjectDefaultUpdate) Exec(ctx context.Context, request *ProjectD
 		return nil, otel.ReportError(span, errors.Join(err, ErrInvalidRequest))
 	}
 
-	now := time.Now()
-
 	var entity *dao.Project
 
 	err = service.transactor.WithinTx(ctx, func(ctx context.Context) error {
@@ -76,7 +74,7 @@ func (service *ProjectDefaultUpdate) Exec(ctx context.Context, request *ProjectD
 		entity, err = service.dao.Exec(ctx, &dao.ProjectDefaultUpdateRequest{
 			ProjectID:  request.ProjectID,
 			InstanceID: request.InstanceID,
-			Now:        now,
+			Now:        time.Now(),
 		})
 		if err != nil {
 			return fmt.Errorf("update project default: %w", err)

@@ -29,9 +29,10 @@ type InstanceContentUpdateRequest struct {
 	ProjectID uuid.UUID `validate:"required"`
 	ID        uuid.UUID `validate:"required"`
 
-	// Version is the exact version of the plugin the content follows, as [parsePluginVersion] reads one. A
-	// client that migrates the content writes the version it migrated to.
-	Version string `validate:"required,pluginversion"`
+	// Version is the exact version of the plugin the content follows, as [parsePluginVersion] reads one,
+	// [InstanceVersionMax] characters at most. A client that migrates the content writes the version it
+	// migrated to.
+	Version string `validate:"required,max=256,pluginversion"`
 	// Content is the JSON document the plugin edits, within the configured caps.
 	Content json.RawMessage `validate:"required"`
 
