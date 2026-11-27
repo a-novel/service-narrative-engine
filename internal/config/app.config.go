@@ -29,12 +29,17 @@ type Dependencies struct {
 	ServiceJSONKeys grpcf.ClientConfig
 }
 
-// Limits bounds what one request carries, below the REST server's own limits. The server's
-// MaxRequestSize fits a batch, so the routes that write one item cap their body lower.
+// Limits bounds what one caller sends, below the REST server's own limits. The server's MaxRequestSize fits
+// a batch, so the routes that write one item cap their body lower, and its rate covers a cheap request, so the
+// routes that write a document count each caller's writes.
 type Limits struct {
 	// MaxItemRequestSize caps the body of a route that writes one item, in bytes. It must fit the content of
-	// an instance, so it stays above [Caps.ContentBytes].
+	// an instance and the links of a project, so it stays above [Caps.ContentBytes] and [Caps.LinksBytes].
 	MaxItemRequestSize int64
+	// RateLimitDocumentWrite caps each signed-in user's writes of a document, the content of an instance or
+	// the links of a project, on top of the router's rate. Each route that writes one counts on a budget of
+	// its own. A write past it answers 429.
+	RateLimitDocumentWrite httpf.Rate
 }
 
 // Caps bounds the documents a project stores: the content of its instances, and its links.

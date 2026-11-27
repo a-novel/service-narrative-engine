@@ -43,6 +43,9 @@ func TestRestInstanceContentUpdate(t *testing.T) {
 
 		expectStatus   int
 		expectResponse any
+		// expectText is the plain body of an error that carries no tag: a client tells a stale write, or the
+		// delete of the default, from a limit by the missing tag.
+		expectText string
 	}{
 		{
 			// The request's updatedAt reaches the service with its microseconds.
@@ -140,6 +143,7 @@ func TestRestInstanceContentUpdate(t *testing.T) {
 			serviceMock: &serviceMock[*core.InstanceDescriptor]{err: core.ErrInstanceStale},
 
 			expectStatus: http.StatusConflict,
+			expectText:   "Conflict\n",
 		},
 		{
 			name: "Error/InstanceDefault",
@@ -149,6 +153,7 @@ func TestRestInstanceContentUpdate(t *testing.T) {
 			serviceMock: &serviceMock[*core.InstanceDescriptor]{err: core.ErrInstanceDefault},
 
 			expectStatus: http.StatusConflict,
+			expectText:   "Conflict\n",
 		},
 		{
 			name: "Error/InstancesFull",
@@ -168,6 +173,7 @@ func TestRestInstanceContentUpdate(t *testing.T) {
 			serviceMock: &serviceMock[*core.InstanceDescriptor]{err: core.ErrProjectLinksStale},
 
 			expectStatus: http.StatusConflict,
+			expectText:   "Conflict\n",
 		},
 		{
 			name: "Error/ProjectBudget",
@@ -212,7 +218,12 @@ func TestRestInstanceContentUpdate(t *testing.T) {
 			w := httptest.NewRecorder()
 			handlers.NewRestInstanceContentUpdate(service, configtest.Logger).ServeHTTP(w, testCase.request(t))
 
-			requireResponse(t, w.Result(), testCase.expectStatus, testCase.expectResponse)
+			response := w.Result()
+			requireResponse(t, response, testCase.expectStatus, testCase.expectResponse)
+
+			if testCase.expectText != "" {
+				requireText(t, response, testCase.expectText)
+			}
 		})
 	}
 }

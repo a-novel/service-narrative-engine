@@ -45,7 +45,7 @@ An instance's content and a project's links are JSON documents the client owns. 
 
 A document write names the `updatedAt` it read, and its statement applies only while the row still holds that value. PostgreSQL keeps microseconds, so the value travels as the exact text the service sent: a client that parses it into a JavaScript date loses three digits, and every write of it then answers 409.
 
-`internal/dao` holds one statement per file, `pg.<operation>.sql` beside its `pg.<operation>.go`, and `internal/handlers` one route per `rest.<operation>.go`, with the shared error maps in `rest.errors.go`. golib's `httpf` answers the ping and runs the health probes, which `rest.health.go` lists: `postgres.Health` and JSON Keys.
+`internal/dao` holds one statement per file, `pg.<operation>.sql` beside its `pg.<operation>.go`, and `internal/handlers` one route per `rest.<operation>.go`, with the shared error maps in `rest.errors.go` and the per-caller limits in `rest.limit.go`. golib's `httpf` answers the ping and runs the health probes, which `rest.health.go` lists: `postgres.Health` and JSON Keys.
 
 ## Transactions
 

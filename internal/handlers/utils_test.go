@@ -72,6 +72,15 @@ func requireResponse(t *testing.T, response *http.Response, expectStatus int, ex
 	require.Equal(t, expectBody, body)
 }
 
+// requireText checks that a handler answered a plain body, as golib writes for an error that carries no tag.
+func requireText(t *testing.T, response *http.Response, expect string) {
+	t.Helper()
+
+	data, err := io.ReadAll(response.Body)
+	require.NoError(t, errors.Join(err, response.Body.Close()))
+	require.Equal(t, expect, string(data))
+}
+
 // probeSetup selects the state of the PostgreSQL connection a health probe meets.
 type probeSetup int
 

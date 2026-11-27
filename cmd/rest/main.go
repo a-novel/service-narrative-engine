@@ -192,6 +192,7 @@ func newRouter(cfg config.App, jsonKeysClient servicejsonkeys.Client) (http.Hand
 	// =================================================================================================================
 
 	router := httpf.NewMux(cfg.Rest, cfg.RestLogger, cfg.App.DowntimeStart)
+	limit := handlers.NewRestLimits(cfg.Rest, cfg.Limits)
 
 	router.Route("/v1", func(api chi.Router) {
 		// The router's body limit fits a batch; a route that writes one item, or compares what a client holds,
@@ -213,15 +214,20 @@ func newRouter(cfg config.App, jsonKeysClient servicejsonkeys.Client) (http.Hand
 		withAuth(item, config.PermissionProjectWrite).Delete("/project/logo", handlerProjectLogoDelete.ServeHTTP)
 		withAuth(item, config.PermissionProjectWrite).Put("/project/default", handlerProjectDefaultUpdate.ServeHTTP)
 
+		// A route that writes a document, a content or the links, also counts the writes of each signed-in user.
 		withAuth(api, config.PermissionProjectRead).Get("/instances", handlerInstanceList.ServeHTTP)
-		withAuth(api, config.PermissionProjectWrite).Post("/instances", handlerInstancesCreate.ServeHTTP)
+		withAuth(api, config.PermissionProjectWrite).With(limit.DocumentWrite).
+			Post("/instances", handlerInstancesCreate.ServeHTTP)
 		withAuth(api, config.PermissionProjectRead).Get("/instance", handlerInstanceGet.ServeHTTP)
-		withAuth(item, config.PermissionProjectWrite).Post("/instance", handlerInstanceCreate.ServeHTTP)
+		withAuth(item, config.PermissionProjectWrite).With(limit.DocumentWrite).
+			Post("/instance", handlerInstanceCreate.ServeHTTP)
 		withAuth(item, config.PermissionProjectWrite).Put("/instance", handlerInstanceUpdate.ServeHTTP)
 		withAuth(item, config.PermissionProjectWrite).Delete("/instance", handlerInstanceDelete.ServeHTTP)
-		withAuth(item, config.PermissionProjectWrite).Put("/instance/content", handlerInstanceContentUpdate.ServeHTTP)
+		withAuth(item, config.PermissionProjectWrite).With(limit.DocumentWrite).
+			Put("/instance/content", handlerInstanceContentUpdate.ServeHTTP)
 		withAuth(api, config.PermissionProjectRead).Get("/links", handlerProjectLinksGet.ServeHTTP)
-		withAuth(item, config.PermissionProjectWrite).Put("/links", handlerProjectLinksUpdate.ServeHTTP)
+		withAuth(item, config.PermissionProjectWrite).With(limit.DocumentWrite).
+			Put("/links", handlerProjectLinksUpdate.ServeHTTP)
 
 		withAuth(api, config.PermissionPluginRead).Get("/plugins", handlerPluginList.ServeHTTP)
 		withAuth(api, config.PermissionPluginRead).Get("/plugin/version", handlerPluginManifestGet.ServeHTTP)

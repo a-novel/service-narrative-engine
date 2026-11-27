@@ -18,7 +18,10 @@ var AppPresetDefault = App{
 	Permissions:  PermissionsConfigDefault,
 	Rest:         env.Rest,
 	ServiceToken: env.ServiceToken,
-	Limits:       Limits{MaxItemRequestSize: env.RestMaxItemRequestSize},
+	Limits: Limits{
+		MaxItemRequestSize:     env.RestMaxItemRequestSize,
+		RateLimitDocumentWrite: env.RestRateLimitDocumentWrite,
+	},
 	Caps: Caps{
 		ContentBytes:          env.MaxContentSize,
 		DocumentDepth:         env.MaxDocumentDepth,
