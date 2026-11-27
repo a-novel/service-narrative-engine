@@ -53,6 +53,8 @@ var (
 	// ErrPluginMessagesNotFound is returned when the registry holds no such version of the plugin, or the
 	// version is not translated in the language.
 	ErrPluginMessagesNotFound = dao.ErrPluginMessagesNotFound
+	// ErrPluginVersionExists is returned by [PluginVersionPublish] when the registry already holds the version.
+	ErrPluginVersionExists = dao.ErrPluginVersionExists
 )
 
 // ProjectOwnerDao checks that a user owns a project. A service that checks ownership without the project lock

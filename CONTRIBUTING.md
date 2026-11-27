@@ -31,17 +31,19 @@ The routes are described in [`openapi.yaml`](./openapi.yaml).
 
 `internal/core` is one flat package. Its file names group it:
 
-| Files          | What they hold                                                                                                                                |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `project*.go`  | The project's model, its own operations, its logo, its default instance, its links, and the drift and edit lists.                             |
-| `instance*.go` | The instances of a project: their model, and the operations on their name and on their content.                                               |
-| `plugin*.go`   | The reads of the plugin registry. `plugin.go` holds its models, and turns a version between its text and the numbers the registry keys it by. |
-| `common.go`    | The sentinels, the size limits, and the checks every operation shares: `lockOwnedProject`, `checkProjectOwnership`, `keepProjectBudget`.      |
-| `validate.go`  | The request validator and its custom tags, and the check every stored document passes: `checkDocument`.                                       |
+| Files          | What they hold                                                                                                                                                                                                       |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `project*.go`  | The project's model, its own operations, its logo, its default instance, its links, and the drift and edit lists.                                                                                                    |
+| `instance*.go` | The instances of a project: their model, and the operations on their name and on their content.                                                                                                                      |
+| `plugin*.go`   | The plugin registry: its reads, and `pluginVersionPublish.go`, which adds a version and checks it first. `plugin.go` holds its models, and turns a version between its text and the numbers the registry keys it by. |
+| `common.go`    | The sentinels, the size limits, and the checks every operation shares: `lockOwnedProject`, `checkProjectOwnership`, `keepProjectBudget`.                                                                             |
+| `validate.go`  | The request validator and its custom tags, and the check every stored document passes: `checkDocument`.                                                                                                              |
 
 ## Documents
 
 An instance's content and a project's links are JSON documents the client owns. The service stores them and bounds them, and never reads what they mean: no code here validates a document against a plugin's schema, or checks that a plugin version or an item a link names exists. `checkDocument` holds a content to its size and its depth, and refuses what PostgreSQL stores in no `jsonb` value: the NUL character, half of a surrogate pair, a number of more than 16383 digits. It counts a number toward the size written in full, as the database stores it, so an exponent adds its digits. The links have a fixed shape, so the service decodes them, and holds each to its sizes. Every cap is configuration, in `config.Caps`, so a check that breaks one returns a `core.FieldError` instead of a validator error.
+
+`PluginVersionPublish` holds the schema, the exports and the messages of a version to the same check, at 256 KiB each and with no depth of its own.
 
 A document write names the `updatedAt` it read, and its statement applies only while the row still holds that value. PostgreSQL keeps microseconds, so the value travels as the exact text the service sent: a client that parses it into a JavaScript date loses three digits, and every write of it then answers 409.
 

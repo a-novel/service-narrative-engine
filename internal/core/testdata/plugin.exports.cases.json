@@ -1,0 +1,185 @@
+[
+  {
+    "name": "Success",
+    "valid": true,
+    "document": {
+      "scenes": { "name": "exports.scenes", "select": "$.beats[*].scenes[*]", "id": "/id", "label": "/title" }
+    }
+  },
+  {
+    "name": "Success/NoExport",
+    "valid": true,
+    "document": {}
+  },
+  {
+    "name": "Success/SeveralExports",
+    "valid": true,
+    "document": {
+      "scenes": { "name": "exports.scenes", "select": "$.beats[*].scenes[*]", "id": "/id", "label": "/title" },
+      "Layers_2-b": { "name": "exports.layers", "select": "$.layers[*]", "id": "/id", "label": "/names/0" }
+    }
+  },
+  {
+    "name": "Success/WholeContent",
+    "valid": true,
+    "document": {
+      "content": { "name": "exports.content", "select": "$", "id": "", "label": "" }
+    }
+  },
+  {
+    "name": "Success/EveryMember",
+    "valid": true,
+    "document": {
+      "items": { "name": "exports.items", "select": "$[*][*]._private", "id": "/a~1b/c~0d", "label": "/" }
+    }
+  },
+  {
+    "name": "Error/NotObject",
+    "valid": false,
+    "document": []
+  },
+  {
+    "name": "Error/Null",
+    "valid": false,
+    "document": null
+  },
+  {
+    "name": "Error/ExportNotObject",
+    "valid": false,
+    "document": {
+      "scenes": "$.beats[*].scenes[*]"
+    }
+  },
+  {
+    "name": "Error/NameWithSlash",
+    "valid": false,
+    "document": {
+      "beats/scenes": { "name": "exports.scenes", "select": "$.beats[*].scenes[*]", "id": "/id", "label": "/title" }
+    }
+  },
+  {
+    "name": "Error/NameFromDigit",
+    "valid": false,
+    "document": {
+      "1scenes": { "name": "exports.scenes", "select": "$.beats[*].scenes[*]", "id": "/id", "label": "/title" }
+    }
+  },
+  {
+    "name": "Error/EmptyName",
+    "valid": false,
+    "document": {
+      "": { "name": "exports.scenes", "select": "$.beats[*].scenes[*]", "id": "/id", "label": "/title" }
+    }
+  },
+  {
+    "name": "Error/MissingName",
+    "valid": false,
+    "document": {
+      "scenes": { "select": "$.beats[*].scenes[*]", "id": "/id", "label": "/title" }
+    }
+  },
+  {
+    "name": "Error/MissingSelect",
+    "valid": false,
+    "document": {
+      "scenes": { "name": "exports.scenes", "id": "/id", "label": "/title" }
+    }
+  },
+  {
+    "name": "Error/MissingID",
+    "valid": false,
+    "document": {
+      "scenes": { "name": "exports.scenes", "select": "$.beats[*].scenes[*]", "label": "/title" }
+    }
+  },
+  {
+    "name": "Error/MissingLabel",
+    "valid": false,
+    "document": {
+      "scenes": { "name": "exports.scenes", "select": "$.beats[*].scenes[*]", "id": "/id" }
+    }
+  },
+  {
+    "name": "Error/UnknownField",
+    "valid": false,
+    "document": {
+      "scenes": {
+        "name": "exports.scenes",
+        "select": "$.beats[*].scenes[*]",
+        "id": "/id",
+        "label": "/title",
+        "filter": "?@.done"
+      }
+    }
+  },
+  {
+    "name": "Error/NameNotString",
+    "valid": false,
+    "document": {
+      "scenes": { "name": 1, "select": "$.beats[*].scenes[*]", "id": "/id", "label": "/title" }
+    }
+  },
+  {
+    "name": "Error/SelectWithoutRoot",
+    "valid": false,
+    "document": {
+      "scenes": { "name": "exports.scenes", "select": "beats[*].scenes[*]", "id": "/id", "label": "/title" }
+    }
+  },
+  {
+    "name": "Error/SelectByIndex",
+    "valid": false,
+    "document": {
+      "scenes": { "name": "exports.scenes", "select": "$.beats[0].scenes[*]", "id": "/id", "label": "/title" }
+    }
+  },
+  {
+    "name": "Error/SelectByFilter",
+    "valid": false,
+    "document": {
+      "scenes": { "name": "exports.scenes", "select": "$.beats[?@.done].scenes[*]", "id": "/id", "label": "/title" }
+    }
+  },
+  {
+    "name": "Error/SelectDescendants",
+    "valid": false,
+    "document": {
+      "scenes": { "name": "exports.scenes", "select": "$..scenes[*]", "id": "/id", "label": "/title" }
+    }
+  },
+  {
+    "name": "Error/SelectQuotedName",
+    "valid": false,
+    "document": {
+      "scenes": { "name": "exports.scenes", "select": "$['beats'][*]", "id": "/id", "label": "/title" }
+    }
+  },
+  {
+    "name": "Error/SelectTrailingNewline",
+    "valid": false,
+    "document": {
+      "scenes": { "name": "exports.scenes", "select": "$.beats[*]\n", "id": "/id", "label": "/title" }
+    }
+  },
+  {
+    "name": "Error/PointerWithoutSlash",
+    "valid": false,
+    "document": {
+      "scenes": { "name": "exports.scenes", "select": "$.beats[*].scenes[*]", "id": "id", "label": "/title" }
+    }
+  },
+  {
+    "name": "Error/PointerBadEscape",
+    "valid": false,
+    "document": {
+      "scenes": { "name": "exports.scenes", "select": "$.beats[*].scenes[*]", "id": "/id", "label": "/a~2b" }
+    }
+  },
+  {
+    "name": "Error/PointerNotString",
+    "valid": false,
+    "document": {
+      "scenes": { "name": "exports.scenes", "select": "$.beats[*].scenes[*]", "id": ["id"], "label": "/title" }
+    }
+  }
+]
