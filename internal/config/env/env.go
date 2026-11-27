@@ -59,10 +59,11 @@ const (
 	MaxLinkRelationshipSizeDefault = 1 << 10
 )
 
-// RestRateLimitDocumentWriteDefault lets a client save a document once a second, which a debounced save stays
-// under. The project budget bounds what a project stores, and this rate what a user makes the database write
-// over time: each write of a content is a new row, with its log.
-var RestRateLimitDocumentWriteDefault = lo.Must(httpf.ParseRate("60/1m"))
+// RestRateLimitDocumentWriteDefault lets a client save a document three times a minute. A client holds the
+// writer's edits itself and saves them at intervals, so it needs no more. The project budget bounds what a
+// project stores, and this rate what a user makes the database write over time: each write of a content is a
+// new row, with its log.
+var RestRateLimitDocumentWriteDefault = lo.Must(httpf.ParseRate("3/1m"))
 
 var (
 	// Postgres reaches PostgreSQL through the POSTGRES_* variables, with the fleet's pool bounds.

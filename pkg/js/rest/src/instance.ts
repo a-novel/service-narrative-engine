@@ -179,7 +179,7 @@ export type InstanceDeleteRequest = z.infer<typeof InstanceDeleteRequestSchema>;
  * Throws on HTTP 404 when the caller owns no such project, on 422 with a {@link DocumentRefusal} under `content` in
  * the error's `tags.invalidFields` for a content it refuses, and on 409 with `instances` or `projectBytes` in the
  * error's `tags.limit` when the project holds as many instances as it may, or would pass its 16 MiB budget of stored
- * bytes. Throws on 429 once the caller writes documents faster than the server allows, 60 requests a minute on this
+ * bytes. Throws on 429 once the caller writes documents faster than the server allows, 3 requests a minute on this
  * route by default.
  */
 export async function instanceCreate(
@@ -273,8 +273,8 @@ export async function instanceUpdate(
  * under `content` in the error's `tags.invalidFields` for a content the server refuses, and on 404 when the caller
  * owns no such project, or the project holds no such instance.
  *
- * Throws on 429 once the caller writes documents faster than the server allows, 60 requests a minute on this route by
- * default: a client that saves as the writer types spaces its writes under that rate.
+ * Throws on 429 once the caller writes documents faster than the server allows, 3 requests a minute on this route by
+ * default: a client keeps the writer's edits itself and saves them at intervals.
  */
 export async function instanceContentUpdate(
   api: NarrativeEngineApi,

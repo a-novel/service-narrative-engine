@@ -531,7 +531,7 @@ paths:
         The request holds as many instances at most as a project does, 50 by default. Each content follows the
         rules of `POST /v1/instance`.
 
-        It writes documents, so each signed-in user sends it 60 requests a minute by default, on top of the
+        It writes documents, so each signed-in user sends it 3 requests a minute by default, on top of the
         rate of every route. One more answers 429 with `Retry-After`.
       tags: [instance]
       requestBody:
@@ -611,7 +611,7 @@ paths:
         surrogate pair (`\ud83d` without its `\ude00`) in a string, and a number of more than 16383 digits,
         its exponent written out.
 
-        It writes a document, so each signed-in user sends it 60 requests a minute by default, on top of the
+        It writes a document, so each signed-in user sends it 3 requests a minute by default, on top of the
         rate of every route. One more answers 429 with `Retry-After`.
       tags: [instance]
       requestBody:
@@ -732,9 +732,9 @@ paths:
 
         `content` follows the rules of `POST /v1/instance`.
 
-        It writes a document, so each signed-in user sends it 60 requests a minute by default, on top of the
-        rate of every route. One more answers 429 with `Retry-After`: a client that saves as the writer types
-        spaces its writes under that rate.
+        It writes a document, so each signed-in user sends it 3 requests a minute by default, on top of the
+        rate of every route. One more answers 429 with `Retry-After`: a client keeps the writer's edits itself
+        and saves them at intervals.
       tags: [instance]
       requestBody:
         required: true
@@ -812,7 +812,7 @@ paths:
         target holds 200 characters and a relationship 1 KiB. Links past a limit, or holding the NUL character
         in a text, answer 422.
 
-        It writes a document, so each signed-in user sends it 60 requests a minute by default, on top of the
+        It writes a document, so each signed-in user sends it 3 requests a minute by default, on top of the
         rate of every route. One more answers 429 with `Retry-After`.
       tags: [link]
       requestBody:

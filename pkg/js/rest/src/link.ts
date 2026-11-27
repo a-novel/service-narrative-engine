@@ -92,7 +92,7 @@ export async function projectLinksGet(
  * another write changed them: nothing is written, and the client reads the links again. A 409 whose `tags.limit` is
  * `projectBytes` is the project's 16 MiB budget instead. Throws on 422, with the rule and the path of the link in the
  * error's `tags.invalidFields`, for links past a limit of the server or holding the NUL character, and on 404 when the
- * caller owns no such project. Throws on 429 once the caller writes documents faster than the server allows, 60
+ * caller owns no such project. Throws on 429 once the caller writes documents faster than the server allows, 3
  * requests a minute on this route by default.
  */
 export async function projectLinksUpdate(

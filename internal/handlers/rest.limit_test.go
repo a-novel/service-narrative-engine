@@ -7,12 +7,12 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
 	"github.com/a-novel-kit/golib/httpf"
 
 	"github.com/a-novel/service-narrative-engine/v2/internal/config"
+	"github.com/a-novel/service-narrative-engine/v2/internal/config/env"
 	"github.com/a-novel/service-narrative-engine/v2/internal/handlers"
 )
 
@@ -21,6 +21,11 @@ func TestRestLimits(t *testing.T) {
 
 	otherUserID := uuid.MustParse("00000000-0000-0000-0000-0000000000a2")
 
+	const (
+		content = "/v1/instance/content"
+		links   = "/v1/links"
+	)
+
 	// documentWrite is one write a test case sends, as a user, to a route.
 	type documentWrite struct {
 		userID uuid.UUID
@@ -28,6 +33,19 @@ func TestRestLimits(t *testing.T) {
 
 		expectStatus int
 	}
+
+	// writes returns count writes of a user to a route, which all pass.
+	writes := func(count int, userID uuid.UUID, path string) []documentWrite {
+		sent := make([]documentWrite, count)
+		for index := range sent {
+			sent[index] = documentWrite{userID: userID, path: path, expectStatus: http.StatusOK}
+		}
+
+		return sent
+	}
+
+	// The default rate lets 3 writes through each minute.
+	perMinute := env.RestRateLimitDocumentWriteDefault.Requests
 
 	testCases := []struct {
 		name string
@@ -39,49 +57,33 @@ func TestRestLimits(t *testing.T) {
 		{
 			name: "Success",
 
-			writes: []documentWrite{
-				{userID: ownerID, path: "/v1/instance/content", expectStatus: http.StatusOK},
-				{userID: ownerID, path: "/v1/instance/content", expectStatus: http.StatusOK},
-			},
+			writes: writes(perMinute, ownerID, content),
 		},
 		{
 			// Each user writes on a budget of their own.
 			name: "Success/PerUser",
 
-			writes: []documentWrite{
-				{userID: ownerID, path: "/v1/instance/content", expectStatus: http.StatusOK},
-				{userID: ownerID, path: "/v1/instance/content", expectStatus: http.StatusOK},
-				{userID: otherUserID, path: "/v1/instance/content", expectStatus: http.StatusOK},
-			},
+			writes: append(writes(perMinute, ownerID, content), writes(1, otherUserID, content)...),
 		},
 		{
 			// Each route that writes a document counts on a budget of its own.
 			name: "Success/PerRoute",
 
-			writes: []documentWrite{
-				{userID: ownerID, path: "/v1/instance/content", expectStatus: http.StatusOK},
-				{userID: ownerID, path: "/v1/instance/content", expectStatus: http.StatusOK},
-				{userID: ownerID, path: "/v1/links", expectStatus: http.StatusOK},
-			},
+			writes: append(writes(perMinute, ownerID, content), writes(1, ownerID, links)...),
 		},
 		{
 			name: "Success/RateLimitsDisabled",
 
 			rateLimitsDisabled: true,
-			writes: []documentWrite{
-				{userID: ownerID, path: "/v1/instance/content", expectStatus: http.StatusOK},
-				{userID: ownerID, path: "/v1/instance/content", expectStatus: http.StatusOK},
-				{userID: ownerID, path: "/v1/instance/content", expectStatus: http.StatusOK},
-			},
+			writes:             writes(perMinute+1, ownerID, content),
 		},
 		{
-			name: "Error/ThirdWrite",
+			name: "Error/OneWriteTooMany",
 
-			writes: []documentWrite{
-				{userID: ownerID, path: "/v1/instance/content", expectStatus: http.StatusOK},
-				{userID: ownerID, path: "/v1/instance/content", expectStatus: http.StatusOK},
-				{userID: ownerID, path: "/v1/instance/content", expectStatus: http.StatusTooManyRequests},
-			},
+			writes: append(
+				writes(perMinute, ownerID, content),
+				documentWrite{userID: ownerID, path: content, expectStatus: http.StatusTooManyRequests},
+			),
 		},
 	}
 
@@ -89,17 +91,17 @@ func TestRestLimits(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			// The rate lets 2 writes through each minute, and the case sends its writes at once.
+			// The case sends its writes at once, well inside the minute the rate counts over.
 			limit := handlers.NewRestLimits(
 				httpf.ServerConfig{RateLimitsEnabled: !testCase.rateLimitsDisabled},
-				config.Limits{RateLimitDocumentWrite: lo.Must(httpf.ParseRate("2/1m"))},
+				config.Limits{RateLimitDocumentWrite: env.RestRateLimitDocumentWriteDefault},
 			)
 
 			answer := func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) }
 
 			router := chi.NewRouter()
-			router.With(limit.DocumentWrite).Put("/v1/instance/content", answer)
-			router.With(limit.DocumentWrite).Put("/v1/links", answer)
+			router.With(limit.DocumentWrite).Put(content, answer)
+			router.With(limit.DocumentWrite).Put(links, answer)
 
 			for _, write := range testCase.writes {
 				w := httptest.NewRecorder()
