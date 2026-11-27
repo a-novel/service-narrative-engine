@@ -32,8 +32,31 @@ type Dependencies struct {
 // Limits bounds what one request carries, below the REST server's own limits. The server's
 // MaxRequestSize fits a batch, so the routes that write one item cap their body lower.
 type Limits struct {
-	// MaxItemRequestSize caps the body of a route that writes one item, in bytes.
+	// MaxItemRequestSize caps the body of a route that writes one item, in bytes. It must fit the content of
+	// an instance, so it stays above [Caps.ContentBytes].
 	MaxItemRequestSize int64
+}
+
+// Caps bounds the documents a project stores: the content of its instances, and its links.
+// The service never reads what a document means, so these are the only rules it holds one to.
+type Caps struct {
+	// ContentBytes caps the content of an instance, in bytes of JSON. A number counts written in full, as the
+	// database stores it, so an exponent adds its digits.
+	ContentBytes int
+	// DocumentDepth caps how deep a content nests its arrays and objects.
+	DocumentDepth int
+	// InstancesPerProject caps the instances a project holds. A project past it after the cap is lowered keeps
+	// its instances, and refuses new ones until it is back under.
+	InstancesPerProject int
+
+	// Links caps how many links a project holds.
+	Links int
+	// LinksBytes caps the links of a project, in bytes of JSON.
+	LinksBytes int
+	// LinkTargetLength caps the target of either end of a link, in characters.
+	LinkTargetLength int
+	// LinkRelationshipBytes caps the relationship of a link, in bytes.
+	LinkRelationshipBytes int
 }
 
 // App is the complete configuration the service reads at startup.
@@ -51,6 +74,8 @@ type App struct {
 	ServiceToken servicetoken.Config
 	// Limits bounds what one request carries, below the REST server's own limits.
 	Limits Limits
+	// Caps bounds the documents a project stores.
+	Caps Caps
 
 	// Otel configures the OpenTelemetry exporter.
 	Otel otel.Config

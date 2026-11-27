@@ -3,6 +3,7 @@ package env
 import (
 	"cmp"
 	"os"
+	"strconv"
 
 	"github.com/a-novel-kit/golib/config"
 	"github.com/a-novel-kit/golib/downtime"
@@ -31,10 +32,28 @@ const (
 	// ServiceJSONKeysPortDefault is the JSON Keys service's default gRPC port.
 	ServiceJSONKeysPortDefault = 8080
 
-	// RestMaxRequestSizeDefault lets a batch of items through. The router applies it to every route.
+	// RestMaxRequestSizeDefault lets a batch of items through: it is above the bytes a whole project stores.
+	// The router applies it to every route.
 	RestMaxRequestSizeDefault = 50 << 20
-	// RestMaxItemRequestSizeDefault caps a route that writes one item.
-	RestMaxItemRequestSizeDefault = 4 << 20
+	// RestMaxItemRequestSizeDefault caps a route that writes one item. It fits the largest one, an instance's
+	// content at [MaxContentSizeDefault], with room for the rest of the body.
+	RestMaxItemRequestSizeDefault = 5 << 20
+
+	// MaxContentSizeDefault fits a long novel several times over: one of 700 KB is under a fifth of it.
+	MaxContentSizeDefault = 4 << 20
+	// MaxDocumentDepthDefault is far above what a document nests by hand, and far under what a parser's stack
+	// holds.
+	MaxDocumentDepthDefault = 32
+	// MaxInstancesPerProjectDefault leaves room for every plugin a project uses, several times each.
+	MaxInstancesPerProjectDefault = 50
+	// MaxLinksDefault gives a link to each cell of a long project.
+	MaxLinksDefault = 20_000
+	// MaxLinksSizeDefault fits [MaxLinksDefault] links of about a hundred bytes each.
+	MaxLinksSizeDefault = 2 << 20
+	// MaxLinkTargetLengthDefault fits an address a plugin builds from a few identifiers.
+	MaxLinkTargetLengthDefault = 200
+	// MaxLinkRelationshipSizeDefault fits a sentence or two in the writer's words.
+	MaxLinkRelationshipSizeDefault = 1 << 10
 )
 
 var (
@@ -58,6 +77,25 @@ var (
 	// RestMaxItemRequestSize caps the body of a route that writes one item, in bytes.
 	RestMaxItemRequestSize = config.LoadEnv(
 		getEnv("REST_MAX_ITEM_REQUEST_SIZE"), RestMaxItemRequestSizeDefault, config.Int64Parser,
+	)
+
+	// MaxContentSize caps the content of an instance, in bytes of JSON.
+	MaxContentSize = config.LoadEnv(getEnv("MAX_CONTENT_SIZE"), MaxContentSizeDefault, strconv.Atoi)
+	// MaxDocumentDepth caps how deep a content nests its arrays and objects.
+	MaxDocumentDepth = config.LoadEnv(getEnv("MAX_DOCUMENT_DEPTH"), MaxDocumentDepthDefault, strconv.Atoi)
+	// MaxInstancesPerProject caps the instances a project holds.
+	MaxInstancesPerProject = config.LoadEnv(
+		getEnv("MAX_INSTANCES_PER_PROJECT"), MaxInstancesPerProjectDefault, strconv.Atoi,
+	)
+	// MaxLinks caps how many links a project holds.
+	MaxLinks = config.LoadEnv(getEnv("MAX_LINKS"), MaxLinksDefault, strconv.Atoi)
+	// MaxLinksSize caps the links of a project, in bytes of JSON.
+	MaxLinksSize = config.LoadEnv(getEnv("MAX_LINKS_SIZE"), MaxLinksSizeDefault, strconv.Atoi)
+	// MaxLinkTargetLength caps the target of either end of a link, in characters.
+	MaxLinkTargetLength = config.LoadEnv(getEnv("MAX_LINK_TARGET_LENGTH"), MaxLinkTargetLengthDefault, strconv.Atoi)
+	// MaxLinkRelationshipSize caps the relationship of a link, in bytes.
+	MaxLinkRelationshipSize = config.LoadEnv(
+		getEnv("MAX_LINK_RELATIONSHIP_SIZE"), MaxLinkRelationshipSizeDefault, strconv.Atoi,
 	)
 
 	// ServiceToken names the service tokens the REST server accepts. Without an issuer, the server

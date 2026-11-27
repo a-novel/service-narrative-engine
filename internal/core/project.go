@@ -35,6 +35,10 @@ type Project struct {
 	// EditedAt is when the project's content last changed. Its logo is cosmetic and leaves it as it was.
 	EditedAt time.Time
 
+	// DefaultInstanceID is the instance the project opens on, nil until the project holds one. The first
+	// instance of a project becomes it, and [ProjectDefaultUpdate] chooses another.
+	DefaultInstanceID *uuid.UUID
+
 	// LogoChecksum is the SHA-256 of the logo's bytes in lowercase hex, nil while the project has no logo. Logo URLs
 	// carry it, so a cache keeps each logo for good.
 	LogoChecksum *string
@@ -42,16 +46,18 @@ type Project struct {
 
 func newProject(entity *dao.Project) *Project {
 	return &Project{
-		ID:           entity.ID,
-		OwnerID:      entity.OwnerID,
-		Title:        entity.Title,
-		Premise:      entity.Premise,
-		Language:     entity.Language,
-		Tags:         entity.Tags,
-		Genres:       entity.Genres,
-		CreatedAt:    entity.CreatedAt,
-		UpdatedAt:    entity.UpdatedAt,
-		EditedAt:     entity.EditedAt,
-		LogoChecksum: entity.LogoChecksum,
+		ID:        entity.ID,
+		OwnerID:   entity.OwnerID,
+		Title:     entity.Title,
+		Premise:   entity.Premise,
+		Language:  entity.Language,
+		Tags:      entity.Tags,
+		Genres:    entity.Genres,
+		CreatedAt: entity.CreatedAt,
+		UpdatedAt: entity.UpdatedAt,
+		EditedAt:  entity.EditedAt,
+
+		DefaultInstanceID: entity.DefaultInstanceID,
+		LogoChecksum:      entity.LogoChecksum,
 	}
 }

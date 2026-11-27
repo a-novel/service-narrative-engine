@@ -19,6 +19,15 @@ var AppPresetDefault = App{
 	Rest:         env.Rest,
 	ServiceToken: env.ServiceToken,
 	Limits:       Limits{MaxItemRequestSize: env.RestMaxItemRequestSize},
+	Caps: Caps{
+		ContentBytes:          env.MaxContentSize,
+		DocumentDepth:         env.MaxDocumentDepth,
+		InstancesPerProject:   env.MaxInstancesPerProject,
+		Links:                 env.MaxLinks,
+		LinksBytes:            env.MaxLinksSize,
+		LinkTargetLength:      env.MaxLinkTargetLength,
+		LinkRelationshipBytes: env.MaxLinkRelationshipSize,
+	},
 
 	Otel:       env.Telemetry.Otel,
 	Logger:     env.Telemetry.Logger,
