@@ -1,6 +1,8 @@
 package core
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"regexp"
 	"slices"
@@ -80,6 +82,96 @@ func validatePluginVersion(fl validator.FieldLevel) bool {
 	_, err := parsePluginVersion(fl.Field().String())
 
 	return err == nil
+}
+
+// The rules a [FieldError] names, beside the tags of the validator.
+const (
+	// ruleMax refuses a list that holds more items, or a text more characters, than its cap.
+	ruleMax = "max"
+	// ruleMaxBytes refuses a text or a document over its cap, in bytes.
+	ruleMaxBytes = "maxbytes"
+	// ruleMaxDepth refuses a document that nests its arrays and objects deeper than its cap.
+	ruleMaxDepth = "maxdepth"
+	// ruleJSON refuses a document that is not JSON.
+	ruleJSON = "json"
+	// ruleNoNul refuses a document whose strings hold the NUL character.
+	ruleNoNul = "nonul"
+)
+
+// FieldError is returned when a field of a request breaks a rule the validator's tags cannot hold: a cap the
+// configuration sets, or a check over a whole document. It wraps [ErrInvalidRequest].
+type FieldError struct {
+	// Path locates the field in the request, in lower camel case, as "instances[2].content" does.
+	Path string
+	// Rule names the rule the field broke, as a validator tag names its own.
+	Rule string
+}
+
+func (err *FieldError) Error() string {
+	return err.Path + " breaks the " + err.Rule + " rule"
+}
+
+func (err *FieldError) Unwrap() error {
+	return ErrInvalidRequest
+}
+
+// nulEscape is how a JSON string spells the NUL character, past the backslash.
+var nulEscape = []byte("u0000")
+
+// documentShape reads a JSON document once. It returns how deep the document nests its arrays and objects,
+// and whether one of its strings holds the NUL character, which PostgreSQL stores in no jsonb value.
+//
+// It follows the depth with a counter and no stack, since JSON closes what it opens. A text that is not JSON
+// yields numbers that mean nothing, and never a fault.
+func documentShape(document []byte) (int, bool) {
+	var (
+		depth, deepest int
+		inString, nul  bool
+	)
+
+	for index := 0; index < len(document); index++ {
+		switch char := document[index]; {
+		case inString && char == '\\':
+			// An escape spans the next byte, which may be a quote. No raw NUL passes for JSON, so the escape
+			// is its only spelling.
+			nul = nul || bytes.HasPrefix(document[index+1:], nulEscape)
+			index++
+		case char == '"':
+			inString = !inString
+		case inString:
+		case char == '{' || char == '[':
+			depth++
+			deepest = max(deepest, depth)
+		case char == '}' || char == ']':
+			depth--
+		}
+	}
+
+	return deepest, nul
+}
+
+// checkDocument returns a [FieldError] at path unless document is JSON of bytesMax bytes at most, nested
+// depthMax levels at most, whose strings hold no NUL character. It reads nothing else of the document: what
+// the document means is the client's to check.
+func checkDocument(path string, document json.RawMessage, bytesMax, depthMax int) error {
+	if len(document) > bytesMax {
+		return &FieldError{Path: path, Rule: ruleMaxBytes}
+	}
+
+	// The depth comes first: the standard library refuses a document nested past its own limit as if it were
+	// not JSON.
+	depth, nul := documentShape(document)
+
+	switch {
+	case depth > depthMax:
+		return &FieldError{Path: path, Rule: ruleMaxDepth}
+	case !json.Valid(document):
+		return &FieldError{Path: path, Rule: ruleJSON}
+	case nul:
+		return &FieldError{Path: path, Rule: ruleNoNul}
+	}
+
+	return nil
 }
 
 func init() {

@@ -2,27 +2,41 @@ package core_test
 
 import (
 	"bytes"
+	"errors"
 	"image"
 	"image/color"
 	"image/jpeg"
 	"image/png"
+	"testing"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 
+	"github.com/a-novel/service-narrative-engine/v2/internal/config"
 	"github.com/a-novel/service-narrative-engine/v2/internal/core"
 	"github.com/a-novel/service-narrative-engine/v2/internal/dao"
 )
 
 var (
-	ownerID   = uuid.MustParse("00000000-0000-0000-0000-0000000000a1")
-	projectID = uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	ownerID    = uuid.MustParse("00000000-0000-0000-0000-0000000000a1")
+	projectID  = uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	instanceID = uuid.MustParse("00000000-0000-0000-0000-000000000031")
 
 	createdAt = time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
 	updatedAt = time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC)
 	editedAt  = time.Date(2021, 1, 3, 0, 0, 0, 0, time.UTC)
+
+	// documentUpdatedAt is when a document of the fixtures last changed, to the microsecond a write names.
+	documentUpdatedAt = time.Date(2021, 1, 2, 0, 0, 0, 123456000, time.UTC)
 )
+
+// caps are the caps the tests configure, small enough for a short document to reach each of them.
+var caps = config.Caps{
+	ContentBytes: 64, DocumentDepth: 3, InstancesPerProject: 3,
+	Links: 3, LinksBytes: 600, LinkTargetLength: 8, LinkRelationshipBytes: 16,
+}
 
 // logoChecksum is the checksum of the test project's logo: a SHA-256 in lowercase hex.
 const logoChecksum = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
@@ -105,3 +119,35 @@ var (
 	// overBudget is a project one byte past its budget, which refuses the write that brought it there.
 	overBudget = &daoMock[*dao.ProjectBytes]{resp: &dao.ProjectBytes{StoredBytes: core.ProjectBytesMax + 1}}
 )
+
+// daoDescriptor returns the instance of the fixtures, as a DAO reads it without its documents.
+func daoDescriptor() *dao.InstanceDescriptor {
+	return &dao.InstanceDescriptor{
+		ID: instanceID, ProjectID: projectID, Plugin: "scenes-composer", Version: "1.2.0", Name: "Composer",
+		CreatedAt: createdAt, UpdatedAt: documentUpdatedAt,
+	}
+}
+
+// coreDescriptor returns the instance [daoDescriptor] reads.
+func coreDescriptor() *core.InstanceDescriptor {
+	return &core.InstanceDescriptor{
+		ID: instanceID, ProjectID: projectID, Plugin: "scenes-composer", Version: "1.2.0", Name: "Composer",
+		CreatedAt: createdAt, UpdatedAt: documentUpdatedAt,
+	}
+}
+
+// requireFieldError checks that err names the field and the rule expect does, and names none when expect is
+// nil.
+func requireFieldError(t *testing.T, expect *core.FieldError, err error) {
+	t.Helper()
+
+	refused, ok := errors.AsType[*core.FieldError](err)
+	if expect == nil {
+		require.False(t, ok, "unexpected field error: %v", refused)
+
+		return
+	}
+
+	require.True(t, ok, "no field error in: %v", err)
+	require.Equal(t, expect, refused)
+}

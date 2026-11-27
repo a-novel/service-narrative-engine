@@ -14,7 +14,8 @@ import (
 )
 
 const (
-	// ProjectBytesMax caps the UTF-8 bytes a project stores: its own fields, and every row it holds.
+	// ProjectBytesMax caps the UTF-8 bytes a project stores: its own fields, and every row it holds, which are
+	// its instances and its links.
 	ProjectBytesMax = 16 << 20
 	// ProjectsPerOwnerMax caps the projects a user owns. Each holds at most [ProjectBytesMax], so an account
 	// stores 1.6 GiB at most. A writer keeps a handful of novels, and 100 leaves room for drafts and copies.
@@ -31,6 +32,19 @@ var (
 	// ErrProjectsFull is returned by [ProjectCreate] when the user already owns [ProjectsPerOwnerMax]
 	// projects.
 	ErrProjectsFull = errors.New("projects full")
+	// ErrInstanceNotFound is returned when the project holds no instance with the ID.
+	ErrInstanceNotFound = dao.ErrInstanceNotFound
+	// ErrInstanceStale is returned by [InstanceContentUpdate] when the instance changed since the caller read
+	// it. The write changes nothing.
+	ErrInstanceStale = dao.ErrInstanceContentUpdateStale
+	// ErrInstanceDefault is returned by [InstanceDelete] when the instance is the default of its project.
+	ErrInstanceDefault = dao.ErrInstanceDeleteDefault
+	// ErrInstancesFull is returned by [InstancesCreate] when the project would hold more instances than it
+	// may.
+	ErrInstancesFull = errors.New("instances full")
+	// ErrProjectLinksStale is returned by [ProjectLinksUpdate] when the links changed since the caller read
+	// them. The write changes nothing.
+	ErrProjectLinksStale = dao.ErrProjectLinksUpsertStale
 	// ErrPluginVersionNotFound is returned when the registry holds no such version of the plugin.
 	ErrPluginVersionNotFound = dao.ErrPluginVersionNotFound
 	// ErrPluginModuleNotFound is returned when the registry holds no such version of the plugin, or the
