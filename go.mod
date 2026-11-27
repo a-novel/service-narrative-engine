@@ -5,7 +5,7 @@ go 1.27.4
 require (
 	github.com/a-novel-kit/golib v0.67.0
 	github.com/a-novel/service-authentication/v2 v2.29.0
-	github.com/a-novel/service-json-keys/v2 v2.17.0
+	github.com/a-novel/service-json-keys/v2 v2.18.0
 	github.com/go-chi/chi/v5 v5.5.0
 	github.com/go-playground/validator/v10 v10.30.6
 	github.com/goccy/go-yaml v1.19.2
@@ -22,7 +22,7 @@ require (
 )
 
 require (
-	github.com/a-novel-kit/jwt/v2 v2.7.0 // indirect
+	github.com/a-novel-kit/jwt/v2 v2.8.0 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/felixge/httpsnoop v1.1.0 // indirect
