@@ -8,8 +8,8 @@ import (
 	"github.com/a-novel/service-narrative-engine/v2/internal/core"
 )
 
-// ProjectFields is the REST representation of a project's fields, with its EditedAt so a project the client lacks
-// arrives whole. It carries no logo.
+// ProjectFields is the REST representation of a project's fields, its default instance among them, with its
+// EditedAt so a project the client lacks arrives whole. It carries no logo.
 type ProjectFields struct {
 	ID uuid.UUID `json:"id"`
 
@@ -29,6 +29,9 @@ type ProjectFields struct {
 	UpdatedAt time.Time `json:"updatedAt"`
 	// EditedAt is when the project's content last changed, its logo aside.
 	EditedAt time.Time `json:"editedAt"`
+
+	// DefaultInstanceID is the instance the project opens on, absent until the project holds one.
+	DefaultInstanceID *uuid.UUID `json:"defaultInstanceID,omitempty"`
 }
 
 func loadProjectFields(project *core.Project) ProjectFields {
@@ -42,5 +45,7 @@ func loadProjectFields(project *core.Project) ProjectFields {
 		CreatedAt: project.CreatedAt,
 		UpdatedAt: project.UpdatedAt,
 		EditedAt:  project.EditedAt,
+
+		DefaultInstanceID: project.DefaultInstanceID,
 	}
 }

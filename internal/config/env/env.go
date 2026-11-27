@@ -5,6 +5,8 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/samber/lo"
+
 	"github.com/a-novel-kit/golib/config"
 	"github.com/a-novel-kit/golib/downtime"
 	"github.com/a-novel-kit/golib/grpcf"
@@ -32,9 +34,10 @@ const (
 	// ServiceJSONKeysPortDefault is the JSON Keys service's default gRPC port.
 	ServiceJSONKeysPortDefault = 8080
 
-	// RestMaxRequestSizeDefault lets a batch of items through: it is above the bytes a whole project stores.
-	// The router applies it to every route.
-	RestMaxRequestSizeDefault = 50 << 20
+	// RestMaxRequestSizeDefault lets a batch of items through: it is above the 16 MiB a whole project stores,
+	// with room for the rest of the body and for what JSON escapes. A larger batch could never be stored, so
+	// the router refuses its body before the service decodes it. The router applies it to every route.
+	RestMaxRequestSizeDefault = 20 << 20
 	// RestMaxItemRequestSizeDefault caps a route that writes one item. It fits the largest one, an instance's
 	// content at [MaxContentSizeDefault], with room for the rest of the body.
 	RestMaxItemRequestSizeDefault = 5 << 20
@@ -55,6 +58,11 @@ const (
 	// MaxLinkRelationshipSizeDefault fits a sentence or two in the writer's words.
 	MaxLinkRelationshipSizeDefault = 1 << 10
 )
+
+// RestRateLimitDocumentWriteDefault lets a client save a document once a second, which a debounced save stays
+// under. The project budget bounds what a project stores, and this rate what a user makes the database write
+// over time: each write of a content is a new row, with its log.
+var RestRateLimitDocumentWriteDefault = lo.Must(httpf.ParseRate("60/1m"))
 
 var (
 	// Postgres reaches PostgreSQL through the POSTGRES_* variables, with the fleet's pool bounds.
@@ -77,6 +85,12 @@ var (
 	// RestMaxItemRequestSize caps the body of a route that writes one item, in bytes.
 	RestMaxItemRequestSize = config.LoadEnv(
 		getEnv("REST_MAX_ITEM_REQUEST_SIZE"), RestMaxItemRequestSizeDefault, config.Int64Parser,
+	)
+
+	// RestRateLimitDocumentWrite caps each signed-in user's writes of a document, on each route that writes
+	// one.
+	RestRateLimitDocumentWrite = config.LoadEnv(
+		getEnv("REST_RATE_LIMIT_DOCUMENT_WRITE"), RestRateLimitDocumentWriteDefault, httpf.ParseRate,
 	)
 
 	// MaxContentSize caps the content of an instance, in bytes of JSON.

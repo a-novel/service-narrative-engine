@@ -9,8 +9,9 @@ import (
 )
 
 var (
-	ownerID   = uuid.MustParse("00000000-0000-0000-0000-0000000000a1")
-	projectID = uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	ownerID    = uuid.MustParse("00000000-0000-0000-0000-0000000000a1")
+	projectID  = uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	instanceID = uuid.MustParse("00000000-0000-0000-0000-000000000031")
 
 	createdAt = time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
 	updatedAt = time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC)
@@ -37,5 +38,37 @@ var (
 		"id": projectID.String(), "title": "Les Heures claires", "premise": "Marie attend.", "language": "fr",
 		"tags": []any{"noir", "huis clos"}, "genres": []any{"thriller"},
 		"createdAt": "2021-01-01T00:00:00Z", "updatedAt": "2021-01-02T00:00:00Z", "editedAt": "2021-01-03T00:00:00Z",
+	}
+
+	// coreDescriptor is an instance without its documents, last written at preciseAt.
+	coreDescriptor = &core.InstanceDescriptor{
+		ID: instanceID, ProjectID: projectID, Plugin: "scenes-composer", Version: "1.2.0", Name: "Composer",
+		CreatedAt: createdAt, UpdatedAt: preciseAt,
+	}
+	// jsonDescriptor is the JSON of coreDescriptor, whose updatedAt keeps its microseconds.
+	jsonDescriptor = map[string]any{
+		"id": instanceID.String(), "projectID": projectID.String(), "plugin": "scenes-composer", "version": "1.2.0",
+		"name": "Composer", "createdAt": "2021-01-01T00:00:00Z", "updatedAt": "2021-01-03T08:15:30.123456Z",
+	}
+
+	// coreProjectWithDefault is coreProject once it opens on the instance of the fixtures.
+	coreProjectWithDefault = &core.Project{
+		ID: projectID, OwnerID: ownerID, Title: "Les Heures claires", Premise: "Marie attend.", Language: "fr",
+		Tags: []string{"noir", "huis clos"}, Genres: []string{"thriller"},
+		CreatedAt: createdAt, UpdatedAt: updatedAt, EditedAt: editedAt,
+		DefaultInstanceID: &instanceID, LogoChecksum: &logoChecksum,
+	}
+	jsonProjectWithDefault = map[string]any{
+		"id": projectID.String(), "title": "Les Heures claires", "premise": "Marie attend.", "language": "fr",
+		"tags": []any{"noir", "huis clos"}, "genres": []any{"thriller"},
+		"createdAt": "2021-01-01T00:00:00Z", "updatedAt": "2021-01-02T00:00:00Z", "editedAt": "2021-01-03T00:00:00Z",
+		"defaultInstanceID": instanceID.String(), "logoChecksum": logoChecksum,
+	}
+	// jsonProjectFieldsWithDefault is the JSON of the fields of coreProjectWithDefault, which carry no logo.
+	jsonProjectFieldsWithDefault = map[string]any{
+		"id": projectID.String(), "title": "Les Heures claires", "premise": "Marie attend.", "language": "fr",
+		"tags": []any{"noir", "huis clos"}, "genres": []any{"thriller"},
+		"createdAt": "2021-01-01T00:00:00Z", "updatedAt": "2021-01-02T00:00:00Z", "editedAt": "2021-01-03T00:00:00Z",
+		"defaultInstanceID": instanceID.String(),
 	}
 )
