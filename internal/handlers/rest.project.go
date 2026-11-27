@@ -4,7 +4,7 @@ import (
 	"github.com/a-novel/service-narrative-engine/v2/internal/core"
 )
 
-// Project is the REST representation of a project: its fields, and its logo's checksum.
+// Project is the REST representation of a project: its fields and its logo's checksum.
 type Project struct {
 	ProjectFields
 
@@ -13,5 +13,8 @@ type Project struct {
 }
 
 func loadProject(project *core.Project) Project {
-	return Project{ProjectFields: loadProjectFields(project), LogoChecksum: project.LogoChecksum}
+	return Project{
+		ProjectFields: loadProjectFields(project),
+		LogoChecksum:  project.LogoChecksum,
+	}
 }

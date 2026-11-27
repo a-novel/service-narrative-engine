@@ -52,6 +52,23 @@ func TestRestProjectFieldsDrift(t *testing.T) {
 			},
 		},
 		{
+			// The fields carry the default instance, which no other read keeps in sync, and still no logo.
+			name: "Success/DefaultInstance",
+
+			request: validRequest,
+
+			serviceMock: &serviceMock[*core.ProjectFieldsDriftResult]{
+				resp: &core.ProjectFieldsDriftResult{
+					Projects: []*core.Project{coreProjectWithDefault}, Removed: []uuid.UUID{},
+				},
+			},
+
+			expectStatus: http.StatusOK,
+			expectResponse: map[string]any{
+				"projects": []any{jsonProjectFieldsWithDefault}, "removed": []any{},
+			},
+		},
+		{
 			name: "Success/NoDrift",
 
 			request: validRequest,

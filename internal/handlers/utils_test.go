@@ -117,3 +117,11 @@ func limitProblem(limit string) any {
 		"type": "about:blank", "title": "Conflict", "status": 409.0, "tags": map[string]any{"limit": limit},
 	}
 }
+
+// invalidFieldsProblem is the body of a refusal for invalid request fields, each named by its path.
+func invalidFieldsProblem(fields map[string]any) any {
+	return map[string]any{
+		"type": "about:blank", "title": "Unprocessable Entity", "status": 422.0,
+		"tags": map[string]any{"invalidFields": fields},
+	}
+}
