@@ -20,6 +20,22 @@ info:
     Each write replaces what it targets, and the last write wins. Every record keeps the time it was
     last written.
 
+    ## Instances and links
+
+    A project is a set of instances and one list of links. An instance is one use of a plugin in the project:
+    it pins the exact version of the plugin, and holds the document the plugin edits, its content. A link
+    relates two items of the project, each addressed by the instance that holds it. The first instance of a
+    project becomes its default, the one the project opens on.
+
+    The service stores these documents and bounds their size and their shape. It never reads what they mean:
+    it validates no content against the schema of its plugin, and never checks that a plugin version, an
+    instance or an item a document names exists. The client validates, migrates and repairs them.
+
+    A write of a content or of the links replaces the whole document, and names the `updatedAt` the client
+    read. It applies only while the document still carries that value, and answers 409 once another write
+    changed it: nothing is merged, and the client reads the document again. An `updatedAt` keeps microseconds,
+    which a JavaScript date drops, so a client keeps the text it received and sends it back as it is.
+
     ## Plugin registry
 
     The registry holds the published versions of each plugin. A version is a manifest (the JSON Schema of the
@@ -41,6 +57,10 @@ tags:
     description: Liveness and dependency checks.
   - name: project
     description: Projects, their logos, and what a client needs to keep its copy of them current.
+  - name: instance
+    description: The plugin instances of a project, with their content.
+  - name: link
+    description: The links between the items of a project.
   - name: plugin
     description: The published versions of each plugin, with their manifest, modules and translations.
 
@@ -120,7 +140,8 @@ paths:
       summary: Find the projects whose fields drifted.
       description: |
         Compares the fields of the projects a client holds with the caller's, and returns the drift. A project's
-        fields are its own fields, from `id` to `updatedAt`, and `updatedAt` changes only when they change.
+        fields are its own fields, from `id` to `updatedAt`, and its default instance. `updatedAt` changes only
+        when they change.
 
         The request maps each project the client holds to its `updatedAt`. Instants compare to the millisecond, the
         precision a JavaScript date keeps, so two changes within one millisecond read as one until the next. The
@@ -426,6 +447,404 @@ paths:
         default:
           $ref: "#/components/responses/internalError"
 
+  /v1/project/default:
+    put:
+      operationId: projectDefaultUpdate
+      summary: Choose the default instance of a project.
+      description: |
+        Makes an instance of a project its default, the one the project opens on, and returns the project. The
+        first instance of a project becomes its default without this call.
+
+        The default is a field of the project: the choice stamps the project's `updatedAt`, so the fields drift
+        reports it, and its `editedAt`.
+      tags: [project]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/projectDefaultUpdateRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/project"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/instanceNotFound"
+        "413":
+          $ref: "#/components/responses/contentTooLarge"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/plannedDowntime"
+        default:
+          $ref: "#/components/responses/internalError"
+
+  /v1/instances:
+    get:
+      operationId: instanceList
+      summary: List the instances of a project.
+      description: |
+        Returns a page of the instances of a project of the caller, oldest first, without their content. The
+        page comes with how many instances the project holds in all. To read the next page, raise `offset` by
+        the instances received, while that stays below the total. A project holds 50 instances at most by
+        default, so one page of the default size holds them all.
+      tags: [instance]
+      parameters:
+        - $ref: "#/components/parameters/parentProjectID"
+        - $ref: "#/components/parameters/composerLimit"
+        - $ref: "#/components/parameters/offset"
+      responses:
+        "200":
+          $ref: "#/components/responses/instancePage"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/plannedDowntime"
+        default:
+          $ref: "#/components/responses/internalError"
+
+    post:
+      operationId: instancesCreate
+      summary: Create instances in a project.
+      description: |
+        Creates instances in a project, all of them or none, and returns them in the order of the request,
+        without their content. A client seeds a new project with it. The first instance of a project becomes
+        its default, which changes the project's `updatedAt`.
+
+        The request holds as many instances at most as a project does, 50 by default. Each content follows the
+        rules of `POST /v1/instance`.
+
+        It writes documents, so each signed-in user sends it 3 requests a minute by default, on top of the
+        rate of every route. One more answers 429 with `Retry-After`.
+      tags: [instance]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/instancesCreateRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/instancesCreated"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "409":
+          $ref: "#/components/responses/instancesFull"
+        "413":
+          $ref: "#/components/responses/batchTooLarge"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/plannedDowntime"
+        default:
+          $ref: "#/components/responses/internalError"
+
+  /v1/instance:
+    get:
+      operationId: instanceGet
+      summary: Get an instance.
+      description: |
+        Returns an instance of a project of the caller, with its content.
+      tags: [instance]
+      parameters:
+        - $ref: "#/components/parameters/parentProjectID"
+        - $ref: "#/components/parameters/instanceID"
+      responses:
+        "200":
+          $ref: "#/components/responses/instance"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/instanceNotFound"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/plannedDowntime"
+        default:
+          $ref: "#/components/responses/internalError"
+
+    post:
+      operationId: instanceCreate
+      summary: Create an instance in a project.
+      description: |
+        Creates an instance in a project, and returns it without its content. The first instance of a project
+        becomes its default, which changes the project's `updatedAt`.
+
+        The service checks the format of `plugin` and of `version`, never that the registry holds them. It
+        stores `content` as it is, any JSON value, and refuses it with 422 when it is over 4 MiB or nests its
+        arrays and objects deeper than 32 levels. Both limits are the defaults of the service's
+        configuration. A number counts toward the size as PostgreSQL stores it, written in full: its exponent
+        adds as many bytes, so `1e400` counts 405.
+
+        It also refuses with 422 what PostgreSQL does not store: the NUL character (`\u0000`) or half of a
+        surrogate pair (`\ud83d` without its `\ude00`) in a string, and a number of more than 16383 digits,
+        its exponent written out.
+
+        It writes a document, so each signed-in user sends it 3 requests a minute by default, on top of the
+        rate of every route. One more answers 429 with `Retry-After`.
+      tags: [instance]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/instanceCreateRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/instanceCreated"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "409":
+          $ref: "#/components/responses/instancesFull"
+        "413":
+          $ref: "#/components/responses/contentTooLarge"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/plannedDowntime"
+        default:
+          $ref: "#/components/responses/internalError"
+
+    put:
+      operationId: instanceUpdate
+      summary: Rename an instance.
+      description: |
+        Replaces the display name of an instance, and returns the instance without its content. An empty
+        name clears it. The name is the one field of an instance a writer edits outside its plugin.
+
+        A rename leaves the instance's `updatedAt` as it was, so it refuses no write of the content.
+      tags: [instance]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/instanceUpdateRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/instanceDescriptor"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/instanceNotFound"
+        "409":
+          $ref: "#/components/responses/projectBudget"
+        "413":
+          $ref: "#/components/responses/contentTooLarge"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/plannedDowntime"
+        default:
+          $ref: "#/components/responses/internalError"
+
+    delete:
+      operationId: instanceDelete
+      summary: Delete an instance.
+      description: |
+        Deletes an instance and its content, and returns the instance without its content.
+
+        The default instance of a project cannot be deleted: the request answers 409 until
+        `PUT /v1/project/default` chooses another. The links that name the instance stay, and the client prunes
+        them.
+      tags: [instance]
+      parameters:
+        - $ref: "#/components/parameters/parentProjectID"
+        - $ref: "#/components/parameters/instanceID"
+      responses:
+        "200":
+          $ref: "#/components/responses/instanceDescriptor"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/instanceNotFound"
+        "409":
+          $ref: "#/components/responses/instanceDefault"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/plannedDowntime"
+        default:
+          $ref: "#/components/responses/internalError"
+
+  /v1/instance/content:
+    put:
+      operationId: instanceContentUpdate
+      summary: Write the content of an instance.
+      description: |
+        Replaces the version and the content of an instance in one write, and returns the instance without its
+        content. A client that migrates the content writes the version it migrated to.
+
+        The write applies only while the instance still carries the `updatedAt` the request names. Once
+        another write changed the instance, it answers 409 and changes nothing: the client reads the instance
+        again. The response carries the new `updatedAt`, which the next write names.
+
+        `content` follows the rules of `POST /v1/instance`.
+
+        It writes a document, so each signed-in user sends it 3 requests a minute by default, on top of the
+        rate of every route. One more answers 429 with `Retry-After`: a client keeps the writer's edits itself
+        and saves them at intervals.
+      tags: [instance]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/instanceContentUpdateRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/instanceDescriptor"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/instanceNotFound"
+        "409":
+          $ref: "#/components/responses/staleWrite"
+        "413":
+          $ref: "#/components/responses/contentTooLarge"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/plannedDowntime"
+        default:
+          $ref: "#/components/responses/internalError"
+
+  /v1/links:
+    get:
+      operationId: projectLinksGet
+      summary: Get the links of a project.
+      description: |
+        Returns the links of a project of the caller, and when they last changed. A project that never wrote
+        its links returns an empty list and a null `updatedAt`.
+      tags: [link]
+      parameters:
+        - $ref: "#/components/parameters/parentProjectID"
+      responses:
+        "200":
+          $ref: "#/components/responses/projectLinks"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/plannedDowntime"
+        default:
+          $ref: "#/components/responses/internalError"
+
+    put:
+      operationId: projectLinksUpdate
+      summary: Write the links of a project.
+      description: |
+        Replaces the links of a project in one write, and returns their new `updatedAt`. An empty list clears
+        them, and a request that omits the list is refused.
+
+        The write applies only while the links still carry the `updatedAt` the request names. Once another
+        write changed them, it answers 409 and changes nothing: the client reads the links again. A project
+        that never wrote its links takes its first write, whatever `updatedAt` the request names.
+
+        The service checks the shape and the size of the links, never that an instance or an item they name
+        exists. By default a project holds 20,000 links at most, of 2 MiB once the service encodes them, a
+        target holds 200 characters and a relationship 1 KiB. Links past a limit, or holding the NUL character
+        in a text, answer 422.
+
+        It writes a document, so each signed-in user sends it 3 requests a minute by default, on top of the
+        rate of every route. One more answers 429 with `Retry-After`.
+      tags: [link]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/projectLinksUpdateRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/projectLinksWritten"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/invalidToken"
+        "403":
+          $ref: "#/components/responses/forbidden"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "409":
+          $ref: "#/components/responses/staleWrite"
+        "413":
+          $ref: "#/components/responses/contentTooLarge"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/plannedDowntime"
+        default:
+          $ref: "#/components/responses/internalError"
+
   /v1/plugins:
     get:
       operationId: pluginList
@@ -685,6 +1104,71 @@ components:
           schema:
             $ref: "#/components/schemas/project"
 
+    instanceDescriptor:
+      description: An instance, without its content.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/instanceDescriptor"
+
+    instancePage:
+      description: A page of the instances of the project, oldest first, without their content, with their total.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/instancePage"
+
+    instance:
+      description: An instance, with its content.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/instance"
+
+    instanceCreated:
+      description: The new instance, without its content.
+      headers:
+        Location:
+          description: The read of the new instance.
+          schema:
+            type: string
+            examples:
+              - /v1/instance?projectID=01920000-0000-7000-8000-000000000001&id=01920000-0000-7000-8000-000000000031
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/instanceDescriptor"
+
+    instancesCreated:
+      description: The new instances, in the order of the request, without their content.
+      headers:
+        Location:
+          description: The list of the project's instances.
+          schema:
+            type: string
+            examples: [/v1/instances?projectID=01920000-0000-7000-8000-000000000001]
+      content:
+        application/json:
+          schema:
+            type: array
+            description: The new instances.
+            items:
+              $ref: "#/components/schemas/instanceDescriptor"
+
+    projectLinks:
+      description: The links of the project, and when they last changed.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/projectLinks"
+
+    projectLinksWritten:
+      description: When the write replaced the links, which the next write names.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/projectLinksWritten"
+
     projectFieldsDrift:
       description: The projects whose fields drifted, and the IDs of the request that name no project of the caller.
       content:
@@ -866,8 +1350,17 @@ components:
       description: |
         The caller owns no such project, or the project holds no logo.
 
+    instanceNotFound:
+      description: |
+        The caller owns no such project, or the project holds no such instance.
+
     contentTooLarge:
-      description: The body is over the limit of a route that writes one item, 4 MiB by default.
+      description: The body is over the limit of a route that writes one item, 5 MiB by default.
+
+    batchTooLarge:
+      description: |
+        The body is over the limit of every route, 20 MiB by default: above the 16 MiB a project stores, so a
+        batch it refuses could not be stored.
 
     unprocessableEntity:
       description: |
@@ -894,6 +1387,39 @@ components:
         The write would bring the project past its 16 MiB budget of stored bytes, and nothing was written. The
         problem's `limit` tag is `projectBytes`.
       content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/limitProblem"
+
+    instancesFull:
+      description: |
+        The project would hold more instances than it may, 50 by default, or pass its 16 MiB budget of stored
+        bytes, and nothing was created. The problem's `limit` tag is `instances` or `projectBytes`.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/limitProblem"
+
+    instanceDefault:
+      description: |
+        The instance is the default of its project, and nothing was deleted. `PUT /v1/project/default` chooses
+        another first.
+      content:
+        text/plain:
+          schema:
+            type: string
+            examples: [Conflict]
+
+    staleWrite:
+      description: |
+        Nothing was written, for one of two reasons. The document changed since the client read it: the body
+        is plain text, and the client reads the document again. Or the write would bring the project past its
+        16 MiB budget of stored bytes: the body is a problem whose `limit` tag is `projectBytes`.
+      content:
+        text/plain:
+          schema:
+            type: string
+            examples: [Conflict]
         application/problem+json:
           schema:
             $ref: "#/components/schemas/limitProblem"
@@ -952,10 +1478,18 @@ components:
                 Maps the path of each invalid field, in lower camel case with `.` for nesting and `[i]` for a
                 list item, to the validation rule it broke. Standard rules carry their usual name (required,
                 max); service rules name a domain check (notblank).
+
+                A document or a text past a configured limit names it: `maxbytes` for one over its size in
+                bytes, `max` for a list over its items or a text over its characters, `maxdepth` for a document
+                nested too deep. A document that is not JSON in UTF-8 breaks `json`. One that holds what
+                PostgreSQL does not store names it: `nonul` for the NUL character in a string,
+                `nolonesurrogate` for half of a surrogate pair in a string, `maxdigits` for a number of more
+                than 16383 digits.
               additionalProperties:
                 type: string
               examples:
                 - { "title": "notblank" }
+                - { "content": "maxbytes" }
 
     projectID:
       type: string
@@ -1008,7 +1542,9 @@ components:
           examples: ["2021-01-01T00:00:00Z"]
         updatedAt:
           type: string
-          description: When the project's own fields, its title, premise, language, tags and genres, last changed.
+          description: |
+            When the project's own fields, its title, premise, language, tags, genres and default instance, last
+            changed.
           format: date-time
           examples: ["2021-01-02T00:00:00Z"]
         editedAt:
@@ -1017,6 +1553,11 @@ components:
             When the project's content last changed. Its logo is cosmetic and leaves it as it was.
           format: date-time
           examples: ["2021-01-03T00:00:00Z"]
+        defaultInstanceID:
+          description: |
+            The instance the project opens on. Absent until the project holds an instance: the first one becomes
+            it, and `PUT /v1/project/default` chooses another.
+          $ref: "#/components/schemas/instanceID"
         logoChecksum:
           type: string
           description: |
@@ -1028,7 +1569,8 @@ components:
     projectFields:
       type: object
       description: |
-        The fields of a project, with its `editedAt` so a project the client lacks arrives whole. It carries no logo.
+        The fields of a project, its default instance among them, with its `editedAt` so a project the client lacks
+        arrives whole. It carries no logo.
       required: [id, title, premise, language, tags, genres, createdAt, updatedAt, editedAt]
       additionalProperties: false
       properties:
@@ -1050,6 +1592,8 @@ components:
           $ref: "#/components/schemas/project/properties/updatedAt"
         editedAt:
           $ref: "#/components/schemas/project/properties/editedAt"
+        defaultInstanceID:
+          $ref: "#/components/schemas/project/properties/defaultInstanceID"
 
     projectFieldsDriftRequest:
       type: object
@@ -1213,6 +1757,291 @@ components:
         genres:
           $ref: "#/components/schemas/projectCreateRequest/properties/genres"
 
+    instanceID:
+      type: string
+      description: The unique identifier of an instance.
+      format: uuid
+      examples: ["01920000-0000-7000-8000-000000000031"]
+
+    instant:
+      type: string
+      description: |
+        When a document last changed, in RFC 3339 with the microseconds the service stores. A write of the
+        document sends it back as the text it received: a JavaScript date drops its last three digits, and the
+        write then answers 409.
+      format: date-time
+      examples: ["2021-01-03T08:15:30.123456Z"]
+
+    instanceName:
+      type: string
+      description: |
+        The display name the writer gives the instance. Empty when the writer gives none: the client then shows
+        a name of its own. A name of only whitespace is refused.
+      maxLength: 80
+      examples: ["Composer", ""]
+
+    instanceVersion:
+      type: string
+      description: |
+        The exact version of the plugin the content follows: a semantic version without build metadata, a
+        prerelease included. The service checks its format, never that the registry holds it.
+      maxLength: 256
+      examples: ["1.2.0", "2.0.0-dev.1"]
+
+    document:
+      description: |
+        A JSON document the client owns: any JSON value. The service stores it without reading what it means.
+        PostgreSQL stores it as `jsonb`, so a read returns its values with another spacing, the keys of its
+        objects in another order, and its numbers in another spelling.
+      examples:
+        - { "beats": [] }
+
+    instanceDescriptor:
+      type: object
+      description: What a project knows of an instance without reading its content.
+      required: [id, projectID, plugin, version, name, createdAt, updatedAt]
+      additionalProperties: false
+      properties:
+        id:
+          $ref: "#/components/schemas/instanceID"
+        projectID:
+          $ref: "#/components/schemas/projectID"
+        plugin:
+          $ref: "#/components/schemas/pluginName"
+        version:
+          $ref: "#/components/schemas/instanceVersion"
+        name:
+          $ref: "#/components/schemas/instanceName"
+        createdAt:
+          type: string
+          description: When the instance was created.
+          format: date-time
+          examples: ["2021-01-01T00:00:00Z"]
+        updatedAt:
+          description: |
+            When the version or the content of the instance last changed. A rename leaves it as it was.
+          $ref: "#/components/schemas/instant"
+
+    instancePage:
+      type: object
+      description: A page of the instances of a project, oldest first.
+      required: [instances, total]
+      additionalProperties: false
+      properties:
+        instances:
+          type: array
+          description: The instances of the page, without their content.
+          items:
+            $ref: "#/components/schemas/instanceDescriptor"
+        total:
+          type: integer
+          description: |
+            How many instances the project holds in all, so a client paging through them knows when it holds
+            them all. A page past the end reports 0.
+          minimum: 0
+          examples: [3]
+
+    instance:
+      type: object
+      description: One use of a plugin in a project, with its content.
+      required: [id, projectID, plugin, version, name, createdAt, updatedAt, content]
+      additionalProperties: false
+      properties:
+        id:
+          $ref: "#/components/schemas/instanceID"
+        projectID:
+          $ref: "#/components/schemas/projectID"
+        plugin:
+          $ref: "#/components/schemas/pluginName"
+        version:
+          $ref: "#/components/schemas/instanceVersion"
+        name:
+          $ref: "#/components/schemas/instanceName"
+        createdAt:
+          $ref: "#/components/schemas/instanceDescriptor/properties/createdAt"
+        updatedAt:
+          $ref: "#/components/schemas/instanceDescriptor/properties/updatedAt"
+        content:
+          description: The document the plugin edits.
+          $ref: "#/components/schemas/document"
+
+    instanceCreateRequest:
+      type: object
+      description: The instance to create. Omitted, its name is empty.
+      required: [projectID, plugin, version, content]
+      additionalProperties: false
+      examples:
+        - projectID: "01920000-0000-7000-8000-000000000001"
+          plugin: scenes-composer
+          version: "1.2.0"
+          name: Composer
+          content: { "beats": [] }
+      properties:
+        projectID:
+          $ref: "#/components/schemas/projectID"
+        plugin:
+          $ref: "#/components/schemas/pluginName"
+        version:
+          $ref: "#/components/schemas/instanceVersion"
+        name:
+          $ref: "#/components/schemas/instanceName"
+        content:
+          description: The document the plugin edits.
+          $ref: "#/components/schemas/document"
+
+    instancesCreateRequest:
+      type: object
+      description: The instances to create in a project.
+      required: [projectID, instances]
+      additionalProperties: false
+      properties:
+        projectID:
+          $ref: "#/components/schemas/projectID"
+        instances:
+          type: array
+          description: The instances to create, as many at most as a project holds, 50 by default.
+          minItems: 1
+          items:
+            type: object
+            description: One instance to create. Omitted, its name is empty.
+            required: [plugin, version, content]
+            additionalProperties: false
+            properties:
+              plugin:
+                $ref: "#/components/schemas/pluginName"
+              version:
+                $ref: "#/components/schemas/instanceVersion"
+              name:
+                $ref: "#/components/schemas/instanceName"
+              content:
+                description: The document the plugin edits.
+                $ref: "#/components/schemas/document"
+
+    instanceUpdateRequest:
+      type: object
+      description: The new name of an instance. Omitted or empty, the instance has none.
+      required: [projectID, id]
+      additionalProperties: false
+      properties:
+        projectID:
+          $ref: "#/components/schemas/projectID"
+        id:
+          $ref: "#/components/schemas/instanceID"
+        name:
+          $ref: "#/components/schemas/instanceName"
+
+    instanceContentUpdateRequest:
+      type: object
+      description: The new version and content of an instance.
+      required: [projectID, id, version, content, updatedAt]
+      additionalProperties: false
+      properties:
+        projectID:
+          $ref: "#/components/schemas/projectID"
+        id:
+          $ref: "#/components/schemas/instanceID"
+        version:
+          $ref: "#/components/schemas/instanceVersion"
+        content:
+          description: The document the plugin edits.
+          $ref: "#/components/schemas/document"
+        updatedAt:
+          description: The `updatedAt` the instance carried when the client read it.
+          $ref: "#/components/schemas/instant"
+
+    projectDefaultUpdateRequest:
+      type: object
+      description: The instance a project opens on.
+      required: [projectID, instanceID]
+      additionalProperties: false
+      properties:
+        projectID:
+          $ref: "#/components/schemas/projectID"
+        instanceID:
+          description: The instance that becomes the default of the project, which holds it.
+          $ref: "#/components/schemas/instanceID"
+
+    linkIdentifier:
+      type: object
+      description: One end of a link, which addresses an item of the project.
+      required: [id, target]
+      additionalProperties: false
+      properties:
+        id:
+          description: The instance that holds the item. The service never checks that it exists.
+          $ref: "#/components/schemas/instanceID"
+        target:
+          type: string
+          description: |
+            The address of the item inside that instance, which only plugins read. Not empty, and 200
+            characters at most by default.
+          minLength: 1
+          examples: ["scenes/01920000-0000-7000-8000-0000000000a1"]
+
+    link:
+      type: object
+      description: A relation between two items of one project.
+      required: [source, destination, relationship]
+      additionalProperties: false
+      properties:
+        source:
+          $ref: "#/components/schemas/linkIdentifier"
+        destination:
+          $ref: "#/components/schemas/linkIdentifier"
+        relationship:
+          type: string
+          description: |
+            What the source is to the destination, in the words of the plugin that wrote the link. 1 KiB at
+            most by default.
+          examples: ["therefore"]
+
+    projectLinks:
+      type: object
+      description: The links of a project, which it stores and replaces whole.
+      required: [links, updatedAt]
+      additionalProperties: false
+      properties:
+        links:
+          type: array
+          description: The links of the project. Empty until the project writes some.
+          items:
+            $ref: "#/components/schemas/link"
+        updatedAt:
+          description: When the links last changed. Null for a project that never wrote its links.
+          oneOf:
+            - $ref: "#/components/schemas/instant"
+            - type: "null"
+
+    projectLinksUpdateRequest:
+      type: object
+      description: The new links of a project.
+      required: [projectID, links]
+      additionalProperties: false
+      properties:
+        projectID:
+          $ref: "#/components/schemas/projectID"
+        links:
+          type: array
+          description: The links that replace those of the project, 20,000 at most by default.
+          items:
+            $ref: "#/components/schemas/link"
+        updatedAt:
+          description: |
+            The `updatedAt` the links carried when the client read them. Null or omitted for a project that
+            never wrote its links, which takes its first write whatever this names.
+          oneOf:
+            - $ref: "#/components/schemas/instant"
+            - type: "null"
+
+    projectLinksWritten:
+      type: object
+      description: When a write replaced the links of a project.
+      required: [updatedAt]
+      additionalProperties: false
+      properties:
+        updatedAt:
+          $ref: "#/components/schemas/instant"
+
     limitProblem:
       type: object
       description: |
@@ -1243,8 +2072,8 @@ components:
               type: string
               description: |
                 The limit the request reached: `projectBytes` for the 16 MiB a project stores, `projects` for the
-                100 projects a user owns.
-              enum: [projectBytes, projects]
+                100 projects a user owns, `instances` for the instances a project holds, 50 by default.
+              enum: [projectBytes, projects, instances]
               examples: [projectBytes]
 
     pictureRefusedProblem:
@@ -1522,10 +2351,18 @@ components:
     parentProjectID:
       name: projectID
       in: query
-      description: The project that holds the logo.
+      description: The project that holds what the route reads or writes.
       required: true
       schema:
         $ref: "#/components/schemas/projectID"
+
+    instanceID:
+      name: id
+      in: query
+      description: The instance to act on.
+      required: true
+      schema:
+        $ref: "#/components/schemas/instanceID"
 
     composerLimit:
       name: limit

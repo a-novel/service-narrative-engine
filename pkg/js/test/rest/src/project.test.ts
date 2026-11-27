@@ -15,11 +15,16 @@ import {
   ProjectGenresSchema,
   ProjectTagsSchema,
   type ProjectUpdateRequest,
+  instanceGet,
+  instancesCreate,
   projectCreate,
+  projectDefaultUpdate,
   projectDelete,
   projectEditsList,
   projectFieldsDrift,
   projectGet,
+  projectLinksGet,
+  projectLinksUpdate,
   projectLogoDelete,
   projectLogoGet,
   projectLogoUpdate,
@@ -625,5 +630,103 @@ describe("projectLogoDelete", () => {
 
   it("returns 404 for an absent project", async () => {
     await expectStatus(projectLogoDelete(api, accessToken, { projectID: ABSENT_ID }), 404);
+  });
+});
+
+/** Creates a project that holds two instances and links, and opens on the first instance. */
+async function seedProject(token = accessToken) {
+  const project = await createProject({ title: "Seeded", language: Language.En }, token);
+  const instances = await instancesCreate(api, token, {
+    projectID: project.id,
+    instances: [
+      { plugin: "scenes-composer", version: "1.2.0", name: "Composer", content: { beats: [] } },
+      { plugin: "characters", version: "0.1.0", name: "Characters", content: [] },
+    ],
+  });
+  await projectLinksUpdate(api, token, {
+    projectID: project.id,
+    links: [
+      {
+        source: { id: instances[0].id, target: "scenes/a" },
+        destination: { id: instances[1].id, target: "characters/b" },
+        relationship: "therefore",
+      },
+    ],
+  });
+
+  return { project, instances };
+}
+
+describe("projectDefaultUpdate", () => {
+  it("chooses the instance the project opens on, and stamps the project", async () => {
+    const { project, instances } = await seedProject();
+
+    const chosen = await projectDefaultUpdate(api, accessToken, {
+      projectID: project.id,
+      instanceID: instances[1].id,
+    });
+
+    expect(chosen.defaultInstanceID).toBe(instances[1].id);
+    expect(chosen.updatedAt.getTime()).toBeGreaterThan(project.updatedAt.getTime());
+    expect(chosen.editedAt.getTime()).toBeGreaterThan(project.editedAt.getTime());
+    await expect(projectGet(api, accessToken, project)).resolves.toEqual(chosen);
+  });
+
+  it("reaches a client that holds the project through the fields drift", async () => {
+    const user = await userAccessToken(authApi);
+    const { project, instances } = await seedProject(user);
+    // The first instance of the project became its default, which the client holds.
+    const held = await projectGet(api, user, project);
+    expect(held.defaultInstanceID).toBe(instances[0].id);
+
+    const chosen = await projectDefaultUpdate(api, user, { projectID: project.id, instanceID: instances[1].id });
+
+    await expect(
+      projectFieldsDrift(api, user, { projects: { [project.id]: held.updatedAt.toISOString() } })
+    ).resolves.toEqual({ projects: [chosen], removed: [] });
+  });
+
+  it("returns 404 for an instance the project lacks, the instance of another project included", async () => {
+    const { project, instances } = await seedProject();
+    const { instances: others } = await seedProject();
+
+    await expectStatus(projectDefaultUpdate(api, accessToken, { projectID: project.id, instanceID: ABSENT_ID }), 404);
+    await expectStatus(
+      projectDefaultUpdate(api, accessToken, { projectID: project.id, instanceID: others[1].id }),
+      404
+    );
+
+    await expect(projectGet(api, accessToken, project)).resolves.toMatchObject({
+      defaultInstanceID: instances[0].id,
+    });
+  });
+
+  it("returns 404 for the project of another user", async () => {
+    const { project, instances } = await seedProject();
+
+    await expectStatus(
+      projectDefaultUpdate(api, await userAccessToken(authApi), {
+        projectID: project.id,
+        instanceID: instances[1].id,
+      }),
+      404
+    );
+  });
+});
+
+describe("projectDelete, of a project that holds instances", () => {
+  it("deletes the project with its default instance, its other instances and its links", async () => {
+    const { project, instances } = await seedProject();
+
+    const deleted = await projectDelete(api, accessToken, project);
+    expect(deleted.defaultInstanceID).toBe(instances[0].id);
+
+    await expectStatus(projectGet(api, accessToken, project), 404);
+    await expectStatus(instanceGet(api, accessToken, instances[0]), 404);
+    await expectStatus(projectLinksGet(api, accessToken, { projectID: project.id }), 404);
+
+    // The owner's other projects keep their instances.
+    const { instances: kept } = await seedProject();
+    await expect(instanceGet(api, accessToken, kept[0])).resolves.toMatchObject({ id: kept[0].id });
   });
 });

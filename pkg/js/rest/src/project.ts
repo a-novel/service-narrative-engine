@@ -44,10 +44,15 @@ export const ProjectSchema = z.object({
   /** The genres the author names, in order. Empty until the author adds one. */
   genres: z.array(z.string()),
   createdAt: DateSchema,
-  /** When the project's own fields, its title, premise, language, tags and genres, last changed. */
+  /** When the project's own fields, its title, premise, language, tags, genres and default instance, last changed. */
   updatedAt: DateSchema,
   /** When the project's content last changed, its logo aside. */
   editedAt: DateSchema,
+  /**
+   * The instance the project opens on, absent until the project holds an instance. The first one becomes it, and
+   * {@link projectDefaultUpdate} chooses another.
+   */
+  defaultInstanceID: z.uuid().optional(),
   /**
    * The checksum of the logo, absent while the project has no logo. A logo URL that carries it names the logo's
    * bytes, which a cache keeps for good.
@@ -177,7 +182,8 @@ export async function projectGet(
 }
 
 /**
- * The fields of a project, with its `editedAt` so a project the client lacks arrives whole, and no logo.
+ * The fields of a project, its default instance among them, with its `editedAt` so a project the client lacks arrives
+ * whole, and no logo.
  */
 export const ProjectFieldsSchema = ProjectSchema.omit({ logoChecksum: true });
 
@@ -316,6 +322,33 @@ export async function projectDelete(
   return await api.fetch(`/v1/project?${params.toString()}`, ProjectSchema, {
     method: "DELETE",
     accessToken,
+  });
+}
+
+/** The instance a project opens on. */
+export const ProjectDefaultUpdateRequestSchema = z.object({
+  projectID: z.uuid(),
+  /** The instance that becomes the default of the project, which holds it. */
+  instanceID: z.uuid(),
+});
+
+/** The value {@link ProjectDefaultUpdateRequestSchema} validates. */
+export type ProjectDefaultUpdateRequest = z.infer<typeof ProjectDefaultUpdateRequestSchema>;
+
+/**
+ * Chooses the default instance of a project, the one it opens on, and returns the project. The default is a field of
+ * the project: the choice moves its `updatedAt`, so {@link projectFieldsDrift} reports it, and its `editedAt`. Throws
+ * on HTTP 404 when the caller owns no such project, or the project holds no such instance.
+ */
+export async function projectDefaultUpdate(
+  api: NarrativeEngineApi,
+  accessToken: string,
+  request: ProjectDefaultUpdateRequest
+): Promise<Project> {
+  return await api.fetch("/v1/project/default", ProjectSchema, {
+    method: "PUT",
+    accessToken,
+    json: request,
   });
 }
 
