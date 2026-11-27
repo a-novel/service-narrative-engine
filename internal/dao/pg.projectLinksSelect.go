@@ -16,16 +16,13 @@ import (
 //go:embed pg.projectLinksSelect.sql
 var projectLinksSelectQuery string
 
-// ErrProjectLinksSelectNotFound is returned by [PgProjectLinksSelect.Exec] when no project has the ID.
-var ErrProjectLinksSelectNotFound = errors.New("project not found")
-
 // ProjectLinksSelectRequest is the input to [PgProjectLinksSelect.Exec].
 type ProjectLinksSelectRequest struct {
 	ProjectID uuid.UUID
 }
 
-// PgProjectLinksSelect reads the links of a project. A project that never wrote its links returns an empty
-// list with a nil UpdatedAt.
+// PgProjectLinksSelect reads the links of a project. It joins [ErrProjectLinksNotFound] for a project that never
+// wrote its links. The caller checks the owner with [PgProjectOwned].
 type PgProjectLinksSelect struct{}
 
 func NewPgProjectLinksSelect() *PgProjectLinksSelect {
@@ -45,7 +42,7 @@ func (dao *PgProjectLinksSelect) Exec(ctx context.Context, request *ProjectLinks
 
 	err = db.NewRaw(projectLinksSelectQuery, request.ProjectID).Scan(ctx, entity)
 	if errors.Is(err, sql.ErrNoRows) {
-		err = errors.Join(err, ErrProjectLinksSelectNotFound)
+		err = errors.Join(err, ErrProjectLinksNotFound)
 	}
 
 	if err != nil {

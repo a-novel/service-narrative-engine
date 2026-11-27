@@ -4,7 +4,6 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
@@ -18,10 +17,6 @@ import (
 
 //go:embed pg.instancesInsert.sql
 var instancesInsertQuery string
-
-// ErrInstancesInsertFull is returned by [PgInstancesInsert.Exec] when the project would hold more instances
-// than the request allows. The batch inserts nothing.
-var ErrInstancesInsertFull = errors.New("project holds the most instances it can")
 
 // InstancesInsertItem is one instance of an [InstancesInsertRequest].
 type InstancesInsertItem struct {
@@ -45,15 +40,13 @@ type InstancesInsertRequest struct {
 
 	// Instances lists the instances to create.
 	Instances []InstancesInsertItem
-	// Max is how many instances the project may hold once they joined it.
-	Max int
 
 	// Now is the instant stored as created_at and updated_at.
 	Now time.Time
 }
 
 // PgInstancesInsert creates instances in a project, all of them or none, and returns them in the order of the
-// request. The first one becomes the default instance of a project that has none.
+// request, without their content.
 type PgInstancesInsert struct{}
 
 func NewPgInstancesInsert() *PgInstancesInsert {
@@ -82,15 +75,10 @@ func (dao *PgInstancesInsert) Exec(
 	err = db.NewRaw(
 		instancesInsertQuery,
 		request.ProjectID, bun.List(ids), bun.List(plugins), bun.List(versions), bun.List(names),
-		bun.List(contents), request.Now, request.Max,
+		bun.List(contents), request.Now,
 	).Scan(ctx, &entities)
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("execute query: %w", err))
-	}
-
-	// The statement inserts every instance or none, and only the cap makes it insert none.
-	if len(entities) < len(request.Instances) {
-		return nil, otel.ReportError(span, ErrInstancesInsertFull)
 	}
 
 	return entities, nil

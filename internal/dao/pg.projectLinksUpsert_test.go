@@ -40,7 +40,7 @@ func TestPgProjectLinksUpsert(t *testing.T) {
 			},
 
 			expect:      &dao.ProjectLinksUpsertRow{UpdatedAt: now},
-			expectLinks: &dao.ProjectLinks{ProjectID: projectID, Links: json.RawMessage(nextLinks), UpdatedAt: new(now)},
+			expectLinks: &dao.ProjectLinks{ProjectID: projectID, Links: json.RawMessage(nextLinks), UpdatedAt: now},
 		},
 		{
 			// The project of the other owner never wrote its links, so its first write names no instant.
@@ -48,10 +48,20 @@ func TestPgProjectLinksUpsert(t *testing.T) {
 
 			request: &dao.ProjectLinksUpsertRequest{ProjectID: otherProjectID, Links: json.RawMessage(nextLinks), Now: now},
 
-			expect: &dao.ProjectLinksUpsertRow{UpdatedAt: now},
-			expectLinks: &dao.ProjectLinks{
-				ProjectID: otherProjectID, Links: json.RawMessage(nextLinks), UpdatedAt: new(now),
+			expect:      &dao.ProjectLinksUpsertRow{UpdatedAt: now},
+			expectLinks: &dao.ProjectLinks{ProjectID: otherProjectID, Links: json.RawMessage(nextLinks), UpdatedAt: now},
+		},
+		{
+			// No client reads an instant from links a project never wrote, so the write has nothing to be stale
+			// against: it is the first.
+			name: "Success/FirstWrite/NamesAnInstant",
+
+			request: &dao.ProjectLinksUpsertRequest{
+				ProjectID: otherProjectID, Links: json.RawMessage(nextLinks), UpdatedAt: new(documentUpdatedAt), Now: now,
 			},
+
+			expect:      &dao.ProjectLinksUpsertRow{UpdatedAt: now},
+			expectLinks: &dao.ProjectLinks{ProjectID: otherProjectID, Links: json.RawMessage(nextLinks), UpdatedAt: now},
 		},
 		{
 			name: "Error/Stale",
@@ -82,17 +92,6 @@ func TestPgProjectLinksUpsert(t *testing.T) {
 			request: &dao.ProjectLinksUpsertRequest{ProjectID: projectID, Links: json.RawMessage(nextLinks), Now: now},
 
 			expectLinks: instanceFixtures().links[0],
-			expectErr:   dao.ErrProjectLinksUpsertStale,
-		},
-		{
-			// A write that names an instant expects links the project wrote.
-			name: "Error/Stale/Unwritten",
-
-			request: &dao.ProjectLinksUpsertRequest{
-				ProjectID: otherProjectID, Links: json.RawMessage(nextLinks), UpdatedAt: new(documentUpdatedAt), Now: now,
-			},
-
-			expectLinks: &dao.ProjectLinks{ProjectID: otherProjectID, Links: json.RawMessage(`[]`)},
 			expectErr:   dao.ErrProjectLinksUpsertStale,
 		},
 	}

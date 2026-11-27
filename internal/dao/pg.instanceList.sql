@@ -6,7 +6,8 @@ SELECT
   version,
   name,
   created_at,
-  updated_at
+  updated_at,
+  count(*) OVER () AS total
 FROM
   instances
 WHERE
@@ -14,4 +15,6 @@ WHERE
 ORDER BY
   id
 LIMIT
-  ?1;
+  ?1
+OFFSET
+  ?2;

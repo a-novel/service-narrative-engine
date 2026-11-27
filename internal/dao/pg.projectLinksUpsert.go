@@ -41,8 +41,9 @@ type ProjectLinksUpsertRow struct {
 	UpdatedAt time.Time `bun:"updated_at"`
 }
 
-// PgProjectLinksUpsert replaces the links of a project in one statement, only while they still hold the
-// updated_at the request names. A missing project fails the write.
+// PgProjectLinksUpsert writes the links of a project in one statement. It replaces links already written only
+// while they still hold the updated_at the request names, and joins [ErrProjectLinksUpsertStale] otherwise. A
+// project that never wrote its links takes them whatever the request names. A missing project fails the write.
 type PgProjectLinksUpsert struct{}
 
 func NewPgProjectLinksUpsert() *PgProjectLinksUpsert {

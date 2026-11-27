@@ -156,7 +156,7 @@ func instanceFixtures() fixtures {
 		},
 	}
 	data.links = []*dao.ProjectLinks{
-		{ProjectID: projectID, Links: json.RawMessage(projectLinks), UpdatedAt: new(documentUpdatedAt)},
+		{ProjectID: projectID, Links: json.RawMessage(projectLinks), UpdatedAt: documentUpdatedAt},
 	}
 	data.projects[0].DefaultInstanceID = new(instanceID)
 	data.projects[1].DefaultInstanceID = new(alienInstanceID)
@@ -177,6 +177,17 @@ func (data fixtures) descriptors(ids ...uuid.UUID) []*dao.InstanceDescriptor {
 	}
 
 	return found
+}
+
+// page returns the fixture instances with these IDs as the rows of a page, each with the total of its list.
+func (data fixtures) page(total int, ids ...uuid.UUID) []*dao.InstanceListRow {
+	rows := make([]*dao.InstanceListRow, 0, len(ids))
+
+	for _, descriptor := range data.descriptors(ids...) {
+		rows = append(rows, &dao.InstanceListRow{InstanceDescriptor: *descriptor, Total: total})
+	}
+
+	return rows
 }
 
 // logoChecksum returns the checksum a read joins for a logo of these bytes: their SHA-256, in lowercase hex.
@@ -366,11 +377,15 @@ func projectDefault(ctx context.Context, t *testing.T, id uuid.UUID) *uuid.UUID 
 	return project.DefaultInstanceID
 }
 
-// storedLinks reads the links of a project as it stores them.
+// storedLinks reads the links of a project as it stores them, nil when it never wrote them.
 func storedLinks(ctx context.Context, t *testing.T, id uuid.UUID) *dao.ProjectLinks {
 	t.Helper()
 
 	links, err := dao.NewPgProjectLinksSelect().Exec(ctx, &dao.ProjectLinksSelectRequest{ProjectID: id})
+	if errors.Is(err, dao.ErrProjectLinksNotFound) {
+		return nil
+	}
+
 	require.NoError(t, err)
 
 	return links

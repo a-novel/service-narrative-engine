@@ -8,7 +8,7 @@ import (
 	"github.com/uptrace/bun"
 )
 
-// ProjectLinks is the links of a project, stored whole.
+// ProjectLinks is the links of a project, stored whole. A project that never wrote its links holds none.
 type ProjectLinks struct {
 	bun.BaseModel `bun:"table:project_links,alias:project_links"`
 
@@ -17,6 +17,6 @@ type ProjectLinks struct {
 	// Links is a JSON array of links, each a source, a destination and their relationship.
 	Links json.RawMessage `bun:"links,type:jsonb"`
 
-	// UpdatedAt is when the links last changed. It is nil for a project that never wrote its links.
-	UpdatedAt *time.Time `bun:"updated_at"`
+	// UpdatedAt is when the links last changed.
+	UpdatedAt time.Time `bun:"updated_at"`
 }

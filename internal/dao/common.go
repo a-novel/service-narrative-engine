@@ -22,4 +22,8 @@ var (
 	ErrPluginMessagesNotFound = errors.New("plugin messages not found")
 	// ErrInstanceNotFound is returned when the project holds no instance with the ID.
 	ErrInstanceNotFound = errors.New("instance not found")
+	// ErrProjectNotFound is returned when no project has the ID.
+	ErrProjectNotFound = errors.New("project not found")
+	// ErrProjectLinksNotFound is returned when the project never wrote its links.
+	ErrProjectLinksNotFound = errors.New("project links not found")
 )

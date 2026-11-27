@@ -51,39 +51,38 @@ func TestPgInstancesInsert(t *testing.T) {
 		expectCount int
 		// expectDefault is the default instance of the test project after the insert.
 		expectDefault *uuid.UUID
-		expectErr     error
 	}{
 		{
-			// The first instance of the request becomes the default of a project that holds none.
+			// The insert leaves the default of the project to its caller.
 			name: "Success",
 
 			fixtures: projectFixtures(),
-			request:  &dao.InstancesInsertRequest{ProjectID: projectID, Instances: items, Max: 2, Now: now},
+			request:  &dao.InstancesInsertRequest{ProjectID: projectID, Instances: items, Now: now},
 
-			expect:        inserted,
-			expectCount:   2,
-			expectDefault: new(firstID),
+			expect:      inserted,
+			expectCount: 2,
 		},
 		{
 			name: "Success/KeepsDefault",
 
 			fixtures: instanceFixtures(),
-			request:  &dao.InstancesInsertRequest{ProjectID: projectID, Instances: items, Max: 4, Now: now},
+			request:  &dao.InstancesInsertRequest{ProjectID: projectID, Instances: items, Now: now},
 
 			expect:        inserted,
 			expectCount:   4,
 			expectDefault: new(instanceID),
 		},
 		{
-			// The project holds two instances, so two more pass the most it may hold.
-			name: "Error/Full",
+			// The rows come back in the order of the request, whatever order their IDs sort in.
+			name: "Success/RequestOrder",
 
-			fixtures: instanceFixtures(),
-			request:  &dao.InstancesInsertRequest{ProjectID: projectID, Instances: items, Max: 3, Now: now},
+			fixtures: projectFixtures(),
+			request: &dao.InstancesInsertRequest{
+				ProjectID: projectID, Instances: []dao.InstancesInsertItem{items[1], items[0]}, Now: now,
+			},
 
-			expectCount:   2,
-			expectDefault: new(instanceID),
-			expectErr:     dao.ErrInstancesInsertFull,
+			expect:      []*dao.InstanceDescriptor{inserted[1], inserted[0]},
+			expectCount: 2,
 		},
 	}
 
@@ -99,7 +98,7 @@ func TestPgInstancesInsert(t *testing.T) {
 				insertFixtures(ctx, t, testCase.fixtures)
 
 				result, err := daoInstancesInsert.Exec(ctx, testCase.request)
-				require.ErrorIs(t, err, testCase.expectErr)
+				require.NoError(t, err)
 				require.Equal(t, testCase.expect, result)
 
 				require.Len(t, projectInstances(ctx, t, projectID), testCase.expectCount)

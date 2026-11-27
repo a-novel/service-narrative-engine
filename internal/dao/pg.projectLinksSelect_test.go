@@ -2,7 +2,6 @@ package dao_test
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -34,18 +33,18 @@ func TestPgProjectLinksSelect(t *testing.T) {
 		},
 		{
 			// The project of the other owner never wrote its links.
-			name: "Success/Unwritten",
+			name: "Error/NotFound",
 
 			request: &dao.ProjectLinksSelectRequest{ProjectID: otherProjectID},
 
-			expect: &dao.ProjectLinks{ProjectID: otherProjectID, Links: json.RawMessage(`[]`)},
+			expectErr: dao.ErrProjectLinksNotFound,
 		},
 		{
-			name: "Error/NotFound",
+			name: "Error/NotFound/NoProject",
 
 			request: &dao.ProjectLinksSelectRequest{ProjectID: absentID},
 
-			expectErr: dao.ErrProjectLinksSelectNotFound,
+			expectErr: dao.ErrProjectLinksNotFound,
 		},
 	}
 

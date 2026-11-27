@@ -1,6 +1,5 @@
--- The batch joins the project only when the project then holds as many instances as the request allows at most,
--- and none of it does otherwise. The first instance of the request becomes the default of a project that has
--- none. That project holds no instance: a default is never unset, and its instance is never deleted.
+-- The caller gives each instance its ID, and its client tells the instances it sent apart by their place, so they
+-- come back in the order of the request.
 WITH
   data AS (
     SELECT
@@ -37,20 +36,6 @@ WITH
       ?6
     FROM
       data
-    WHERE
-      (
-        SELECT
-          count(*)
-        FROM
-          instances
-        WHERE
-          project_id = ?0
-      ) + (
-        SELECT
-          count(*)
-        FROM
-          data
-      ) <= ?7
     RETURNING
       id,
       project_id,
@@ -59,18 +44,6 @@ WITH
       name,
       created_at,
       updated_at
-  ),
-  defaulted AS (
-    UPDATE projects
-    SET
-      default_instance_id = data.id
-    FROM
-      inserted
-      JOIN data ON data.id = inserted.id
-    WHERE
-      projects.id = ?0
-      AND projects.default_instance_id IS NULL
-      AND data.position = 1
   )
 SELECT
   inserted.*

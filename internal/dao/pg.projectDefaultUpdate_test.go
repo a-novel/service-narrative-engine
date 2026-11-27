@@ -17,10 +17,11 @@ import (
 func TestPgProjectDefaultUpdate(t *testing.T) {
 	t.Parallel()
 
-	// chosen returns the test project once it opens on its second instance.
+	// chosen returns the test project once it opens on its second instance. The choice stamps its fields.
 	chosen := func() *dao.Project {
 		project := instanceFixtures().projects[0]
 		project.DefaultInstanceID = new(otherInstanceID)
+		project.UpdatedAt = now
 
 		return project
 	}
@@ -38,7 +39,7 @@ func TestPgProjectDefaultUpdate(t *testing.T) {
 		{
 			name: "Success",
 
-			request: &dao.ProjectDefaultUpdateRequest{ProjectID: projectID, InstanceID: otherInstanceID},
+			request: &dao.ProjectDefaultUpdateRequest{ProjectID: projectID, InstanceID: otherInstanceID, Now: now},
 
 			expect:        chosen(),
 			expectDefault: new(otherInstanceID),
@@ -46,7 +47,7 @@ func TestPgProjectDefaultUpdate(t *testing.T) {
 		{
 			name: "Error/InstanceNotFound",
 
-			request: &dao.ProjectDefaultUpdateRequest{ProjectID: projectID, InstanceID: absentID},
+			request: &dao.ProjectDefaultUpdateRequest{ProjectID: projectID, InstanceID: absentID, Now: now},
 
 			expectDefault: new(instanceID),
 			expectErr:     dao.ErrInstanceNotFound,
@@ -55,7 +56,7 @@ func TestPgProjectDefaultUpdate(t *testing.T) {
 			// The instance exists, in the project of another owner.
 			name: "Error/InstanceOfOtherProject",
 
-			request: &dao.ProjectDefaultUpdateRequest{ProjectID: projectID, InstanceID: alienInstanceID},
+			request: &dao.ProjectDefaultUpdateRequest{ProjectID: projectID, InstanceID: alienInstanceID, Now: now},
 
 			expectDefault: new(instanceID),
 			expectErr:     dao.ErrInstanceNotFound,
@@ -63,10 +64,10 @@ func TestPgProjectDefaultUpdate(t *testing.T) {
 		{
 			name: "Error/NotFound",
 
-			request: &dao.ProjectDefaultUpdateRequest{ProjectID: absentID, InstanceID: instanceID},
+			request: &dao.ProjectDefaultUpdateRequest{ProjectID: absentID, InstanceID: instanceID, Now: now},
 
 			expectDefault: new(instanceID),
-			expectErr:     dao.ErrProjectDefaultUpdateNotFound,
+			expectErr:     dao.ErrProjectNotFound,
 		},
 	}
 

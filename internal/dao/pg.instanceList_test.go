@@ -21,28 +21,44 @@ func TestPgInstanceList(t *testing.T) {
 
 		request *dao.InstanceListRequest
 
-		expect []*dao.InstanceDescriptor
+		expect []*dao.InstanceListRow
 	}{
 		{
 			name: "Success",
 
 			request: &dao.InstanceListRequest{ProjectID: projectID, Limit: 10},
 
-			expect: instanceFixtures().descriptors(instanceID, otherInstanceID),
+			expect: instanceFixtures().page(2, instanceID, otherInstanceID),
 		},
 		{
+			// The total counts every instance of the project, beyond the page.
 			name: "Success/Limit",
 
 			request: &dao.InstanceListRequest{ProjectID: projectID, Limit: 1},
 
-			expect: instanceFixtures().descriptors(instanceID),
+			expect: instanceFixtures().page(2, instanceID),
+		},
+		{
+			name: "Success/Offset",
+
+			request: &dao.InstanceListRequest{ProjectID: projectID, Limit: 10, Offset: 1},
+
+			expect: instanceFixtures().page(2, otherInstanceID),
+		},
+		{
+			// A page past the end has no row to carry the total.
+			name: "Success/PastTheEnd",
+
+			request: &dao.InstanceListRequest{ProjectID: projectID, Limit: 10, Offset: 2},
+
+			expect: []*dao.InstanceListRow{},
 		},
 		{
 			name: "Success/Empty",
 
 			request: &dao.InstanceListRequest{ProjectID: absentID, Limit: 10},
 
-			expect: []*dao.InstanceDescriptor{},
+			expect: []*dao.InstanceListRow{},
 		},
 	}
 
