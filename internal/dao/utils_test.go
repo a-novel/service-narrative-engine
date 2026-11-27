@@ -368,7 +368,7 @@ func projectDefault(ctx context.Context, t *testing.T, id uuid.UUID) *uuid.UUID 
 	t.Helper()
 
 	project, err := dao.NewPgProjectSelect().Exec(ctx, &dao.ProjectSelectRequest{ID: id})
-	if errors.Is(err, dao.ErrProjectSelectNotFound) {
+	if errors.Is(err, dao.ErrProjectNotFound) {
 		return nil
 	}
 

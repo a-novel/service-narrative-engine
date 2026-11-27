@@ -18,9 +18,6 @@ import (
 //go:embed pg.projectUpdate.sql
 var projectUpdateQuery string
 
-// ErrProjectUpdateNotFound is returned by [PgProjectUpdate.Exec] when no project has the ID.
-var ErrProjectUpdateNotFound = errors.New("project not found")
-
 // ProjectUpdateRequest is the input to [PgProjectUpdate.Exec].
 type ProjectUpdateRequest struct {
 	ID uuid.UUID
@@ -64,7 +61,7 @@ func (dao *PgProjectUpdate) Exec(ctx context.Context, request *ProjectUpdateRequ
 		pgdialect.Array(request.Tags), pgdialect.Array(request.Genres), request.Now,
 	).Scan(ctx, entity)
 	if errors.Is(err, sql.ErrNoRows) {
-		err = errors.Join(err, ErrProjectUpdateNotFound)
+		err = errors.Join(err, ErrProjectNotFound)
 	}
 
 	if err != nil {

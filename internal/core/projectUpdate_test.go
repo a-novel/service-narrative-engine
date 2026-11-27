@@ -355,7 +355,7 @@ func TestProjectUpdate(t *testing.T) {
 			request: request,
 
 			lockMock: &daoMock[bool]{resp: true},
-			daoMock:  &daoMock[*dao.Project]{err: dao.ErrProjectUpdateNotFound},
+			daoMock:  &daoMock[*dao.Project]{err: dao.ErrProjectNotFound},
 
 			expectErr: core.ErrProjectNotFound,
 		},

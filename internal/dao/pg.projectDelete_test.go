@@ -67,7 +67,7 @@ func TestPgProjectDelete(t *testing.T) {
 
 			expectLogo: logoFixtures().logos[0],
 			expectKept: []*dao.Instance{},
-			expectErr:  dao.ErrProjectDeleteNotFound,
+			expectErr:  dao.ErrProjectNotFound,
 		},
 	}
 

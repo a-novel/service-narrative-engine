@@ -16,9 +16,6 @@ import (
 //go:embed pg.projectSelect.sql
 var projectSelectQuery string
 
-// ErrProjectSelectNotFound is returned by [PgProjectSelect.Exec] when no project has the ID.
-var ErrProjectSelectNotFound = errors.New("project not found")
-
 // ProjectSelectRequest is the input to [PgProjectSelect.Exec].
 type ProjectSelectRequest struct {
 	ID uuid.UUID
@@ -44,7 +41,7 @@ func (dao *PgProjectSelect) Exec(ctx context.Context, request *ProjectSelectRequ
 
 	err = db.NewRaw(projectSelectQuery, request.ID).Scan(ctx, entity)
 	if errors.Is(err, sql.ErrNoRows) {
-		err = errors.Join(err, ErrProjectSelectNotFound)
+		err = errors.Join(err, ErrProjectNotFound)
 	}
 
 	if err != nil {

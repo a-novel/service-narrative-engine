@@ -57,10 +57,6 @@ func (service *ProjectDelete) Exec(ctx context.Context, request *ProjectDeleteRe
 	}
 
 	entity, err := service.dao.Exec(ctx, &dao.ProjectDeleteRequest{ID: request.ID})
-	if errors.Is(err, dao.ErrProjectDeleteNotFound) {
-		err = errors.Join(err, ErrProjectNotFound)
-	}
-
 	if err != nil {
 		return nil, otel.ReportError(span, fmt.Errorf("delete project: %w", err))
 	}
