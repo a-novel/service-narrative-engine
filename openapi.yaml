@@ -44,6 +44,11 @@ info:
     good. Semantic versioning orders the versions, and a prerelease is read by its exact name only: no list
     returns one. Any signed-in user reads the registry, which belongs to no user.
 
+    A version enters the registry whole, in one request. Its publisher holds no session: it signs each
+    request with a system API key, an Ed25519 key pair whose public key JSON Keys serves, as
+    pluginVersionPublish describes. The same key signs a proof of the version, which the registry stores and
+    the manifest carries, so a client verifies who published a version before it uses it.
+
   version: v1.9.1
   license:
     name: RPL-1.5
@@ -909,6 +914,75 @@ paths:
         default:
           $ref: "#/components/responses/internalError"
 
+    post:
+      operationId: pluginVersionPublish
+      summary: Publish a version of a plugin.
+      description: |
+        Adds one version of a plugin to the registry, whole: its manifest, its modules and its translations,
+        or nothing. A version never changes once published: publishing one the registry holds answers 409 and
+        leaves it as it is, so a publisher may send a version twice. A prerelease, such as `1.2.0-dev.1`,
+        publishes as a release does, and no list returns it.
+
+        The route takes no session. Its caller owns a system API key made for the purpose
+        `publish-narrative-engine-plugin`, and signs a request token for each request, as the
+        `PluginPublisher` security scheme describes. The server holds no key: it verifies the token through
+        JSON Keys, which serves the key the token names. It answers 401 to a request without a token and to
+        any other bearer token, a user's access token included.
+
+        The same key signs the `proof` of the version. The server answers 422, naming `proof` with the rule
+        `pluginproof`, when another key than the request's signed the proof, or when the proof names another
+        plugin, another version, or another SHA-256 of a module than the body's. A refused version stores
+        nothing. The server stores the proof with the ID of the key, and the manifest of the version carries
+        both.
+
+        A local stack that runs without service tokens takes a request without a token. Such a request
+        carries no proof, and its version stores none.
+
+        The body is closed, and the server enforces it: a member this specification does not list answers
+        400, and nothing is stored. A version never changes once published, so a member the server dropped in
+        silence would be lost for good.
+
+        The server holds `schema`, `exports` and the `messages` of each language to their 256 KiB as PostgreSQL
+        stores them, with each number written in full: its exponent adds as many bytes, so `1e400` counts 405.
+        It also refuses with 422 what PostgreSQL does not store: the NUL character (`\u0000`) in a title, a
+        description or a string of these documents, half of a surrogate pair (`\ud83d` without its `\ude00`)
+        in a string of these documents, and a number of more than 16383 digits, its exponent written out.
+
+        It writes a version, so each API key sends it 2 requests a minute and 5 in 15 minutes by default, on
+        top of the rate of every route. One more answers 429 with `Retry-After`. Every request the key signed
+        counts, whatever its answer, and a request the server answers 401 counts for no key. A request without
+        a token, which only a local stack takes, counts on the rate of every route alone.
+
+        The body holds 5 MiB at most by default, whatever its fields hold.
+      tags: [plugin]
+      security:
+        - PluginPublisher: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/pluginVersionPublishRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/pluginVersionPublished"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/pluginPublisherRefused"
+        "409":
+          $ref: "#/components/responses/pluginVersionExists"
+        "413":
+          $ref: "#/components/responses/contentTooLarge"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+        "429":
+          $ref: "#/components/responses/tooManyRequests"
+        "503":
+          $ref: "#/components/responses/plannedDowntime"
+        default:
+          $ref: "#/components/responses/internalError"
+
   /v1/plugin/version/ui:
     get:
       operationId: pluginUIGet
@@ -1327,6 +1401,30 @@ components:
       description: |
         The registry holds no such version of the plugin, the version ships without the module, or it is not
         translated in the language.
+
+    pluginVersionPublished:
+      description: The registry holds the version. The response has no body.
+      headers:
+        Location:
+          description: The read of the version's manifest.
+          schema:
+            type: string
+            examples: ["/v1/plugin/version?plugin=scenes-composer&version=1.2.0"]
+
+    pluginVersionExists:
+      description: |
+        The registry already holds the version, which stays as it is. A publisher reads it as published.
+
+    pluginPublisherRefused:
+      description: |
+        The request carries no request token that an active key made for the purpose signed for this body,
+        within its times. Every refusal answers alike: the response never says which check failed.
+      headers:
+        WWW-Authenticate:
+          description: The challenge of a bearer token (RFC 6750), with no error code.
+          schema:
+            type: string
+            const: Bearer
 
     badRequest:
       description: |
@@ -2268,6 +2366,18 @@ components:
         uiChecksum:
           $ref: "#/components/schemas/pluginChecksum"
           description: The checksum of the UI module's bytes, which the module's `ETag` carries.
+        proof:
+          $ref: "#/components/schemas/pluginProof"
+          description: |
+            The proof the publisher's key signed for the version. A client verifies it before it uses the
+            version: its signature against the key `apiKeyID` names, then its claims against the version and
+            the modules it received. Absent for a version published without a key, as on a local stack.
+        apiKeyID:
+          type: string
+          description: |
+            The ID of the API key that signed `proof`. A client reads the key from JSON Keys by that ID to
+            verify the proof. Absent when `proof` is.
+          examples: ["SkBLVT62kklQKTWOoMCMzugx--jKjyHKB2fKHZFBV-k"]
         publishedAt:
           type: string
           description: When the version was published.
@@ -2333,11 +2443,168 @@ components:
           minimum: 0
           examples: [4]
 
+    pluginExport:
+      type: object
+      description: One named list of linkable items an instance of a plugin exposes.
+      required: [name, select, id, label]
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          description: The key of the version's messages that names the export.
+          examples: [exports.scenes]
+        select:
+          type: string
+          description: |
+            The path to the exported items in the content: `$`, then member names and `[*]`, a subset of
+            JSONPath (RFC 9535).
+          pattern: "^\\$(\\.[A-Za-z_][A-Za-z0-9_]*|\\[\\*\\])*$"
+          examples: ["$.beats[*].scenes[*]"]
+        id:
+          type: string
+          description: The JSON Pointer (RFC 6901) to the identifier inside each item.
+          pattern: "^(/([^/~]|~[01])*)*$"
+          examples: [/id]
+        label:
+          type: string
+          description: The JSON Pointer (RFC 6901) to the label inside each item.
+          pattern: "^(/([^/~]|~[01])*)*$"
+          examples: [/title]
+
+    pluginVersionPublishLanguage:
+      type: object
+      description: The translations of a version of a plugin in one language.
+      required: [title, description, messages]
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          description: The plugin's title, as the list of plugins shows it. Not blank.
+          minLength: 1
+          maxLength: 262144
+          examples: [Scenes Composer]
+        description:
+          type: string
+          description: What the plugin does, as the list of plugins shows it. Not blank.
+          minLength: 1
+          maxLength: 262144
+          examples: [Compose a story scene by scene.]
+        messages:
+          type: object
+          description: |
+            The translations of the plugin's interface and of its schema, by key, in 256 KiB of JSON at most.
+          additionalProperties: true
+          examples:
+            - { "exports": { "scenes": "Scenes" } }
+
+    pluginVersionPublishRequest:
+      type: object
+      description: One whole version of a plugin.
+      required: [plugin, version, schema, exports, ui, languages]
+      additionalProperties: false
+      properties:
+        plugin:
+          $ref: "#/components/schemas/pluginName"
+        version:
+          $ref: "#/components/schemas/pluginSemver"
+        schema:
+          type: object
+          description: |
+            The JSON Schema (2020-12) the content of an instance follows, in 256 KiB of JSON at most. It stays
+            inside the dialect every host reads alike: each `$ref` of its subschemas starts with `#`, and none
+            of them uses `$dynamicRef`, `$dynamicAnchor` or `format`. The server does not compile it.
+          additionalProperties: true
+          examples:
+            - { "type": "object", "default": { "beats": [], "layers": [] } }
+        exports:
+          type: object
+          description: |
+            The lists of linkable items an instance exposes, by name, in 256 KiB of JSON at most. A link
+            addresses an item as `<export>/<id>`, so a name holds no slash.
+          propertyNames:
+            pattern: "^[A-Za-z][A-Za-z0-9_-]*$"
+          additionalProperties:
+            $ref: "#/components/schemas/pluginExport"
+          examples:
+            - {
+                "scenes":
+                  { "name": "exports.scenes", "select": "$.beats[*].scenes[*]", "id": "/id", "label": "/title" },
+              }
+        ui:
+          type: string
+          description: The source of the JavaScript module that renders the plugin, in 1 MiB of UTF-8 at most.
+          minLength: 1
+          maxLength: 1048576
+          examples: ["export default { mount(target, host) {} };"]
+        migration:
+          type: string
+          description: |
+            The source of the JavaScript module that brings content from the previous version to this one, in
+            256 KiB of UTF-8 at most. Left out when the version needs none.
+          minLength: 1
+          maxLength: 262144
+          examples: ["export default (content) => ({ migrated: content });"]
+        languages:
+          type: object
+          description: |
+            The translations of the version by language, a BCP 47 tag each: English, as `en`, and 99 other
+            languages at most.
+          required: [en]
+          maxProperties: 100
+          additionalProperties:
+            $ref: "#/components/schemas/pluginVersionPublishLanguage"
+          properties:
+            en:
+              $ref: "#/components/schemas/pluginVersionPublishLanguage"
+        proof:
+          $ref: "#/components/schemas/pluginProof"
+          description: |
+            The proof of the version, signed by the key of the request token. Its `plugin` and `version` claims
+            are those of this body, `uiSHA256` is the SHA-256 of `ui` as UTF-8, and `migrationSHA256` that of
+            `migration`. A request with a token carries a proof, and a request without one carries none.
+
+    pluginProof:
+      type: string
+      description: |
+        The proof of who published a version of a plugin: a compact JWT signed with EdDSA (RFC 8037) by a
+        system API key made for the purpose `publish-narrative-engine-plugin`. Its header holds the type
+        `proof+jwt` in `typ` and the ID of the key in `kid`. Its payload holds:
+
+        - `aud`: the purpose of the key, `publish-narrative-engine-plugin`.
+        - `iat`: when the proof was signed, in seconds.
+        - `plugin`: the name of the plugin.
+        - `version`: the version, as a semantic version.
+        - `uiSHA256`: the SHA-256 of the UI module's bytes, in lowercase hex.
+        - `migrationSHA256`: the SHA-256 of the migration module's bytes, in lowercase hex. Left out when the
+          version ships none.
+
+        A proof never expires, and one signed by a key deactivated since still verifies.
+      maxLength: 4096
+      examples: ["<header>.<payload>.<signature>"]
+
   securitySchemes:
     BearerAuth:
       type: http
       scheme: bearer
       description: An access token from the authentication service, for a signed-in user.
+    PluginPublisher:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        A request token signed with a system API key made for the purpose `publish-narrative-engine-plugin`:
+        an Ed25519 key pair whose public key JSON Keys serves by its ID. It is a JWT signed with EdDSA
+        (RFC 8037). Its header holds the type `JWT` in `typ` and the ID of the key in `kid`. Its payload holds
+        four claims:
+
+        - `aud`: the purpose of the key, `publish-narrative-engine-plugin`.
+        - `iat`: when the token was signed, in seconds.
+        - `exp`: when it expires, in seconds, 300 after `iat` at most.
+        - `bodySHA256`: the SHA-256 of the request's body, in lowercase hex.
+
+        The server checks the times against its clock with 30 seconds of leeway. A token authenticates the one
+        request it was signed for: it can be sent again until it expires, with the same body alone, which
+        publishes nothing new.
 
   parameters:
     projectID:
