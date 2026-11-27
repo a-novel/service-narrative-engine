@@ -32,10 +32,12 @@ func TestPgPluginManifestSelect(t *testing.T) {
 			expect: &dao.PluginManifest{
 				PluginVersionKey: composer1100, Schema: []byte(pluginSchemaNext), Exports: []byte(pluginExports),
 				HasMigration: true, SchemaChecksum: pluginSchemaChecksum(pluginSchemaNext),
-				UIChecksum: pluginChecksum(pluginUI(composer1100)), PublishedAt: createdAt,
+				UIChecksum: pluginChecksum(pluginUI(composer1100)),
+				Proof:      new(pluginProof), APIKeyID: new(pluginAPIKeyID), PublishedAt: createdAt,
 			},
 		},
 		{
+			// A version published without a key carries no proof.
 			name: "Success/NoMigration",
 
 			request: &dao.PluginManifestSelectRequest{PluginVersionKey: composer100},
