@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/a-novel-kit/golib/postgres"
 	"github.com/a-novel-kit/golib/postgres/postgrestest"
 
 	"github.com/a-novel/service-narrative-engine/v2/internal/config/configtest"
@@ -17,12 +16,17 @@ import (
 func TestPgProjectBytes(t *testing.T) {
 	t.Parallel()
 
+	// held sums the bytes of the rows the test project holds in the instance fixtures: the texts and the
+	// documents of its two instances, and its links. PostgreSQL counts a JSON document as it spells it.
+	held := len("scenes-composer"+"1.0.0"+"Composer"+instanceContent) +
+		len("characters"+"0.1.0-dev.1"+"Characters"+instanceContentNext) +
+		len(projectLinks)
+
 	testCases := []struct {
 		name string
 
-		// held is the count of the bytes the rows of the test project hold, which the schema keeps.
-		held    int64
-		request *dao.ProjectBytesRequest
+		fixtures fixtures
+		request  *dao.ProjectBytesRequest
 
 		expect    *dao.ProjectBytes
 		expectErr error
@@ -30,7 +34,8 @@ func TestPgProjectBytes(t *testing.T) {
 		{
 			name: "Success",
 
-			request: &dao.ProjectBytesRequest{ID: projectID},
+			fixtures: projectFixtures(),
+			request:  &dao.ProjectBytesRequest{ID: projectID},
 
 			// The UTF-8 bytes of the project's own texts.
 			expect: &dao.ProjectBytes{StoredBytes: 31},
@@ -38,16 +43,17 @@ func TestPgProjectBytes(t *testing.T) {
 		{
 			name: "Success/HeldRows",
 
-			held:    64,
-			request: &dao.ProjectBytesRequest{ID: projectID},
+			fixtures: instanceFixtures(),
+			request:  &dao.ProjectBytesRequest{ID: projectID},
 
-			// The bytes of the project's own texts (31), and of the rows it holds (64).
-			expect: &dao.ProjectBytes{StoredBytes: 95},
+			// The bytes of the project's own texts, and of the rows it holds.
+			expect: &dao.ProjectBytes{StoredBytes: int64(31 + held)},
 		},
 		{
 			name: "Error/NotFound",
 
-			request: &dao.ProjectBytesRequest{ID: absentID},
+			fixtures: projectFixtures(),
+			request:  &dao.ProjectBytesRequest{ID: absentID},
 
 			expectErr: dao.ErrProjectBytesNotFound,
 		},
@@ -62,17 +68,13 @@ func TestPgProjectBytes(t *testing.T) {
 			postgrestest.RunDBTest(t, configtest.PostgresPreset, migrations.Migrations, func(ctx context.Context, t *testing.T) {
 				t.Helper()
 
-				insertFixtures(ctx, t, projectFixtures())
-
-				db, err := postgres.GetContext(ctx)
-				require.NoError(t, err)
-
-				_, err = db.NewRaw("UPDATE projects SET stored_bytes = ?0 WHERE id = ?1", testCase.held, projectID).Exec(ctx)
-				require.NoError(t, err)
+				insertFixtures(ctx, t, testCase.fixtures)
 
 				result, err := daoProjectBytes.Exec(ctx, testCase.request)
 				require.ErrorIs(t, err, testCase.expectErr)
 				require.Equal(t, testCase.expect, result)
+
+				requireStoredBytes(ctx, t)
 			})
 		})
 	}

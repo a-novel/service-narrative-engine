@@ -33,6 +33,9 @@ type Project struct {
 	// project. A logo write leaves it as it was.
 	EditedAt time.Time `bun:"edited_at"`
 
+	// DefaultInstanceID is the instance the project opens on, nil until the project holds one.
+	DefaultInstanceID *uuid.UUID `bun:"default_instance_id,type:uuid"`
+
 	// LogoChecksum is the SHA-256 of the logo's bytes in lowercase hex, nil while the project has no logo. A read
 	// joins it from the logo's row, and an insert of the model leaves it out.
 	LogoChecksum *string `bun:"logo_checksum,scanonly"`
