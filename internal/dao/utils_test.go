@@ -38,9 +38,12 @@ var (
 	updatedAt = time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC)
 	now       = time.Date(2021, 1, 3, 0, 0, 0, 0, time.UTC)
 
-	// documentUpdatedAt is when the documents of the fixtures last changed, to the microsecond PostgreSQL
-	// keeps. A write names it to apply.
+	// documentUpdatedAt is when the contents of the fixtures and the links of their project last changed, to
+	// the microsecond PostgreSQL keeps. A write names it to apply.
 	documentUpdatedAt = time.Date(2021, 1, 2, 0, 0, 0, 123456000, time.UTC)
+	// linksUpdatedAt is when the links the fixture instances store last changed, at another instant than their
+	// content: an instance stamps the two apart.
+	linksUpdatedAt = time.Date(2021, 1, 2, 12, 0, 0, 654321000, time.UTC)
 )
 
 // storedBytesQuery reads, for each project, the count of the bytes its rows hold, and a fresh sum of them.
@@ -86,6 +89,11 @@ const (
 	projectLinks        = `[{"source": {"id": "00000000-0000-0000-0000-000000000031", "target": "scenes/a"}, ` +
 		`"destination": {"id": "00000000-0000-0000-0000-000000000032", "target": "characters/b"}, ` +
 		`"relationship": "therefore"}]`
+	composerLinks = `[{"source": "scenes/a", ` +
+		`"destination": {"id": "00000000-0000-0000-0000-000000000032", "target": "characters/b"}, ` +
+		`"relationship": "therefore"}]`
+	// noLinks is what an instance that never wrote its links stores.
+	noLinks = `[]`
 )
 
 // fixtures is the data a DAO test seeds before it runs the operation under test.
@@ -95,6 +103,8 @@ type fixtures struct {
 
 	instances []*dao.Instance
 	links     []*dao.ProjectLinks
+	// instanceLinks are the links the instances wrote. An instance left out never wrote its links.
+	instanceLinks []*dao.InstanceLinks
 
 	pluginVersions []*dao.PluginVersion
 	pluginMessages []*dao.PluginMessages
@@ -134,8 +144,8 @@ func logoFixtures() fixtures {
 }
 
 // instanceFixtures returns the project fixtures with instances and links. The test project holds two instances,
-// opens on the first and holds links. The project of the other owner opens on an instance of its own, and never
-// wrote its links.
+// opens on the first, the only instance that wrote its links, and holds links of its own. The project of the
+// other owner opens on an instance of its own, and never wrote its links.
 func instanceFixtures() fixtures {
 	data := projectFixtures()
 	data.instances = []*dao.Instance{
@@ -157,6 +167,9 @@ func instanceFixtures() fixtures {
 	}
 	data.links = []*dao.ProjectLinks{
 		{ProjectID: projectID, Links: json.RawMessage(projectLinks), UpdatedAt: documentUpdatedAt},
+	}
+	data.instanceLinks = []*dao.InstanceLinks{
+		{InstanceID: instanceID, Links: json.RawMessage(composerLinks), UpdatedAt: new(linksUpdatedAt)},
 	}
 	data.projects[0].DefaultInstanceID = new(instanceID)
 	data.projects[1].DefaultInstanceID = new(alienInstanceID)
@@ -306,6 +319,14 @@ func insertFixtures(ctx context.Context, t *testing.T, data fixtures) {
 		require.NoError(t, err)
 	}
 
+	for _, links := range data.instanceLinks {
+		_, err = db.NewRaw(
+			"UPDATE instances SET links = ?0::jsonb, links_updated_at = ?1 WHERE id = ?2",
+			string(links.Links), links.UpdatedAt, links.InstanceID,
+		).Exec(ctx)
+		require.NoError(t, err)
+	}
+
 	if len(data.pluginVersions) > 0 {
 		_, err = db.NewInsert().Model(&data.pluginVersions).Returning("NULL").Exec(ctx)
 		require.NoError(t, err)
@@ -402,4 +423,44 @@ func linksCount(ctx context.Context, t *testing.T, id uuid.UUID) int64 {
 	require.NoError(t, err)
 
 	return count
+}
+
+// allLinks returns the links every fixture instance of the test project stores, oldest instance first: the links
+// the fixtures wrote, and an empty list without a stamp for an instance that never wrote its links.
+func (data fixtures) allLinks() []*dao.InstanceLinks {
+	stored := []*dao.InstanceLinks{}
+
+	for _, instance := range data.instances {
+		if instance.ProjectID != projectID {
+			continue
+		}
+
+		links := &dao.InstanceLinks{InstanceID: instance.ID, Links: json.RawMessage(noLinks)}
+
+		for _, written := range data.instanceLinks {
+			if written.InstanceID == instance.ID {
+				links = written
+			}
+		}
+
+		stored = append(stored, links)
+	}
+
+	return stored
+}
+
+// storedInstanceLinks reads the links the instances of a project store, oldest instance first.
+func storedInstanceLinks(ctx context.Context, t *testing.T, id uuid.UUID) []*dao.InstanceLinks {
+	t.Helper()
+
+	db, err := postgres.GetContext(ctx)
+	require.NoError(t, err)
+
+	links := []*dao.InstanceLinks{}
+
+	err = db.NewRaw("SELECT id, links, links_updated_at FROM instances WHERE project_id = ?0 ORDER BY id", id).
+		Scan(ctx, &links)
+	require.NoError(t, err)
+
+	return links
 }

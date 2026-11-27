@@ -2,6 +2,7 @@ package dao_test
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -19,20 +20,39 @@ func TestPgInstanceDelete(t *testing.T) {
 	testCases := []struct {
 		name string
 
+		// links are links the second instance wrote before the delete, when the case sets them.
+		links   *dao.InstanceLinks
 		request *dao.InstanceDeleteRequest
 
 		expect *dao.InstanceDescriptor
 		// expectInstances are the instances of the test project after the delete.
 		expectInstances []*dao.Instance
-		expectErr       error
+		// expectLinks are the links the instances of the test project store after the delete.
+		expectLinks []*dao.InstanceLinks
+		expectErr   error
 	}{
 		{
+			// The first instance stores a link that points at the deleted one. The link stays where it is stored.
 			name: "Success",
 
 			request: &dao.InstanceDeleteRequest{ProjectID: projectID, ID: otherInstanceID},
 
 			expect:          instanceFixtures().descriptors(otherInstanceID)[0],
 			expectInstances: instanceFixtures().instances[:1],
+			expectLinks:     instanceFixtures().allLinks()[:1],
+		},
+		{
+			// The links an instance stores go with it.
+			name: "Success/StoresLinks",
+
+			links: &dao.InstanceLinks{
+				InstanceID: otherInstanceID, Links: json.RawMessage(composerLinks), UpdatedAt: new(linksUpdatedAt),
+			},
+			request: &dao.InstanceDeleteRequest{ProjectID: projectID, ID: otherInstanceID},
+
+			expect:          instanceFixtures().descriptors(otherInstanceID)[0],
+			expectInstances: instanceFixtures().instances[:1],
+			expectLinks:     instanceFixtures().allLinks()[:1],
 		},
 		{
 			// The test project opens on its first instance.
@@ -41,6 +61,7 @@ func TestPgInstanceDelete(t *testing.T) {
 			request: &dao.InstanceDeleteRequest{ProjectID: projectID, ID: instanceID},
 
 			expectInstances: instanceFixtures().instances[:2],
+			expectLinks:     instanceFixtures().allLinks(),
 			expectErr:       dao.ErrInstanceDeleteDefault,
 		},
 		{
@@ -49,6 +70,7 @@ func TestPgInstanceDelete(t *testing.T) {
 			request: &dao.InstanceDeleteRequest{ProjectID: projectID, ID: absentID},
 
 			expectInstances: instanceFixtures().instances[:2],
+			expectLinks:     instanceFixtures().allLinks(),
 			expectErr:       dao.ErrInstanceNotFound,
 		},
 		{
@@ -57,6 +79,7 @@ func TestPgInstanceDelete(t *testing.T) {
 			request: &dao.InstanceDeleteRequest{ProjectID: otherProjectID, ID: otherInstanceID},
 
 			expectInstances: instanceFixtures().instances[:2],
+			expectLinks:     instanceFixtures().allLinks(),
 			expectErr:       dao.ErrInstanceNotFound,
 		},
 	}
@@ -70,7 +93,12 @@ func TestPgInstanceDelete(t *testing.T) {
 			postgrestest.RunDBTest(t, configtest.PostgresPreset, migrations.Migrations, func(ctx context.Context, t *testing.T) {
 				t.Helper()
 
-				insertFixtures(ctx, t, instanceFixtures())
+				data := instanceFixtures()
+				if testCase.links != nil {
+					data.instanceLinks = append(data.instanceLinks, testCase.links)
+				}
+
+				insertFixtures(ctx, t, data)
 
 				result, err := daoInstanceDelete.Exec(ctx, testCase.request)
 				require.ErrorIs(t, err, testCase.expectErr)
@@ -82,6 +110,7 @@ func TestPgInstanceDelete(t *testing.T) {
 				}
 
 				require.Equal(t, testCase.expectInstances, projectInstances(ctx, t, projectID))
+				require.Equal(t, testCase.expectLinks, storedInstanceLinks(ctx, t, projectID))
 				requireStoredBytes(ctx, t)
 			})
 		})

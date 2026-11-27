@@ -16,10 +16,11 @@ import (
 func TestPgProjectBytes(t *testing.T) {
 	t.Parallel()
 
-	// held sums the bytes of the rows the test project holds in the instance fixtures: the texts and the
-	// documents of its two instances, and its links. PostgreSQL counts a JSON document as it spells it.
-	held := len("scenes-composer"+"1.0.0"+"Composer"+instanceContent) +
-		len("characters"+"0.1.0-dev.1"+"Characters"+instanceContentNext) +
+	// held sums the bytes of the rows the test project holds in the instance fixtures: the texts, the content
+	// and the links of its two instances, the second of which never wrote its links, and the project's own
+	// links. PostgreSQL counts a JSON document as it spells it.
+	held := len("scenes-composer"+"1.0.0"+"Composer"+instanceContent+composerLinks) +
+		len("characters"+"0.1.0-dev.1"+"Characters"+instanceContentNext+noLinks) +
 		len(projectLinks)
 
 	testCases := []struct {

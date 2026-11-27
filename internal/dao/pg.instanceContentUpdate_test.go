@@ -111,6 +111,9 @@ func TestPgInstanceContentUpdate(t *testing.T) {
 				// The write replaces the instance it names and leaves the other one of the project.
 				instances := projectInstances(ctx, t, projectID)
 				require.Equal(t, []*dao.Instance{instanceFixtures().instances[0], testCase.expect}, instances)
+
+				// A content write leaves the links of every instance, and the stamp a links write names.
+				require.Equal(t, instanceFixtures().allLinks(), storedInstanceLinks(ctx, t, projectID))
 				requireStoredBytes(ctx, t)
 			})
 		})
